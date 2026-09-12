@@ -1,0 +1,50 @@
+{
+  "POST /cotizaciones [cotizacion-ccbbc8466-mn9h8]" : {
+    "transaction" : "POST /cotizaciones [cotizacion-ccbbc8466-mn9h8]",
+    "sampleCount" : 1289,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 4.8021722265321936,
+    "medianResTime" : 5.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 9.0,
+    "pct1ResTime" : 7.0,
+    "pct2ResTime" : 7.0,
+    "pct3ResTime" : 8.0,
+    "throughput" : 8.530774321641296,
+    "receivedKBytesPerSec" : 3.3906495594804764,
+    "sentKBytesPerSec" : 1.9160918886499008
+  },
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 1800,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 4.5638888888888935,
+    "medianResTime" : 4.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 39.0,
+    "pct1ResTime" : 7.0,
+    "pct2ResTime" : 7.0,
+    "pct3ResTime" : 8.0,
+    "throughput" : 11.779796340409936,
+    "receivedKBytesPerSec" : 4.682008897018402,
+    "sentKBytesPerSec" : 2.6458526936467632
+  },
+  "POST /cotizaciones [cotizacion-ccbbc8466-854t5]" : {
+    "transaction" : "POST /cotizaciones [cotizacion-ccbbc8466-854t5]",
+    "sampleCount" : 511,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 3.9628180039138954,
+    "medianResTime" : 4.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 39.0,
+    "pct1ResTime" : 5.0,
+    "pct2ResTime" : 5.0,
+    "pct3ResTime" : 6.0,
+    "throughput" : 5.894498852245332,
+    "receivedKBytesPerSec" : 2.342833039906103,
+    "sentKBytesPerSec" : 1.323959703141041
+  }
+}

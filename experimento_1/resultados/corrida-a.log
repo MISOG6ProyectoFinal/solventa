@@ -1,0 +1,79 @@
+2026-09-11 22:03:50,824 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2026-09-11 22:03:50,835 INFO o.a.j.JMeter: Loading user properties from: D:\apache-jmeter-5.6.3\bin\user.properties
+2026-09-11 22:03:50,835 INFO o.a.j.JMeter: Loading system properties from: D:\apache-jmeter-5.6.3\bin\system.properties
+2026-09-11 22:03:50,835 INFO o.a.j.JMeter: Setting JMeter property: sample_variables=instancia
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: Version 5.6.3
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: java.version=17.0.17
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: java.vm.name=OpenJDK 64-Bit Server VM
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: os.name=Windows 11
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: os.arch=amd64
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: os.version=10.0
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: file.encoding=Cp1252
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: java.awt.headless=true
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: Max memory     =1073741824
+2026-09-11 22:03:50,841 INFO o.a.j.JMeter: Available Processors =16
+2026-09-11 22:03:50,846 INFO o.a.j.JMeter: Default Locale=English (EN)
+2026-09-11 22:03:50,846 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2026-09-11 22:03:50,846 INFO o.a.j.JMeter: JMeterHome=D:\apache-jmeter-5.6.3
+2026-09-11 22:03:50,846 INFO o.a.j.JMeter: user.dir  =C:\Users\necar\Documents\MISO\Semestre 5\Proyecto 1\solventa\experimento_1
+2026-09-11 22:03:50,846 INFO o.a.j.JMeter: PWD       =C:\Users\necar\Documents\MISO\Semestre 5\Proyecto 1\solventa\experimento_1
+2026-09-11 22:03:50,847 INFO o.a.j.JMeter: IP: 192.168.1.52 Name: DESKTOP-8FB31QT FullName: host.docker.internal
+2026-09-11 22:03:50,855 INFO o.a.j.s.FileServer: Default base='C:\Users\necar\Documents\MISO\Semestre 5\Proyecto 1\solventa\experimento_1'
+2026-09-11 22:03:50,857 INFO o.a.j.s.FileServer: Set new base='C:\Users\necar\Documents\MISO\Semestre 5\Proyecto 1\solventa\experimento_1\jmeter'
+2026-09-11 22:03:50,958 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2026-09-11 22:03:50,974 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2026-09-11 22:03:50,975 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2026-09-11 22:03:50,976 INFO o.a.j.s.SaveService: Loading file: jmeter\cotizaciones.jmx
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2026-09-11 22:03:51,005 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2026-09-11 22:03:51,030 INFO o.a.j.JMeter: Creating summariser <summary>
+2026-09-11 22:03:51,036 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2026-09-11 22:03:51,037 INFO o.a.j.s.SampleEvent: List of sample_variables: [instancia]
+2026-09-11 22:03:51,037 INFO o.a.j.s.SampleEvent: List of sample_variables: [instancia]
+2026-09-11 22:03:51,039 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2026-09-11 22:03:51,039 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2026-09-11 22:03:51,169 INFO o.a.j.JMeter: Running test (1789182231169)
+2026-09-11 22:03:51,176 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Carga constante
+2026-09-11 22:03:51,176 INFO o.a.j.e.StandardJMeterEngine: Starting 5 threads for group Carga constante.
+2026-09-11 22:03:51,176 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2026-09-11 22:03:51,176 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=5 ramp-up=5 delayedStart=false
+2026-09-11 22:03:51,181 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2026-09-11 22:03:51,181 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2026-09-11 22:03:51,182 INFO o.a.j.t.JMeterThread: Thread started: Carga constante 1-1
+2026-09-11 22:03:51,643 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = DESKTOP-8FB31QT
+2026-09-11 22:03:51,659 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2026-09-11 22:03:51,660 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2026-09-11 22:03:51,660 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to UTF-8
+2026-09-11 22:03:51,660 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2026-09-11 22:03:51,660 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2026-09-11 22:03:52,178 INFO o.a.j.t.JMeterThread: Thread started: Carga constante 1-2
+2026-09-11 22:03:53,178 INFO o.a.j.t.JMeterThread: Thread started: Carga constante 1-3
+2026-09-11 22:03:54,178 INFO o.a.j.t.JMeterThread: Thread started: Carga constante 1-4
+2026-09-11 22:03:55,177 INFO o.a.j.t.JMeterThread: Thread started: Carga constante 1-5
+2026-09-11 22:04:00,042 INFO o.a.j.r.Summariser: summary +     79 in 00:00:09 =    8.9/s Avg:     4 Min:     3 Max:    39 Err:     0 (0.00%) Active: 5 Started: 5 Finished: 0
+2026-09-11 22:04:30,103 INFO o.a.j.r.Summariser: summary +    362 in 00:00:30 =   12.0/s Avg:     3 Min:     2 Max:     6 Err:     0 (0.00%) Active: 5 Started: 5 Finished: 0
+2026-09-11 22:04:30,104 INFO o.a.j.r.Summariser: summary =    441 in 00:00:39 =   11.3/s Avg:     3 Min:     2 Max:    39 Err:     0 (0.00%)
+2026-09-11 22:05:00,173 INFO o.a.j.r.Summariser: summary +    362 in 00:00:30 =   12.0/s Avg:     3 Min:     2 Max:     6 Err:     0 (0.00%) Active: 5 Started: 5 Finished: 0
+2026-09-11 22:05:00,173 INFO o.a.j.r.Summariser: summary =    803 in 00:01:09 =   11.6/s Avg:     3 Min:     2 Max:    39 Err:     0 (0.00%)
+2026-09-11 22:05:30,314 INFO o.a.j.r.Summariser: summary +    365 in 00:00:30 =   12.1/s Avg:     4 Min:     3 Max:     6 Err:     0 (0.00%) Active: 5 Started: 5 Finished: 0
+2026-09-11 22:05:30,315 INFO o.a.j.r.Summariser: summary =   1168 in 00:01:39 =   11.8/s Avg:     4 Min:     2 Max:    39 Err:     0 (0.00%)
+2026-09-11 22:06:00,330 INFO o.a.j.r.Summariser: summary +    360 in 00:00:30 =   12.0/s Avg:     5 Min:     2 Max:     9 Err:     0 (0.00%) Active: 5 Started: 5 Finished: 0
+2026-09-11 22:06:00,330 INFO o.a.j.r.Summariser: summary =   1528 in 00:02:09 =   11.8/s Avg:     4 Min:     2 Max:    39 Err:     0 (0.00%)
+2026-09-11 22:06:21,166 INFO o.a.j.t.JMeterThread: Thread is done: Carga constante 1-1
+2026-09-11 22:06:21,167 INFO o.a.j.t.JMeterThread: Thread finished: Carga constante 1-1
+2026-09-11 22:06:21,584 INFO o.a.j.t.JMeterThread: Thread is done: Carga constante 1-2
+2026-09-11 22:06:21,584 INFO o.a.j.t.JMeterThread: Thread finished: Carga constante 1-2
+2026-09-11 22:06:22,420 INFO o.a.j.t.JMeterThread: Thread is done: Carga constante 1-3
+2026-09-11 22:06:22,420 INFO o.a.j.t.JMeterThread: Thread finished: Carga constante 1-3
+2026-09-11 22:06:23,673 INFO o.a.j.t.JMeterThread: Thread is done: Carga constante 1-4
+2026-09-11 22:06:23,673 INFO o.a.j.t.JMeterThread: Thread finished: Carga constante 1-4
+2026-09-11 22:06:24,510 INFO o.a.j.t.JMeterThread: Thread is done: Carga constante 1-5
+2026-09-11 22:06:24,510 INFO o.a.j.t.JMeterThread: Thread finished: Carga constante 1-5
+2026-09-11 22:06:24,510 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2026-09-11 22:06:24,512 INFO o.a.j.r.Summariser: summary +    272 in 00:00:24 =   11.2/s Avg:     5 Min:     2 Max:     9 Err:     0 (0.00%) Active: 0 Started: 5 Finished: 5
+2026-09-11 22:06:24,512 INFO o.a.j.r.Summariser: summary =   1800 in 00:02:33 =   11.7/s Avg:     4 Min:     2 Max:    39 Err:     0 (0.00%)

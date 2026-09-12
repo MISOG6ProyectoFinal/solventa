@@ -1,0 +1,50 @@
+{
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 1800,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 3.9516666666666667,
+    "medianResTime" : 4.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 28.0,
+    "pct1ResTime" : 5.0,
+    "pct2ResTime" : 5.0,
+    "pct3ResTime" : 6.0,
+    "throughput" : 11.800957188749754,
+    "receivedKBytesPerSec" : 4.690419507637841,
+    "sentKBytesPerSec" : 2.650605618566839
+  },
+  "POST /cotizaciones [cotizacion-9c8d7fd6d-b8znp]" : {
+    "transaction" : "POST /cotizaciones [cotizacion-9c8d7fd6d-b8znp]",
+    "sampleCount" : 542,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 3.8800738007380087,
+    "medianResTime" : 4.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 28.0,
+    "pct1ResTime" : 5.0,
+    "pct2ResTime" : 5.0,
+    "pct3ResTime" : 6.0,
+    "throughput" : 5.928615963509478,
+    "receivedKBytesPerSec" : 2.356393258933943,
+    "sentKBytesPerSec" : 1.3316227261788867
+  },
+  "POST /cotizaciones [cotizacion-9c8d7fd6d-xhp87]" : {
+    "transaction" : "POST /cotizaciones [cotizacion-9c8d7fd6d-xhp87]",
+    "sampleCount" : 1258,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 3.9825119236883917,
+    "medianResTime" : 4.0,
+    "minResTime" : 2.0,
+    "maxResTime" : 7.0,
+    "pct1ResTime" : 5.0,
+    "pct2ResTime" : 5.0,
+    "pct3ResTime" : 6.0,
+    "throughput" : 8.290660814435503,
+    "receivedKBytesPerSec" : 3.2952138198000487,
+    "sentKBytesPerSec" : 1.8621601438673494
+  }
+}
