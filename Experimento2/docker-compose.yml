@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: usuario
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: solventa_siniestros
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usuario -d solventa_siniestros"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  sqs-local:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - "4566:9324"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://usuario:password@db:5432/solventa_siniestros
+      - ENDPOINT_URL=http://sqs-local:9324
+      - SQS_QUEUE_URL=http://sqs-local:9324/000000000000/eventos-parametricos-queue
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      db:
+        condition: service_healthy
+      sqs-local:
+        condition: service_started
+
+  worker:
+    build: .
+    command: python app/worker.py
+    environment:
+      - DATABASE_URL=postgresql://usuario:password@db:5432/solventa_siniestros
+      - ENDPOINT_URL=http://sqs-local:9324
+      - SQS_QUEUE_URL=http://sqs-local:9324/000000000000/eventos-parametricos-queue
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      db:
+        condition: service_healthy
+      sqs-local:
+        condition: service_started
