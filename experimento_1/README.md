@@ -18,7 +18,7 @@ ASR asociado: **ASR-07: Disponibilidad de los flujos críticos** (≥ 99,97 % me
 
 ### 3.1 Código del servicio y cómo se introduce la falla
 
-El servicio mínimo está en `app/main.py` (FastAPI). No llama a Catálogo, Perfilamiento ni Open Finance. Calcula una prima fija por ramo y devuelve `id`, `prima`, `impuestos`, `vigenciaOferta` e `instancia` (el `HOSTNAME` del Pod).
+El servicio mínimo está en [`app/main.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/app/main.py) (FastAPI). No llama a Catálogo, Perfilamiento ni Open Finance. Calcula una prima fija por ramo y devuelve `id`, `prima`, `impuestos`, `vigenciaOferta` e `instancia` (el `HOSTNAME` del Pod).
 
 La salud de **esa réplica** vive en memoria, en un `MonitorSalud` con un booleano `listo`. No se comparte entre Pods.
 
@@ -29,7 +29,7 @@ La salud de **esa réplica** vive en memoria, en un `MonitorSalud` con un boolea
 | `POST /experimentos/falla-salud` | Pone `listo = False`. El proceso no se apaga. |
 | `POST /experimentos/recupera-salud` | Vuelve `listo = True`. |
 
-La falla no se inyecta por el gateway. Si JMeter o Postman pegaran a `/experimentos/falla-salud` en `127.0.0.1:8080`, nginx reenviaría al Service y el golpe caería en **cualquier** réplica sana. El script `scripts/inyectar_falla.py` evita eso:
+La falla no se inyecta por el gateway. Si JMeter o Postman pegaran a `/experimentos/falla-salud` en `127.0.0.1:8080`, nginx reenviaría al Service y el golpe caería en **cualquier** réplica sana. El script [`scripts/inyectar_falla.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/scripts/inyectar_falla.py) evita eso:
 
 1. Lista los Pods con etiqueta `app=cotizacion` en el namespace `solventa`.
 2. Elige uno que esté `Ready` (o el que se pase con `--pod`).
@@ -39,7 +39,7 @@ La falla no se inyecta por el gateway. Si JMeter o Postman pegaran a `/experimen
 
 No se usa `kubectl delete pod`. Borrar el Pod haría que Kubernetes creara otro y se mediría el self-healing, no el probe.
 
-Orden de una corrida: clúster arriba (`python scripts/levantar_k8s.py`), `port-forward` del gateway, JMeter en marcha, y **después** `python scripts/inyectar_falla.py`. Al terminar: `python scripts/inyectar_falla.py --recuperar` para dejar las dos réplicas `Ready` antes de la corrida B.
+Orden de una corrida: clúster arriba ([`scripts/levantar_k8s.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/scripts/levantar_k8s.py)), `port-forward` del gateway, JMeter en marcha, y **después** [`scripts/inyectar_falla.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/scripts/inyectar_falla.py). Al terminar: el mismo script con `--recuperar` para dejar las dos réplicas `Ready` antes de la corrida B.
 
 ### 3.2 Arquitectura en Kubernetes
 
@@ -63,7 +63,7 @@ Pod Cotización   Pod Cotización    Deployment, replicas: 2
   └── kubelet GET /health (readinessProbe)
 ```
 
-El Deployment `cotizacion` no tiene `livenessProbe`. El readiness de la corrida A queda en el manifiesto (`periodSeconds: 2`, `failureThreshold: 2`). La corrida B se aplica con `kubectl patch` sobre el mismo Deployment (`periodSeconds: 5`, `failureThreshold: 3`). Al cambiar el probe, Kubernetes recrea los Pods; hay que esperar a que las dos réplicas estén `Ready` otra vez.
+El Deployment `cotizacion` no tiene `livenessProbe`. El readiness de la corrida A queda en el manifiesto [`k8s/cotizacion-deployment.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-deployment.yaml) (`periodSeconds: 2`, `failureThreshold: 2`). La corrida B se aplica con `kubectl patch` sobre el mismo Deployment, con [`k8s/cotizacion-probe-corrida-b.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-probe-corrida-b.yaml) (`periodSeconds: 5`, `failureThreshold: 3`). Al cambiar el probe, Kubernetes recrea los Pods; hay que esperar a que las dos réplicas estén `Ready` otra vez.
 
 nginx (`Deployment gateway`, 1 réplica) apunta al **nombre DNS del Service**, no a cada Pod. No hace health check. `/gateway/health` solo dice si nginx está vivo. El `/health` de Cotización lo sondea kubelet, no el gateway.
 
@@ -73,11 +73,11 @@ El Service `cotizacion` es ClusterIP: no es alcanzable desde Postman ni JMeter. 
 kubectl port-forward svc/gateway 8080:80 -n solventa
 ```
 
-Manifiestos: `k8s/namespace.yaml`, `k8s/cotizacion-deployment.yaml`, `k8s/cotizacion-service.yaml`, `k8s/gateway-configmap.yaml`, `k8s/gateway-deployment.yaml`, `k8s/gateway-service.yaml`.
+Manifiestos: [`k8s/namespace.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/namespace.yaml), [`k8s/cotizacion-deployment.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-deployment.yaml), [`k8s/cotizacion-service.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-service.yaml), [`k8s/gateway-configmap.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/gateway-configmap.yaml), [`k8s/gateway-deployment.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/gateway-deployment.yaml), [`k8s/gateway-service.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/gateway-service.yaml).
 
 ### 3.3 Plan de JMeter
 
-El plan está en `jmeter/cotizaciones.jmx`. JMeter no abre la interfaz (`-n`). Pega siempre al gateway, nunca a un Pod.
+El plan está en [`jmeter/cotizaciones.jmx`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/jmeter/cotizaciones.jmx). JMeter no abre la interfaz (`-n`). Pega siempre al gateway, nunca a un Pod.
 
 | Parámetro | Valor usado en las corridas |
 |---|---|
@@ -91,15 +91,15 @@ El plan está en `jmeter/cotizaciones.jmx`. JMeter no abre la interfaz (`-n`). P
 | Samples por corrida | 1800 |
 | Extrae | `$.instancia` (nombre del Pod) |
 
-A mitad de la carga se lanza `inyectar_falla.py`. JMeter no se detiene: sigue hasta terminar las 360 vueltas. Así hay tramo con dos réplicas, ventana de detección y tramo con una sola.
+A mitad de la carga se lanza [`inyectar_falla.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/scripts/inyectar_falla.py). JMeter no se detiene: sigue hasta terminar las 360 vueltas. Así hay tramo con dos réplicas, ventana de detección y tramo con una sola.
 
-Desde `experimento_1/`:
+Desde [`experimento_1/`](https://github.com/MISOG6ProyectoFinal/solventa/tree/main/experimento_1):
 
 ```text
 jmeter -n -t jmeter/cotizaciones.jmx -l resultados/corrida-a.jtl -Jsample_variables=instancia
 ```
 
-La corrida B usa el mismo `.jmx` y escribe `resultados/corrida-b.jtl`. Lo único que cambia es el probe.
+La corrida B usa el mismo [`.jmx`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/jmeter/cotizaciones.jmx) y escribe [`resultados/corrida-b.jtl`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-b.jtl). Lo único que cambia es el probe.
 
 ## 4. Resultados obtenidos
 
@@ -129,7 +129,7 @@ Según la hoja de trabajo del experimento: **48 horas-hombre**.
 
 | Integrante | Trabajo | Horas |
 |---|---|---|
-| Nicolás | Servicio FastAPI, `/health`, cotización mínima, endpoints de falla/recuperación, Dockerfile | 12 |
+| Nicolás | Servicio FastAPI, `/health`, cotización mínima, endpoints de falla/recuperación, [`Dockerfile`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/Dockerfile) | 12 |
 | Daniel | nginx como API Gateway, Service, `readinessProbe` (intervalo y umbral) | 12 |
 | Jerson | Manifiestos del clúster, script de despliegue, ambiente local (minikube) | 12 |
 | Jonatan | Plan JMeter, inyección de la falla, consolidación de métricas | 12 |
@@ -175,15 +175,15 @@ La corrida A (probe 2 s × 2 fallos) conviene más al flujo de cotización: el r
 
 | Archivo | Contenido |
 |---|---|
-| `resultados/corrida-a.jtl` | Cada POST de la corrida A: timestamp, código HTTP, éxito, `instancia` (nombre del Pod). |
-| `resultados/corrida-a.log` | Log de JMeter A. Resumen: 1800 samples, 0 % error, 11,7 req/s. |
-| `resultados/corrida-b.jtl` | Igual para la corrida B. |
-| `resultados/corrida-b.log` | Resumen B: 1800 samples, 0 % error, 11,8 req/s. |
-| `resultados/corrida-a/index.html` | Dashboard HTML de JMeter, corrida A. |
-| `resultados/corrida-b/index.html` | Dashboard HTML de JMeter, corrida B. |
-| `scripts/inyectar_falla.py` | Inyecta `POST /experimentos/falla-salud` **dentro de un Pod**. Imprime instante UTC y espera `Ready=false`. |
-| `k8s/cotizacion-deployment.yaml` | Probe A (`periodSeconds: 2`, `failureThreshold: 2`). |
-| `k8s/cotizacion-probe-corrida-b.yaml` | Parche del probe B (`periodSeconds: 5`, `failureThreshold: 3`). |
+| [`resultados/corrida-a.jtl`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-a.jtl) | Cada POST de la corrida A: timestamp, código HTTP, éxito, `instancia` (nombre del Pod). |
+| [`resultados/corrida-a.log`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-a.log) | Log de JMeter A. Resumen: 1800 samples, 0 % error, 11,7 req/s. |
+| [`resultados/corrida-b.jtl`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-b.jtl) | Igual para la corrida B. |
+| [`resultados/corrida-b.log`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-b.log) | Resumen B: 1800 samples, 0 % error, 11,8 req/s. |
+| [`resultados/corrida-a/index.html`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-a/index.html) | Dashboard HTML de JMeter, corrida A. |
+| [`resultados/corrida-b/index.html`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-b/index.html) | Dashboard HTML de JMeter, corrida B. |
+| [`scripts/inyectar_falla.py`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/scripts/inyectar_falla.py) | Inyecta `POST /experimentos/falla-salud` **dentro de un Pod**. Imprime instante UTC y espera `Ready=false`. |
+| [`k8s/cotizacion-deployment.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-deployment.yaml) | Probe A (`periodSeconds: 2`, `failureThreshold: 2`). |
+| [`k8s/cotizacion-probe-corrida-b.yaml`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/k8s/cotizacion-probe-corrida-b.yaml) | Parche del probe B (`periodSeconds: 5`, `failureThreshold: 3`). |
 
 ### 8.2 Marcas de tiempo de la inyección
 
@@ -194,7 +194,7 @@ La corrida A (probe 2 s × 2 fallos) conviene más al flujo de cotización: el r
 
 La columna `instancia` es el Pod que calculó la prima. Antes de la falla deben aparecer dos valores. Después del retiro, uno solo. `success=true` y `responseCode=200` en toda la serie respaldan que el flujo no se detuvo.
 
-Plan JMeter: `jmeter/cotizaciones.jmx`. Carga constante contra `POST http://127.0.0.1:8080/cotizaciones` (gateway con `port-forward`).
+Plan JMeter: [`jmeter/cotizaciones.jmx`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/jmeter/cotizaciones.jmx). Carga constante contra `POST http://127.0.0.1:8080/cotizaciones` (gateway con `port-forward`).
 
 ### 8.4 Dashboard HTML de JMeter
 
@@ -223,4 +223,4 @@ GitHub muestra el archivo, no ejecuta las gráficas. Para ver el dashboard como 
 | `cotizacion-9c8d7fd6d-xhp87` (réplica sana) | 1258 | 0 | 0 % | 3,98 | 8,29 |
 | `cotizacion-9c8d7fd6d-b8znp` (réplica caída) | 542 | 0 | 0 % | 3,88 | 5,93 |
 
-Los gráficos Over Time, Hits per Second y Response Times del dashboard **no** se usan como evidencia del retiro. JMeter los agrega en ventanas de 60 s. En ~2 min 33 s apenas hay tres puntos: no se ve la ventana de 2,3 s ni la de 13,5 s. El corte (dos réplicas, luego una) está en la columna `instancia` del `.jtl`.
+Los gráficos Over Time, Hits per Second y Response Times del dashboard **no** se usan como evidencia del retiro. JMeter los agrega en ventanas de 60 s. En ~2 min 33 s apenas hay tres puntos: no se ve la ventana de 2,3 s ni la de 13,5 s. El corte (dos réplicas, luego una) está en la columna `instancia` de [`corrida-a.jtl`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-a.jtl) y [`corrida-b.jtl`](https://github.com/MISOG6ProyectoFinal/solventa/blob/main/experimento_1/resultados/corrida-b.jtl).
