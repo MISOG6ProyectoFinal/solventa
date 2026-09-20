@@ -4,6 +4,10 @@ Capturas de los mockups web y mobile de Solventa, organizadas por historia de us
 
 > Generadas con Playwright (`npm run screenshots`) en el repositorio [SolventaMockUps](https://github.com/dso-uniandes/SolventaMockUps). Para actualizarlas, regenerarlas allá y copiar la carpeta `screenshots` aquí.
 
+## Diseño en Figma
+
+La carpeta [`figma/`](./figma/README.md) tiene los mismos flujos exportados desde el archivo de diseño [Solventa — Design System & Mockups](https://www.figma.com/design/8MnTxyIqImk6Zkw0q6KpRW/Solventa--Design-System---Mockups), en el orden en que están en el archivo, junto con el design system (color, tipografía, layout, iconografía y componentes) y la internacionalización ES/EN. Cada imagen enlaza a su sección en Figma.
+
 ## WEB
 
 | HU | Historia | Módulo | Pasos | Flujo |
