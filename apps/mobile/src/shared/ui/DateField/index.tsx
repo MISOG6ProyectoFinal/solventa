@@ -15,6 +15,7 @@ type DateFieldProps = {
   onChange?: (value: string) => void;
   required?: boolean;
   error?: boolean;
+  yearSelection?: boolean;
   testID?: string;
 };
 
@@ -24,6 +25,7 @@ export function DateField({
   onChange,
   required = false,
   error = false,
+  yearSelection = true,
   testID,
 }: DateFieldProps) {
   const parsed = useMemo(() => parseDate(value), [value]);
@@ -42,6 +44,10 @@ export function DateField({
     setFocused(true);
     sheet.current?.present();
   };
+
+  const setYear = useCallback((year: number) => {
+    setCursor((current) => ({ month: current.month, year }));
+  }, []);
 
   const shiftMonth = useCallback((delta: number) => {
     setCursor((current) => {
@@ -86,6 +92,8 @@ export function DateField({
             selectedYear={parsed?.year ?? null}
             onShift={shiftMonth}
             onChoose={choose}
+            yearSelection={yearSelection}
+            onYear={setYear}
           />
         ) : null}
       </Sheet>

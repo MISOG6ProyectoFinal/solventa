@@ -405,12 +405,13 @@ export const catalog: PlaygroundItem[] = [
   {
     id: 'date',
     title: 'Fecha',
-    initial: { label: 'Fecha de salida', value: '10/10/2026', required: false, error: false },
+    initial: { label: 'Fecha de salida', value: '10/10/2026', required: false, error: false, yearSelection: true },
     fields: [
       { kind: 'text', key: 'label', label: 'Etiqueta' },
       { kind: 'text', key: 'value', label: 'Valor' },
       { kind: 'switch', key: 'required', label: 'Obligatorio' },
       { kind: 'switch', key: 'error', label: 'Error' },
+      { kind: 'switch', key: 'yearSelection', label: 'Elegir año' },
     ],
     render: (values, update) => (
       <DateField
@@ -419,6 +420,7 @@ export const catalog: PlaygroundItem[] = [
         onChange={(value) => update('value', value)}
         required={flag(values, 'required')}
         error={flag(values, 'error')}
+        yearSelection={flag(values, 'yearSelection')}
       />
     ),
   },

@@ -67,6 +67,54 @@ describe('DateField', () => {
     expect(onChange).toHaveBeenCalledWith('15/09/2026 10:30');
   });
 
+  it('does not offer a year change unless year selection is enabled', async () => {
+    const { getByText, queryByLabelText } = await render(
+      <DateField label="Fecha de salida" value="10/10/2026" />,
+    );
+
+    await fireEvent.press(getByText('10/10/2026'));
+
+    expect(queryByLabelText('Cambiar año')).toBeNull();
+  });
+
+  it('changes the year from a year list when year selection is enabled', async () => {
+    const onChange = jest.fn();
+    const { getByLabelText, getByText, queryByLabelText } = await render(
+      <DateField label="Fecha de salida" value="10/10/2026" onChange={onChange} yearSelection />,
+    );
+
+    await fireEvent.press(getByText('10/10/2026'));
+    await fireEvent.press(getByLabelText('Cambiar año'));
+
+    expect(getByText('2021 a 2032')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('Años siguientes'));
+    expect(getByText('2033 a 2044')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('Años anteriores'));
+    await fireEvent.press(getByLabelText('Año 2024'));
+
+    expect(getByText('Octubre 2024')).toBeTruthy();
+    expect(queryByLabelText('Año 2024')).toBeNull();
+
+    await fireEvent.press(getByLabelText('15 de octubre de 2024'));
+
+    expect(onChange).toHaveBeenCalledWith('15/10/2024');
+  });
+
+  it('returns to the month without changing the year', async () => {
+    const { getByLabelText, getByText, queryByText } = await render(
+      <DateField label="Fecha de salida" value="10/10/2026" yearSelection />,
+    );
+
+    await fireEvent.press(getByText('10/10/2026'));
+    await fireEvent.press(getByLabelText('Cambiar año'));
+    await fireEvent.press(getByLabelText('Volver al mes'));
+
+    expect(getByText('Octubre 2026')).toBeTruthy();
+    expect(queryByText('2021 a 2032')).toBeNull();
+  });
+
   it('keeps the calendar above the bottom inset', async () => {
     const { getByTestId, getByText } = await render(
       <DateField label="Fecha de salida" value="10/10/2026" />,

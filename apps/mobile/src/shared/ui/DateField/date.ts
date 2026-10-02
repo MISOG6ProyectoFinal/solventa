@@ -55,6 +55,13 @@ export function formatDate(parts: DateParts) {
   return parts.time ? `${date} ${parts.time}` : date;
 }
 
+export const yearsPerPage = 12;
+
+// Leaves the current year near the middle of the page.
+export function yearPageStart(year: number) {
+  return year - 5;
+}
+
 export function monthLayout(year: number, month: number) {
   const lead = (new Date(year, month - 1, 1).getDay() + 6) % 7;
   const days = new Date(year, month, 0).getDate();
