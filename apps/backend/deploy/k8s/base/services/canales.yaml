@@ -1,0 +1,115 @@
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canales
+  labels:
+    app.kubernetes.io/name: canales
+    app.kubernetes.io/component: exposicion
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: canales
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: canales
+        app.kubernetes.io/component: exposicion
+    spec:
+      serviceAccountName: solventa-backend
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: canales
+      containers:
+      - name: canales
+        image: solventa/canales
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NAME
+          value: canales
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          periodSeconds: 1
+          timeoutSeconds: 1
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canales
+  labels:
+    app.kubernetes.io/name: canales
+    app.kubernetes.io/component: exposicion
+spec:
+  selector:
+    app.kubernetes.io/name: canales
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: canales
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: canales
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: canales
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: canales
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

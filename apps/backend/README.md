@@ -7,7 +7,7 @@ Microservicios en Python (FastAPI) que implementan el modelo de componentes VC-0
 ```
 apps/backend/
 ├── libs/solventa_common/     # Librería compartida
-├── services/<servicio>/      # Un microservicio por capacidad (19)
+├── services/<servicio>/      # Un servicio por almacén (8), un módulo por componente
 ├── Dockerfile                # Imagen única: --build-arg SERVICE=<servicio>
 ├── docker-compose.yml        # PostgreSQL, Redis y LocalStack para desarrollo
 ├── scripts/                  # test-all.sh, build-images.sh
@@ -21,52 +21,49 @@ apps/backend/
     └── scripts/deploy-aws.sh
 ```
 
-Cada servicio sigue la misma organización hexagonal:
+Cada servicio agrupa los componentes del VC-003 que comparten almacén. Cada componente es un módulo con su propio dominio, y separarlo en otro servicio es mover su carpeta:
 
 ```
 services/<servicio>/<servicio>/
 ├── config.py          # Settings leídos de variables de entorno
-├── domain/            # Modelos, puertos y casos de uso, sin FastAPI ni boto3
-├── adapters/          # Repositorios, clientes y bus
-└── entrypoints/       # api.py (FastAPI) y, si aplica, worker.py
+├── main.py            # App FastAPI: monta el router de cada módulo
+└── <modulo>/          # Un componente del VC-003
+    ├── domain/        # Modelos, puertos y casos de uso, sin FastAPI ni boto3
+    ├── adapters/      # Repositorios, clientes y bus
+    └── api.py         # Router del componente
 ```
 
 ## Del modelo de componentes al código
 
-| Capa | Componente | Servicio | Almacén |
+La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a varios componentes. Database-per-Service se mantiene: ningún servicio lee la base de otro. Quedan como despliegue propio los que tienen una razón en los ASR: Pagos por el perímetro PCI, el worker paramétrico porque escala por profundidad de cola (ASR-06) y el Monitor de Salud porque vigila a los demás.
+
+| Servicio | Módulo | Componente VC-003 | Almacén |
 |---|---|---|---|
-| Exposición | BFF Web | `bff_web` (`/web`) | |
-| Exposición | BFF Móvil | `bff_movil` (`/movil`) | |
-| Exposición | API Pública de Socios | `api_socios` (`/socios`) | |
-| Exposición | Monitor de Salud y Retiro | `health_monitor` | |
-| Negocio | Cotización y Rating (x3) | `cotizacion_rating` | cotizacion |
-| Negocio | Validador de Consenso | `validador_consenso` | |
-| Negocio | Suscripción | `suscripcion` | polizas |
-| Negocio | Pólizas y Ciclo de Vida | `polizas` | polizas |
-| Negocio | Catálogo de Productos | `catalogo_productos` | cotizacion |
-| Negocio | Perfilamiento y Personalización | `perfilamiento` | identidad |
-| Negocio | Identidad, Consentimiento y KYC | `identidad_kyc` | identidad |
-| Negocio | Siniestros | `siniestros` | siniestros |
-| Negocio | Siniestro Paramétrico + Idempotency Key Validator | `siniestro_parametrico` | siniestros |
-| Negocio | Workers de Absorción (Picos) | `siniestro_parametrico` (worker) | siniestros |
-| Negocio | Cobros y Pagos | `cobros_pagos` | pagos |
-| Negocio | Socios y Gobierno de API | `socios_gobierno_api` | cotizacion |
-| Negocio | Analítica, Fraude y Cumplimiento | `analitica_fraude` | auditoria |
-| Negocio | Notificaciones | `notificaciones` | |
-| Negocio | Reaseguro y Cesión | `reaseguro` | polizas |
-| Negocio | Auditoría y Linaje del Dato | `auditoria_linaje` | auditoria |
-| Integración | Adaptadores por tercero + Circuit Breaker Global | `solventa_common.integration` | |
-| Integración | Bus de Eventos + Dead Letter Queue | SNS + SQS (`event_bus`) | |
+| `canales` | `web`, `movil`, `socios` | BFF Web, BFF Móvil, API Pública de Socios (`/web`, `/movil`, `/socios`) | |
+| `cotizacion` (x3) | `rating` | Cotización y Rating | cotizacion |
+| | `consenso` | Validador de Consenso | |
+| | `catalogo` | Catálogo de Productos | cotizacion |
+| | `gobierno_socios` | Socios y Gobierno de API | cotizacion |
+| `polizas` | `suscripcion`, `ciclo_vida`, `reaseguro` | Suscripción, Pólizas y Ciclo de Vida, Reaseguro y Cesión | polizas |
+| `identidad` | `kyc`, `perfilamiento` | Identidad, Consentimiento y KYC; Perfilamiento y Personalización | identidad |
+| `siniestros` | `avisos` | Siniestros | siniestros |
+| | `parametrico` | Siniestro Paramétrico + Idempotency Key Validator | siniestros |
+| `siniestros-worker` | `parametrico.worker` | Workers de Absorción (Picos), misma imagen que `siniestros` | siniestros |
+| `pagos` | `cobros` | Cobros y Pagos | pagos |
+| `auditoria` | `linaje`, `analitica`, `notificaciones` | Auditoría y Linaje, Analítica y Fraude, Notificaciones (consumidores del bus) | auditoria |
+| `health-monitor` | | Monitor de Salud y Retiro | |
+| `solventa_common` | `integration` | Adaptadores por tercero + Circuit Breaker Global | |
+| SNS + SQS | | Bus de Eventos + Dead Letter Queue | |
 
-La lógica completa está en los servicios que los experimentos validaron:
+La lógica completa está en los módulos que los experimentos validaron:
 
-- **Cotización y Rating**: reglas de rating como configuración versionada. Corre con 3 réplicas detrás de un Service headless.
-- **Validador de Consenso**: llama a las 3 réplicas en paralelo con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
+- **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
-- **BFF y API de socios**: llaman a los servicios internos con timeout de 1 s y circuit breaker; un circuito abierto responde 503.
+- **Canales**: llaman a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; un circuito abierto responde 503.
 - **Monitor de Salud**: latido cada 500 ms a `/health/ready` de cada servicio y retiro tras 2 fallas consecutivas.
 
-Los demás servicios arrancan con su endpoint de salud, su almacén asignado y el dominio documentado en `domain/__init__.py`. El siguiente paso es implementar sus casos de uso sobre esa base.
+Los demás módulos arrancan con su router y el dominio documentado en su `__init__.py`. El siguiente paso es implementar sus casos de uso sobre esa base.
 
 ### Librería común
 
@@ -109,9 +106,9 @@ Para correr un servicio contra PostgreSQL, Redis y LocalStack:
 
 ```bash
 docker compose up -d
-cd services/cotizacion_rating
+cd services/cotizacion
 DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
-  poetry run uvicorn cotizacion_rating.entrypoints.api:app --reload
+  poetry run uvicorn cotizacion.main:app --reload
 ```
 
 Todo el backend en minikube:
@@ -147,7 +144,7 @@ ENV=dev ./deploy/scripts/deploy-aws.sh all
    | 6 | `cluster_addons` | NGINX Ingress (NLB), KEDA, metrics-server | 3 |
    | 7 | `platform` | Namespace, ConfigMap `solventa-platform`, Secret `db-*`, roles de Pod Identity | 3, 4, 5 |
 
-2. `images`: construye las 19 imágenes y las publica en ECR con el tag del commit.
+2. `images`: construye las 8 imágenes y las publica en ECR con el tag del commit.
 3. `k8s`: renderiza `deploy/k8s/overlays/aws` con las imágenes de ECR y lo aplica.
 
 El borde (CloudFront + WAF) se aplica aparte con `deploy-aws.sh edge`, cuando el NLB del ingress ya existe.
@@ -161,4 +158,4 @@ Para destruir, se aplica `terraform destroy` en orden inverso (edge, platform, c
 - Región secundaria del VC-004: réplica asíncrona de RDS en otra región, clúster pasivo y replicación del bus y de S3.
 - Perímetro PCI de `pagos`: red y accesos separados con Security Groups for Pods o una cuenta dedicada.
 - Certificado ACM en el NLB para cifrar el tramo CloudFront → API Gateway.
-- Casos de uso de los servicios que hoy exponen su base.
+- Casos de uso de los módulos que hoy exponen su base.

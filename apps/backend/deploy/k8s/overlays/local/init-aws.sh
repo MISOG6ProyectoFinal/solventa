@@ -9,7 +9,7 @@ queue_arn() {
     --query Attributes.QueueArn --output text
 }
 
-for consumer in siniestro-parametrico analitica-fraude auditoria-linaje; do
+for consumer in siniestros-parametrico auditoria; do
   dlq_url=$(awslocal sqs create-queue --queue-name "solventa-${consumer}-dlq" --query QueueUrl --output text)
   queue_url=$(awslocal sqs create-queue --queue-name "solventa-${consumer}" --query QueueUrl --output text)
   attrs=$(printf '{"RedrivePolicy":"{\\"deadLetterTargetArn\\":\\"%s\\",\\"maxReceiveCount\\":\\"3\\"}"}' \

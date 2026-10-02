@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from health_monitor.entrypoints.api import app
+from health_monitor.main import app
 
 client = TestClient(app)
 

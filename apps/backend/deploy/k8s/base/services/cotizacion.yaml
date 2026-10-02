@@ -1,0 +1,133 @@
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cotizacion
+  labels:
+    app.kubernetes.io/name: cotizacion
+    app.kubernetes.io/component: negocio
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cotizacion
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cotizacion
+        app.kubernetes.io/component: negocio
+    spec:
+      serviceAccountName: solventa-backend
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: cotizacion
+      containers:
+      - name: cotizacion
+        image: solventa/cotizacion
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NAME
+          value: cotizacion
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        - secretRef:
+            name: db-cotizacion
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          periodSeconds: 1
+          timeoutSeconds: 1
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cotizacion
+  labels:
+    app.kubernetes.io/name: cotizacion
+    app.kubernetes.io/component: negocio
+spec:
+  selector:
+    app.kubernetes.io/name: cotizacion
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cotizacion-replicas
+  labels:
+    app.kubernetes.io/name: cotizacion
+    app.kubernetes.io/component: negocio
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: cotizacion
+  ports:
+  - name: http
+    port: 8000
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cotizacion
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cotizacion
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cotizacion
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cotizacion
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

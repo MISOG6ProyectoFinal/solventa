@@ -12,11 +12,11 @@ spec:
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: workers-siniestro-parametrico
+  name: siniestros-worker
   namespace: solventa
 spec:
   scaleTargetRef:
-    name: workers-siniestro-parametrico
+    name: siniestros-worker
   minReplicaCount: 2 # una por zona de disponibilidad
   maxReplicaCount: 60
   pollingInterval: 5

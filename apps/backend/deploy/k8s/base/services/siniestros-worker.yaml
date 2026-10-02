@@ -1,0 +1,75 @@
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: siniestros-worker
+  labels:
+    app.kubernetes.io/name: siniestros-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: siniestros-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: siniestros-worker
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: solventa-backend
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: siniestros-worker
+      containers:
+      - name: siniestros-worker
+        image: solventa/siniestros
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NAME
+          value: siniestros-worker
+        - name: EVENTS_QUEUE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: solventa-platform
+              key: QUEUE_URL_SINIESTROS_PARAMETRICO
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        - secretRef:
+            name: db-siniestros
+        resources:
+          requests:
+            cpu: 250m
+            memory: 192Mi
+          limits:
+            cpu: '1'
+            memory: 384Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        command:
+        - python
+        - -m
+        - siniestros.parametrico.worker
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: siniestros-worker
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: siniestros-worker

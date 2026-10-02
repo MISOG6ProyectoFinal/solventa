@@ -1,4 +1,4 @@
-# Generado a partir del modelo de componentes VC-003 v2.0. Editar a mano es válido.
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -17,20 +17,20 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: bff-web
+            name: canales
             port:
               number: 80
       - path: /movil
         pathType: Prefix
         backend:
           service:
-            name: bff-movil
+            name: canales
             port:
               number: 80
       - path: /socios
         pathType: Prefix
         backend:
           service:
-            name: api-socios
+            name: canales
             port:
               number: 80

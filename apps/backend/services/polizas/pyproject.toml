@@ -1,7 +1,7 @@
 [project]
 name = "polizas"
 version = "0.1.0"
-description = "Pólizas y Ciclo de Vida: Emisión, endosos, renovación, cancelación."
+description = "Pólizas: Suscripción, ciclo de vida de la póliza y reaseguro."
 requires-python = ">=3.11"
 dependencies = ["solventa-common"]
 

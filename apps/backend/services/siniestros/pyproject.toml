@@ -1,7 +1,7 @@
 [project]
 name = "siniestros"
 version = "0.1.0"
-description = "Siniestros: Aviso, evidencia, evaluación, peritaje."
+description = "Siniestros: Avisos de siniestro y siniestro paramétrico con su worker de liquidación."
 requires-python = ">=3.11"
 dependencies = ["solventa-common"]
 

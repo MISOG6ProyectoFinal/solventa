@@ -1,8 +1,8 @@
 # Dependencias locales: PostgreSQL (una base por almacén), Redis y LocalStack (SNS, SQS, S3).
 # Para correr un servicio contra ellas:
 #   docker compose up -d
-#   cd services/cotizacion_rating && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
-#     DB_PASSWORD=solventa uvicorn cotizacion_rating.entrypoints.api:app --reload
+#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
+#     DB_PASSWORD=solventa uvicorn cotizacion.main:app --reload
 services:
   postgres:
     image: postgres:17

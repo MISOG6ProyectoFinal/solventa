@@ -23,9 +23,8 @@ configMapGenerator:
       - AWS_SECRET_ACCESS_KEY=test
       - REDIS_URL=redis://redis:6379/0
       - EVENTS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:solventa-eventos
-      - QUEUE_URL_SINIESTRO_PARAMETRICO=http://localstack:4566/000000000000/solventa-siniestro-parametrico
-      - QUEUE_URL_ANALITICA_FRAUDE=http://localstack:4566/000000000000/solventa-analitica-fraude
-      - QUEUE_URL_AUDITORIA_LINAJE=http://localstack:4566/000000000000/solventa-auditoria-linaje
+      - QUEUE_URL_SINIESTROS_PARAMETRICO=http://localstack:4566/000000000000/solventa-siniestros-parametrico
+      - QUEUE_URL_AUDITORIA=http://localstack:4566/000000000000/solventa-auditoria
       - EVIDENCIAS_BUCKET=solventa-evidencias
   - name: postgres-init
     files:

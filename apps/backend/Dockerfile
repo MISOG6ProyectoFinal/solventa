@@ -1,5 +1,5 @@
 # Imagen única para todos los microservicios. Se construye desde apps/backend:
-#   docker build --build-arg SERVICE=cotizacion_rating -t solventa/cotizacion-rating .
+#   docker build --build-arg SERVICE=cotizacion -t solventa/cotizacion .
 # El mismo Dockerfile sirve para la API y para los workers; el Deployment elige el comando.
 FROM python:3.12-slim AS base
 
@@ -22,4 +22,4 @@ USER 10001
 
 ENV SERVICE=${SERVICE}
 EXPOSE 8000
-CMD ["sh", "-c", "exec uvicorn ${SERVICE}.entrypoints.api:app --host 0.0.0.0 --port 8000 --no-access-log"]
+CMD ["sh", "-c", "exec uvicorn ${SERVICE}.main:app --host 0.0.0.0 --port 8000 --no-access-log"]

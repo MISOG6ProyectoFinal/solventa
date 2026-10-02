@@ -9,23 +9,12 @@ resources:
   - services-config.yaml
   - network-policy.yaml
   - ingress.yaml
-  - services/bff-web.yaml
-  - services/bff-movil.yaml
-  - services/api-socios.yaml
-  - services/health-monitor.yaml
-  - services/cotizacion-rating.yaml
-  - services/validador-consenso.yaml
-  - services/suscripcion.yaml
+  - services/canales.yaml
+  - services/cotizacion.yaml
   - services/polizas.yaml
-  - services/catalogo-productos.yaml
-  - services/perfilamiento.yaml
-  - services/identidad-kyc.yaml
+  - services/identidad.yaml
   - services/siniestros.yaml
-  - services/siniestro-parametrico.yaml
-  - services/cobros-pagos.yaml
-  - services/socios-gobierno-api.yaml
-  - services/analitica-fraude.yaml
-  - services/notificaciones.yaml
-  - services/reaseguro.yaml
-  - services/auditoria-linaje.yaml
-  - services/workers-siniestro-parametrico.yaml
+  - services/pagos.yaml
+  - services/auditoria.yaml
+  - services/health-monitor.yaml
+  - services/siniestros-worker.yaml
