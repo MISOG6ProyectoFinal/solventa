@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import {
   AppText,
@@ -10,37 +11,50 @@ import {
   SelectField,
   TextField,
 } from '../../../../shared/ui';
+import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { formatFileSize, photoUri } from '../../photoUtils';
 import { claimReport } from '../../claimReport';
+import { texts } from '../../texts';
 import styles from './styles';
 
 export default function ReportClaimScreen() {
+  const navigation = useNavigation();
   const [policy, setPolicy] = useState(claimReport.policy);
-  const [claimType, setClaimType] = useState(claimReport.type);
+  const [claimType, setClaimType] = useState(claimReport.claimType);
   const [occurredAt, setOccurredAt] = useState(claimReport.occurredAt);
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const photos = useClaimPhotosStore((state) => state.photos);
+  const clearPhotos = useClaimPhotosStore((state) => state.clear);
   const descriptionMissing = submitted && description.trim() === '';
+  const evidenceMissing = submitted && photos.length === 0;
+
+  useEffect(() => {
+    return () => {
+      clearPhotos();
+    };
+  }, [clearPhotos]);
 
   return (
-    <Screen testID="report-claim-screen" header={{ title: claimReport.title }}>
+    <Screen testID="report-claim-screen" header={{ title: texts.report.screenTitle }}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
           <SelectField
-            label={claimReport.policyLabel}
+            label={texts.report.policyLabel}
             value={policy}
             options={claimReport.policies}
             onChange={setPolicy}
             required
           />
           <SelectField
-            label={claimReport.typeLabel}
+            label={texts.report.claimTypeLabel}
             value={claimType}
-            options={claimReport.types}
+            options={claimReport.claimTypes}
             onChange={setClaimType}
             required
           />
           <DateField
-            label={claimReport.occurredAtLabel}
+            label={texts.report.occurredAtLabel}
             value={occurredAt}
             onChange={setOccurredAt}
             required
@@ -48,7 +62,7 @@ export default function ReportClaimScreen() {
           />
           <View>
             <AppText variant="label" style={styles.locationLabel}>
-              {claimReport.locationLabel}
+              {texts.report.locationLabel}
             </AppText>
             <AppText variant="bodySmall" style={styles.address}>
               {claimReport.address}
@@ -58,10 +72,10 @@ export default function ReportClaimScreen() {
             </AppText>
           </View>
           <TextField
-            label={claimReport.descriptionLabel}
+            label={texts.report.descriptionLabel}
             value={description}
             onChangeText={setDescription}
-            placeholder={claimReport.descriptionPlaceholder}
+            placeholder={texts.report.descriptionPlaceholder}
             multiline
             required
             error={descriptionMissing}
@@ -70,28 +84,60 @@ export default function ReportClaimScreen() {
         <Card>
           <View style={styles.evidenceHeader}>
             <AppText variant="button" style={styles.evidenceTitle}>
-              {claimReport.evidenceTitle}
+              {texts.report.evidenceHeading}
             </AppText>
-            <AppText variant="caption">{claimReport.evidenceCount}</AppText>
+            <AppText variant="caption" style={styles.evidenceCount}>
+              {`${photos.length}/10`}
+            </AppText>
           </View>
           <AppText variant="bodySmall" style={styles.evidenceHint}>
-            {claimReport.evidenceHint}
+            {texts.report.evidenceHint}
           </AppText>
           <View style={styles.actions}>
             <View style={styles.action}>
-              <Button title={claimReport.takePhoto} variant="outlined" />
+              <Button title={texts.report.takePhotoButton} variant="outlined" onPress={() => navigation.navigate('ClaimReport', { screen: 'TakePhoto' })} />
             </View>
             <View style={styles.action}>
-              <Button title={claimReport.recordVideo} variant="outlined" />
+              <Button title={texts.report.recordVideoButton} variant="outlined" />
             </View>
           </View>
-          {submitted ? (
+          {photos.length > 0 ? (
+            <View style={styles.thumbs}>
+              {photos.map((photo) => (
+                <Pressable
+                  key={photo.filePath}
+                  accessibilityRole="button"
+                  accessibilityLabel={photo.label}
+                  style={styles.thumb}
+                  onPress={() =>
+                    navigation.navigate('ClaimReport', {
+                      screen: 'PhotoPreview',
+                      params: { filePath: photo.filePath },
+                    })
+                  }
+                >
+                  <Image
+                    testID="evidence-photo"
+                    style={styles.thumbPhoto}
+                    source={{ uri: photoUri(photo.filePath) }}
+                  />
+                  <AppText variant="caption" style={styles.thumbLabel}>
+                    {photo.label}
+                  </AppText>
+                  <AppText variant="caption" style={styles.thumbSize}>
+                    {formatFileSize(photo.bytes)}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          {evidenceMissing ? (
             <AppText variant="caption" style={styles.evidenceError}>
-              {claimReport.evidenceError}
+              {texts.report.missingEvidence}
             </AppText>
           ) : null}
         </Card>
-        <Button title={claimReport.submit} onPress={() => setSubmitted(true)} />
+        <Button title={texts.report.submitButton} onPress={() => setSubmitted(true)} />
       </ScrollView>
     </Screen>
   );

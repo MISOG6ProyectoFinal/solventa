@@ -1,13 +1,16 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useClaimPhotos } from '../../claimPhotos';
 import ReportClaimScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
   const goBack = jest.fn();
+  const navigate = jest.fn();
   return {
     useNavigation: () => ({
       goBack,
+      navigate,
       canGoBack: () => true,
     }),
   };
@@ -16,6 +19,8 @@ jest.mock('@react-navigation/native', () => {
 describe('ReportClaimScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
+    useNavigation().navigate.mockClear();
+    useClaimPhotos.getState().clear();
   });
 
   it('shows the online report form', async () => {
@@ -70,6 +75,26 @@ describe('ReportClaimScreen', () => {
     await fireEvent.press(getByText('Listo'));
 
     expect(getByText('12/09/2026 11:30')).toBeTruthy();
+  });
+
+  it('opens the camera to take a photo', async () => {
+    const { getByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByText('Tomar foto'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', { screen: 'TakePhoto' });
+  });
+
+  it('opens a saved photo', async () => {
+    useClaimPhotos.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const { getByLabelText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByLabelText('Foto 1'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', {
+      screen: 'PhotoPreview',
+      params: { filePath: '/tmp/foto.jpg' },
+    });
   });
 
   it('returns to the claims list', async () => {

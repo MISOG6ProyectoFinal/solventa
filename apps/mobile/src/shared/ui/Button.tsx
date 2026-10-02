@@ -12,7 +12,8 @@ type ButtonVariant =
   | 'outlined'
   | 'primaryOutline'
   | 'text'
-  | 'accentLink';
+  | 'accentLink'
+  | 'danger';
 
 type ButtonProps = {
   title: string;
@@ -31,6 +32,7 @@ const iconColor: Record<ButtonVariant, IconColor> = {
   primaryOutline: 'primary',
   text: 'primary',
   accentLink: 'accent',
+  danger: 'onNavy',
 };
 
 export function Button({
@@ -147,6 +149,9 @@ const containerStyles = StyleSheet.create({
   accentLink: {
     backgroundColor: 'transparent',
   },
+  danger: {
+    backgroundColor: theme.colors.danger,
+  },
 });
 
 const labelStyles = StyleSheet.create({
@@ -157,4 +162,5 @@ const labelStyles = StyleSheet.create({
   primaryOutline: { color: theme.colors.navy },
   text: { color: theme.colors.navy },
   accentLink: { color: theme.colors.teal },
+  danger: { color: theme.colors.onNavy },
 });

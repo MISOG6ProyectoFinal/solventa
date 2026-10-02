@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import { theme } from '../../../../shared/theme';
+import { outfitFont } from '../../../../shared/theme/fonts';
 
 export default StyleSheet.create({
   scroll: {
@@ -34,6 +35,40 @@ export default StyleSheet.create({
   },
   evidenceTitle: {
     color: theme.colors.text,
+  },
+  evidenceCount: {
+    ...outfitFont('400'),
+  },
+  thumbs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.space.sm,
+  },
+  thumb: {
+    width: '31%',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.background,
+    padding: theme.space.sm,
+    gap: theme.space.xs,
+  },
+  thumbPhoto: {
+    width: '100%',
+    height: 72,
+    borderRadius: theme.radius.medium,
+  },
+  thumbLabel: {
+    color: theme.colors.text,
+    fontSize: 10,
+    lineHeight: 14,
+    ...outfitFont('400'),
+  },
+  thumbSize: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    lineHeight: 14,
+    ...outfitFont('400'),
   },
   evidenceError: {
     fontSize: 11,

@@ -57,5 +57,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Se usa la cámara para tomar fotos y grabar videos de las evidencias.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Se usa el micrófono para grabar el audio de los videos.</string>
 </dict>
 </plist>

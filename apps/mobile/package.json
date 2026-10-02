@@ -16,7 +16,10 @@
     "react-native-screens": "*",
     "react-native-gesture-handler": "*",
     "react-native-reanimated": "*",
-    "react-native-worklets": "*"
+    "react-native-worklets": "*",
+    "react-native-nitro-image": "*",
+    "react-native-nitro-modules": "*",
+    "react-native-vision-camera": "*"
   },
   "devDependencies": {}
 }

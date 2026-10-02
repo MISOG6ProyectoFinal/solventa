@@ -1,12 +1,5 @@
 import { create } from "zustand";
-
-type State = {
-  counter: number;
-}
-
-type Actions = {
-  increaseCounter: () => void;
-}
+import { Actions, State } from "../types";
 
 export const useHomeStore = create<State & Actions>((set) => ({
   counter: 0,

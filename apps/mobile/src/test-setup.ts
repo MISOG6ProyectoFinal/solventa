@@ -41,6 +41,7 @@ jest.mock('react-native', () => {
   return {
     View: host('View'),
     Text: host('Text'),
+    Image: host('Image'),
     TextInput: host('TextInput'),
     Pressable: host('Pressable'),
     ScrollView: host('ScrollView'),

@@ -2,7 +2,7 @@ import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen } from '../../../../shared/ui';
-import { claimsSummary } from '../../claimsSummary';
+import { texts } from '../../texts';
 import styles from './styles';
 
 export default function ClaimsScreen() {
@@ -12,15 +12,15 @@ export default function ClaimsScreen() {
     <Screen
       testID="claims-screen"
       withTabBar
-      header={{ title: claimsSummary.title, hideBackButton: true }}
+      header={{ title: texts.claims.screenTitle, hideBackButton: true }}
     >
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card style={styles.empty}>
           <AppText variant="bodySmall" style={styles.emptyMessage}>
-            {claimsSummary.emptyMessage}
+            {texts.claims.emptyMessage}
           </AppText>
           <Button
-            title={claimsSummary.reportAction}
+            title={texts.claims.reportButton}
             onPress={() => navigation.navigate('ClaimReport')}
           />
         </Card>
