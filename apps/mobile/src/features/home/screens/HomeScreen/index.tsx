@@ -1,26 +1,38 @@
-import { Button, StatusBar, View, Text } from "react-native";
+import { StatusBar, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-import { theme } from "../../../../shared/theme";
-import styles from "./styles";
-import { useNavigation } from "@react-navigation/native";
-import { useHomeStore } from "../../store";
+import { useHomeStore } from '../../store';
+import { theme } from '../../../../shared/theme';
+import { Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import styles from './styles';
 
 const HomeScreen: React.FunctionComponent = () => {
   const navigation = useNavigation();
-  const counter = useHomeStore(state => state.counter);
-  const increaseCounter = useHomeStore(state => state.increaseCounter);
+  const counter = useHomeStore((state) => state.counter);
+  const increaseCounter = useHomeStore((state) => state.increaseCounter);
 
   return (
-    <>
+    <Screen testID="home-screen">
       <StatusBar barStyle="dark-content" />
-      <View testID="home-screen" style={styles.screen}>
-        <View testID="home-surface" style={styles.surface}>
-          <Text style={theme.type.body}>Counter - {counter}</Text>
-          <Button title="Increase" onPress={increaseCounter} />
-          <Button title="Go to details" onPress={() => navigation.navigate('Details')} />
-        </View>
+      <View style={styles.inset}>
+        <Card testID="home-surface">
+          <Text style={theme.type.body}>Contador - {counter}</Text>
+          <Banner testID="home-banner" variant="success">
+            Tu póliza fue emitida y tu seguro ya está activo
+          </Banner>
+          <StatusChip testID="home-chip" variant="online">
+            En línea
+          </StatusChip>
+          <Button testID="home-primary" title="Aumentar" onPress={increaseCounter} />
+          <Button
+            testID="home-confirm"
+            title="Ver detalle"
+            variant="confirm"
+            onPress={() => navigation.navigate('Details')}
+          />
+        </Card>
       </View>
-    </>
+    </Screen>
   );
 };
 
