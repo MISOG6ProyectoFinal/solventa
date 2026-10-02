@@ -9,6 +9,7 @@ type FieldFrameProps = {
   required?: boolean;
   error?: boolean;
   message?: string;
+  focused?: boolean;
   testID?: string;
   trailing?: ReactNode;
   onPress?: () => void;
@@ -20,13 +21,14 @@ export function FieldFrame({
   required = false,
   error = false,
   message,
+  focused = false,
   testID,
   trailing,
   onPress,
   children,
 }: FieldFrameProps) {
   const control = (
-    <View testID={testID} style={[styles.control, error && styles.error]}>
+    <View testID={testID} style={[styles.control, focused && !error && styles.focused, error && styles.error]}>
       <View style={styles.body}>{children}</View>
       {trailing}
     </View>
@@ -34,7 +36,7 @@ export function FieldFrame({
 
   return (
     <View style={styles.field}>
-      <AppText variant="label">
+      <AppText variant="label" style={styles.label}>
         {label}
         {required ? (
           <AppText variant="label" style={styles.asterisk}>
@@ -56,6 +58,11 @@ const styles = StyleSheet.create({
   field: {
     gap: theme.space.xs,
   },
+  label: {
+    fontFamily: theme.type.subtitle.fontFamily,
+    fontWeight: theme.type.subtitle.fontWeight,
+    letterSpacing: 0.6,
+  },
   asterisk: {
     color: theme.colors.danger,
     textTransform: 'none',
@@ -67,8 +74,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.medium,
-    paddingHorizontal: theme.space.md,
-    minHeight: 48,
+    paddingVertical: theme.space.md,
+    paddingHorizontal: theme.space.lg,
+  },
+  focused: {
+    borderWidth: 2,
+    borderColor: theme.colors.blue,
   },
   error: {
     borderColor: theme.colors.danger,

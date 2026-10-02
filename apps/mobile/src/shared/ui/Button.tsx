@@ -3,7 +3,14 @@ import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react
 import { theme } from '../theme';
 import { AppText } from './AppText';
 
-type ButtonVariant = 'primary' | 'confirm' | 'secondary' | 'danger';
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'outlined'
+  | 'primaryOutline'
+  | 'text'
+  | 'accentLink';
 
 type ButtonProps = {
   title: string;
@@ -20,7 +27,6 @@ export function Button({
   onPress,
   testID,
 }: ButtonProps) {
-  const looksDisabled = disabled && variant === 'primary';
   const pressed = useAnimatedValue(0);
 
   const animatePressed = (toValue: number) => {
@@ -61,9 +67,9 @@ export function Button({
           if (!disabled) animatePressed(1);
         }}
         onPressOut={() => animatePressed(0)}
-        style={[styles.base, containerStyles[variant], looksDisabled && styles.disabled]}
+        style={[styles.base, containerStyles[variant], disabled && styles.disabled]}
       >
-        <AppText variant="button" style={labelStyles[variant]}>
+        <AppText variant="button" style={[labelStyles[variant], disabled && styles.disabledLabel]}>
           {title}
         </AppText>
       </Pressable>
@@ -79,11 +85,15 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     borderRadius: theme.radius.medium,
-    paddingVertical: theme.space.md,
+    paddingVertical: 10,
     paddingHorizontal: theme.space.lg,
   },
   disabled: {
-    opacity: 0.45,
+    backgroundColor: theme.colors.border,
+    borderWidth: 0,
+  },
+  disabledLabel: {
+    color: theme.colors.textMuted,
   },
 });
 
@@ -91,22 +101,36 @@ const containerStyles = StyleSheet.create({
   primary: {
     backgroundColor: theme.colors.navy,
   },
-  confirm: {
+  secondary: {
+    backgroundColor: theme.colors.blue,
+  },
+  accent: {
     backgroundColor: theme.colors.teal,
   },
-  secondary: {
+  outlined: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  danger: {
-    backgroundColor: theme.colors.danger,
+  primaryOutline: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.navy,
+  },
+  text: {
+    backgroundColor: 'transparent',
+  },
+  accentLink: {
+    backgroundColor: 'transparent',
   },
 });
 
 const labelStyles = StyleSheet.create({
   primary: { color: theme.colors.onNavy },
-  confirm: { color: theme.colors.onNavy },
-  secondary: { color: theme.colors.navy },
-  danger: { color: theme.colors.onNavy },
+  secondary: { color: theme.colors.onNavy },
+  accent: { color: theme.colors.onNavy },
+  outlined: { color: theme.colors.text },
+  primaryOutline: { color: theme.colors.navy },
+  text: { color: theme.colors.navy },
+  accentLink: { color: theme.colors.teal },
 });

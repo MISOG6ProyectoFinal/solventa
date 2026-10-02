@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
   },
   inverse: {
     backgroundColor: theme.colors.navy,
-    borderColor: theme.colors.navy,
+    borderWidth: 0,
   },
 });

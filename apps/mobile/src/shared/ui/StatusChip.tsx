@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { theme } from '../theme';
 import { AppText } from './AppText';
 
-type StatusChipVariant = 'online' | 'active' | 'filed' | 'pending' | 'assistance';
+type StatusChipVariant = 'tag' | 'active' | 'paid' | 'pending';
 
 type StatusChipProps = {
   variant: StatusChipVariant;
@@ -12,10 +12,15 @@ type StatusChipProps = {
   testID?: string;
 };
 
+const medium = {
+  fontFamily: theme.type.subtitle.fontFamily,
+  fontWeight: theme.type.subtitle.fontWeight,
+};
+
 export function StatusChip({ variant, children, testID }: StatusChipProps) {
   return (
     <View testID={testID} style={[styles.chip, containerStyles[variant]]}>
-      <AppText variant="caption" style={labelStyles[variant]}>
+      <AppText variant="bodySmall" style={[labelStyles[variant], variant !== 'tag' && medium]}>
         {children}
       </AppText>
     </View>
@@ -26,43 +31,33 @@ const styles = StyleSheet.create({
   chip: {
     alignSelf: 'flex-start',
     borderRadius: theme.radius.full,
-    paddingVertical: theme.space.xs,
+    paddingVertical: 6,
     paddingHorizontal: theme.space.md,
   },
 });
 
 const containerStyles = StyleSheet.create({
-  online: {
-    backgroundColor: theme.colors.surface,
+  tag: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   active: {
-    backgroundColor: theme.colors.success.background,
-    borderWidth: 1,
-    borderColor: theme.colors.success.border,
+    backgroundColor: theme.colors.navy,
   },
-  filed: {
-    backgroundColor: theme.colors.info.background,
-    borderWidth: 1,
-    borderColor: theme.colors.info.border,
+  paid: {
+    backgroundColor: theme.colors.teal,
   },
   pending: {
     backgroundColor: theme.colors.warning.background,
     borderWidth: 1,
     borderColor: theme.colors.warning.border,
   },
-  assistance: {
-    backgroundColor: theme.colors.info.background,
-    borderWidth: 1,
-    borderColor: theme.colors.info.border,
-  },
 });
 
 const labelStyles = StyleSheet.create({
-  online: { color: theme.colors.navy },
-  active: { color: theme.colors.success.text },
-  filed: { color: theme.colors.info.text },
+  tag: { color: theme.colors.text },
+  active: { color: theme.colors.onNavy },
+  paid: { color: theme.colors.onNavy },
   pending: { color: theme.colors.warning.text },
-  assistance: { color: theme.colors.info.text },
 });

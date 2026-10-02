@@ -34,7 +34,7 @@ export function DateField({
         </AppText>
       }
     >
-      <AppText variant="body" style={value ? styles.value : styles.placeholder}>
+      <AppText variant="bodySmall" style={value ? styles.value : styles.placeholder}>
         {value || 'dd/mm/aaaa'}
       </AppText>
     </FieldFrame>
@@ -43,11 +43,10 @@ export function DateField({
 
 const styles = StyleSheet.create({
   value: {
-    paddingVertical: theme.space.md,
+    color: theme.colors.text,
   },
   placeholder: {
     color: theme.colors.textMuted,
-    paddingVertical: theme.space.md,
   },
   icon: {
     marginLeft: theme.space.sm,

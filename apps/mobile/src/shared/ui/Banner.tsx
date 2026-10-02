@@ -24,7 +24,7 @@ export function Banner({ variant, children, testID }: BannerProps) {
         },
       ]}
     >
-      <AppText variant="body" style={{ color: theme.colors[variant].text }}>
+      <AppText variant="bodySmall" style={{ color: theme.colors[variant].text }}>
         {children}
       </AppText>
     </View>
@@ -36,6 +36,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     borderWidth: 1,
     borderRadius: theme.radius.medium,
-    padding: theme.space.md,
+    paddingVertical: theme.space.md,
+    paddingHorizontal: theme.space.lg,
   },
 });

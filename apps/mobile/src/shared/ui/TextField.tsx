@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
 import { theme } from '../theme';
@@ -20,17 +21,22 @@ export function TextField({
   error = false,
   testID,
 }: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <FieldFrame
       label={label}
       required={required}
       error={error}
+      focused={focused}
       message={error ? 'Obligatorio' : undefined}
       testID={testID}
     >
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={styles.input}
         placeholderTextColor={theme.colors.textMuted}
       />
@@ -40,7 +46,8 @@ export function TextField({
 
 const styles = StyleSheet.create({
   input: {
-    ...theme.type.body,
-    paddingVertical: theme.space.md,
+    ...theme.type.bodySmall,
+    color: theme.colors.text,
+    paddingVertical: 0,
   },
 });
