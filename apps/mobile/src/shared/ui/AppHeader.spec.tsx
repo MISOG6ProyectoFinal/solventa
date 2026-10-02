@@ -26,5 +26,18 @@ describe('AppHeader', () => {
 
     expect(hidden.getByText('Componentes')).toBeTruthy();
     expect(hidden.getByLabelText('Volver')).toBeTruthy();
+    expect(hidden.queryByText('Cobertura vigente')).toBeNull();
+  });
+
+  it('shows a flow subtitle when one is given', async () => {
+    const { getByText } = await render(
+      <AppHeader variant="flow" title="Mis pólizas" subtitle="Cobertura vigente" />,
+    );
+
+    expect(getByText('Cobertura vigente')).toHaveStyle({
+      fontSize: 11,
+      lineHeight: 16.5,
+      color: theme.colors.onNavyMuted,
+    });
   });
 });

@@ -16,6 +16,7 @@ type HomeHeaderProps = {
 type FlowHeaderProps = {
   variant: 'flow';
   title: string;
+  subtitle?: string;
   onBackPress?: () => void;
 };
 
@@ -98,51 +99,60 @@ export function AppHeader(props: AppHeaderProps) {
   return (
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>
       <StatusBar barStyle="light-content" />
-      {props.variant === 'home' ? (
-        <HeaderIconButton
-          label="Menú"
-          icon="menu"
-          onPress={props.onMenuPress}
-          onLongPress={props.onMenuLongPress}
-        />
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Volver"
-          onPress={props.onBackPress}
-          style={styles.hit}
-        >
-          <Icon name="volver" size={20} color="onNavy" />
-        </Pressable>
-      )}
-      <View style={styles.copy}>
+      <View style={styles.row}>
         {props.variant === 'home' ? (
-          <>
-            <AppText variant="screenTitle" numberOfLines={1} style={styles.greeting}>
-              {props.greeting}
-            </AppText>
-            <AppText variant="bodySmall" style={styles.muted}>
-              Tu cobertura
-            </AppText>
-          </>
+          <HeaderIconButton
+            label="Menú"
+            icon="menu"
+            onPress={props.onMenuPress}
+            onLongPress={props.onMenuLongPress}
+          />
         ) : (
-          <AppText variant="button" style={styles.onNavy}>
-            {props.title}
-          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
+            onPress={props.onBackPress}
+            style={styles.hit}
+          >
+            <Icon name="volver" size={20} color="onNavy" />
+          </Pressable>
         )}
+        <View style={styles.copy}>
+          {props.variant === 'home' ? (
+            <>
+              <AppText variant="screenTitle" numberOfLines={1} style={styles.greeting}>
+                {props.greeting}
+              </AppText>
+              <AppText variant="bodySmall" style={styles.muted}>
+                Tu cobertura
+              </AppText>
+            </>
+          ) : (
+            <AppText variant="screenTitle" numberOfLines={1} style={styles.greeting}>
+              {props.title}
+            </AppText>
+          )}
+        </View>
       </View>
+      {props.variant === 'flow' && props.subtitle ? (
+        <AppText variant="bodySmall" numberOfLines={1} style={styles.subtitle}>
+          {props.subtitle}
+        </AppText>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.sm,
     backgroundColor: theme.colors.navy,
     paddingBottom: theme.space.md,
     paddingHorizontal: theme.space.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.sm,
   },
   hit: {
     width: 44,
@@ -166,10 +176,14 @@ const styles = StyleSheet.create({
     lineHeight: 22.5,
     color: theme.colors.onNavy,
   },
-  onNavy: {
-    color: theme.colors.onNavy,
-  },
   muted: {
+    color: theme.colors.onNavyMuted,
+  },
+  subtitle: {
+    marginTop: theme.space.xs,
+    marginLeft: theme.space.xxl,
+    fontSize: 11,
+    lineHeight: 16.5,
     color: theme.colors.onNavyMuted,
   },
 });
