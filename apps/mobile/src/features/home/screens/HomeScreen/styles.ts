@@ -6,6 +6,6 @@ export default StyleSheet.create({
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
+    gap: 12,
   },
 });
