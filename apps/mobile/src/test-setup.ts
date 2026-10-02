@@ -44,6 +44,8 @@ jest.mock('react-native', () => {
     TextInput: host('TextInput'),
     Pressable: host('Pressable'),
     ScrollView: host('ScrollView'),
+    Modal: ({ children, visible, ...props }: { children?: unknown; visible?: boolean }) =>
+      visible ? React.createElement('Modal', props, children) : null,
     StatusBar: () => null,
     Animated: {
       View: host('Animated.View'),

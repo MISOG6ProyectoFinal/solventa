@@ -78,6 +78,7 @@ const iconLabels: Record<IconName, string> = {
   socios: 'Socios',
   menu: 'Menú',
   volver: 'Volver',
+  desplegar: 'Desplegar',
   cerrar: 'Cerrar',
   buscar: 'Buscar',
   filtro: 'Filtrar',
@@ -385,10 +386,16 @@ export const catalog: PlaygroundItem[] = [
       { kind: 'switch', key: 'required', label: 'Obligatorio' },
       { kind: 'switch', key: 'error', label: 'Error' },
     ],
-    render: (values) => (
+    render: (values, update) => (
       <SelectField
         label={text(values, 'label')}
         value={text(values, 'value')}
+        options={[
+          { value: 'España', label: 'España' },
+          { value: 'México', label: 'México' },
+          { value: 'Colombia', label: 'Colombia' },
+        ]}
+        onChange={(value) => update('value', value)}
         required={flag(values, 'required')}
         error={flag(values, 'error')}
       />

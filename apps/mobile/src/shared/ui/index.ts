@@ -14,6 +14,7 @@ export { Indicator } from './Indicator';
 export { KeyValue } from './KeyValue';
 export { OptionList } from './OptionList';
 export { Screen } from './Screen';
+export type { SelectOption } from './SelectField';
 export { SelectField } from './SelectField';
 export { Stat } from './Stat';
 export { StatusChip } from './StatusChip';

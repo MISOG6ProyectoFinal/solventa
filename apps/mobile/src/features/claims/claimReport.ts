@@ -1,9 +1,16 @@
+export type ClaimChoice = {
+  value: string;
+  label: string;
+};
+
 export type ClaimReport = {
   title: string;
   policyLabel: string;
   policy: string;
+  policies: ClaimChoice[];
   typeLabel: string;
   type: string;
+  types: ClaimChoice[];
   occurredAtLabel: string;
   occurredAt: string;
   locationLabel: string;
@@ -24,8 +31,26 @@ export const claimReport: ClaimReport = {
   title: 'Reportar siniestro',
   policyLabel: 'Póliza afectada',
   policy: 'Viaje Internacional · SLV-2026-03105',
+  policies: [
+    {
+      value: 'Viaje Internacional · SLV-2026-03105',
+      label: 'Viaje Internacional · SLV-2026-03105',
+    },
+    {
+      value: 'Protección Celular · SLV-2025-01820',
+      label: 'Protección Celular · SLV-2025-01820',
+    },
+  ],
   typeLabel: 'Tipo de siniestro',
   type: 'Accidente con vehículo de alquiler',
+  types: [
+    {
+      value: 'Accidente con vehículo de alquiler',
+      label: 'Accidente con vehículo de alquiler',
+    },
+    { value: 'Pérdida de equipaje', label: 'Pérdida de equipaje' },
+    { value: 'Emergencia médica', label: 'Emergencia médica' },
+  ],
   occurredAtLabel: 'Fecha y hora de ocurrencia',
   occurredAt: '2026-09-12 10:30',
   locationLabel: 'Ubicación',

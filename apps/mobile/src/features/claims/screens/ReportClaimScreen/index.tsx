@@ -14,6 +14,8 @@ import { claimReport } from '../../claimReport';
 import styles from './styles';
 
 export default function ReportClaimScreen() {
+  const [policy, setPolicy] = useState(claimReport.policy);
+  const [claimType, setClaimType] = useState(claimReport.type);
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const descriptionMissing = submitted && description.trim() === '';
@@ -22,8 +24,20 @@ export default function ReportClaimScreen() {
     <Screen testID="report-claim-screen" header={{ title: claimReport.title }}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
-          <SelectField label={claimReport.policyLabel} value={claimReport.policy} required />
-          <SelectField label={claimReport.typeLabel} value={claimReport.type} required />
+          <SelectField
+            label={claimReport.policyLabel}
+            value={policy}
+            options={claimReport.policies}
+            onChange={setPolicy}
+            required
+          />
+          <SelectField
+            label={claimReport.typeLabel}
+            value={claimType}
+            options={claimReport.types}
+            onChange={setClaimType}
+            required
+          />
           <DateField label={claimReport.occurredAtLabel} value={claimReport.occurredAt} required />
           <View>
             <AppText variant="label" style={styles.locationLabel}>
