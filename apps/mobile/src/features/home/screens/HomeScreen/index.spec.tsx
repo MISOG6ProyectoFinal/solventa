@@ -38,6 +38,7 @@ describe('HomeScreen', () => {
     ).toHaveStyle({ color: theme.colors.success.text });
     expect(getByTestId('home-banner')).toHaveStyle({
       backgroundColor: theme.colors.success.background,
+      borderColor: theme.colors.success.border,
     });
 
     expect(getByText('En línea')).toHaveStyle({ color: theme.colors.navy });

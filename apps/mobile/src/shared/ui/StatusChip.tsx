@@ -39,22 +39,30 @@ const containerStyles = StyleSheet.create({
   },
   active: {
     backgroundColor: theme.colors.success.background,
+    borderWidth: 1,
+    borderColor: theme.colors.success.border,
   },
   filed: {
-    backgroundColor: theme.colors.progress.background,
+    backgroundColor: theme.colors.info.background,
+    borderWidth: 1,
+    borderColor: theme.colors.info.border,
   },
   pending: {
     backgroundColor: theme.colors.warning.background,
+    borderWidth: 1,
+    borderColor: theme.colors.warning.border,
   },
   assistance: {
     backgroundColor: theme.colors.info.background,
+    borderWidth: 1,
+    borderColor: theme.colors.info.border,
   },
 });
 
 const labelStyles = StyleSheet.create({
   online: { color: theme.colors.navy },
   active: { color: theme.colors.success.text },
-  filed: { color: theme.colors.progress.text },
+  filed: { color: theme.colors.info.text },
   pending: { color: theme.colors.warning.text },
   assistance: { color: theme.colors.info.text },
 });
