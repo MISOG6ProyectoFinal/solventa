@@ -29,7 +29,7 @@ export function OptionList({ options, value, onChange }: OptionListProps) {
             onPress={() => onChange(option.id)}
             style={[styles.option, selected && styles.selected]}
           >
-            <AppText variant="bodyMedium">{option.label}</AppText>
+            <AppText variant="body">{option.label}</AppText>
           </Pressable>
         );
       })}

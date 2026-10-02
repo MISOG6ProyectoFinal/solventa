@@ -12,7 +12,7 @@ export function KeyValue({ label, value }: KeyValueProps) {
   return (
     <View style={styles.row}>
       <AppText variant="caption">{label}</AppText>
-      <AppText variant="value">{value}</AppText>
+      <AppText variant="body">{value}</AppText>
     </View>
   );
 }

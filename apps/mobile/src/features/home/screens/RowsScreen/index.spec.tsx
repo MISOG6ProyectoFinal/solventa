@@ -29,8 +29,9 @@ describe('RowsScreen', () => {
     expect(getByText('Asistencia en viaje')).toBeTruthy();
 
     expect(getByText('Perito')).toHaveStyle({
-      fontFamily: 'Outfit-Medium',
-      color: theme.colors.text,
+      fontFamily: 'Outfit-Regular',
+      fontSize: theme.type.body.fontSize,
+      color: theme.type.body.color,
     });
     expect(getByTestId('option-perito')).toHaveStyle({
       borderColor: theme.colors.borderSelected,
