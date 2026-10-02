@@ -44,6 +44,7 @@ export default function ReportClaimScreen() {
             value={occurredAt}
             onChange={setOccurredAt}
             required
+            timeSelection
           />
           <View>
             <AppText variant="label" style={styles.locationLabel}>

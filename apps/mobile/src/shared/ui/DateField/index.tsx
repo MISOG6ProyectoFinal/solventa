@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../../theme';
+import { outfitFont } from '../../theme/fonts';
 import { AppText } from '../AppText';
+import { Button } from '../Button';
 import { FieldFrame } from '../FieldFrame';
 import { Icon } from '../Icon';
 import { Sheet, type SheetHandle } from '../Sheet';
-import { formatDate, parseDate } from './date';
+import { formatDate, formatTime, months, parseDate, parseTime } from './date';
 import { MonthGrid } from './MonthGrid';
+import { TimePicker } from './TimePicker';
 
 type DateFieldProps = {
   label: string;
@@ -16,6 +19,7 @@ type DateFieldProps = {
   required?: boolean;
   error?: boolean;
   yearSelection?: boolean;
+  timeSelection?: boolean;
   testID?: string;
 };
 
@@ -26,6 +30,7 @@ export function DateField({
   required = false,
   error = false,
   yearSelection = true,
+  timeSelection = false,
   testID,
 }: DateFieldProps) {
   const parsed = useMemo(() => parseDate(value), [value]);
@@ -35,12 +40,17 @@ export function DateField({
     const initial = parsed ?? { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
     return { month: initial.month, year: initial.year };
   });
+  const [clock, setClock] = useState(() => parseTime(parsed?.time) ?? { hour: 0, minute: 0 });
+  const [pendingDay, setPendingDay] = useState<number | null>(null);
+  const pickingTime = timeSelection && pendingDay !== null;
 
   const open = () => {
     const next = parseDate(value);
     if (next && (next.month !== cursor.month || next.year !== cursor.year)) {
       setCursor({ month: next.month, year: next.year });
     }
+    setClock(parseTime(next?.time) ?? { hour: 0, minute: 0 });
+    setPendingDay(null);
     setFocused(true);
     sheet.current?.present();
   };
@@ -58,11 +68,31 @@ export function DateField({
 
   const choose = useCallback(
     (day: number) => {
+      if (timeSelection) {
+        setPendingDay(day);
+        return;
+      }
       onChange?.(formatDate({ day, month: cursor.month, year: cursor.year, time: parsed?.time }));
       sheet.current?.dismiss();
     },
-    [cursor, onChange, parsed],
+    [cursor, onChange, parsed, timeSelection],
   );
+
+  const confirmTime = useCallback(() => {
+    if (pendingDay === null) return;
+    onChange?.(
+      formatDate({ day: pendingDay, month: cursor.month, year: cursor.year, time: formatTime(clock) }),
+    );
+    sheet.current?.dismiss();
+  }, [clock, cursor, onChange, pendingDay]);
+
+  const setHour = useCallback((hour: number) => {
+    setClock((current) => ({ ...current, hour }));
+  }, []);
+
+  const setMinute = useCallback((minute: number) => {
+    setClock((current) => ({ ...current, minute }));
+  }, []);
 
   const shown = parsed ? formatDate(parsed) : value;
 
@@ -79,15 +109,15 @@ export function DateField({
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
       >
         <AppText variant="bodySmall" style={shown ? styles.value : styles.placeholder}>
-          {shown || 'dd/mm/aaaa'}
+          {shown || (timeSelection ? 'dd/mm/aaaa hh:mm' : 'dd/mm/aaaa')}
         </AppText>
       </FieldFrame>
-      <Sheet ref={sheet} onClose={() => setFocused(false)} testID="date-sheet">
-        {focused ? (
+      <Sheet ref={sheet} onClose={() => { setFocused(false); setPendingDay(null); }} testID="date-sheet">
+        {focused && !pickingTime ? (
           <MonthGrid
             month={cursor.month}
             year={cursor.year}
-            selectedDay={parsed?.day ?? null}
+            selectedDay={pendingDay ?? parsed?.day ?? null}
             selectedMonth={parsed?.month ?? null}
             selectedYear={parsed?.year ?? null}
             onShift={shiftMonth}
@@ -95,6 +125,17 @@ export function DateField({
             yearSelection={yearSelection}
             onYear={setYear}
           />
+        ) : null}
+        {focused && pickingTime ? (
+          <>
+            <AppText variant="subtitle" style={styles.chosen}>
+              {`${pendingDay} de ${months[cursor.month - 1]} de ${cursor.year}`}
+            </AppText>
+            <TimePicker hour={clock.hour} minute={clock.minute} onHour={setHour} onMinute={setMinute} />
+            <View style={{height: theme.space.md}} />
+            <Button title="Listo" onPress={confirmTime} />
+            <Button title="Cambiar fecha" variant="text" onPress={() => setPendingDay(null)} />
+          </>
         ) : null}
       </Sheet>
     </>
@@ -107,5 +148,10 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: theme.colors.textMuted,
+  },
+  chosen: {
+    textAlign: 'center',
+    // Outfit Medium leaves the digits blank on Android.
+    ...outfitFont('400'),
   },
 });

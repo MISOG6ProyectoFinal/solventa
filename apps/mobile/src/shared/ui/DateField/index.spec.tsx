@@ -55,6 +55,61 @@ describe('DateField', () => {
     expect(queryByText('Octubre 2026')).toBeNull();
   });
 
+  it('does not offer a time change unless time selection is enabled', async () => {
+    const { getByText, queryByLabelText } = await render(
+      <DateField label="Fecha y hora de ocurrencia" value="2026-09-12 10:30" />,
+    );
+
+    await fireEvent.press(getByText('12/09/2026 10:30'));
+
+    expect(queryByLabelText('Hora')).toBeNull();
+    expect(queryByLabelText('Minuto')).toBeNull();
+  });
+
+  it('shows a time placeholder when time selection is enabled and no date is set', async () => {
+    const { getByText } = await render(<DateField label="Fecha y hora de ocurrencia" timeSelection />);
+
+    expect(getByText('dd/mm/aaaa hh:mm')).toBeTruthy();
+  });
+
+  it('changes the hour and minute when time selection is enabled', async () => {
+    const onChange = jest.fn();
+    const { getByLabelText, getByText, queryByLabelText, queryByText } = await render(
+      <DateField label="Fecha y hora de ocurrencia" value="2026-09-12 10:30" onChange={onChange} timeSelection />,
+    );
+
+    await fireEvent.press(getByText('12/09/2026 10:30'));
+
+    expect(queryByLabelText('Hora')).toBeNull();
+
+    await fireEvent.press(getByLabelText('15 de septiembre de 2026'));
+
+    expect(getByLabelText('Hora')).toHaveProp('value', '10');
+    expect(getByLabelText('Minuto')).toHaveProp('value', '30');
+    expect(queryByText('Septiembre 2026')).toBeNull();
+
+    await fireEvent.changeText(getByLabelText('Hora'), '11');
+    await fireEvent.changeText(getByLabelText('Minuto'), '29');
+    await fireEvent.press(getByText('Listo'));
+
+    expect(onChange).toHaveBeenCalledWith('15/09/2026 11:29');
+    expect(queryByLabelText('Hora')).toBeNull();
+  });
+
+  it('ignores an hour or minute outside the clock', async () => {
+    const { getByLabelText, getByText } = await render(
+      <DateField label="Fecha y hora de ocurrencia" value="2026-09-12 10:30" timeSelection />,
+    );
+
+    await fireEvent.press(getByText('12/09/2026 10:30'));
+    await fireEvent.press(getByLabelText('12 de septiembre de 2026'));
+    await fireEvent.changeText(getByLabelText('Hora'), '25');
+    await fireEvent.changeText(getByLabelText('Minuto'), '60');
+
+    expect(getByLabelText('Hora')).toHaveProp('value', '10');
+    expect(getByLabelText('Minuto')).toHaveProp('value', '30');
+  });
+
   it('keeps the time when a new day is chosen', async () => {
     const onChange = jest.fn();
     const { getByLabelText, getByText } = await render(
@@ -69,7 +124,7 @@ describe('DateField', () => {
 
   it('does not offer a year change unless year selection is enabled', async () => {
     const { getByText, queryByLabelText } = await render(
-      <DateField label="Fecha de salida" value="10/10/2026" />,
+      <DateField label="Fecha de salida" value="10/10/2026" yearSelection={false} />,
     );
 
     await fireEvent.press(getByText('10/10/2026'));

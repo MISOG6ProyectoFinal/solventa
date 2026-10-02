@@ -405,13 +405,14 @@ export const catalog: PlaygroundItem[] = [
   {
     id: 'date',
     title: 'Fecha',
-    initial: { label: 'Fecha de salida', value: '10/10/2026', required: false, error: false, yearSelection: true },
+    initial: { label: 'Fecha de salida', value: '10/10/2026', required: false, error: false, yearSelection: true, timeSelection: false },
     fields: [
       { kind: 'text', key: 'label', label: 'Etiqueta' },
       { kind: 'text', key: 'value', label: 'Valor' },
       { kind: 'switch', key: 'required', label: 'Obligatorio' },
       { kind: 'switch', key: 'error', label: 'Error' },
       { kind: 'switch', key: 'yearSelection', label: 'Elegir año' },
+      { kind: 'switch', key: 'timeSelection', label: 'Elegir hora' },
     ],
     render: (values, update) => (
       <DateField
@@ -421,6 +422,7 @@ export const catalog: PlaygroundItem[] = [
         required={flag(values, 'required')}
         error={flag(values, 'error')}
         yearSelection={flag(values, 'yearSelection')}
+        timeSelection={flag(values, 'timeSelection')}
       />
     ),
   },

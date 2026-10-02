@@ -55,6 +55,18 @@ export function formatDate(parts: DateParts) {
   return parts.time ? `${date} ${parts.time}` : date;
 }
 
+export function parseTime(value?: string) {
+  const match = value?.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+export function formatTime(parts: { hour: number; minute: number }) {
+  const hour = String(parts.hour).padStart(2, '0');
+  const minute = String(parts.minute).padStart(2, '0');
+  return `${hour}:${minute}`;
+}
+
 export const yearsPerPage = 12;
 
 // Leaves the current year near the middle of the page.

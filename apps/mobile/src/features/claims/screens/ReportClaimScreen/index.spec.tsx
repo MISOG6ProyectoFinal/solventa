@@ -61,6 +61,17 @@ describe('ReportClaimScreen', () => {
     expect(getByText('Agrega al menos una evidencia')).toBeTruthy();
   });
 
+  it('changes the occurrence time', async () => {
+    const { getByLabelText, getByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByText('12/09/2026 10:30'));
+    await fireEvent.press(getByLabelText('12 de septiembre de 2026'));
+    await fireEvent.changeText(getByLabelText('Hora'), '11');
+    await fireEvent.press(getByText('Listo'));
+
+    expect(getByText('12/09/2026 11:30')).toBeTruthy();
+  });
+
   it('returns to the claims list', async () => {
     const { getByLabelText } = await render(<ReportClaimScreen />);
 
