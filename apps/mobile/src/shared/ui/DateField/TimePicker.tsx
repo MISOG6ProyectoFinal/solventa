@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import { theme } from '../../theme';
 import { outfitFont } from '../../theme/fonts';
@@ -28,7 +29,7 @@ function TimePart({ label, value, max, onChange }: TimePartProps) {
 
   return (
     <View style={styles.part}>
-      <TextInput
+      <BottomSheetTextInput
         accessibilityLabel={label}
         value={focused ? text : pad(value)}
         keyboardType="number-pad"

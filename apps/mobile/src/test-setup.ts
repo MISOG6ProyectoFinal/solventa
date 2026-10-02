@@ -149,7 +149,7 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const { TextInput, View } = require('react-native');
 
   const BottomSheetModal = React.forwardRef(
     (props: { children?: unknown; onDismiss?: () => void }, ref: React.Ref<{ present: () => void; dismiss: () => void }>) => {
@@ -186,6 +186,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetModal,
     BottomSheetModalProvider: ({ children }: { children?: unknown }) => children,
     BottomSheetView,
+    BottomSheetTextInput: TextInput,
     BottomSheetBackdrop: () => null,
   };
 });

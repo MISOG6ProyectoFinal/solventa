@@ -45,11 +45,15 @@ export const Sheet = forwardRef<SheetHandle, SheetProps>(function Sheet({ onClos
     [],
   );
 
+  // The window stays full screen, so the sheet moves by the keyboard height.
   return (
     <BottomSheetModal
       ref={modal}
       enableDynamicSizing
       enablePanDownToClose
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustPan"
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleIndicatorStyle={styles.handle}
