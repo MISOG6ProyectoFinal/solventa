@@ -1,0 +1,98 @@
+# Generado a partir del modelo de componentes VC-003 v2.0. Editar a mano es válido.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: siniestro-parametrico
+  labels:
+    app.kubernetes.io/name: siniestro-parametrico
+    app.kubernetes.io/component: negocio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: siniestro-parametrico
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: siniestro-parametrico
+        app.kubernetes.io/component: negocio
+    spec:
+      serviceAccountName: solventa-backend
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: siniestro-parametrico
+      containers:
+      - name: siniestro-parametrico
+        image: solventa/siniestro-parametrico
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NAME
+          value: siniestro-parametrico
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        - secretRef:
+            name: db-siniestros
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          periodSeconds: 1
+          timeoutSeconds: 1
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: siniestro-parametrico
+  labels:
+    app.kubernetes.io/name: siniestro-parametrico
+    app.kubernetes.io/component: negocio
+spec:
+  selector:
+    app.kubernetes.io/name: siniestro-parametrico
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: siniestro-parametrico
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: siniestro-parametrico

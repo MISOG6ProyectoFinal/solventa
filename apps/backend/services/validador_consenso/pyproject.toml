@@ -1,0 +1,14 @@
+[project]
+name = "validador-consenso"
+version = "0.1.0"
+description = "Validador de Consenso: Compara resultados de Cotización (2 de 3, acotado en tiempo)."
+requires-python = ">=3.11"
+dependencies = ["solventa-common"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

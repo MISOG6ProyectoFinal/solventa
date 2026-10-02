@@ -1,0 +1,26 @@
+# Entorno de desarrollo del backend: un solo venv con la librería común y las
+# dependencias de prueba. Cada servicio tiene su propio pyproject para la imagen.
+[project]
+name = "solventa-backend"
+version = "0.1.0"
+description = "Workspace de desarrollo de los microservicios de Solventa"
+requires-python = ">=3.11"
+dependencies = ["solventa-common"]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+solventa-common = { path = "libs/solventa_common", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+ruff = "^0.6"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["deploy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: solventa
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: solventa
+resources:
+  - serviceaccount.yaml
+  - services-config.yaml
+  - network-policy.yaml
+  - ingress.yaml
+  - services/bff-web.yaml
+  - services/bff-movil.yaml
+  - services/api-socios.yaml
+  - services/health-monitor.yaml
+  - services/cotizacion-rating.yaml
+  - services/validador-consenso.yaml
+  - services/suscripcion.yaml
+  - services/polizas.yaml
+  - services/catalogo-productos.yaml
+  - services/perfilamiento.yaml
+  - services/identidad-kyc.yaml
+  - services/siniestros.yaml
+  - services/siniestro-parametrico.yaml
+  - services/cobros-pagos.yaml
+  - services/socios-gobierno-api.yaml
+  - services/analitica-fraude.yaml
+  - services/notificaciones.yaml
+  - services/reaseguro.yaml
+  - services/auditoria-linaje.yaml
+  - services/workers-siniestro-parametrico.yaml

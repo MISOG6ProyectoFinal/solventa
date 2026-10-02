@@ -1,0 +1,115 @@
+# Generado a partir del modelo de componentes VC-003 v2.0. Editar a mano es válido.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validador-consenso
+  labels:
+    app.kubernetes.io/name: validador-consenso
+    app.kubernetes.io/component: negocio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: validador-consenso
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: validador-consenso
+        app.kubernetes.io/component: negocio
+    spec:
+      serviceAccountName: solventa-backend
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: validador-consenso
+      containers:
+      - name: validador-consenso
+        image: solventa/validador-consenso
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NAME
+          value: validador-consenso
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          periodSeconds: 1
+          timeoutSeconds: 1
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: validador-consenso
+  labels:
+    app.kubernetes.io/name: validador-consenso
+    app.kubernetes.io/component: negocio
+spec:
+  selector:
+    app.kubernetes.io/name: validador-consenso
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: validador-consenso
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: validador-consenso
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: validador-consenso
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: validador-consenso
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

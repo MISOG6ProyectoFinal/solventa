@@ -3,5 +3,50 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/backend",
-  "targets": {}
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./scripts/test-all.sh",
+        "cwd": "apps/backend"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ruff check . && ruff format --check .",
+        "cwd": "apps/backend"
+      }
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./scripts/build-images.sh",
+        "cwd": "apps/backend"
+      }
+    },
+    "k8s-render": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "kubectl kustomize deploy/k8s/overlays/{args.overlay}",
+        "cwd": "apps/backend",
+        "args": "--overlay=aws"
+      }
+    },
+    "tf-validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "for s in deploy/terraform/stacks/*/; do terraform -chdir=$s init -backend=false -input=false >/dev/null && terraform -chdir=$s validate || exit 1; done",
+        "cwd": "apps/backend"
+      }
+    },
+    "deploy": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ENV={args.env} ./deploy/scripts/deploy-aws.sh {args.step}",
+        "cwd": "apps/backend",
+        "args": "--env=dev --step=all"
+      }
+    }
+  }
 }

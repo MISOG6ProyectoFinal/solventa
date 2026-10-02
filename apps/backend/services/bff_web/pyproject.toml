@@ -1,0 +1,14 @@
+[project]
+name = "bff-web"
+version = "0.1.0"
+description = "BFF Web: Composición para gestión y back-office."
+requires-python = ">=3.11"
+dependencies = ["solventa-common"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
