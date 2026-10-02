@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type CoverageListProps = {
   items: string[];
@@ -10,9 +11,9 @@ export function CoverageList({ items }: CoverageListProps) {
   return (
     <View style={styles.list}>
       {items.map((item) => (
-        <Text key={item} style={theme.type.body}>
+        <AppText key={item} variant="body">
           {item}
-        </Text>
+        </AppText>
       ))}
     </View>
   );

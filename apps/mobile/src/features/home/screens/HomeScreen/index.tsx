@@ -1,9 +1,8 @@
-import { StatusBar, Text, View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { useHomeStore } from '../../store';
-import { theme } from '../../../../shared/theme';
-import { Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import styles from './styles';
 
 const HomeScreen: React.FunctionComponent = () => {
@@ -16,7 +15,7 @@ const HomeScreen: React.FunctionComponent = () => {
       <StatusBar barStyle="dark-content" />
       <View style={styles.inset}>
         <Card testID="home-surface">
-          <Text style={theme.type.body}>Contador - {counter}</Text>
+          <AppText variant="body">Contador - {counter}</AppText>
           <Banner testID="home-banner" variant="success">
             Tu póliza fue emitida y tu seguro ya está activo
           </Banner>

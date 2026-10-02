@@ -8,6 +8,7 @@ describe('FieldsScreen', () => {
     const { getByTestId, getByText, queryByText } = await render(<FieldsScreen />);
 
     expect(getByText(/Nombre completo/)).toHaveStyle({
+      fontFamily: 'Outfit-Regular',
       textTransform: 'uppercase',
       fontSize: theme.type.label.fontSize,
       color: theme.type.label.color,

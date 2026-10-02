@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type StatusChipVariant = 'online' | 'active' | 'filed' | 'pending' | 'assistance';
 
@@ -14,7 +15,9 @@ type StatusChipProps = {
 export function StatusChip({ variant, children, testID }: StatusChipProps) {
   return (
     <View testID={testID} style={[styles.chip, containerStyles[variant]]}>
-      <Text style={[theme.type.caption, labelStyles[variant]]}>{children}</Text>
+      <AppText variant="caption" style={labelStyles[variant]}>
+        {children}
+      </AppText>
     </View>
   );
 }

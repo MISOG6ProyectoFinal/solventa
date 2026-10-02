@@ -1,6 +1,7 @@
-import { Animated, Easing, Pressable, StyleSheet, Text, useAnimatedValue } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type ButtonVariant = 'primary' | 'confirm' | 'secondary' | 'danger';
 
@@ -62,9 +63,9 @@ export function Button({
         onPressOut={() => animatePressed(0)}
         style={[styles.base, containerStyles[variant], looksDisabled && styles.disabled]}
       >
-        <Text style={[theme.type.body, labelStyles[variant], styles.label]}>
+        <AppText variant="button" style={labelStyles[variant]}>
           {title}
-        </Text>
+        </AppText>
       </Pressable>
     </Animated.View>
   );
@@ -80,9 +81,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     paddingVertical: theme.space.md,
     paddingHorizontal: theme.space.lg,
-  },
-  label: {
-    fontWeight: '600',
   },
   disabled: {
     opacity: 0.45,

@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type ThumbnailProps = {
   name: string;
@@ -12,8 +13,8 @@ export function Thumbnail({ name, size, testID }: ThumbnailProps) {
   return (
     <View style={styles.item}>
       <View testID={testID} style={styles.preview} />
-      <Text style={theme.type.body}>{name}</Text>
-      <Text style={theme.type.caption}>{size}</Text>
+      <AppText variant="body">{name}</AppText>
+      <AppText variant="caption">{size}</AppText>
     </View>
   );
 }

@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type FieldFrameProps = {
   label: string;
@@ -33,12 +34,20 @@ export function FieldFrame({
 
   return (
     <View style={styles.field}>
-      <Text style={theme.type.label}>
+      <AppText variant="label">
         {label}
-        {required ? <Text style={styles.asterisk}> *</Text> : null}
-      </Text>
+        {required ? (
+          <AppText variant="label" style={styles.asterisk}>
+            {' *'}
+          </AppText>
+        ) : null}
+      </AppText>
       {onPress ? <Pressable onPress={onPress}>{control}</Pressable> : control}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {message ? (
+        <AppText variant="caption" style={styles.message}>
+          {message}
+        </AppText>
+      ) : null}
     </View>
   );
 }
@@ -68,8 +77,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   message: {
-    fontSize: theme.type.caption.fontSize,
-    fontWeight: theme.type.caption.fontWeight,
     color: theme.colors.danger,
   },
 });

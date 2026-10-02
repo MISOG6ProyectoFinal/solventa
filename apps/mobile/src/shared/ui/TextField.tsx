@@ -40,8 +40,7 @@ export function TextField({
 
 const styles = StyleSheet.create({
   input: {
-    color: theme.colors.text,
-    fontSize: theme.type.body.fontSize,
+    ...theme.type.body,
     paddingVertical: theme.space.md,
   },
 });

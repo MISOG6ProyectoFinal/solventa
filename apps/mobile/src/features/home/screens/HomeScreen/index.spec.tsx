@@ -18,6 +18,7 @@ describe('HomeScreen', () => {
       backgroundColor: theme.colors.surface,
     });
     expect(getByText('Contador - 0')).toHaveStyle({
+      fontFamily: 'Outfit-Regular',
       fontSize: theme.type.body.fontSize,
       color: theme.type.body.color,
     });

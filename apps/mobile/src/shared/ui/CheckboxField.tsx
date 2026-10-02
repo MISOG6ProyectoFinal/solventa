@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, useAnimatedValue } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type CheckboxFieldProps = {
   label: string;
@@ -72,10 +73,14 @@ export function CheckboxField({
           ✓
         </Animated.Text>
       </Animated.View>
-      <Text style={theme.type.label}>
+      <AppText variant="label">
         {label}
-        {required ? <Text style={styles.asterisk}> *</Text> : null}
-      </Text>
+        {required ? (
+          <AppText variant="label" style={styles.asterisk}>
+            {' *'}
+          </AppText>
+        ) : null}
+      </AppText>
     </Pressable>
   );
 }
@@ -97,8 +102,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mark: {
+    ...theme.type.caption,
     color: theme.colors.onNavy,
-    fontSize: theme.type.caption.fontSize,
   },
   asterisk: {
     color: theme.colors.danger,

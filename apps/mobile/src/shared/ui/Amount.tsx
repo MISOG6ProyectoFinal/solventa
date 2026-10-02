@@ -1,6 +1,4 @@
-import { Text } from 'react-native';
-
-import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type AmountProps = {
   value: string;
@@ -8,5 +6,9 @@ type AmountProps = {
 };
 
 export function Amount({ value, align = 'left' }: AmountProps) {
-  return <Text style={[theme.type.amount, { textAlign: align }]}>{value}</Text>;
+  return (
+    <AppText variant="amount" style={{ textAlign: align }}>
+      {value}
+    </AppText>
+  );
 }

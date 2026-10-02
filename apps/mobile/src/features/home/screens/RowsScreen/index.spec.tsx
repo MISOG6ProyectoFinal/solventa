@@ -8,6 +8,7 @@ describe('RowsScreen', () => {
     const { getByTestId, getByText } = await render(<RowsScreen />);
 
     expect(getByText('$ 149.940')).toHaveStyle({
+      fontFamily: 'Fraunces-SemiBold',
       fontSize: theme.type.amount.fontSize,
       fontWeight: theme.type.amount.fontWeight,
       color: theme.type.amount.color,
@@ -19,6 +20,7 @@ describe('RowsScreen', () => {
     expect(getByText('$ 453.600')).toBeTruthy();
 
     expect(getByText('Gastos médicos')).toHaveStyle({
+      fontFamily: 'Outfit-Regular',
       fontSize: theme.type.body.fontSize,
       color: theme.type.body.color,
     });
@@ -26,6 +28,10 @@ describe('RowsScreen', () => {
     expect(getByText('Pérdida de equipaje')).toBeTruthy();
     expect(getByText('Asistencia en viaje')).toBeTruthy();
 
+    expect(getByText('Perito')).toHaveStyle({
+      fontFamily: 'Outfit-Medium',
+      color: theme.colors.text,
+    });
     expect(getByTestId('option-perito')).toHaveStyle({
       borderColor: theme.colors.borderSelected,
     });
@@ -44,6 +50,7 @@ describe('RowsScreen', () => {
 
     expect(getByText('Foto 1')).toBeTruthy();
     expect(getByText('1,6 MB')).toHaveStyle({
+      fontFamily: 'Outfit-Medium',
       fontSize: theme.type.caption.fontSize,
       color: theme.type.caption.color,
     });

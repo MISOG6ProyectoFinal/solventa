@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type KeyValueProps = {
   label: string;
@@ -10,8 +11,8 @@ type KeyValueProps = {
 export function KeyValue({ label, value }: KeyValueProps) {
   return (
     <View style={styles.row}>
-      <Text style={theme.type.caption}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <AppText variant="caption">{label}</AppText>
+      <AppText variant="value">{value}</AppText>
     </View>
   );
 }
@@ -22,10 +23,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: theme.space.md,
-  },
-  value: {
-    fontSize: theme.type.body.fontSize,
-    fontWeight: '600',
-    color: theme.colors.text,
   },
 });

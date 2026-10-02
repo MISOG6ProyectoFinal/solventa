@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type BannerVariant = 'success' | 'info' | 'warning' | 'error' | 'progress';
 
@@ -17,9 +18,9 @@ export function Banner({ variant, children, testID }: BannerProps) {
       testID={testID}
       style={[styles.banner, { backgroundColor: theme.colors[variant].background }]}
     >
-      <Text style={[theme.type.body, { color: theme.colors[variant].text }]}>
+      <AppText variant="body" style={{ color: theme.colors[variant].text }}>
         {children}
-      </Text>
+      </AppText>
     </View>
   );
 }

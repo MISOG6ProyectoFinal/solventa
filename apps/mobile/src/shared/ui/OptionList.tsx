@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
+import { AppText } from './AppText';
 
 type Option = {
   id: string;
@@ -28,7 +29,7 @@ export function OptionList({ options, value, onChange }: OptionListProps) {
             onPress={() => onChange(option.id)}
             style={[styles.option, selected && styles.selected]}
           >
-            <Text style={theme.type.body}>{option.label}</Text>
+            <AppText variant="bodyMedium">{option.label}</AppText>
           </Pressable>
         );
       })}

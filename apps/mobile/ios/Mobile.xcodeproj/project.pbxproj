@@ -11,6 +11,12 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A1F07E000000000000000011 /* Outfit-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000001 /* Outfit-Regular.ttf */; };
+		A1F07E000000000000000012 /* Outfit-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000002 /* Outfit-Medium.ttf */; };
+		A1F07E000000000000000013 /* Outfit-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000003 /* Outfit-SemiBold.ttf */; };
+		A1F07E000000000000000014 /* Outfit-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000004 /* Outfit-Bold.ttf */; };
+		A1F07E000000000000000015 /* Fraunces-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000005 /* Fraunces-SemiBold.ttf */; };
+		A1F07E000000000000000016 /* FrauncesText-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1F07E000000000000000006 /* FrauncesText-SemiBold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +40,12 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-Mobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Mobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Mobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Mobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A1F07E000000000000000001 /* Outfit-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Outfit-Regular.ttf"; path = "../assets/fonts/Outfit-Regular.ttf"; sourceTree = "<group>"; };
+		A1F07E000000000000000002 /* Outfit-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Outfit-Medium.ttf"; path = "../assets/fonts/Outfit-Medium.ttf"; sourceTree = "<group>"; };
+		A1F07E000000000000000003 /* Outfit-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Outfit-SemiBold.ttf"; path = "../assets/fonts/Outfit-SemiBold.ttf"; sourceTree = "<group>"; };
+		A1F07E000000000000000004 /* Outfit-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Outfit-Bold.ttf"; path = "../assets/fonts/Outfit-Bold.ttf"; sourceTree = "<group>"; };
+		A1F07E000000000000000005 /* Fraunces-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Fraunces-SemiBold.ttf"; path = "../assets/fonts/Fraunces-SemiBold.ttf"; sourceTree = "<group>"; };
+		A1F07E000000000000000006 /* FrauncesText-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "FrauncesText-SemiBold.ttf"; path = "../assets/fonts/FrauncesText-SemiBold.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -64,6 +76,12 @@
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
+				A1F07E000000000000000001 /* Outfit-Regular.ttf */,
+				A1F07E000000000000000002 /* Outfit-Medium.ttf */,
+				A1F07E000000000000000003 /* Outfit-SemiBold.ttf */,
+				A1F07E000000000000000004 /* Outfit-Bold.ttf */,
+				A1F07E000000000000000005 /* Fraunces-SemiBold.ttf */,
+				A1F07E000000000000000006 /* FrauncesText-SemiBold.ttf */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
 			name = Mobile;
@@ -184,6 +202,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
+				A1F07E000000000000000011 /* Outfit-Regular.ttf in Resources */,
+				A1F07E000000000000000012 /* Outfit-Medium.ttf in Resources */,
+				A1F07E000000000000000013 /* Outfit-SemiBold.ttf in Resources */,
+				A1F07E000000000000000014 /* Outfit-Bold.ttf in Resources */,
+				A1F07E000000000000000015 /* Fraunces-SemiBold.ttf in Resources */,
+				A1F07E000000000000000016 /* FrauncesText-SemiBold.ttf in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

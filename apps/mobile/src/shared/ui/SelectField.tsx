@@ -1,7 +1,8 @@
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { theme } from '../theme';
 import { FieldFrame } from './FieldFrame';
+import { AppText } from './AppText';
 
 type SelectFieldProps = {
   label: string;
@@ -27,27 +28,28 @@ export function SelectField({
       error={error}
       testID={testID}
       onPress={onPress}
-      trailing={<Text style={styles.icon}>▼</Text>}
+      trailing={
+        <AppText variant="caption" style={styles.icon}>
+          ▼
+        </AppText>
+      }
     >
-      <Text style={value ? styles.value : styles.placeholder}>{value || 'Selecciona'}</Text>
+      <AppText variant="body" style={value ? styles.value : styles.placeholder}>
+        {value || 'Selecciona'}
+      </AppText>
     </FieldFrame>
   );
 }
 
 const styles = StyleSheet.create({
   value: {
-    color: theme.colors.text,
-    fontSize: theme.type.body.fontSize,
     paddingVertical: theme.space.md,
   },
   placeholder: {
     color: theme.colors.textMuted,
-    fontSize: theme.type.body.fontSize,
     paddingVertical: theme.space.md,
   },
   icon: {
-    color: theme.colors.textMuted,
-    fontSize: theme.type.caption.fontSize,
     marginLeft: theme.space.sm,
   },
 });
