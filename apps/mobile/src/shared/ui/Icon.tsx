@@ -22,7 +22,7 @@ type IconProps = {
   testID?: string;
 };
 
-const stroke: Record<IconColor, string> = {
+export const iconColor: Record<IconColor, string> = {
   dark: theme.colors.text,
   gray: theme.colors.textMuted,
   primary: theme.colors.navy,
@@ -46,7 +46,7 @@ export function Icon({
   return (
     <Glyph
       size={size}
-      color={stroke[color]}
+      color={iconColor[color]}
       strokeWidth={1.5}
       testID={testID}
       accessible={accessibilityLabel != null}

@@ -16,6 +16,7 @@ import styles from './styles';
 export default function ReportClaimScreen() {
   const [policy, setPolicy] = useState(claimReport.policy);
   const [claimType, setClaimType] = useState(claimReport.type);
+  const [occurredAt, setOccurredAt] = useState(claimReport.occurredAt);
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const descriptionMissing = submitted && description.trim() === '';
@@ -38,7 +39,12 @@ export default function ReportClaimScreen() {
             onChange={setClaimType}
             required
           />
-          <DateField label={claimReport.occurredAtLabel} value={claimReport.occurredAt} required />
+          <DateField
+            label={claimReport.occurredAtLabel}
+            value={occurredAt}
+            onChange={setOccurredAt}
+            required
+          />
           <View>
             <AppText variant="label" style={styles.locationLabel}>
               {claimReport.locationLabel}

@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
 import { FieldFrame } from './FieldFrame';
 import { Icon } from './Icon';
+import { Sheet, type SheetHandle } from './Sheet';
 
 export type SelectOption = {
   value: string;
@@ -31,14 +31,14 @@ export function SelectField({
   error = false,
   testID,
 }: SelectFieldProps) {
-  const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState(false);
+  const sheet = useRef<SheetHandle>(null);
+  const [focused, setFocused] = useState(false);
   const selected = options.find((option) => option.value === value);
   const shown = selected?.label || value;
 
   const choose = (next: string) => {
     onChange?.(next);
-    setOpen(false);
+    sheet.current?.dismiss();
   };
 
   return (
@@ -47,49 +47,44 @@ export function SelectField({
         label={label}
         required={required}
         error={error}
-        focused={open}
+        focused={focused}
         message={error ? 'Obligatorio' : undefined}
         testID={testID}
-        onPress={options.length > 0 ? () => setOpen(true) : undefined}
+        onPress={
+          options.length > 0
+            ? () => {
+                setFocused(true);
+                sheet.current?.present();
+              }
+            : undefined
+        }
         trailing={<Icon name="desplegar" size={16} color="gray" />}
       >
         <AppText variant="bodySmall" style={shown ? styles.value : styles.placeholder}>
           {shown || 'Selecciona'}
         </AppText>
       </FieldFrame>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <View style={styles.backdrop}>
-          <Pressable
-            accessibilityLabel="Cerrar"
-            onPress={() => setOpen(false)}
-            style={styles.dismiss}
-          />
-          <View
-            testID="select-sheet"
-            style={[styles.sheet, { paddingBottom: insets.bottom + theme.space.lg }]}
-          >
-            <AppText variant="subtitle">{label}</AppText>
-            {options.map((option) => {
-              const selectedOption = option.value === value;
+      <Sheet ref={sheet} onClose={() => setFocused(false)} testID="select-sheet">
+        <AppText variant="subtitle">{label}</AppText>
+        {options.map((option) => {
+          const selectedOption = option.value === value;
 
-              return (
-                <Pressable
-                  key={option.value}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  accessibilityState={{ selected: selectedOption }}
-                  onPress={() => choose(option.value)}
-                  style={[styles.option, selectedOption && styles.selected]}
-                >
-                  <AppText variant="bodySmall" style={styles.optionLabel}>
-                    {option.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </Modal>
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+              accessibilityState={{ selected: selectedOption }}
+              onPress={() => choose(option.value)}
+              style={[styles.option, selectedOption && styles.selected]}
+            >
+              <AppText variant="bodySmall" style={styles.optionLabel}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </Sheet>
     </>
   );
 }
@@ -100,21 +95,6 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: theme.colors.textMuted,
-  },
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15, 42, 69, 0.45)',
-  },
-  dismiss: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: theme.radius.medium,
-    borderTopRightRadius: theme.radius.medium,
-    padding: theme.space.lg,
-    gap: theme.space.sm,
   },
   option: {
     borderWidth: 1,

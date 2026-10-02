@@ -78,6 +78,7 @@ const iconLabels: Record<IconName, string> = {
   socios: 'Socios',
   menu: 'Menú',
   volver: 'Volver',
+  siguiente: 'Siguiente',
   desplegar: 'Desplegar',
   cerrar: 'Cerrar',
   buscar: 'Buscar',
@@ -411,10 +412,11 @@ export const catalog: PlaygroundItem[] = [
       { kind: 'switch', key: 'required', label: 'Obligatorio' },
       { kind: 'switch', key: 'error', label: 'Error' },
     ],
-    render: (values) => (
+    render: (values, update) => (
       <DateField
         label={text(values, 'label')}
         value={text(values, 'value')}
+        onChange={(value) => update('value', value)}
         required={flag(values, 'required')}
         error={flag(values, 'error')}
       />

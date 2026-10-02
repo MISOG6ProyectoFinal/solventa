@@ -4,3 +4,19 @@ extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autoli
 rootProject.name = 'Mobile'
 include ':app'
 includeBuild('../../../node_modules/@react-native/gradle-plugin')
+
+// Library modules do not inherit the app CMake version.
+// CMake 3.22 Ninja rewrites build.ninja on every run when the path contains a space.
+gradle.beforeProject { project ->
+    project.afterEvaluate {
+        def androidExtension = project.extensions.findByName("android")
+        if (androidExtension == null) {
+            return
+        }
+        def cmake = androidExtension.externalNativeBuild.cmake
+        if (cmake.path == null || cmake.version) {
+            return
+        }
+        cmake.version = "3.31.6"
+    }
+}

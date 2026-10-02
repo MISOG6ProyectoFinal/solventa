@@ -27,7 +27,7 @@ describe('ReportClaimScreen', () => {
     expect(getByText(/Tipo de siniestro/)).toBeTruthy();
     expect(getByText('Accidente con vehículo de alquiler')).toBeTruthy();
     expect(getByText(/Fecha y hora de ocurrencia/)).toBeTruthy();
-    expect(getByText('2026-09-12 10:30')).toBeTruthy();
+    expect(getByText('12/09/2026 10:30')).toBeTruthy();
     expect(getByText('Ubicación')).toBeTruthy();
     expect(getByText('Calle 85 #12-34, Chapinero, Bogotá')).toBeTruthy();
     expect(getByText('GPS 4.6683, -74.0531 (±8 m)')).toBeTruthy();

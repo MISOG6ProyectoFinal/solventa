@@ -85,6 +85,7 @@ jest.mock('react-native', () => {
       get: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }),
       addEventListener: () => ({ remove: () => undefined }),
     },
+    useWindowDimensions: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }),
     I18nManager: {
       getConstants: () => ({ isRTL: false }),
       allowRTL: () => undefined,
@@ -142,6 +143,49 @@ jest.mock('react-native-safe-area-context', () => {
       insets,
     },
     useSafeAreaInsets: () => insets,
+  };
+});
+
+jest.mock('@gorhom/bottom-sheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const BottomSheetModal = React.forwardRef(
+    (props: { children?: unknown; onDismiss?: () => void }, ref: React.Ref<{ present: () => void; dismiss: () => void }>) => {
+      const [shown, setShown] = React.useState(false);
+      const onDismiss = React.useRef(props.onDismiss);
+      onDismiss.current = props.onDismiss;
+
+      React.useImperativeHandle(ref, () => ({
+        present: () => setShown(true),
+        dismiss: () => {
+          setShown((current: boolean) => {
+            if (current) onDismiss.current?.();
+            return false;
+          });
+        },
+      }));
+
+      if (!shown) return null;
+      return React.createElement(View, null, props.children);
+    },
+  );
+
+  const BottomSheetView = ({
+    children,
+    style,
+    testID,
+  }: {
+    children?: unknown;
+    style?: unknown;
+    testID?: string;
+  }) => React.createElement(View, { style, testID }, children);
+
+  return {
+    BottomSheetModal,
+    BottomSheetModalProvider: ({ children }: { children?: unknown }) => children,
+    BottomSheetView,
+    BottomSheetBackdrop: () => null,
   };
 });
 

@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ReactNode, useEffect } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue, View } from 'react-native';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
@@ -27,11 +27,40 @@ export function FieldFrame({
   onPress,
   children,
 }: FieldFrameProps) {
+  const active = focused && !error;
+  const focus = useAnimatedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    Animated.timing(focus, {
+      toValue: active ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [active, focus]);
+
   const control = (
-    <View testID={testID} style={[styles.control, focused && !error && styles.focused, error && styles.error]}>
+    <Animated.View
+      testID={testID}
+      style={[
+        styles.control,
+        {
+          borderColor: error
+            ? theme.colors.danger
+            : focus.interpolate({
+                inputRange: [0, 1],
+                outputRange: [theme.colors.border, theme.colors.blue],
+              }),
+          borderWidth: focus.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 2],
+          }),
+        },
+      ]}
+    >
       <View style={styles.body}>{children}</View>
       {trailing}
-    </View>
+    </Animated.View>
   );
 
   return (
@@ -76,13 +105,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     paddingVertical: theme.space.md,
     paddingHorizontal: theme.space.lg,
-  },
-  focused: {
-    borderWidth: 2,
-    borderColor: theme.colors.blue,
-  },
-  error: {
-    borderColor: theme.colors.danger,
   },
   body: {
     flex: 1,

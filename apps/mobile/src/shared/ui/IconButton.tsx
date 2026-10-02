@@ -1,17 +1,18 @@
 import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
-import { Icon } from './Icon';
+import { Icon, iconColor, type IconColor } from './Icon';
 import { type IconName } from './icons';
 
 type IconButtonProps = {
   label: string;
   icon: IconName;
+  color?: IconColor;
   onPress?: () => void;
   onLongPress?: () => void;
 };
 
-export function IconButton({ label, icon, onPress, onLongPress }: IconButtonProps) {
+export function IconButton({ label, icon, color = 'onNavy', onPress, onLongPress }: IconButtonProps) {
   const pressed = useAnimatedValue(0);
 
   const animatePressed = (toValue: number) => {
@@ -37,6 +38,7 @@ export function IconButton({ label, icon, onPress, onLongPress }: IconButtonProp
         pointerEvents="none"
         style={[
           styles.feedback,
+          { backgroundColor: iconColor[color] },
           {
             opacity: pressed.interpolate({
               inputRange: [0, 1],
@@ -69,7 +71,7 @@ export function IconButton({ label, icon, onPress, onLongPress }: IconButtonProp
           ],
         }}
       >
-        <Icon name={icon} size={20} color="onNavy" />
+        <Icon name={icon} size={20} color={color} />
       </Animated.View>
     </Pressable>
   );
@@ -87,6 +89,5 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.onNavy,
   },
 });
