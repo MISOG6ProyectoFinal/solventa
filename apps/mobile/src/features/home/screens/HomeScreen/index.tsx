@@ -36,7 +36,7 @@ const HomeScreen: React.FunctionComponent = () => {
           />
           <Stat label="Próxima prima" value="$ 154.167" detail="Vence el 15 oct 2026" />
           <AppText variant="body">Contador - {counter}</AppText>
-          <Banner testID="home-banner" variant="success">
+          <Banner testID="home-banner" variant="success" icon="exito">
             Tu póliza fue emitida y tu seguro ya está activo
           </Banner>
           <View style={styles.chips}>
@@ -54,6 +54,8 @@ const HomeScreen: React.FunctionComponent = () => {
             </StatusChip>
           </View>
           <Button testID="home-primary" title="Aumentar" onPress={increaseCounter} />
+          <Button title="Calcular cotización" icon="cotizacion" />
+          <Button title="Tomar foto" icon="camara" variant="outlined" />
           <Button testID="home-secondary" title="Continuar" variant="secondary" />
           <Button
             testID="home-accent"

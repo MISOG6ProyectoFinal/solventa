@@ -1,8 +1,9 @@
 import { StyleSheet } from 'react-native';
 
 import { theme } from '../theme';
-import { FieldFrame } from './FieldFrame';
 import { AppText } from './AppText';
+import { FieldFrame } from './FieldFrame';
+import { Icon } from './Icon';
 
 type DateFieldProps = {
   label: string;
@@ -28,11 +29,7 @@ export function DateField({
       error={error}
       testID={testID}
       onPress={onPress}
-      trailing={
-        <AppText variant="body" style={styles.icon}>
-          📅
-        </AppText>
-      }
+      trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
     >
       <AppText variant="bodySmall" style={value ? styles.value : styles.placeholder}>
         {value || 'dd/mm/aaaa'}
@@ -47,8 +44,5 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: theme.colors.textMuted,
-  },
-  icon: {
-    marginLeft: theme.space.sm,
   },
 });

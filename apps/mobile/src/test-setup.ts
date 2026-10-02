@@ -75,6 +75,23 @@ jest.mock('react-native', () => {
   };
 });
 
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const host = (name: string) => {
+    return ({ children, ...props }: { children?: unknown }) =>
+      React.createElement(name, props, children);
+  };
+  const tags = ['Svg', 'Path', 'Circle', 'Rect', 'Line', 'Polyline', 'Polygon', 'Ellipse', 'G'];
+  const api: Record<string, unknown> = { __esModule: true };
+
+  for (const tag of tags) {
+    api[tag] = host(tag);
+  }
+
+  api.default = api.Svg;
+  return api;
+});
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
 

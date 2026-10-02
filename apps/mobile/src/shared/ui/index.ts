@@ -6,6 +6,8 @@ export { Card } from './Card';
 export { CheckboxField } from './CheckboxField';
 export { CoverageList } from './CoverageList';
 export { DateField } from './DateField';
+export { Icon } from './Icon';
+export type { IconColor, IconName } from './Icon';
 export { Indicator } from './Indicator';
 export { KeyValue } from './KeyValue';
 export { OptionList } from './OptionList';

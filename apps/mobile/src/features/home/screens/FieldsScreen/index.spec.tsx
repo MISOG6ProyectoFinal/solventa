@@ -24,7 +24,11 @@ describe('FieldsScreen', () => {
       borderColor: theme.colors.border,
     });
 
-    expect(getByText('📅')).toBeTruthy();
+    expect(getByTestId('fields-date-icon', { includeHiddenElements: true }).props).toMatchObject({
+      stroke: theme.colors.textMuted,
+      strokeWidth: 1.5,
+      width: 16,
+    });
     expect(getByTestId('fields-date')).toHaveStyle({
       borderColor: theme.colors.border,
     });

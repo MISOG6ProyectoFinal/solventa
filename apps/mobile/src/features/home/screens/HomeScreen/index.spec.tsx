@@ -59,6 +59,11 @@ describe('HomeScreen', () => {
       backgroundColor: theme.colors.success.background,
       borderColor: theme.colors.success.border,
     });
+    expect(getByTestId('home-banner-icon', { includeHiddenElements: true }).props).toMatchObject({
+      stroke: theme.colors.teal,
+      strokeWidth: 1.5,
+      width: 20,
+    });
 
     expect(getByText('En línea')).toHaveStyle({ color: theme.colors.text });
     expect(getByTestId('home-chip')).toHaveStyle({

@@ -1,7 +1,9 @@
-import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue, View } from 'react-native';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
+import { Icon, IconColor } from './Icon';
+import { type IconName } from './icons';
 
 type ButtonVariant =
   | 'primary'
@@ -15,14 +17,26 @@ type ButtonVariant =
 type ButtonProps = {
   title: string;
   variant?: ButtonVariant;
+  icon?: IconName;
   disabled?: boolean;
   onPress?: () => void;
   testID?: string;
 };
 
+const iconColor: Record<ButtonVariant, IconColor> = {
+  primary: 'onNavy',
+  secondary: 'onNavy',
+  accent: 'onNavy',
+  outlined: 'dark',
+  primaryOutline: 'primary',
+  text: 'primary',
+  accentLink: 'accent',
+};
+
 export function Button({
   title,
   variant = 'primary',
+  icon,
   disabled = false,
   onPress,
   testID,
@@ -69,9 +83,14 @@ export function Button({
         onPressOut={() => animatePressed(0)}
         style={[styles.base, containerStyles[variant], disabled && styles.disabled]}
       >
-        <AppText variant="button" style={[labelStyles[variant], disabled && styles.disabledLabel]}>
-          {title}
-        </AppText>
+        <View style={styles.content}>
+          {icon ? (
+            <Icon name={icon} size={20} color={disabled ? 'gray' : iconColor[variant]} />
+          ) : null}
+          <AppText variant="button" style={[labelStyles[variant], disabled && styles.disabledLabel]}>
+            {title}
+          </AppText>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -94,6 +113,11 @@ const styles = StyleSheet.create({
   },
   disabledLabel: {
     color: theme.colors.textMuted,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.sm,
   },
 });
 
