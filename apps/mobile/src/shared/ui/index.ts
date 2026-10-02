@@ -1,9 +1,14 @@
+export { Amount } from './Amount';
 export { Banner } from './Banner';
 export { Button } from './Button';
 export { Card } from './Card';
 export { CheckboxField } from './CheckboxField';
+export { CoverageList } from './CoverageList';
 export { DateField } from './DateField';
+export { KeyValue } from './KeyValue';
+export { OptionList } from './OptionList';
 export { Screen } from './Screen';
 export { SelectField } from './SelectField';
 export { StatusChip } from './StatusChip';
 export { TextField } from './TextField';
+export { Thumbnail } from './Thumbnail';

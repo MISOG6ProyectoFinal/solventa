@@ -35,6 +35,11 @@ const HomeScreen: React.FunctionComponent = () => {
             variant="secondary"
             onPress={() => navigation.navigate('Fields')}
           />
+          <Button
+            title="Ver filas"
+            variant="secondary"
+            onPress={() => navigation.navigate('Rows')}
+          />
         </Card>
       </View>
     </Screen>

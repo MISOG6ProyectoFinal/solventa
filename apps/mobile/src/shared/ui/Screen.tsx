@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../theme';
 
@@ -11,12 +11,11 @@ type ScreenProps = {
 };
 
 export function Screen({ children, testID, withTabBar = false }: ScreenProps) {
+  // The native stack header already occupies the top inset.
+  const edges: Edge[] = withTabBar ? ['left', 'right'] : ['left', 'right', 'bottom'];
+
   return (
-    <SafeAreaView
-      testID={testID}
-      edges={withTabBar ? ['top', 'left', 'right'] : undefined}
-      style={styles.screen}
-    >
+    <SafeAreaView testID={testID} edges={edges} style={styles.screen}>
       {children}
     </SafeAreaView>
   );

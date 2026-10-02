@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../features/home/screens/HomeScreen';
 import DetailsScreen from '../features/home/screens/DetailsScreen';
 import FieldsScreen from '../features/home/screens/FieldsScreen';
+import RowsScreen from '../features/home/screens/RowsScreen';
 
 export const RootStack = createNativeStackNavigator({
   initialRouteName: 'Home',
@@ -14,6 +15,12 @@ export const RootStack = createNativeStackNavigator({
       screen: FieldsScreen,
       options: {
         title: 'Campos',
+      },
+    },
+    Rows: {
+      screen: RowsScreen,
+      options: {
+        title: 'Filas',
       },
     },
   },
