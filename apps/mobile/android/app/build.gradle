@@ -78,6 +78,13 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.mobile"
+    // CMake 3.22 ships Ninja 1.10, which rejects paths longer than 260 characters.
+    // 3.31.6 ships Ninja 1.12, which accepts them when Windows long paths are enabled.
+    externalNativeBuild {
+        cmake {
+            version "3.31.6"
+        }
+    }
     defaultConfig {
         applicationId "com.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
