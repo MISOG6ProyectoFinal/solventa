@@ -4,7 +4,7 @@ import { Screen } from '../shared/ui';
 
 export function EmptyTabScreen() {
   return (
-    <Screen withTabBar>
+    <Screen header={{ hide: true }} withTabBar>
       <StatusBar barStyle="dark-content" />
     </Screen>
   );

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import {
-  AppHeader,
   AppText,
   Button,
   Card,
@@ -20,8 +19,7 @@ export default function ReportClaimScreen() {
   const descriptionMissing = submitted && description.trim() === '';
 
   return (
-    <Screen testID="report-claim-screen" withHeader>
-      <AppHeader title={claimReport.title} />
+    <Screen testID="report-claim-screen" header={{ title: claimReport.title }}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
           <SelectField label={claimReport.policyLabel} value={claimReport.policy} required />

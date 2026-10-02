@@ -45,11 +45,9 @@ describe('ClaimsScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport');
   });
 
-  it('goes back from the header', async () => {
-    const { getByLabelText } = await render(<ClaimsScreen />);
+  it('does not offer a back button', async () => {
+    const { queryByLabelText } = await render(<ClaimsScreen />);
 
-    await fireEvent.press(getByLabelText('Volver'));
-
-    expect(useNavigation().goBack).toHaveBeenCalledTimes(1);
+    expect(queryByLabelText('Volver')).toBeNull();
   });
 });

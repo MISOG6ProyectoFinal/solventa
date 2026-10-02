@@ -1,7 +1,7 @@
 import { ScrollView, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { AppHeader, AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { homeSummary, type HomeDestination } from '../../homeSummary';
 import styles from './styles';
 
@@ -14,16 +14,19 @@ export default function HomeScreen() {
   };
 
   return (
-    <Screen testID="home-screen" withHeader withTabBar>
-      <AppHeader
-        title={homeSummary.greeting}
-        subtitle="Tu cobertura"
-        leadingIcon={{
+    <Screen
+      testID="home-screen"
+      withTabBar
+      header={{
+        title: homeSummary.greeting,
+        subtitle: 'Tu cobertura',
+        leadingIcon: {
           icon: 'menu',
           label: 'Menú',
           onLongPress: __DEV__ ? () => navigation.navigate('Components') : undefined,
-        }}
-      />
+        },
+      }}
+    >
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card variant="inverse">
           <View style={styles.coverageCopy}>

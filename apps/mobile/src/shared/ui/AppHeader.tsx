@@ -14,7 +14,7 @@ type LeadingIcon = {
   onLongPress?: () => void;
 };
 
-type AppHeaderProps = {
+export type AppHeaderProps = {
   title: string;
   subtitle?: string;
   leadingIcon?: LeadingIcon;

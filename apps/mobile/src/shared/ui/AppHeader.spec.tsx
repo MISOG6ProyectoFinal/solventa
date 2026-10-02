@@ -64,9 +64,7 @@ describe('AppHeader', () => {
   it('shows the back button when navigation can go back', async () => {
     navigation.canGoBack.mockReturnValue(true);
 
-    const { getByLabelText, queryByLabelText } = await render(
-      <AppHeader title="Componentes" leadingIcon={{ icon: 'menu', label: 'Menú' }} />,
-    );
+    const { getByLabelText, queryByLabelText } = await render(<AppHeader title="Componentes" />);
 
     expect(queryByLabelText('Menú')).toBeNull();
 

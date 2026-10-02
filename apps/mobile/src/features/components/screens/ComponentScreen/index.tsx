@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { StaticScreenProps } from '@react-navigation/native';
 
 import { theme } from '../../../../shared/theme';
-import { AppHeader, AppText, OptionList, Screen, Switch, TextField } from '../../../../shared/ui';
+import { AppText, OptionList, Screen, Switch, TextField } from '../../../../shared/ui';
 import { findComponent, PlaygroundValues } from '../../catalog';
 
 type Props = StaticScreenProps<{
@@ -24,16 +24,14 @@ export default function ComponentScreen({ route }: Props) {
 
   if (!item) {
     return (
-      <Screen withHeader>
-        <AppHeader title="Componente" />
+      <Screen header={{ title: 'Componente' }}>
         <AppText variant="body">No se encontró el componente</AppText>
       </Screen>
     );
   }
 
   return (
-    <Screen withHeader>
-      <AppHeader title={item.title} />
+    <Screen header={{ title: item.title }}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.preview}>{item.render(values, update)}</View>
         {item.fields.length > 0 ? <AppText variant="subtitle">Propiedades</AppText> : null}
