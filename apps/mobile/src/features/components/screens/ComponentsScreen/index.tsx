@@ -2,14 +2,15 @@ import { ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { theme } from '../../../../shared/theme';
-import { AppText, Screen } from '../../../../shared/ui';
+import { AppHeader, AppText, Screen } from '../../../../shared/ui';
 import { catalog } from '../../catalog';
 
 export default function ComponentsScreen() {
   const navigation = useNavigation();
 
   return (
-    <Screen>
+    <Screen withHeader>
+      <AppHeader variant="flow" title="Componentes" onBackPress={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
         {catalog.map((item) => (
           <Pressable

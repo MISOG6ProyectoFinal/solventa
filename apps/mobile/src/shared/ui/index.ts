@@ -1,4 +1,5 @@
 export { Amount } from './Amount';
+export { AppHeader } from './AppHeader';
 export { AppText } from './AppText';
 export { Banner } from './Banner';
 export { Button } from './Button';
@@ -16,5 +17,6 @@ export { SelectField } from './SelectField';
 export { Stat } from './Stat';
 export { StatusChip } from './StatusChip';
 export { Switch } from './Switch';
+export { TabBar } from './TabBar';
 export { TextField } from './TextField';
 export { Thumbnail } from './Thumbnail';

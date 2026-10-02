@@ -9,7 +9,8 @@ export type IconColor =
   | 'accent'
   | 'warning'
   | 'error'
-  | 'onNavy';
+  | 'onNavy'
+  | 'onNavyMuted';
 
 type IconSize = 16 | 20 | 24 | 32;
 
@@ -30,6 +31,7 @@ const stroke: Record<IconColor, string> = {
   warning: theme.colors.warningSolid,
   error: theme.colors.danger,
   onNavy: theme.colors.onNavy,
+  onNavyMuted: theme.colors.onNavyMuted,
 };
 
 export function Icon({

@@ -1,27 +1,40 @@
 import { createStaticNavigation } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import ComponentScreen from '../features/components/screens/ComponentScreen';
 import ComponentsScreen from '../features/components/screens/ComponentsScreen';
 import HomeScreen from '../features/home/screens/HomeScreen';
-import { theme } from '../shared/theme';
+import { TabBar } from '../shared/ui';
+import { EmptyTabScreen } from './emptyTabs';
 
-export const RootStack = createNativeStackNavigator({
+const Tabs = createBottomTabNavigator({
   initialRouteName: 'Home',
   screenOptions: {
-    headerTitleStyle: {
-      fontFamily: theme.type.button.fontFamily,
-      fontWeight: theme.type.button.fontWeight,
-    },
+    headerShown: false,
   },
+  tabBar: ({ state, navigation }) => (
+    <TabBar
+      value={state.routes[state.index].name}
+      onChange={(id) => navigation.navigate(id)}
+    />
+  ),
   screens: {
     Home: HomeScreen,
-    Components: {
-      screen: ComponentsScreen,
-      options: {
-        title: 'Componentes',
-      },
-    },
+    Policies: EmptyTabScreen,
+    Claims: EmptyTabScreen,
+    Buy: EmptyTabScreen,
+  },
+});
+
+export const RootStack = createNativeStackNavigator({
+  initialRouteName: 'Main',
+  screenOptions: {
+    headerShown: false,
+  },
+  screens: {
+    Main: Tabs,
+    Components: ComponentsScreen,
     Component: ComponentScreen,
   },
 });

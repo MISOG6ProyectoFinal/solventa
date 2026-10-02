@@ -140,6 +140,7 @@ const iconColors: Choice[] = [
   { id: 'warning', label: 'Advertencia' },
   { id: 'error', label: 'Error' },
   { id: 'onNavy', label: 'Sobre azul' },
+  { id: 'onNavyMuted', label: 'Sobre azul tenue' },
 ];
 
 const bannerVariants: Choice[] = [
@@ -239,7 +240,13 @@ export const catalog: PlaygroundItem[] = [
       { kind: 'choice', key: 'color', label: 'Color', options: iconColors },
     ],
     render: (values) => (
-      <View style={text(values, 'color') === 'onNavy' ? { backgroundColor: theme.colors.navy, padding: theme.space.md } : undefined}>
+      <View
+        style={
+          text(values, 'color') === 'onNavy' || text(values, 'color') === 'onNavyMuted'
+            ? { backgroundColor: theme.colors.navy, padding: theme.space.md }
+            : undefined
+        }
+      >
         <Icon
           name={text(values, 'name') as IconName}
           size={Number(text(values, 'size')) as 16 | 20 | 24 | 32}

@@ -51,10 +51,17 @@ jest.mock('react-native', () => {
       Value: AnimatedValue,
       timing: () => startAnimation,
       spring: () => startAnimation,
+      createAnimatedComponent: (component: unknown) => component,
     },
     Easing: {
+      in: (easing: (value: number) => number) => easing,
       out: (easing: (value: number) => number) => easing,
+      inOut: (easing: (value: number) => number) => easing,
       cubic: (value: number) => value,
+      linear: (value: number) => value,
+      ease: (value: number) => value,
+      poly: () => (value: number) => value,
+      bezier: () => (value: number) => value,
     },
     useAnimatedValue: (initialValue: number) => {
       const ref = React.useRef(null);
@@ -71,6 +78,15 @@ jest.mock('react-native', () => {
     Platform: {
       OS: 'android',
       select: (options: { android?: unknown }) => options.android,
+    },
+    Dimensions: {
+      get: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }),
+      addEventListener: () => ({ remove: () => undefined }),
+    },
+    I18nManager: {
+      getConstants: () => ({ isRTL: false }),
+      allowRTL: () => undefined,
+      forceRTL: () => undefined,
     },
   };
 });
@@ -92,11 +108,39 @@ jest.mock('react-native-svg', () => {
   return api;
 });
 
-jest.mock('react-native-safe-area-context', () => {
+jest.mock('react-native-screens', () => {
   const React = require('react');
+  const View = ({ children, ...props }: { children?: unknown }) =>
+    React.createElement('View', props, children);
 
   return {
-    SafeAreaView: ({ children, ...props }: { children?: unknown }) =>
-      React.createElement('SafeAreaView', props, children),
+    enableScreens: () => undefined,
+    screensEnabled: () => false,
+    Screen: View,
+    ScreenContainer: View,
+    NativeScreen: View,
+    NativeScreenContainer: View,
+    ScreenStack: View,
+    ScreenStackItem: View,
+    FullWindowOverlay: View,
   };
 });
+
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+  return {
+    SafeAreaProvider: ({ children }: { children?: unknown }) => children,
+    SafeAreaView: ({ children, ...props }: { children?: unknown }) =>
+      React.createElement('SafeAreaView', props, children),
+    SafeAreaInsetsContext: React.createContext(insets),
+    initialWindowMetrics: {
+      frame: { x: 0, y: 0, width: 390, height: 844 },
+      insets,
+    },
+    useSafeAreaInsets: () => insets,
+  };
+});
+
+global.__DEV__ = true;

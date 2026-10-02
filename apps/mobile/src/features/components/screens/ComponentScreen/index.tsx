@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { theme } from '../../../../shared/theme';
-import { AppText, OptionList, Screen, Switch, TextField } from '../../../../shared/ui';
+import { AppHeader, AppText, OptionList, Screen, Switch, TextField } from '../../../../shared/ui';
 import { findComponent, PlaygroundValues } from '../../catalog';
 
 type Props = StaticScreenProps<{
@@ -19,24 +19,26 @@ export default function ComponentScreen({ route }: Props) {
     setValues(item?.initial ?? {});
   }, [item]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: item?.title ?? 'Componente' });
-  }, [item, navigation]);
-
   const update = (key: string, value: string | boolean) => {
     setValues((current) => ({ ...current, [key]: value }));
   };
 
   if (!item) {
     return (
-      <Screen>
+      <Screen withHeader>
+        <AppHeader variant="flow" title="Componente" onBackPress={() => navigation.goBack()} />
         <AppText variant="body">No se encontró el componente</AppText>
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen withHeader>
+      <AppHeader
+        variant="flow"
+        title={item.title}
+        onBackPress={() => navigation.goBack()}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.preview}>{item.render(values, update)}</View>
         {item.fields.length > 0 ? <AppText variant="subtitle">Propiedades</AppText> : null}
