@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 
 import {
   AppHeader,
@@ -16,18 +15,13 @@ import { claimReport } from '../../claimReport';
 import styles from './styles';
 
 export default function ReportClaimScreen() {
-  const navigation = useNavigation();
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const descriptionMissing = submitted && description.trim() === '';
 
   return (
     <Screen testID="report-claim-screen" withHeader>
-      <AppHeader
-        variant="flow"
-        title={claimReport.title}
-        onBackPress={() => navigation.goBack()}
-      />
+      <AppHeader title={claimReport.title} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card>
           <SelectField label={claimReport.policyLabel} value={claimReport.policy} required />

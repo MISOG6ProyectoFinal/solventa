@@ -16,9 +16,13 @@ export default function HomeScreen() {
   return (
     <Screen testID="home-screen" withHeader withTabBar>
       <AppHeader
-        variant="home"
-        greeting={homeSummary.greeting}
-        onMenuLongPress={__DEV__ ? () => navigation.navigate('Components') : undefined}
+        title={homeSummary.greeting}
+        subtitle="Tu cobertura"
+        leadingIcon={{
+          icon: 'menu',
+          label: 'Menú',
+          onLongPress: __DEV__ ? () => navigation.navigate('Components') : undefined,
+        }}
       />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card variant="inverse">

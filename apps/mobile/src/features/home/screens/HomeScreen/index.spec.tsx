@@ -6,7 +6,11 @@ import HomeScreen from './index';
 jest.mock('@react-navigation/native', () => {
   const navigate = jest.fn();
   return {
-    useNavigation: () => ({ navigate }),
+    useNavigation: () => ({
+      navigate,
+      canGoBack: () => false,
+      goBack: jest.fn(),
+    }),
   };
 });
 

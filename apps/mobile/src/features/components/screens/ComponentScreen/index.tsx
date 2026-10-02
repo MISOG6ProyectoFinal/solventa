@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { StaticScreenProps, useNavigation } from '@react-navigation/native';
+import { StaticScreenProps } from '@react-navigation/native';
 
 import { theme } from '../../../../shared/theme';
 import { AppHeader, AppText, OptionList, Screen, Switch, TextField } from '../../../../shared/ui';
@@ -11,7 +11,6 @@ type Props = StaticScreenProps<{
 }>;
 
 export default function ComponentScreen({ route }: Props) {
-  const navigation = useNavigation();
   const item = findComponent(route.params.id);
   const [values, setValues] = useState<PlaygroundValues>(item?.initial ?? {});
 
@@ -26,7 +25,7 @@ export default function ComponentScreen({ route }: Props) {
   if (!item) {
     return (
       <Screen withHeader>
-        <AppHeader variant="flow" title="Componente" onBackPress={() => navigation.goBack()} />
+        <AppHeader title="Componente" />
         <AppText variant="body">No se encontró el componente</AppText>
       </Screen>
     );
@@ -34,11 +33,7 @@ export default function ComponentScreen({ route }: Props) {
 
   return (
     <Screen withHeader>
-      <AppHeader
-        variant="flow"
-        title={item.title}
-        onBackPress={() => navigation.goBack()}
-      />
+      <AppHeader title={item.title} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.preview}>{item.render(values, update)}</View>
         {item.fields.length > 0 ? <AppText variant="subtitle">Propiedades</AppText> : null}

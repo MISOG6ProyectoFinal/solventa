@@ -10,7 +10,7 @@ export default function ComponentsScreen() {
 
   return (
     <Screen withHeader>
-      <AppHeader variant="flow" title="Componentes" onBackPress={() => navigation.goBack()} />
+      <AppHeader title="Componentes" />
       <ScrollView contentContainerStyle={styles.content}>
         {catalog.map((item) => (
           <Pressable

@@ -1,144 +1,58 @@
-import { Animated, Easing, Pressable, StatusBar, StyleSheet, useAnimatedValue, View } from 'react-native';
+import { StatusBar, StyleSheet, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
-import { Icon } from './Icon';
+import { IconButton } from './IconButton';
 import { type IconName } from './icons';
 
-type HomeHeaderProps = {
-  variant: 'home';
-  greeting: string;
-  onMenuPress?: () => void;
-  onMenuLongPress?: () => void;
-};
-
-type FlowHeaderProps = {
-  variant: 'flow';
-  title: string;
-  subtitle?: string;
-  onBackPress?: () => void;
-};
-
-type AppHeaderProps = HomeHeaderProps | FlowHeaderProps;
-
-type HeaderIconButtonProps = {
-  label: string;
+type LeadingIcon = {
   icon: IconName;
+  label: string;
   onPress?: () => void;
   onLongPress?: () => void;
 };
 
-function HeaderIconButton({ label, icon, onPress, onLongPress }: HeaderIconButtonProps) {
-  const pressed = useAnimatedValue(0);
+type AppHeaderProps = {
+  title: string;
+  subtitle?: string;
+  leadingIcon?: LeadingIcon;
+  hideBackButton?: boolean;
+};
 
-  const animatePressed = (toValue: number) => {
-    Animated.timing(pressed, {
-      toValue,
-      duration: toValue === 0 ? 160 : 80,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressIn={() => animatePressed(1)}
-      onPressOut={() => animatePressed(0)}
-      style={styles.hit}
-    >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.feedback,
-          {
-            opacity: pressed.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 0.24],
-            }),
-            transform: [
-              {
-                scale: pressed.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={{
-          opacity: pressed.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 0.65],
-          }),
-          transform: [
-            {
-              scale: pressed.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0.88],
-              }),
-            },
-          ],
-        }}
-      >
-        <Icon name={icon} size={20} color="onNavy" />
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-export function AppHeader(props: AppHeaderProps) {
+export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+
+  const displayBackBtn = navigation.canGoBack() && !hideBackButton && leadingIcon == null;
+  const hasLeadingIcon = displayBackBtn || leadingIcon != null;
 
   return (
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>
       <StatusBar barStyle="light-content" />
-      <View style={styles.row}>
-        {props.variant === 'home' ? (
-          <HeaderIconButton
-            label="Menú"
-            icon="menu"
-            onPress={props.onMenuPress}
-            onLongPress={props.onMenuLongPress}
+      <View testID="app-header-row" style={styles.row}>
+        {displayBackBtn ? (
+          <IconButton label="Volver" icon="volver" onPress={() => navigation.goBack()} />
+        ) : leadingIcon ? (
+          <IconButton
+            label={leadingIcon.label}
+            icon={leadingIcon.icon}
+            onPress={leadingIcon.onPress}
+            onLongPress={leadingIcon.onLongPress}
           />
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Volver"
-            onPress={props.onBackPress}
-            style={styles.hit}
-          >
-            <Icon name="volver" size={20} color="onNavy" />
-          </Pressable>
-        )}
-        <View style={styles.copy}>
-          {props.variant === 'home' ? (
-            <>
-              <AppText variant="screenTitle" numberOfLines={1} style={styles.greeting}>
-                {props.greeting}
-              </AppText>
-              <AppText variant="bodySmall" style={styles.muted}>
-                Tu cobertura
-              </AppText>
-            </>
-          ) : (
-            <AppText variant="screenTitle" numberOfLines={1} style={styles.greeting}>
-              {props.title}
+        ) : null}
+        <View style={[styles.copy, !hasLeadingIcon && styles.noLeadingSpace]}>
+          <AppText variant="screenTitle" numberOfLines={1} style={styles.title}>
+            {title}
+          </AppText>
+          {subtitle ? (
+            <AppText variant="bodySmall" numberOfLines={1} style={styles.subtitle}>
+              {subtitle}
             </AppText>
-          )}
+          ) : null}
         </View>
       </View>
-      {props.variant === 'flow' && props.subtitle ? (
-        <AppText variant="bodySmall" numberOfLines={1} style={styles.subtitle}>
-          {props.subtitle}
-        </AppText>
-      ) : null}
     </View>
   );
 }
@@ -153,37 +67,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.sm,
-  },
-  hit: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  feedback: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.onNavy,
+    minHeight: 44,
   },
   copy: {
     flex: 1,
     gap: theme.space.xs,
   },
-  greeting: {
+  title: {
     fontSize: 18,
     lineHeight: 22.5,
     color: theme.colors.onNavy,
   },
-  muted: {
+  subtitle: {
     color: theme.colors.onNavyMuted,
   },
-  subtitle: {
-    marginTop: theme.space.xs,
-    marginLeft: theme.space.xxl,
-    fontSize: 11,
-    lineHeight: 16.5,
-    color: theme.colors.onNavyMuted,
+  noLeadingSpace: {
+    paddingStart: theme.space.sm,
   },
 });

@@ -4,7 +4,10 @@ import { theme } from '../../../../shared/theme';
 import ComponentScreen from './index';
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ setOptions: jest.fn() }),
+  useNavigation: () => ({
+    canGoBack: () => true,
+    goBack: jest.fn(),
+  }),
 }));
 
 describe('ComponentScreen', () => {

@@ -6,7 +6,10 @@ import ReportClaimScreen from './index';
 jest.mock('@react-navigation/native', () => {
   const goBack = jest.fn();
   return {
-    useNavigation: () => ({ goBack }),
+    useNavigation: () => ({
+      goBack,
+      canGoBack: () => true,
+    }),
   };
 });
 

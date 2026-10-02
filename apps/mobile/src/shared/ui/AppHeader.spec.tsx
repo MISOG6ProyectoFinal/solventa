@@ -1,12 +1,34 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import { theme } from '../theme';
 import { AppHeader } from './AppHeader';
 
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: jest.fn(),
+}));
+
+const navigation = {
+  goBack: jest.fn(),
+  canGoBack: jest.fn(),
+};
+
 describe('AppHeader', () => {
-  it('shows the home bar', async () => {
-    const { getByLabelText, getByTestId, getByText, queryByText } = await render(
-      <AppHeader variant="home" greeting="Hola, María" />,
+  beforeEach(() => {
+    navigation.goBack.mockClear();
+    navigation.canGoBack.mockReset();
+    jest.mocked(useNavigation).mockReturnValue(navigation as never);
+  });
+
+  it('shows the title, subtitle, and leading icon', async () => {
+    navigation.canGoBack.mockReturnValue(false);
+
+    const { getByLabelText, getByTestId, getByText, queryByLabelText, queryByText } = await render(
+      <AppHeader
+        title="Hola, María"
+        subtitle="Tu cobertura"
+        leadingIcon={{ icon: 'menu', label: 'Menú' }}
+      />,
     );
 
     expect(getByText('Hola, María')).toHaveStyle({
@@ -15,29 +37,41 @@ describe('AppHeader', () => {
       lineHeight: 22.5,
       color: theme.colors.onNavy,
     });
-    expect(getByText('Tu cobertura')).toBeTruthy();
+    expect(getByText('Tu cobertura')).toHaveStyle({
+      fontSize: 14,
+      lineHeight: 20,
+      color: theme.colors.onNavyMuted,
+    });
     expect(queryByText('En línea')).toBeNull();
     expect(getByLabelText('Menú')).toBeTruthy();
+    expect(queryByLabelText('Volver')).toBeNull();
     expect(getByTestId('app-header')).toHaveStyle({ backgroundColor: theme.colors.navy });
   });
 
-  it('shows a back title', async () => {
-    const hidden = await render(<AppHeader variant="flow" title="Componentes" />);
+  it('keeps a title-only bar as tall as the icon button', async () => {
+    navigation.canGoBack.mockReturnValue(false);
 
-    expect(hidden.getByText('Componentes')).toBeTruthy();
-    expect(hidden.getByLabelText('Volver')).toBeTruthy();
-    expect(hidden.queryByText('Cobertura vigente')).toBeNull();
-  });
-
-  it('shows a flow subtitle when one is given', async () => {
-    const { getByText } = await render(
-      <AppHeader variant="flow" title="Mis pólizas" subtitle="Cobertura vigente" />,
+    const { getByTestId, getByText, queryByLabelText, queryByText } = await render(
+      <AppHeader title="Siniestros" />,
     );
 
-    expect(getByText('Cobertura vigente')).toHaveStyle({
-      fontSize: 11,
-      lineHeight: 16.5,
-      color: theme.colors.onNavyMuted,
-    });
+    expect(getByText('Siniestros')).toBeTruthy();
+    expect(queryByText('Conectado')).toBeNull();
+    expect(queryByLabelText('Volver')).toBeNull();
+    expect(getByTestId('app-header-row')).toHaveStyle({ minHeight: 44 });
+  });
+
+  it('shows the back button when navigation can go back', async () => {
+    navigation.canGoBack.mockReturnValue(true);
+
+    const { getByLabelText, queryByLabelText } = await render(
+      <AppHeader title="Componentes" leadingIcon={{ icon: 'menu', label: 'Menú' }} />,
+    );
+
+    expect(queryByLabelText('Menú')).toBeNull();
+
+    await fireEvent.press(getByLabelText('Volver'));
+
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 });

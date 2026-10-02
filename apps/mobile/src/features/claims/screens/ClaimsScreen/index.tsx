@@ -10,11 +10,7 @@ export default function ClaimsScreen() {
 
   return (
     <Screen testID="claims-screen" withHeader withTabBar>
-      <AppHeader
-        variant="flow"
-        title={claimsSummary.title}
-        onBackPress={() => navigation.navigate('Main', { screen: 'Home' })}
-      />
+      <AppHeader title={claimsSummary.title} hideBackButton />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Card style={styles.empty}>
           <AppText variant="bodySmall" style={styles.emptyMessage}>

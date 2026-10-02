@@ -6,14 +6,20 @@ import ClaimsScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
   const navigate = jest.fn();
+  const goBack = jest.fn();
   return {
-    useNavigation: () => ({ navigate }),
+    useNavigation: () => ({
+      navigate,
+      goBack,
+      canGoBack: () => true,
+    }),
   };
 });
 
 describe('ClaimsScreen', () => {
   beforeEach(() => {
     useNavigation().navigate.mockClear();
+    useNavigation().goBack.mockClear();
   });
 
   it('shows the empty claims list while online', async () => {
@@ -39,11 +45,11 @@ describe('ClaimsScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport');
   });
 
-  it('returns home from the back control', async () => {
+  it('goes back from the header', async () => {
     const { getByLabelText } = await render(<ClaimsScreen />);
 
     await fireEvent.press(getByLabelText('Volver'));
 
-    expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Home' });
+    expect(useNavigation().goBack).toHaveBeenCalledTimes(1);
   });
 });

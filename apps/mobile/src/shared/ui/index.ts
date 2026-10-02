@@ -8,6 +8,7 @@ export { CheckboxField } from './CheckboxField';
 export { CoverageList } from './CoverageList';
 export { DateField } from './DateField';
 export { Icon } from './Icon';
+export { IconButton } from './IconButton';
 export type { IconColor, IconName } from './Icon';
 export { Indicator } from './Indicator';
 export { KeyValue } from './KeyValue';
