@@ -30,6 +30,11 @@ const HomeScreen: React.FunctionComponent = () => {
             variant="confirm"
             onPress={() => navigation.navigate('Details')}
           />
+          <Button
+            title="Ver campos"
+            variant="secondary"
+            onPress={() => navigation.navigate('Fields')}
+          />
         </Card>
       </View>
     </Screen>

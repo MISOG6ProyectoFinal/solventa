@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
 
@@ -20,23 +20,60 @@ export function Button({
   testID,
 }: ButtonProps) {
   const looksDisabled = disabled && variant === 'primary';
+  const pressed = useAnimatedValue(0);
+
+  const animatePressed = (toValue: number) => {
+    Animated.timing(pressed, {
+      toValue,
+      duration: toValue === 0 ? 160 : 80,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.base, containerStyles[variant], looksDisabled && styles.disabled]}
+    <Animated.View
+      style={[
+        styles.press,
+        {
+          opacity: pressed.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.85],
+          }),
+          transform: [
+            {
+              scale: pressed.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0.97],
+              }),
+            },
+          ],
+        },
+      ]}
     >
-      <Text style={[theme.type.body, labelStyles[variant], styles.label]}>
-        {title}
-      </Text>
-    </Pressable>
+      <Pressable
+        testID={testID}
+        accessibilityRole="button"
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={() => {
+          if (!disabled) animatePressed(1);
+        }}
+        onPressOut={() => animatePressed(0)}
+        style={[styles.base, containerStyles[variant], looksDisabled && styles.disabled]}
+      >
+        <Text style={[theme.type.body, labelStyles[variant], styles.label]}>
+          {title}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  press: {
+    alignSelf: 'stretch',
+  },
   base: {
     alignSelf: 'stretch',
     alignItems: 'center',
