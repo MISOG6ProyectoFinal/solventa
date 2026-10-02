@@ -1,10 +1,9 @@
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import ComponentScreen from '../features/components/screens/ComponentScreen';
+import ComponentsScreen from '../features/components/screens/ComponentsScreen';
 import HomeScreen from '../features/home/screens/HomeScreen';
-import DetailsScreen from '../features/home/screens/DetailsScreen';
-import FieldsScreen from '../features/home/screens/FieldsScreen';
-import RowsScreen from '../features/home/screens/RowsScreen';
 import { theme } from '../shared/theme';
 
 export const RootStack = createNativeStackNavigator({
@@ -17,19 +16,13 @@ export const RootStack = createNativeStackNavigator({
   },
   screens: {
     Home: HomeScreen,
-    Details: DetailsScreen,
-    Fields: {
-      screen: FieldsScreen,
+    Components: {
+      screen: ComponentsScreen,
       options: {
-        title: 'Campos',
+        title: 'Componentes',
       },
     },
-    Rows: {
-      screen: RowsScreen,
-      options: {
-        title: 'Filas',
-      },
-    },
+    Component: ComponentScreen,
   },
 });
 
