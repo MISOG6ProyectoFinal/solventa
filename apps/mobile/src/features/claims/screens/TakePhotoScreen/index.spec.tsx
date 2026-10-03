@@ -79,7 +79,7 @@ describe('TakePhotoScreen', () => {
 
   it('captures a photo from the back camera and asks to confirm it', async () => {
     const { getByTestId, getByText, queryByText } = await render(<TakePhotoScreen />);
-    const camera = getByTestId('camera-preview');
+    const camera = getByTestId('camera-preview').queryAll((node) => node.type === 'Camera')[0];
 
     expect(camera.props.device).toBe('back');
     expect(camera.props.isActive).toBe(true);

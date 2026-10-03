@@ -8,7 +8,9 @@
     "metro": "nx start mobile --client-logs",
     "android": "nx run-android mobile -- --no-packager",
     "sync-mobile": "nx sync-deps mobile",
-    "postinstall": "node apps/mobile/scripts/sync-native-deps.mjs"
+    "typecheck-mobile": "tsc -p apps/mobile/tsconfig.app.json --noEmit",
+    "postinstall": "node apps/mobile/scripts/sync-native-deps.mjs",
+    "prepare": "node scripts/install-git-hooks.mjs"
   },
   "keywords": [],
   "author": "",

@@ -59,13 +59,9 @@ export default function TakePhotoScreen() {
           ) : (
             <>
               {hasPermission ? (
-                <Camera
-                  testID="camera-preview"
-                  style={styles.camera}
-                  device="back"
-                  isActive
-                  outputs={[photoOutput]}
-                />
+                <View testID="camera-preview" style={styles.camera}>
+                  <Camera style={styles.camera} device="back" isActive outputs={[photoOutput]} />
+                </View>
               ) : null}
               <View pointerEvents="none" style={styles.overlay}>
                 <AppText variant="subtitle" style={styles.cameraLabel}>
