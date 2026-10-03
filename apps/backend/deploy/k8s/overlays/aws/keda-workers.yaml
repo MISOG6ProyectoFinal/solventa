@@ -1,0 +1,31 @@
+# Auto-Scaling Group de los Workers Siniestro Paramétrico (VC-004 v2.0): KEDA lee
+# ApproximateNumberOfMessagesVisible de la cola y ajusta las réplicas (Competing Consumers).
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: aws-sqs
+  namespace: solventa
+spec:
+  podIdentity:
+    provider: aws
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: siniestros-worker
+  namespace: solventa
+spec:
+  scaleTargetRef:
+    name: siniestros-worker
+  minReplicaCount: 2 # una por zona de disponibilidad
+  maxReplicaCount: 60
+  pollingInterval: 5
+  cooldownPeriod: 120
+  triggers:
+    - type: aws-sqs-queue
+      authenticationRef:
+        name: aws-sqs
+      metadata:
+        queueURLFromEnv: EVENTS_QUEUE_URL
+        queueLength: "50" # mensajes visibles por réplica
+        awsRegion: us-east-1

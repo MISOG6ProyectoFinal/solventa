@@ -1,0 +1,11 @@
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: solventa-services
+data:
+  HEALTH_TARGETS: canales,cotizacion,polizas,identidad,siniestros,pagos,auditoria
+  COTIZACION_URL: http://cotizacion
+  POLIZAS_URL: http://polizas
+  SINIESTROS_URL: http://siniestros
+  COTIZACION_REPLICAS_HOST: cotizacion-replicas

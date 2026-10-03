@@ -1,0 +1,36 @@
+# Un servicio por almacén; cada componente de VC-003 v2.0 es un módulo dentro de él. Editar a mano es válido.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: '100'
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '2'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '5'
+    nginx.ingress.kubernetes.io/proxy-next-upstream: error timeout http_503
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /web
+        pathType: Prefix
+        backend:
+          service:
+            name: canales
+            port:
+              number: 80
+      - path: /movil
+        pathType: Prefix
+        backend:
+          service:
+            name: canales
+            port:
+              number: 80
+      - path: /socios
+        pathType: Prefix
+        backend:
+          service:
+            name: canales
+            port:
+              number: 80

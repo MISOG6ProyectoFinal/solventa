@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: solventa
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: solventa
+resources:
+  - serviceaccount.yaml
+  - services-config.yaml
+  - network-policy.yaml
+  - ingress.yaml
+  - services/canales.yaml
+  - services/cotizacion.yaml
+  - services/polizas.yaml
+  - services/identidad.yaml
+  - services/siniestros.yaml
+  - services/pagos.yaml
+  - services/auditoria.yaml
+  - services/health-monitor.yaml
+  - services/siniestros-worker.yaml

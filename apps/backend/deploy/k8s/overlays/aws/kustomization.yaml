@@ -1,0 +1,7 @@
+# Overlay para EKS. El ConfigMap solventa-platform y los Secret db-* los crea
+# Terraform (stack platform). Las imágenes se fijan con deploy/scripts/deploy-aws.sh.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - keda-workers.yaml

@@ -1,0 +1,69 @@
+# Overlay para minikube/kind: dependencias dentro del clúster (PostgreSQL, Redis,
+# LocalStack) y una réplica por servicio.
+#   eval $(minikube docker-env) && TAG=latest ./scripts/build-images.sh   (desde apps/backend)
+#   kubectl apply -k deploy/k8s/overlays/local
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: solventa
+resources:
+  - ../../base
+  - namespace.yaml
+  - dependencies.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: solventa-platform
+    literals:
+      - ENVIRONMENT=local
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - REDIS_URL=redis://redis:6379/0
+      - EVENTS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:solventa-eventos
+      - QUEUE_URL_SINIESTROS_PARAMETRICO=http://localstack:4566/000000000000/solventa-siniestros-parametrico
+      - QUEUE_URL_AUDITORIA=http://localstack:4566/000000000000/solventa-auditoria
+      - EVIDENCIAS_BUCKET=solventa-evidencias
+  - name: postgres-init
+    files:
+      - init-databases.sql
+  - name: localstack-init
+    files:
+      - init-aws.sh
+
+secretGenerator:
+  - name: db-cotizacion
+    literals: [DB_HOST=postgres, DB_NAME=cotizacion, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: db-polizas
+    literals: [DB_HOST=postgres, DB_NAME=polizas, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: db-siniestros
+    literals: [DB_HOST=postgres, DB_NAME=siniestros, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: db-identidad
+    literals: [DB_HOST=postgres, DB_NAME=identidad, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: db-pagos
+    literals: [DB_HOST=postgres, DB_NAME=pagos, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: db-auditoria
+    literals: [DB_HOST=postgres, DB_NAME=auditoria, DB_USER=solventa, DB_PASSWORD=solventa]
+
+patches:
+  - target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/part-of=solventa
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 0
