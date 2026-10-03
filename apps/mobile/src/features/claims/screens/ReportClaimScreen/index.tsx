@@ -18,12 +18,13 @@ import { claimReport } from '../../claimReport';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
+import { formatDate } from '../../utils';
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
   const [policy, setPolicy] = useState(claimReport.policy);
   const [claimType, setClaimType] = useState(claimReport.claimType);
-  const [occurredAt, setOccurredAt] = useState(claimReport.occurredAt);
+  const [occurredAt, setOccurredAt] = useState(() => formatDate(new Date()));
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const { location, failed: locationFailed, refresh } = useLocation();
