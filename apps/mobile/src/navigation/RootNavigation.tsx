@@ -15,12 +15,19 @@ const Tabs = createBottomTabNavigator({
   screenOptions: {
     headerShown: false,
   },
-  tabBar: ({ state, navigation }) => (
-    <TabBar
-      value={state.routes[state.index].name}
-      onChange={(id) => navigation.navigate(id)}
-    />
-  ),
+  tabBar: ({ state, navigation }) => {
+    const route = state.routes[state.index];
+    if (!route) {
+      return null;
+    }
+
+    return (
+      <TabBar
+        value={route.name}
+        onChange={(id) => navigation.navigate(id)}
+      />
+    );
+  },
   screens: {
     Home: HomeScreen,
     Policies: EmptyTabScreen,

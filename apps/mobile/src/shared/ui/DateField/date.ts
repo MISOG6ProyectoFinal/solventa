@@ -20,7 +20,9 @@ export const months = [
   'diciembre',
 ];
 
-export const monthLabels = months.map((month) => `${month[0].toUpperCase()}${month.slice(1)}`);
+export const monthLabels = months.map(
+  (month) => `${month.charAt(0).toUpperCase()}${month.slice(1)}`,
+);
 
 export function parseDate(value?: string): DateParts | null {
   if (!value) return null;
