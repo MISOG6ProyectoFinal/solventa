@@ -100,6 +100,21 @@ jest.mock('react-native', () => {
   };
 });
 
+jest.mock('react-native-video', () => {
+  const React = require('react');
+  const Video = React.forwardRef((props: { children?: unknown }, ref: React.Ref<{ seek: () => void }>) => {
+    React.useImperativeHandle(ref, () => ({
+      seek: () => undefined,
+    }));
+    return React.createElement('Video', props);
+  });
+
+  return {
+    __esModule: true,
+    default: Video,
+  };
+});
+
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const host = (name: string) => {

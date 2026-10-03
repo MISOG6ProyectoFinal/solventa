@@ -22,3 +22,4 @@ export { Switch } from './Switch';
 export { TabBar } from './TabBar';
 export { TextField } from './TextField';
 export { Thumbnail } from './Thumbnail';
+export { VideoPlayer } from './VideoPlayer';

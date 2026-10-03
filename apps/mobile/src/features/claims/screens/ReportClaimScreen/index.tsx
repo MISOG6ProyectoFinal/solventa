@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   DateField,
+  Icon,
   IconButton,
   Screen,
   SelectField,
@@ -29,15 +30,17 @@ export default function ReportClaimScreen() {
   const [submitted, setSubmitted] = useState(false);
   const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimPhotosStore((state) => state.photos);
-  const clearPhotos = useClaimPhotosStore((state) => state.clear);
+  const videos = useClaimPhotosStore((state) => state.videos);
+  const clearEvidence = useClaimPhotosStore((state) => state.clear);
+  const evidenceCount = photos.length + videos.length;
   const descriptionMissing = submitted && description.trim() === '';
-  const evidenceMissing = submitted && photos.length === 0;
+  const evidenceMissing = submitted && evidenceCount === 0;
 
   useEffect(() => {
     return () => {
-      clearPhotos();
+      clearEvidence();
     };
-  }, [clearPhotos]);
+  }, [clearEvidence]);
 
   return (
     <Screen testID="report-claim-screen" header={{ title: texts.report.screenTitle }}>
@@ -102,7 +105,7 @@ export default function ReportClaimScreen() {
               {texts.report.evidenceHeading}
             </AppText>
             <AppText variant="caption" style={styles.evidenceCount}>
-              {`${photos.length}/10`}
+              {`${evidenceCount}/10`}
             </AppText>
           </View>
           <AppText variant="bodySmall" style={styles.evidenceHint}>
@@ -113,10 +116,14 @@ export default function ReportClaimScreen() {
               <Button title={texts.report.takePhotoButton} variant="outlined" onPress={() => navigation.navigate('ClaimReport', { screen: 'TakePhoto' })} />
             </View>
             <View style={styles.action}>
-              <Button title={texts.report.recordVideoButton} variant="outlined" />
+              <Button
+                title={texts.report.recordVideoButton}
+                variant="outlined"
+                onPress={() => navigation.navigate('ClaimReport', { screen: 'RecordVideo' })}
+              />
             </View>
           </View>
-          {photos.length > 0 ? (
+          {evidenceCount > 0 ? (
             <View style={styles.thumbs}>
               {photos.map((photo) => (
                 <Pressable
@@ -141,6 +148,30 @@ export default function ReportClaimScreen() {
                   </AppText>
                   <AppText variant="caption" style={styles.thumbSize}>
                     {formatFileSize(photo.bytes)}
+                  </AppText>
+                </Pressable>
+              ))}
+              {videos.map((video) => (
+                <Pressable
+                  key={video.filePath}
+                  accessibilityRole="button"
+                  accessibilityLabel={video.label}
+                  style={styles.thumb}
+                  onPress={() =>
+                    navigation.navigate('ClaimReport', {
+                      screen: 'VideoPreview',
+                      params: { filePath: video.filePath },
+                    })
+                  }
+                >
+                  <View style={styles.thumbVideo}>
+                    <Icon name="video" size={24} color="primary" />
+                  </View>
+                  <AppText variant="caption" style={styles.thumbLabel}>
+                    {video.label}
+                  </AppText>
+                  <AppText variant="caption" style={styles.thumbSize}>
+                    {formatFileSize(video.bytes)}
                   </AppText>
                 </Pressable>
               ))}

@@ -63,6 +63,14 @@ export default StyleSheet.create({
     height: 72,
     borderRadius: theme.radius.medium,
   },
+  thumbVideo: {
+    width: '100%',
+    height: 72,
+    borderRadius: theme.radius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background,
+  },
   thumbLabel: {
     color: theme.colors.text,
     fontSize: 10,

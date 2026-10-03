@@ -20,7 +20,8 @@
     "react-native-worklets": "*",
     "react-native-nitro-image": "*",
     "react-native-nitro-modules": "*",
-    "react-native-vision-camera": "*"
+    "react-native-vision-camera": "*",
+    "react-native-video": "*"
   },
   "devDependencies": {}
 }

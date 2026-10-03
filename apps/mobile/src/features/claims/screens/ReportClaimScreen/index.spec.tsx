@@ -105,6 +105,40 @@ describe('ReportClaimScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', { screen: 'TakePhoto' });
   });
 
+  it('opens the camera to record a video', async () => {
+    const { getByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByText('Grabar video'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', { screen: 'RecordVideo' });
+  });
+
+  it('opens a saved video', async () => {
+    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
+    const { getByLabelText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByLabelText('Video 1'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', {
+      screen: 'VideoPreview',
+      params: { filePath: '/tmp/video.mp4' },
+    });
+  });
+
+  it('accepts a video as evidence', async () => {
+    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
+    const { getByText, getByPlaceholderText, queryByText } = await render(<ReportClaimScreen />);
+
+    expect(getByText('Video 1')).toBeTruthy();
+    expect(getByText('1,5 KB')).toBeTruthy();
+    expect(getByText('1/10')).toBeTruthy();
+
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Choque en la calle 85');
+    await fireEvent.press(getByText('Enviar reporte'));
+
+    expect(queryByText('Agrega al menos una evidencia')).toBeNull();
+  });
+
   it('opens a saved photo', async () => {
     useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { getByLabelText } = await render(<ReportClaimScreen />);

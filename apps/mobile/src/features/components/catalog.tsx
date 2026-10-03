@@ -90,6 +90,8 @@ const iconLabels: Record<IconName, string> = {
   enviar: 'Enviar',
   camara: 'Cámara',
   video: 'Video',
+  reproducir: 'Reproducir',
+  pausar: 'Pausar',
   repetir: 'Repetir',
   sincronizar: 'Sincronizar',
   exito: 'Éxito',

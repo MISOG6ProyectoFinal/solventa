@@ -2,21 +2,29 @@
   "[javascript]": {
     "editor.detectIndentation": false,
     "editor.insertSpaces": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   },
   "[javascriptreact]": {
     "editor.detectIndentation": false,
     "editor.insertSpaces": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   },
   "[typescript]": {
     "editor.detectIndentation": false,
     "editor.insertSpaces": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   },
   "[typescriptreact]": {
     "editor.detectIndentation": false,
     "editor.insertSpaces": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   }
 }

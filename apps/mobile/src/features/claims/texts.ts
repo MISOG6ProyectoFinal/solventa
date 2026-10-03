@@ -32,8 +32,25 @@ export const texts = {
     captureButton: 'Capturar',
     confirmButton: 'Confirmar',
   },
+  video: {
+    screenTitle: 'Grabar video',
+    previewTitle: 'Vista previa',
+    durationLimit: 'Máximo 30 s',
+    recordButton: 'Grabar',
+    stopButton: 'Detener',
+    cancelButton: 'Cancelar',
+    confirmButton: 'Confirmar',
+    playButton: 'Reproducir',
+    pauseButton: 'Pausar',
+  },
   savedPhoto: {
     screenTitle: 'Evidencia',
     removeButton: 'Eliminar',
+  },
+  savedVideo: {
+    screenTitle: 'Evidencia',
+    removeButton: 'Eliminar',
+    playButton: 'Reproducir',
+    pauseButton: 'Pausar',
   },
 };

@@ -1,8 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import ReportClaimScreen from './screens/ReportClaimScreen';
 import PhotoPreviewScreen from './screens/PhotoPreviewScreen';
+import RecordVideoScreen from './screens/RecordVideoScreen';
+import ReportClaimScreen from './screens/ReportClaimScreen';
 import TakePhotoScreen from './screens/TakePhotoScreen';
+import VideoPreviewScreen from './screens/VideoPreviewScreen';
 
 export const ClaimReportStack = createNativeStackNavigator({
   initialRouteName: 'Report',
@@ -12,6 +14,8 @@ export const ClaimReportStack = createNativeStackNavigator({
   screens: {
     Report: ReportClaimScreen,
     TakePhoto: TakePhotoScreen,
+    RecordVideo: RecordVideoScreen,
     PhotoPreview: PhotoPreviewScreen,
+    VideoPreview: VideoPreviewScreen,
   },
 });

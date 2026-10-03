@@ -9,9 +9,23 @@ type NewPhoto = {
   bytes: number;
 };
 
+export type ClaimVideo = {
+  label: string;
+  filePath: string;
+  bytes: number;
+};
+
+type NewVideo = {
+  filePath: string;
+  bytes: number;
+};
+
 export type ClaimPhotos = {
   photos: ClaimPhoto[];
+  videos: ClaimVideo[];
   addPhoto: (photo: NewPhoto) => void;
+  addVideo: (video: NewVideo) => void;
   removePhoto: (filePath: string) => void;
+  removeVideo: (filePath: string) => void;
   clear: () => void;
 };
