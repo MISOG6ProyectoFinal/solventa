@@ -22,6 +22,4 @@ export const claimReport: ClaimReport = {
     { value: 'Emergencia médica', label: 'Emergencia médica' },
   ],
   occurredAt: '2026-09-12 10:30',
-  address: 'Calle 85 #12-34, Chapinero, Bogotá',
-  gps: 'GPS 4.6683, -74.0531 (±8 m)',
 };

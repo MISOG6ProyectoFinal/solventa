@@ -10,6 +10,7 @@
     "metro-config": "*",
     "@nx/eslint-plugin": "*",
     "react-native-svg-transformer": "*",
+    "@react-native-community/geolocation": "*",
     "@react-navigation/native": "*",
     "@react-navigation/native-stack": "*",
     "react-native-safe-area-context": "*",

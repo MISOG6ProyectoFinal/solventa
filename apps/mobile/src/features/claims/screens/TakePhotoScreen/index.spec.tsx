@@ -2,10 +2,18 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePhotoOutput } from 'react-native-vision-camera';
 
-import { useClaimPhotos } from '../../claimPhotos';
-import { claimReport } from '../../claimReport';
+import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import TakePhotoScreen from './index';
+
+jest.mock('../../../../shared/location', () => ({
+  readLocation: jest.fn(() =>
+    Promise.resolve({
+      address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
+      gps: 'GPS 4.5981, -74.0760 (±12 m)',
+    }),
+  ),
+}));
 
 jest.mock('@react-navigation/native', () => {
   const goBack = jest.fn();
@@ -43,7 +51,7 @@ describe('TakePhotoScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
     usePhotoOutput().capturePhoto.mockClear();
-    useClaimPhotos.getState().clear();
+    useClaimPhotosStore.getState().clear();
   });
 
   it('shows the viewfinder for the damage photo', async () => {
@@ -52,7 +60,9 @@ describe('TakePhotoScreen', () => {
     expect(getByText('Tomar foto')).toBeTruthy();
     expect(getByText('Cámara')).toBeTruthy();
     expect(getByText('Encuadra el daño y captura')).toBeTruthy();
-    expect(getByText(claimReport.gps)).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText('GPS 4.5981, -74.0760 (±12 m)')).toBeTruthy();
+    });
     expect(getByText('Cancelar')).toBeTruthy();
     expect(getByText('Capturar')).toBeTruthy();
     expect(getByLabelText('Volver')).toBeTruthy();

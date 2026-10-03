@@ -4,9 +4,9 @@ import { useNavigation } from '@react-navigation/native';
 import { Camera, useCameraPermission, usePhotoOutput } from 'react-native-vision-camera';
 
 import { AppText, Button, Screen } from '../../../../shared/ui';
+import { useLocation } from '../../../../shared/useLocation';
 import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import { photoUri } from '../../photoUtils';
-import { claimReport } from '../../claimReport';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -20,6 +20,7 @@ export default function TakePhotoScreen() {
   const photoOutput = usePhotoOutput();
   const { hasPermission, requestPermission } = useCameraPermission();
   const [captured, setCaptured] = useState<CapturedPhoto | null>(null);
+  const { location, failed: locationFailed } = useLocation();
   const addPhoto = useClaimPhotosStore((state) => state.addPhoto);
 
   useEffect(() => {
@@ -74,7 +75,8 @@ export default function TakePhotoScreen() {
                   {texts.camera.framingHint}
                 </AppText>
                 <AppText variant="caption" style={styles.gps}>
-                  {claimReport.gps}
+                  {location?.gps ??
+                    (locationFailed ? texts.report.locationUnavailable : texts.report.locationPending)}
                 </AppText>
               </View>
             </>

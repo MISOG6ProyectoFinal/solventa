@@ -82,6 +82,11 @@ jest.mock('react-native', () => {
       OS: 'android',
       select: (options: { android?: unknown }) => options.android,
     },
+    PermissionsAndroid: {
+      PERMISSIONS: { ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION' },
+      RESULTS: { GRANTED: 'granted', DENIED: 'denied' },
+      request: jest.fn(async () => 'granted'),
+    },
     Dimensions: {
       get: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }),
       addEventListener: () => ({ remove: () => undefined }),

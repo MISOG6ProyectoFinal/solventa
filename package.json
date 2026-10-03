@@ -83,6 +83,7 @@
     "@angular/platform-browser-dynamic": "~22.1.0",
     "@angular/router": "~22.1.0",
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@react-native-community/geolocation": "^3.4.0",
     "@react-navigation/bottom-tabs": "^7.20.0",
     "@react-navigation/elements": "^2.9.44",
     "@react-navigation/native": "^7.5.0",

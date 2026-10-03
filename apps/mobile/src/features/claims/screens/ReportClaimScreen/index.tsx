@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   DateField,
+  IconButton,
   Screen,
   SelectField,
   TextField,
@@ -14,6 +15,7 @@ import {
 import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import { formatFileSize, photoUri } from '../../photoUtils';
 import { claimReport } from '../../claimReport';
+import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -24,6 +26,7 @@ export default function ReportClaimScreen() {
   const [occurredAt, setOccurredAt] = useState(claimReport.occurredAt);
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimPhotosStore((state) => state.photos);
   const clearPhotos = useClaimPhotosStore((state) => state.clear);
   const descriptionMissing = submitted && description.trim() === '';
@@ -61,15 +64,26 @@ export default function ReportClaimScreen() {
             timeSelection
           />
           <View>
-            <AppText variant="label" style={styles.locationLabel}>
-              {texts.report.locationLabel}
-            </AppText>
+            <View style={styles.locationHeader}>
+              <AppText variant="label" style={styles.locationLabel}>
+                {texts.report.locationLabel}
+              </AppText>
+              <IconButton
+                label={texts.report.refreshLocation}
+                icon="sincronizar"
+                color="primary"
+                onPress={refresh}
+              />
+            </View>
             <AppText variant="bodySmall" style={styles.address}>
-              {claimReport.address}
+              {location?.address ??
+                (locationFailed ? texts.report.locationUnavailable : texts.report.locationPending)}
             </AppText>
-            <AppText variant="bodySmall" style={styles.detail}>
-              {claimReport.gps}
-            </AppText>
+            {location ? (
+              <AppText variant="bodySmall" style={styles.detail}>
+                {location.gps}
+              </AppText>
+            ) : null}
           </View>
           <TextField
             label={texts.report.descriptionLabel}

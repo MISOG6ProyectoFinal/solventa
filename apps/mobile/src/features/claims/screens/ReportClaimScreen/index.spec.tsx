@@ -1,7 +1,8 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useClaimPhotos } from '../../claimPhotos';
+import { readLocation } from '../../../../shared/location';
+import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import ReportClaimScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -16,11 +17,27 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
+jest.mock('../../../../shared/location', () => ({
+  readLocation: jest.fn(() =>
+    Promise.resolve({
+      address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
+      gps: 'GPS 4.5981, -74.0760 (±12 m)',
+    }),
+  ),
+}));
+
+const currentPlace = {
+  address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
+  gps: 'GPS 4.5981, -74.0760 (±12 m)',
+};
+
 describe('ReportClaimScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
     useNavigation().navigate.mockClear();
-    useClaimPhotos.getState().clear();
+    useClaimPhotosStore.getState().clear();
+    jest.mocked(readLocation).mockReset();
+    jest.mocked(readLocation).mockResolvedValue(currentPlace);
   });
 
   it('shows the online report form', async () => {
@@ -34,8 +51,11 @@ describe('ReportClaimScreen', () => {
     expect(getByText(/Fecha y hora de ocurrencia/)).toBeTruthy();
     expect(getByText('12/09/2026 10:30')).toBeTruthy();
     expect(getByText('Ubicación')).toBeTruthy();
-    expect(getByText('Calle 85 #12-34, Chapinero, Bogotá')).toBeTruthy();
-    expect(getByText('GPS 4.6683, -74.0531 (±8 m)')).toBeTruthy();
+
+    await waitFor(() => {
+      expect(getByText('Carrera 7 #32-16, La Candelaria, Bogotá')).toBeTruthy();
+    });
+    expect(getByText('GPS 4.5981, -74.0760 (±12 m)')).toBeTruthy();
     expect(getByText(/Descripción/)).toBeTruthy();
     expect(getByPlaceholderText('Describe lo ocurrido')).toBeTruthy();
     expect(getByText('Evidencias')).toBeTruthy();
@@ -86,7 +106,7 @@ describe('ReportClaimScreen', () => {
   });
 
   it('opens a saved photo', async () => {
-    useClaimPhotos.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { getByLabelText } = await render(<ReportClaimScreen />);
 
     await fireEvent.press(getByLabelText('Foto 1'));
@@ -103,5 +123,54 @@ describe('ReportClaimScreen', () => {
     await fireEvent.press(getByLabelText('Volver'));
 
     expect(useNavigation().goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the location when it is updated', async () => {
+    let finishRefresh: (place: { address: string; gps: string }) => void = () => undefined;
+    jest
+      .mocked(readLocation)
+      .mockResolvedValueOnce(currentPlace)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishRefresh = resolve;
+        }),
+      );
+
+    const { getByText, getByLabelText, queryByText } = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(getByText(currentPlace.address)).toBeTruthy();
+    });
+
+    await fireEvent.press(getByLabelText('Actualizar ubicación'));
+
+    expect(getByText('Obteniendo ubicación')).toBeTruthy();
+    expect(queryByText(currentPlace.address)).toBeNull();
+
+    finishRefresh({
+      address: 'Calle 85 #12-34, Chapinero, Bogotá',
+      gps: 'GPS 4.7110, -74.0721 (±8 m)',
+    });
+
+    await waitFor(() => {
+      expect(getByText('Calle 85 #12-34, Chapinero, Bogotá')).toBeTruthy();
+    });
+    expect(getByText('GPS 4.7110, -74.0721 (±8 m)')).toBeTruthy();
+    expect(queryByText('Obteniendo ubicación')).toBeNull();
+  });
+
+  it('shows an error when the location cannot be read', async () => {
+    jest.mocked(readLocation).mockRejectedValueOnce(new Error('denied'));
+    const { findByText, queryByText } = await render(<ReportClaimScreen />);
+
+    expect(await findByText('No se pudo obtener la ubicación')).toBeTruthy();
+    expect(queryByText(/GPS /)).toBeNull();
+  });
+
+  it('shows that the location is still being read', async () => {
+    jest.mocked(readLocation).mockReturnValueOnce(new Promise(() => undefined));
+    const { getByText } = await render(<ReportClaimScreen />);
+
+    expect(getByText('Obteniendo ubicación')).toBeTruthy();
   });
 });

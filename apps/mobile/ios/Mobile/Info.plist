@@ -33,7 +33,7 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Se usa tu ubicación para mostrar dónde ocurrió el siniestro.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Outfit-Regular.ttf</string>

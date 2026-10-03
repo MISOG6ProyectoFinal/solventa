@@ -11,6 +11,11 @@ export default StyleSheet.create({
     padding: theme.space.lg,
     gap: theme.space.md,
   },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   locationLabel: {
     fontFamily: theme.type.subtitle.fontFamily,
     fontWeight: theme.type.subtitle.fontWeight,

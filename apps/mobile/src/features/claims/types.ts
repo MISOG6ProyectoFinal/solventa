@@ -9,6 +9,4 @@ export type ClaimReport = {
   claimType: string;
   claimTypes: ClaimChoice[];
   occurredAt: string;
-  address: string;
-  gps: string;
 };
