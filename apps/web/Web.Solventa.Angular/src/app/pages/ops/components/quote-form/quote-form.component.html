@@ -1,0 +1,27 @@
+<slv-card>
+  <h2 class="text-sm font-semibold mb-4 text-foreground">Formulario dinámico por ramo</h2>
+
+  <slv-field label="Ramo" [required]="true">
+    <select slvInput [ngModel]="ramo()" (ngModelChange)="changeRamo($event)">
+      @for (item of ramos; track item.id) {
+        <option [value]="item.id">{{ item.label }}{{ item.requiresConsent ? ' (requiere consentimiento)' : '' }}</option>
+      }
+    </select>
+  </slv-field>
+
+  <p class="text-[11px] uppercase tracking-wider font-semibold mt-5 mb-3 text-muted-foreground">Datos del cliente</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    @for (field of clientFields; track field.key) {
+      <slv-quote-field [definition]="field" [value]="valueOf(field.key)" (valueChange)="setValue(field.key, $event)" />
+    }
+  </div>
+
+  <p class="text-[11px] uppercase tracking-wider font-semibold mt-5 mb-3 text-muted-foreground">
+    Datos del riesgo · {{ ramoLabel() }}
+  </p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    @for (field of riskFields(); track field.key) {
+      <slv-quote-field [definition]="field" [value]="valueOf(field.key)" (valueChange)="setValue(field.key, $event)" />
+    }
+  </div>
+</slv-card>

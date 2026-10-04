@@ -1,0 +1,53 @@
+<div class="space-y-4">
+  <div>
+    <h3 class="text-sm font-semibold text-foreground">Configuración de ramos y coberturas</h3>
+    <p class="text-xs mt-1 text-muted-foreground">Los cambios aplican a las siguientes solicitudes del socio. Los ramos no habilitados se rechazan.</p>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    @for (r of ramos; track r.id) {
+      <div 
+        class="rounded-xl border p-4 transition-colors"
+        [class.border-secondary]="isEnabled(r.id)"
+        [class.border-border]="!isEnabled(r.id)"
+        [style.background]="isEnabled(r.id) ? '#EAF3FA' : '#FFFFFF'">
+        
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="font-semibold text-sm text-foreground">{{ r.label }}</p>
+            <p class="text-xs text-muted-foreground">{{ isEnabled(r.id) ? 'Habilitado' : 'Deshabilitado' }}</p>
+          </div>
+          <slv-switch [checked]="isEnabled(r.id)" (checkedChange)="toggleRamo(r.id)" />
+        </div>
+        
+        @if (isEnabled(r.id)) {
+          <div class="space-y-2 pt-2 border-t border-border">
+            <p class="text-[11px] uppercase tracking-wider text-muted-foreground">Coberturas</p>
+            @for (cov of coverageCatalog[r.id]; track cov) {
+              <label class="flex items-center gap-2 text-sm cursor-pointer text-foreground">
+                <input type="checkbox" [checked]="hasCoverage(r.id, cov)" (change)="toggleCoverage(r.id, cov)" class="rounded border-border" />
+                {{ cov }}
+              </label>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <slv-card class="!bg-[#F5F8FA]">
+    <p class="text-xs uppercase tracking-wider mb-2 text-muted-foreground">Configuración vigente</p>
+    @if (partner().enabledRamos.length === 0) {
+      <p class="text-sm text-muted-foreground">El socio no tiene ramos habilitados.</p>
+    } @else {
+      <ul class="space-y-2 text-sm text-foreground">
+        @for (r of partner().enabledRamos; track r) {
+          <li>
+            <strong>{{ getRamoLabel(r) }}:</strong> 
+            {{ (partner().coveragesByRamo[r] || []).join(', ') || 'Sin coberturas seleccionadas' }}
+          </li>
+        }
+      </ul>
+    }
+  </slv-card>
+</div>

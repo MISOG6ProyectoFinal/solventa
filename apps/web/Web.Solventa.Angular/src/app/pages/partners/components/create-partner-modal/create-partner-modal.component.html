@@ -1,0 +1,82 @@
+<slv-modal 
+  [open]="open()" 
+  (closed)="handleClose()"
+  [title]="createdResult() ? 'Socio creado exitosamente' : 'Nuevo socio'"
+  [wide]="true">
+  
+  @if (!createdResult()) {
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <slv-field label="NOMBRE DEL SOCIO *" [required]="true" [error]="errors()['name']">
+        <input slvInput [invalid]="!!errors()['name']" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      </slv-field>
+      
+      <slv-field label="IDENTIFICADOR ÚNICO *" [required]="true" [error]="errors()['identifier']">
+        <input slvInput placeholder="MI-SOCIO" [invalid]="!!errors()['identifier']" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" />
+        <p class="text-[11px] text-muted-foreground mt-1">No se permiten duplicados</p>
+      </slv-field>
+      
+      <slv-field label="TIPO DE SOCIO *" [required]="true">
+        <select slvInput [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
+          @for (t of partnerTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </slv-field>
+      
+      <slv-field label="PAÍS *" [required]="true">
+        <select slvInput [ngModel]="pais()" (ngModelChange)="pais.set($event)">
+          <option value="Colombia">Colombia</option>
+          <option disabled value="México">México (Pronto)</option>
+          <option disabled value="Chile">Chile (Pronto)</option>
+          <option disabled value="Perú">Perú (Pronto)</option>
+        </select>
+      </slv-field>
+      
+      <slv-field label="CORREO DE CONTACTO TÉCNICO *" [required]="true" [error]="errors()['email']">
+        <input slvInput [invalid]="!!errors()['email']" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+      </slv-field>
+      
+      <slv-field label="ALCANCE INICIAL *" [required]="true" [error]="errors()['alcances']">
+        <div class="space-y-2 pt-1">
+          @for (a of alcancesOptions; track a.id) {
+            <label class="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" [checked]="alcances().includes(a.id)" (change)="toggleAlcance(a.id)" class="rounded" />
+              {{ a.label }}
+            </label>
+          }
+        </div>
+      </slv-field>
+    </div>
+  } @else {
+    <div class="space-y-4">
+      <slv-alert tone="success">Guarde estas credenciales en un lugar seguro. El secreto no se volverá a mostrar.</slv-alert>
+      <div class="rounded-xl border border-border bg-background p-4 grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-sm">
+        <div>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">client_id</p>
+          <p class="text-foreground">{{ createdResult()!.partner.clientId }}</p>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">secreto (API KEY)</p>
+          <p class="text-foreground">{{ createdResult()!.secret }}</p>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">Contrato API</p>
+          <p class="text-foreground">Activo · {{ createdResult()!.partner.versionContratoApi }}</p>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">Estado Credencial</p>
+          <p class="text-foreground">{{ createdResult()!.partner.credentialStatus }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="flex gap-4">
+    @if (!createdResult()) {
+      <button slv-button variant="outline" (click)="handleClose()">Cancelar</button>
+      <button slv-button variant="primary" (click)="submit()">Crear y aprovisionar</button>
+    } @else {
+      <button slv-button variant="primary" (click)="goDetail()">Ir al detalle del socio</button>
+    }
+  </div>
+</slv-modal>

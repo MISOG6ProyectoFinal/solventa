@@ -1,0 +1,44 @@
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full bg-accent"></div>
+        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">Operaciones y Pólizas</h1>
+      </div>
+      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">Back-office comercial · Cotización, consentimiento Open Finance / Open Data y gestión de pólizas</p>
+    </div>
+  </div>
+
+  <slv-tabs [items]="tabs()" [(active)]="activeTab"></slv-tabs>
+
+  @if (activeTab() === 'cotizar') {
+    <slv-quote-tab />
+  } @else {
+    @if (!selectedPolicyId()) {
+      <slv-policy-list 
+        [policies]="policies()" 
+        [partners]="partners()" 
+        (opened)="openPolicy($event)" />
+    } @else if (selectedPolicy()) {
+      <slv-policy-detail 
+        [policy]="selectedPolicy()!"
+        (backRequested)="closePolicy()"
+        (endorsementRequested)="showEndosoModal.set(true)"
+        (cancellationRequested)="showCancelModal.set(true)" />
+    }
+  }
+</div>
+
+@if (showEndosoModal() && selectedPolicy()) {
+  <slv-endorsement-modal 
+    [policy]="selectedPolicy()!" 
+    (closed)="showEndosoModal.set(false)" 
+    (continued)="onEndorsementContinued($event)" />
+}
+
+@if (showCancelModal() && selectedPolicy()) {
+  <slv-cancel-policy-modal 
+    [policy]="selectedPolicy()!" 
+    (closed)="showCancelModal.set(false)" 
+    (confirmed)="onCancellationConfirmed($event)" />
+}

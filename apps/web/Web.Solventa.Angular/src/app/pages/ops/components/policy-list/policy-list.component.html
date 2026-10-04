@@ -1,0 +1,71 @@
+<div class="space-y-4">
+  <slv-card>
+    <h2 class="text-sm font-semibold mb-3 text-foreground">Consulta de pólizas</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="md:col-span-2">
+        <slv-field label="Buscar por número de póliza o identificación" hint="Ej: SLV-2024-00391 o 1020304050">
+          <input slvInput type="text" placeholder="Buscar..." [(ngModel)]="query" />
+        </slv-field>
+      </div>
+
+      <slv-field label="Estado">
+        <select slvInput [(ngModel)]="statusFilter">
+          <option [value]="allFilter">Todos</option>
+          @for (status of statusOptions; track status) {
+            <option [value]="status">{{ status }}</option>
+          }
+        </select>
+      </slv-field>
+
+      <slv-field label="Socio origen">
+        <select slvInput [(ngModel)]="partnerFilter">
+          <option [value]="allFilter">Todos</option>
+          @for (partner of partners(); track partner) {
+            <option [value]="partner">{{ partner }}</option>
+          }
+        </select>
+      </slv-field>
+    </div>
+  </slv-card>
+
+  <slv-card [padding]="false">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-border text-muted-foreground">
+            <th class="px-5 py-3 font-medium">Póliza</th>
+            <th class="px-5 py-3 font-medium">Asegurado</th>
+            <th class="px-5 py-3 font-medium">Identificación</th>
+            <th class="px-5 py-3 font-medium">Ramo</th>
+            <th class="px-5 py-3 font-medium">Socio origen</th>
+            <th class="px-5 py-3 font-medium">Estado</th>
+            <th class="px-5 py-3 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (policy of filteredPolicies(); track policy.id) {
+            <tr class="border-b border-border last:border-0">
+              <td class="px-5 py-3 font-medium text-foreground">{{ policy.number }}</td>
+              <td class="px-5 py-3 text-foreground">{{ policy.insuredName }}</td>
+              <td class="px-5 py-3 text-muted-foreground">{{ policy.tipoDocumento }} {{ policy.identification }}</td>
+              <td class="px-5 py-3">{{ ramoLabel(policy.ramo) }}</td>
+              <td class="px-5 py-3 text-muted-foreground">{{ policy.socioOrigen }}</td>
+              <td class="px-5 py-3">
+                <slv-badge [tone]="statusTone[policy.status]">{{ policy.status.toUpperCase() }}</slv-badge>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <button slv-button type="button" variant="ghost" (click)="opened.emit(policy.id)">Abrir</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="px-5 py-8 text-center text-muted-foreground">
+                No se encontraron pólizas con los filtros aplicados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </slv-card>
+</div>

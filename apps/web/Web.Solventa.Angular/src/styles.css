@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-on-primary: var(--on-primary);
+  --color-on-primary-muted: var(--on-primary-muted);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --color-success-surface: var(--success-surface);
+  --color-success-border: var(--success-border);
+  --color-success-text: var(--success-text);
+  --color-info-surface: var(--info-surface);
+  --color-info-border: var(--info-border);
+  --color-info-text: var(--info-text);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-warning-text: var(--warning-text);
+  --color-error-surface: var(--error-surface);
+  --color-error-border: var(--error-border);
+  --color-error-text: var(--error-text);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Fraunces', serif;
+}
+
+:root {
+  /* Solventa brand */
+  --background: #F5F8FA;
+  --foreground: #1D2733;
+  --card: #FFFFFF;
+  --card-foreground: #1D2733;
+
+  --primary: #163A5F;
+  --primary-foreground: #FFFFFF;
+  --primary-light: #2878B5;
+  --primary-dark: #0F2A45;
+
+  --secondary: #2878B5;
+  --secondary-foreground: #FFFFFF;
+  --secondary-light: #5A9BC9;
+  --secondary-dark: #1E5A8A;
+
+  --accent: #28A6A1;
+  --accent-foreground: #FFFFFF;
+  --accent-light: #5CBCB8;
+  --accent-dark: #1E7D79;
+
+  --muted: #E8EEF2;
+  --muted-foreground: #5A6A7A;
+  --border: #D4DEE6;
+  --ring: #28A6A1;
+
+  --on-primary: #FFFFFF;
+  --on-primary-muted: #9BB8D0;
+
+  --success: #28A6A1;
+  --warning: #E8A838;
+  --error: #C45C5C;
+  --info: #2878B5;
+
+  /* Status surfaces: background · border · text */
+  --success-surface: #E6F6F5;
+  --success-border: #A8DED9;
+  --success-text: #1E7D79;
+  --info-surface: #EAF3FA;
+  --info-border: #B8D4EA;
+  --info-text: #1E5A8A;
+  --warning-surface: #FFF8EB;
+  --warning-border: #F0D9A0;
+  --warning-text: #8A6A10;
+  --error-surface: #FDF0F0;
+  --error-border: #E8B8B8;
+  --error-text: #8A3A3A;
+
+  --radius: 0.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}

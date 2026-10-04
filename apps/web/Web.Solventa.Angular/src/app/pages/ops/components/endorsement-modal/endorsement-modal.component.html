@@ -1,0 +1,44 @@
+<slv-modal [open]="true" title="Registrar endoso" [wide]="true" (closed)="closed.emit()">
+  <div class="space-y-4">
+    <slv-alert tone="info">Solo pólizas activas admiten endosos. Revise los cambios antes de confirmar.</slv-alert>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <slv-field label="Tipo de endoso" [required]="true">
+        <select slvInput [(ngModel)]="type">
+          @for (option of types; track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
+          }
+        </select>
+      </slv-field>
+
+      <slv-field label="Fecha efectiva" [required]="true" [error]="dateError()">
+        <input slvInput type="date" [invalid]="!!dateError()" [(ngModel)]="effectiveDate" />
+      </slv-field>
+
+      <slv-field label="Teléfono">
+        <input slvInput type="text" [(ngModel)]="phone" />
+      </slv-field>
+
+      <slv-field label="Correo">
+        <input slvInput type="email" [(ngModel)]="email" />
+      </slv-field>
+    </div>
+
+    <slv-field label="Dirección">
+      <input slvInput type="text" [(ngModel)]="address" />
+    </slv-field>
+
+    <slv-field label="Motivo del endoso" [required]="true" [error]="reasonError()">
+      <input
+        slvInput
+        type="text"
+        placeholder="Ej: Actualización de datos solicitada por el asegurado"
+        [invalid]="!!reasonError()"
+        [(ngModel)]="reason"
+      />
+    </slv-field>
+  </div>
+
+  <button slot="footer" slv-button type="button" variant="outline" (click)="closed.emit()">Cancelar</button>
+  <button slot="footer" slv-button type="button" variant="primary" (click)="submit()">Continuar</button>
+</slv-modal>

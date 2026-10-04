@@ -1,0 +1,148 @@
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <button slv-button type="button" variant="outline" (click)="backRequested.emit()">Volver al listado</button>
+    <div class="flex flex-wrap gap-2">
+      <button slv-button type="button" variant="secondary" [disabled]="!isActive()" (click)="endorsementRequested.emit()">
+        Registrar endoso
+      </button>
+      <button slv-button type="button" variant="danger" [disabled]="!isActive()" (click)="cancellationRequested.emit()">
+        Cancelar póliza
+      </button>
+    </div>
+  </div>
+
+  @if (!isActive()) {
+    <slv-alert [tone]="policy().status === 'Cancelada' ? 'error' : 'warning'">
+      La póliza está {{ policy().status.toUpperCase() }} y no admite endosos ni cancelación.
+      @if (policy().cancelReason) {
+        Causa: {{ policy().cancelReason }} ({{ policy().cancelDate }}).
+      }
+    </slv-alert>
+  }
+
+  <slv-card>
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Detalle de póliza</p>
+        <h2 class="text-xl font-semibold font-serif text-foreground">{{ policy().number }}</h2>
+        <p class="text-sm mt-1 text-muted-foreground">
+          {{ policy().producto }} · {{ ramoLabel() }} · {{ policy().startDate }} a {{ policy().endDate }}
+        </p>
+        <p class="text-xs mt-1 text-muted-foreground">Socio origen: {{ policy().socioOrigen }}</p>
+      </div>
+      <slv-badge [tone]="statusTone[policy().status]">{{ policy().status }}</slv-badge>
+    </div>
+
+    <slv-tabs [items]="tabs" [(active)]="activeTab" />
+
+    <div class="pt-5">
+      @switch (activeTab()) {
+        @case ('asegurado') {
+          <div class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              @for (item of insuredInfo(); track item.label) {
+                <div>
+                  <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">{{ item.label }}</p>
+                  <p class="text-foreground">{{ item.value }}</p>
+                </div>
+              }
+            </div>
+
+            @if (policy().beneficiaries.length) {
+              <div>
+                <p class="text-xs uppercase tracking-wider mb-2 text-muted-foreground">Beneficiarios</p>
+                <div class="space-y-2">
+                  @for (beneficiary of policy().beneficiaries; track beneficiary.name) {
+                    <div class="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm">
+                      <div>
+                        <p class="text-foreground">{{ beneficiary.name }}</p>
+                        <p class="text-xs text-muted-foreground">{{ beneficiary.parentesco }}</p>
+                      </div>
+                      <span class="font-medium text-foreground">{{ beneficiary.porcentaje }}%</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @case ('coberturas') {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left border-b border-border text-muted-foreground">
+                  <th class="py-2 pr-4 font-medium">Cobertura</th>
+                  <th class="py-2 pr-4 font-medium">Suma asegurada</th>
+                  <th class="py-2 pr-4 font-medium">Deducible</th>
+                  <th class="py-2 pr-4 font-medium">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (coverage of policy().coverages; track coverage.name) {
+                  <tr class="border-b border-border last:border-0">
+                    <td class="py-3 pr-4 text-foreground">{{ coverage.name }}</td>
+                    <td class="py-3 pr-4 text-muted-foreground">{{ coverage.sumaAsegurada }}</td>
+                    <td class="py-3 pr-4 text-muted-foreground">{{ coverage.deducible }}</td>
+                    <td class="py-3 pr-4">
+                      <slv-badge [tone]="coverage.included ? 'success' : 'neutral'">
+                        {{ coverage.included ? 'Incluida' : 'No incluida' }}
+                      </slv-badge>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="py-6 text-muted-foreground">Esta póliza no tiene coberturas registradas.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @case ('pagos') {
+          <div class="space-y-2">
+            @for (payment of policy().payments; track payment.ref) {
+              <div class="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm">
+                <div>
+                  <p class="text-foreground">{{ payment.tipo }} · {{ payment.ref }}</p>
+                  <p class="text-xs text-muted-foreground">{{ payment.date }} · {{ payment.medio }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-medium text-foreground">{{ payment.amount | copCurrency }}</p>
+                  <slv-badge [tone]="paymentTone[payment.status]">{{ payment.status }}</slv-badge>
+                </div>
+              </div>
+            } @empty {
+              <p class="text-sm text-muted-foreground">Esta póliza no tiene pagos registrados.</p>
+            }
+          </div>
+        }
+
+        @case ('siniestros') {
+          <div class="space-y-2">
+            @for (claim of policy().claims; track claim.id) {
+              <div class="rounded-xl border border-border px-4 py-3 text-sm">
+                <div class="flex justify-between gap-3">
+                  <p class="font-medium text-foreground">{{ claim.id }} · {{ claim.tipo }}</p>
+                  <slv-badge [tone]="claimTone[claim.status]">{{ claim.status }}</slv-badge>
+                </div>
+                <p class="text-xs mt-1 text-muted-foreground">
+                  Ocurrencia: {{ claim.fechaOcurrencia }} · Aviso: {{ claim.fechaAviso }}
+                </p>
+                <p class="text-xs mt-1 text-muted-foreground">
+                  Monto estimado: {{ claim.montoEstimado | copCurrency }}
+                  @if (claim.montoAprobado !== undefined) {
+                    · Aprobado: {{ claim.montoAprobado | copCurrency }}
+                  }
+                </p>
+              </div>
+            } @empty {
+              <p class="text-sm text-muted-foreground">Esta póliza no tiene siniestros registrados.</p>
+            }
+          </div>
+        }
+      }
+    </div>
+  </slv-card>
+</div>

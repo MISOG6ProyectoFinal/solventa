@@ -1,0 +1,46 @@
+<slv-card [padding]="false">
+  <div class="px-5 py-4 border-b border-border">
+    <h2 class="text-sm font-semibold text-foreground">Socios aprovisionados</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left border-b border-border text-muted-foreground">
+          <th class="px-5 py-3 font-medium">Socio</th>
+          <th class="px-5 py-3 font-medium">Tipo · País</th>
+          <th class="px-5 py-3 font-medium">Alcances</th>
+          <th class="px-5 py-3 font-medium">Contrato API</th>
+          <th class="px-5 py-3 font-medium">Ramos</th>
+          <th class="px-5 py-3 font-medium"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of partners(); track p.id) {
+          <tr class="border-b border-border last:border-0 hover:bg-background">
+            <td class="px-5 py-3">
+              <p class="font-medium text-foreground">{{ p.name }}</p>
+              <p class="font-mono text-xs text-muted-foreground">{{ p.identifier }}</p>
+            </td>
+            <td class="px-5 py-3 text-muted-foreground">
+              {{ p.tipo }} · {{ p.pais }}
+            </td>
+            <td class="px-5 py-3 text-muted-foreground">
+              {{ getAlcancesLabel(p.alcances) }}
+            </td>
+            <td class="px-5 py-3">
+              <slv-badge [tone]="getContractTone(p.apiContractStatus)">
+                {{ p.apiContractStatus }} · {{ p.versionContratoApi }}
+              </slv-badge>
+            </td>
+            <td class="px-5 py-3 text-foreground">
+              {{ getRamosLabel(p.enabledRamos) }}
+            </td>
+            <td class="px-5 py-3 text-right">
+              <button slv-button variant="ghost" (click)="opened.emit(p.id)">Abrir</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</slv-card>

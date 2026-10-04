@@ -1,0 +1,6 @@
+<slv-icon [name]="icon()" [size]="32" />
+<p class="text-base font-medium text-foreground">{{ title() }}</p>
+@if (description()) {
+  <p class="text-sm max-w-sm">{{ description() }}</p>
+}
+<ng-content />

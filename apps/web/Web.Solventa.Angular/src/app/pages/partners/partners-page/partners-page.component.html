@@ -1,0 +1,34 @@
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full bg-accent"></div>
+        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">Socios e Integraciones</h1>
+      </div>
+      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">Canal embebido · Alta de socios, configuración de ramos y operaciones del canal</p>
+    </div>
+    <div class="flex gap-2">
+      <button slv-button variant="primary" (click)="showCreateModal.set(true)">Nuevo socio</button>
+    </div>
+  </div>
+
+  @if (!selectedPartner()) {
+    <slv-partner-list 
+      [partners]="partners()"
+      (opened)="openPartner($event)"
+    />
+  } @else {
+    <slv-partner-detail 
+      [partner]="selectedPartner()!"
+      (backRequested)="closePartner()"
+      (updateRequested)="onPartnerUpdated($event)"
+    />
+  }
+
+  <slv-create-partner-modal 
+    [open]="showCreateModal()"
+    [existingIdentifiers]="existingIdentifiers()"
+    (closed)="showCreateModal.set(false)"
+    (created)="onPartnerCreated($event)"
+  />
+</div>

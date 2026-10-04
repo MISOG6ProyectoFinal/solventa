@@ -1,0 +1,10 @@
+<p
+  class="text-[10px] uppercase tracking-wider mb-1"
+  [class]="dark() ? 'text-on-primary-muted' : 'text-muted-foreground'"
+>
+  {{ label() }}
+</p>
+<p class="text-2xl font-semibold font-serif" [class]="dark() ? 'text-white' : 'text-foreground'">{{ value() }}</p>
+@if (caption()) {
+  <p class="text-xs mt-0.5" [class]="dark() ? 'text-on-primary-muted' : 'text-muted-foreground'">{{ caption() }}</p>
+}

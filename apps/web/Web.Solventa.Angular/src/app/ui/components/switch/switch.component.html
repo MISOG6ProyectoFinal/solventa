@@ -1,0 +1,14 @@
+<button
+  type="button"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="label() || null"
+  (click)="checked.set(!checked())"
+  class="w-12 h-6 rounded-full relative border border-border transition-colors cursor-pointer"
+  [class]="checked() ? 'bg-accent border-accent' : 'bg-border'"
+>
+  <span
+    class="absolute top-1 w-4 h-4 bg-white rounded-full transition-all"
+    [class]="checked() ? 'right-1' : 'left-1'"
+  ></span>
+</button>

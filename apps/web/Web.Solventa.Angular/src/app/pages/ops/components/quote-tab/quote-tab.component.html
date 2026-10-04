@@ -1,0 +1,30 @@
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+  <div class="xl:col-span-3 space-y-5">
+    <slv-quote-form [(ramo)]="ramo" />
+
+    <slv-consent-panel [required]="requiresConsent()" [ramoLabel]="ramoLabel()" />
+
+    <slv-card>
+      <slv-field label="Simulación de proveedores externos (demo)">
+        <select slvInput [(ngModel)]="scenario">
+          @for (option of scenarios; track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
+          }
+        </select>
+      </slv-field>
+    </slv-card>
+
+    <div class="flex justify-end">
+      <button slv-button type="button">Calcular cotización</button>
+    </div>
+  </div>
+
+  <div class="xl:col-span-2">
+    <slv-card class="sticky top-20">
+      <h2 class="text-sm font-semibold mb-4 text-foreground">Desglose de cotización</h2>
+      <p class="text-sm text-muted-foreground">
+        Complete el formulario y calcule para ver prima básica, recargo de riesgo, coberturas e impuestos.
+      </p>
+    </slv-card>
+  </div>
+</div>

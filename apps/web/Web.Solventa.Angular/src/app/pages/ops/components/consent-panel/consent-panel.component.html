@@ -1,0 +1,43 @@
+<slv-card>
+  <h2 class="text-sm font-semibold mb-2 text-foreground">Consentimiento digital Open Finance / Open Data</h2>
+
+  @if (required()) {
+    <p class="text-xs mb-4 text-muted-foreground">
+      Este ramo requiere autorización del cliente para consultar sus datos financieros en el perfilamiento de riesgo.
+    </p>
+
+    <div class="space-y-4">
+      <slv-alert tone="warning">Debe solicitar y validar el consentimiento antes de cotizar.</slv-alert>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <slv-field label="Enviar código por">
+          <select slvInput [(ngModel)]="channel">
+            @for (option of channels; track option.id) {
+              <option [value]="option.id">{{ option.label }}</option>
+            }
+          </select>
+        </slv-field>
+
+        <slv-field label="Alcance autorizado">
+          <div class="space-y-2 pt-1">
+            <label class="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" class="accent-primary" [(ngModel)]="openFinance" />
+              Open Finance · datos financieros
+            </label>
+            <label class="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" class="accent-primary" [(ngModel)]="openData" />
+              Open Data · fuentes públicas
+            </label>
+          </div>
+        </slv-field>
+      </div>
+
+      <button slv-button type="button" variant="secondary" (click)="requested.emit()">
+        Solicitar consentimiento (enviar código)
+      </button>
+    </div>
+  } @else {
+    <p class="text-xs mb-4 text-muted-foreground">Este ramo no requiere autorización del cliente para cotizar.</p>
+    <slv-alert tone="info">El ramo {{ ramoLabel() }} no requiere consentimiento Open Finance / Open Data.</slv-alert>
+  }
+</slv-card>

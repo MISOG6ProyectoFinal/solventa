@@ -1,0 +1,78 @@
+<slv-modal [open]="true" title="Cancelar póliza" (closed)="closed.emit()">
+  @if (step() === 'form') {
+    <div class="space-y-4">
+      <slv-field label="Causa de cancelación" [required]="true">
+        <select slvInput [(ngModel)]="cause">
+          <option value="">Seleccione...</option>
+          @for (option of causes; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </slv-field>
+
+      @if (quote(); as refundQuote) {
+        <div class="rounded-xl border border-border bg-background p-5 space-y-3">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Prima anual</p>
+              <p class="text-foreground">{{ policy().premium | copCurrency }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Fecha de cancelación</p>
+              <p class="text-foreground">{{ today }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Días de vigencia</p>
+              <p class="text-foreground">{{ refundQuote.termDays }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Días no devengados</p>
+              <p class="text-foreground">{{ refundQuote.unearnedDays }}</p>
+            </div>
+          </div>
+
+          <div class="border-t border-border pt-3">
+            <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Devolución estimada</p>
+            <p class="text-2xl font-semibold font-serif text-primary">{{ refundQuote.refund | copCurrency }}</p>
+            <p class="text-xs mt-1 text-muted-foreground">
+              {{
+                cause() === nonRefundableCause
+                  ? 'No aplica devolución por impago de prima.'
+                  : 'Se devolverá por el mismo medio de pago de la prima.'
+              }}
+            </p>
+          </div>
+        </div>
+      } @else {
+        <p class="text-sm text-muted-foreground">Seleccione la causa para calcular la prima no devengada.</p>
+      }
+    </div>
+  } @else {
+    <div class="space-y-3">
+      <slv-alert tone="error">Esta acción cancelará la póliza. Revise los datos antes de confirmar.</slv-alert>
+
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Póliza</p>
+        <p class="text-foreground">{{ policy().number }}</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Causa</p>
+        <p class="text-foreground">{{ cause() }}</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Devolución</p>
+        <p class="text-foreground">{{ quote()?.refund | copCurrency }}</p>
+      </div>
+    </div>
+  }
+
+  @if (step() === 'form') {
+    <button slot="footer" slv-button type="button" variant="outline" (click)="closed.emit()">Cerrar</button>
+    <button slot="footer" slv-button type="button" variant="danger" [disabled]="!quote()" (click)="goToConfirmation()">
+      Continuar
+    </button>
+  } @else {
+    <button slot="footer" slv-button type="button" variant="outline" (click)="step.set('form')">Atrás</button>
+    <button slot="footer" slv-button type="button" variant="danger" (click)="confirm()">Confirmar cancelación</button>
+  }
+</slv-modal>

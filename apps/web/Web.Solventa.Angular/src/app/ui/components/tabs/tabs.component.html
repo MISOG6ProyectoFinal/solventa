@@ -1,0 +1,17 @@
+@for (item of items(); track item.id) {
+  <button
+    type="button"
+    role="tab"
+    [attr.aria-selected]="active() === item.id"
+    [attr.data-testid]="testIdPrefix() ? testIdPrefix() + '-' + item.id : null"
+    (click)="active.set(item.id)"
+    class="px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer"
+    [class]="
+      active() === item.id
+        ? 'border-primary text-primary'
+        : 'border-transparent text-muted-foreground hover:text-foreground'
+    "
+  >
+    {{ item.label }}
+  </button>
+}

@@ -1,0 +1,17 @@
+<slv-field [label]="definition().label" [required]="definition().required">
+  @if (definition().type === 'select') {
+    <select slvInput [(ngModel)]="value">
+      <option value="">Seleccione...</option>
+      @for (option of definition().options; track option) {
+        <option [value]="option">{{ option }}</option>
+      }
+    </select>
+  } @else {
+    <input
+      slvInput
+      [type]="definition().type"
+      [placeholder]="definition().placeholder ?? ''"
+      [(ngModel)]="value"
+    />
+  }
+</slv-field>

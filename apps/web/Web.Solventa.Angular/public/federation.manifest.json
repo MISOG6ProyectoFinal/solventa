@@ -1,0 +1,4 @@
+{
+  "ops-polizas": "http://localhost:4201/remoteEntry.json",
+  "socios-integraciones": "http://localhost:4202/remoteEntry.json"
+}
