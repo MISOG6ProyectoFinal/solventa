@@ -7,14 +7,14 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "./scripts/test-all.sh",
+        "command": "poetry run ./scripts/test-all.sh",
         "cwd": "apps/backend"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "ruff check . && ruff format --check .",
+        "command": "poetry run ruff check . && poetry run ruff format --check .",
         "cwd": "apps/backend"
       }
     },
