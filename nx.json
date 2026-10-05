@@ -78,5 +78,13 @@
       "style": "scss",
       "unitTestRunner": "jest"
     }
+  },
+  "namedInputs": {
+    "sharedGlobals": [
+      "{workspaceRoot}/.github/workflows/ci.yml"
+    ],
+    "default": [
+      "sharedGlobals"
+    ]
   }
 }
