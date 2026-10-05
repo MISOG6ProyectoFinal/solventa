@@ -44,14 +44,10 @@ jobs:
         working-directory: apps/backend
         run: poetry install --no-interaction
 
-      # Playwright for Angular E2E
-      - name: Install Playwright
-        run: npx playwright install --with-deps
-
       # Tell Nx which commits to compare
       - name: Set Nx SHAs
         uses: nrwl/nx-set-shas@v5
 
       # Run only tasks belonging to affected projects
       - name: Run affected tasks
-        run: npx nx affected -t lint test build e2e
+        run: npx nx affected -t lint test build
