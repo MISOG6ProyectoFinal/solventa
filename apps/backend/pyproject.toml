@@ -15,7 +15,30 @@ solventa-common = { path = "libs/solventa_common", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
+pytest-cov = "^6.0"
 ruff = "^0.6"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = [
+    "services",
+    "libs",
+]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    ".venv/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_empty = true
+include_namespace_packages = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
 
 [tool.ruff]
 line-length = 120

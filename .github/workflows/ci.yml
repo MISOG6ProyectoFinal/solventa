@@ -11,9 +11,10 @@ permissions:
   contents: read
 
 jobs:
-  main:
+  detect-affected:
     runs-on: ubuntu-latest
-
+    outputs:
+      backend_affected: ${{ steps.backend.outputs.backend_affected }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -21,7 +22,6 @@ jobs:
           filter: tree:0
           fetch-depth: 0
 
-      # Node / Nx
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -31,7 +31,80 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      # Python backend
+      - name: Set Nx SHAs
+        uses: nrwl/nx-set-shas@v5
+
+      - name: Detect backend affected
+        id: backend
+        run: |
+          if npx nx show projects --affected | grep -qx 'backend'; then
+            echo "backend_affected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend_affected=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  main:
+    needs: detect-affected
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.3
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Setup Python
+        if: needs.detect-affected.outputs.backend_affected == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        if: needs.detect-affected.outputs.backend_affected == 'true'
+        run: python -m pip install poetry
+
+      - name: Install backend dependencies
+        if: needs.detect-affected.outputs.backend_affected == 'true'
+        working-directory: apps/backend
+        run: poetry install --no-interaction
+
+      - name: Set Nx SHAs
+        uses: nrwl/nx-set-shas@v5
+
+      - name: Run affected lint and build
+        run: npx nx affected -t lint build
+
+  backend-tests:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.backend_affected == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.3
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -44,10 +117,5 @@ jobs:
         working-directory: apps/backend
         run: poetry install --no-interaction
 
-      # Tell Nx which commits to compare
-      - name: Set Nx SHAs
-        uses: nrwl/nx-set-shas@v5
-
-      # Run only tasks belonging to affected projects
-      - name: Run affected tasks
-        run: npx nx affected -t lint test build
+      - name: Run backend tests with coverage
+        run: npx nx run backend:test
