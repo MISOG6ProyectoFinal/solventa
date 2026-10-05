@@ -4,7 +4,7 @@
 
 Desde la raíz del repositorio. iOS requiere un Mac.
 
-El proyecto usa Node.js 26. Comprueba con `node -v` que la versión empieza por 26.
+La versión recomendada de Node.js es 22.22.3 (comprueba con `node -v`). También son compatibles Node 24.15+ y Node 26.
 
 ### Android
 
@@ -50,7 +50,7 @@ npm run android
 
 ### APK
 
-Estos scripts generan un APK de release. No abren el emulador y no necesitan Metro: el JavaScript va dentro del APK. Hace falta Node 26, Java y el Android SDK en `ANDROID_HOME`, con el NDK y CMake de arriba. En Windows, si `ANDROID_HOME` no está definido, el script usa `%LOCALAPPDATA%\Android\Sdk`.
+Estos scripts generan un APK de release. No abren el emulador y no necesitan Metro: el JavaScript va dentro del APK. Hace falta Node.js (recomendado 22.22.3; también compatibles 24.15+ y 26.x), Java y el Android SDK en `ANDROID_HOME`, con el NDK y CMake de arriba. En Windows, si `ANDROID_HOME` no está definido, el script usa `%LOCALAPPDATA%\Android\Sdk`.
 
 El APK se firma con la clave de depuración que ya trae el proyecto. Sirve para instalarlo. No es la firma de Play Store.
 
