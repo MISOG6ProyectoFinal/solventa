@@ -1,0 +1,17 @@
+{
+  "name": "project-metrics",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "tools/project-metrics/src",
+  "targets": {
+    "generate-charts": {
+      "command": "node src/generate.mjs",
+      "options": {
+        "cwd": "tools/project-metrics"
+      },
+      "outputs": [
+        "{projectRoot}/output"
+      ]
+    }
+  }
+}
