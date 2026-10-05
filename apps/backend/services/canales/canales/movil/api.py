@@ -11,10 +11,16 @@ def info() -> dict:
     return {"component": "BFF Móvil"}
 
 
+@router.get("/productos")
+def listar_productos() -> list:
+    """Catálogo de productos habilitados para Mobile (vía servicio de Cotización)."""
+    return call_upstream(cotizacion.get, "/catalogo/productos")
+
+
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
-    resultado = call_upstream(cotizacion.post, "/consenso/cotizaciones", json=solicitud)
-    return {"prima": resultado["prima"], "version_reglas": resultado["version_reglas"]}
+    """Delega en el consenso y devuelve la oferta de negocio completa."""
+    return call_upstream(cotizacion.post, "/consenso/cotizaciones", json=solicitud)
 
 
 @router.post("/siniestros", status_code=201)
