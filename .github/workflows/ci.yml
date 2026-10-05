@@ -201,7 +201,7 @@ jobs:
         with:
           sonar-source-path: "apps/backend"
           sonar-project-key: "solventa-backend"
-          sonar-project-name: "Solventa Backend"
+          sonar-project-name: "Solventa-Backend"
           sonar-metrics-path: "sonar-metrics.json"
 
       - name: Obtener detalles específicos de problemas
