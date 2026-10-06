@@ -22,6 +22,8 @@ export const texts = {
     recordVideoButton: 'Grabar video',
     submitButton: 'Enviar reporte',
     missingEvidence: 'Agrega al menos una evidencia',
+    evidenceLimit: 'Este reporte ya tiene 10 evidencias.',
+    fileTooLarge: 'El archivo supera 50 MB.',
   },
   camera: {
     screenTitle: 'Tomar foto',

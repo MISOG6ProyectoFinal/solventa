@@ -46,10 +46,12 @@ jest.mock('react-native-vision-camera', () => {
   };
   const createRecorder = jest.fn(() => Promise.resolve(recorder));
   const requestPermission = jest.fn(() => Promise.resolve(true));
+  const useVideoOutput = jest.fn(() => ({ createRecorder }));
 
   return {
     Camera: (props: object) => React.createElement('Camera', props),
-    useVideoOutput: () => ({ createRecorder }),
+    useVideoOutput,
+    recorder,
     useCameraPermission: () => ({
       hasPermission: true,
       canRequestPermission: false,
@@ -71,6 +73,7 @@ describe('RecordVideoScreen', () => {
     useNavigation().goBack.mockClear();
     useVideoOutput().createRecorder.mockClear();
     useClaimPhotosStore.getState().clear();
+    jest.requireMock('react-native-vision-camera').recorder.recordedFileSize = 1536;
   });
 
   it('shows the viewfinder with a 30 second limit', async () => {
@@ -199,5 +202,37 @@ describe('RecordVideoScreen', () => {
     expect(report.getByText('Video 1')).toBeTruthy();
     expect(report.getByText('1,5 KB')).toBeTruthy();
     expect(report.getByText('1/10')).toBeTruthy();
+  });
+
+  it('records a compressed mp4', async () => {
+    await render(<RecordVideoScreen />);
+
+    expect(useVideoOutput).toHaveBeenCalledWith({
+      enableAudio: true,
+      targetBitRate: 4_000_000,
+      fileType: 'mp4',
+    });
+  });
+
+  it('refuses a video larger than 50 MB', async () => {
+    const { recorder } = jest.requireMock('react-native-vision-camera');
+    recorder.recordedFileSize = 52_428_801;
+    const camera = await render(<RecordVideoScreen />);
+
+    await fireEvent.press(camera.getByText('Grabar'));
+    await waitFor(() => {
+      expect(camera.getByText('Detener')).toBeTruthy();
+    });
+    await fireEvent.press(camera.getByText('Detener'));
+    await waitFor(() => {
+      expect(camera.getByText('Confirmar')).toBeTruthy();
+    });
+    await fireEvent.press(camera.getByText('Confirmar'));
+
+    expect(camera.getByText('El archivo supera 50 MB.')).toBeTruthy();
+    expect(useNavigation().goBack).not.toHaveBeenCalled();
+
+    const report = await render(<ReportClaimScreen />);
+    expect(report.getByText('0/10')).toBeTruthy();
   });
 });

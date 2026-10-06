@@ -9,9 +9,9 @@ import {
   type Recorder,
 } from 'react-native-vision-camera';
 
-import { AppText, Button, Screen, VideoPlayer } from '../../../../shared/ui';
+import { AppText, Banner, Button, Screen, VideoPlayer } from '../../../../shared/ui';
 import { useLocation } from '../../../../shared/useLocation';
-import { videoMaxDuration } from '../../constants';
+import { maxEvidenceBytes, videoMaxDuration, videoTargetBitRate } from '../../constants';
 import { formatFileSize, photoUri } from '../../photoUtils';
 import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import { texts } from '../../texts';
@@ -31,12 +31,18 @@ function formatDuration(seconds: number) {
 
 export default function RecordVideoScreen() {
   const navigation = useNavigation();
-  const videoOutput = useVideoOutput({ enableAudio: true });
+  // iOS defaults to mov. The report only accepts MP4.
+  const videoOutput = useVideoOutput({
+    enableAudio: true,
+    targetBitRate: videoTargetBitRate,
+    fileType: 'mp4',
+  });
   const { hasPermission, requestPermission } = useCameraPermission();
   const { hasPermission: hasMicrophone, requestPermission: requestMicrophone } = useMicrophonePermission();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [captured, setCaptured] = useState<CapturedVideo | null>(null);
+  const [tooLarge, setTooLarge] = useState(false);
   const recorderRef = useRef<Recorder | null>(null);
   const { location, failed: locationFailed } = useLocation();
   const addVideo = useClaimPhotosStore((state) => state.addVideo);
@@ -88,6 +94,7 @@ export default function RecordVideoScreen() {
   const cancel = async () => {
     if (captured) {
       setCaptured(null);
+      setTooLarge(false);
       return;
     }
 
@@ -100,6 +107,11 @@ export default function RecordVideoScreen() {
 
   const confirm = () => {
     if (!captured) {
+      return;
+    }
+
+    if (captured.bytes > maxEvidenceBytes) {
+      setTooLarge(true);
       return;
     }
 
@@ -143,6 +155,7 @@ export default function RecordVideoScreen() {
             </>
           )}
         </View>
+        {tooLarge ? <Banner variant="error">{texts.report.fileTooLarge}</Banner> : null}
         <View style={styles.actions}>
           <View style={styles.action}>
             <Button title={texts.video.cancelButton} variant="outlined" onPress={cancel} />

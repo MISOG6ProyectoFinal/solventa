@@ -113,6 +113,20 @@ describe('ReportClaimScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport', { screen: 'RecordVideo' });
   });
 
+  it('tells the user when the report already has 10 files', async () => {
+    for (let index = 0; index < 10; index += 1) {
+      useClaimPhotosStore.getState().addPhoto({ filePath: `/tmp/foto-${index}.jpg`, bytes: 100 });
+    }
+    const { getByText, queryByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.press(getByText('Tomar foto'));
+    await fireEvent.press(getByText('Grabar video'));
+
+    expect(getByText('Este reporte ya tiene 10 evidencias.')).toBeTruthy();
+    expect(useNavigation().navigate).not.toHaveBeenCalled();
+    expect(queryByText('11/10')).toBeNull();
+  });
+
   it('opens a saved video', async () => {
     useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
     const { getByLabelText } = await render(<ReportClaimScreen />);
