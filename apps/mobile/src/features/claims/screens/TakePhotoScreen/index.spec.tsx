@@ -34,10 +34,11 @@ jest.mock('react-native-vision-camera', () => {
   };
   const capturePhoto = jest.fn(() => Promise.resolve(photo));
   const requestPermission = jest.fn(() => Promise.resolve(true));
+  const usePhotoOutput = jest.fn(() => ({ capturePhoto }));
 
   return {
     Camera: (props: object) => React.createElement('Camera', props),
-    usePhotoOutput: () => ({ capturePhoto }),
+    usePhotoOutput,
     useCameraPermission: () => ({
       hasPermission: true,
       canRequestPermission: false,
@@ -129,5 +130,37 @@ describe('TakePhotoScreen', () => {
     expect(report.getByText('1,5 KB')).toBeTruthy();
     expect(report.getByTestId('evidence-photo').props.source).toEqual({ uri: 'file:///tmp/foto.jpg' });
     expect(report.getByText('1/10')).toBeTruthy();
+  });
+
+  it('compresses the photo and still shows it as evidence', async () => {
+    const camera = await render(<TakePhotoScreen />);
+
+    expect(usePhotoOutput).toHaveBeenCalledWith({ quality: 0.8 });
+
+    await fireEvent.press(camera.getByText('Capturar'));
+    await waitFor(() => {
+      expect(camera.getByTestId('photo-preview').props.source).toEqual({ uri: 'file:///tmp/foto.jpg' });
+    });
+  });
+
+  it('refuses a photo larger than 50 MB', async () => {
+    usePhotoOutput().capturePhoto.mockResolvedValueOnce({
+      getFileDataAsync: () => Promise.resolve({ byteLength: 52_428_801 }),
+      saveToTemporaryFileAsync: () => Promise.resolve('/tmp/grande.jpg'),
+      dispose: () => undefined,
+    });
+    const camera = await render(<TakePhotoScreen />);
+
+    await fireEvent.press(camera.getByText('Capturar'));
+    await waitFor(() => {
+      expect(camera.getByText('Confirmar')).toBeTruthy();
+    });
+    await fireEvent.press(camera.getByText('Confirmar'));
+
+    expect(camera.getByText('El archivo supera 50 MB.')).toBeTruthy();
+    expect(useNavigation().goBack).not.toHaveBeenCalled();
+
+    const report = await render(<ReportClaimScreen />);
+    expect(report.getByText('0/10')).toBeTruthy();
   });
 });

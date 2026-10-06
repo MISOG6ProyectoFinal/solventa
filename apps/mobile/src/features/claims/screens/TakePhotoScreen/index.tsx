@@ -3,8 +3,9 @@ import { Image, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, useCameraPermission, usePhotoOutput } from 'react-native-vision-camera';
 
-import { AppText, Button, Screen } from '../../../../shared/ui';
+import { AppText, Banner, Button, Screen } from '../../../../shared/ui';
 import { useLocation } from '../../../../shared/useLocation';
+import { maxEvidenceBytes, photoQuality } from '../../constants';
 import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import { photoUri } from '../../photoUtils';
 import { texts } from '../../texts';
@@ -17,9 +18,10 @@ type CapturedPhoto = {
 
 export default function TakePhotoScreen() {
   const navigation = useNavigation();
-  const photoOutput = usePhotoOutput();
+  const photoOutput = usePhotoOutput({ quality: photoQuality });
   const { hasPermission, requestPermission } = useCameraPermission();
   const [captured, setCaptured] = useState<CapturedPhoto | null>(null);
+  const [tooLarge, setTooLarge] = useState(false);
   const { location, failed: locationFailed } = useLocation();
   const addPhoto = useClaimPhotosStore((state) => state.addPhoto);
 
@@ -41,8 +43,18 @@ export default function TakePhotoScreen() {
     }
   };
 
+  const discard = () => {
+    setCaptured(null);
+    setTooLarge(false);
+  };
+
   const confirm = () => {
     if (!captured) {
+      return;
+    }
+
+    if (captured.bytes > maxEvidenceBytes) {
+      setTooLarge(true);
       return;
     }
 
@@ -78,12 +90,13 @@ export default function TakePhotoScreen() {
             </>
           )}
         </View>
+        {tooLarge ? <Banner variant="error">{texts.report.fileTooLarge}</Banner> : null}
         <View style={styles.actions}>
           <View style={styles.action}>
             <Button
               title={texts.camera.cancelButton}
               variant="outlined"
-              onPress={() => (captured ? setCaptured(null) : navigation.goBack())}
+              onPress={() => (captured ? discard() : navigation.goBack())}
             />
           </View>
           <View style={styles.action}>

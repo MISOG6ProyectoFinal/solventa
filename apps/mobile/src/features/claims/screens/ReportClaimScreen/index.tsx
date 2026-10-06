@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import {
   AppText,
+  Banner,
   Button,
   Card,
   DateField,
@@ -13,6 +14,7 @@ import {
   SelectField,
   TextField,
 } from '../../../../shared/ui';
+import { photoLimit } from '../../constants';
 import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
 import { formatFileSize, photoUri } from '../../photoUtils';
 import { claimReport } from '../../claimReport';
@@ -28,6 +30,7 @@ export default function ReportClaimScreen() {
   const [occurredAt, setOccurredAt] = useState(() => formatDate(new Date()));
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
   const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimPhotosStore((state) => state.photos);
   const videos = useClaimPhotosStore((state) => state.videos);
@@ -35,6 +38,15 @@ export default function ReportClaimScreen() {
   const evidenceCount = photos.length + videos.length;
   const descriptionMissing = submitted && description.trim() === '';
   const evidenceMissing = submitted && evidenceCount === 0;
+
+  const openCamera = (screen: 'TakePhoto' | 'RecordVideo') => {
+    if (evidenceCount >= photoLimit) {
+      setLimitReached(true);
+      return;
+    }
+
+    navigation.navigate('ClaimReport', { screen });
+  };
 
   useEffect(() => {
     return () => {
@@ -113,16 +125,17 @@ export default function ReportClaimScreen() {
           </AppText>
           <View style={styles.actions}>
             <View style={styles.action}>
-              <Button title={texts.report.takePhotoButton} variant="outlined" onPress={() => navigation.navigate('ClaimReport', { screen: 'TakePhoto' })} />
+              <Button title={texts.report.takePhotoButton} variant="outlined" onPress={() => openCamera('TakePhoto')} />
             </View>
             <View style={styles.action}>
               <Button
                 title={texts.report.recordVideoButton}
                 variant="outlined"
-                onPress={() => navigation.navigate('ClaimReport', { screen: 'RecordVideo' })}
+                onPress={() => openCamera('RecordVideo')}
               />
             </View>
           </View>
+          {limitReached ? <Banner variant="error">{texts.report.evidenceLimit}</Banner> : null}
           {evidenceCount > 0 ? (
             <View style={styles.thumbs}>
               {photos.map((photo) => (
