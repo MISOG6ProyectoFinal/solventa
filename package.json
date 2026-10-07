@@ -10,7 +10,8 @@
     "sync-mobile": "nx sync-deps mobile",
     "typecheck-mobile": "tsc -p apps/mobile/tsconfig.app.json --noEmit",
     "postinstall": "node apps/mobile/scripts/sync-native-deps.mjs",
-    "prepare": "node scripts/install-git-hooks.mjs"
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "validate-be": "nx tf-validate backend"
   },
   "keywords": [],
   "author": "",

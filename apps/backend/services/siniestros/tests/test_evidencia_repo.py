@@ -2,9 +2,9 @@ import os
 from datetime import UTC, datetime
 
 import pytest
-from siniestros.avisos.adapters.repository import PostgresAvisoRepository
+from siniestros.avisos.adapters.repository import PostgresAvisoRepository, avisos, evidencias
 from siniestros.avisos.domain.models import Aviso, Evidencia
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, delete, inspect
 
 
 def _postgres_url() -> str | None:
@@ -35,6 +35,9 @@ def repository(request):
     engine = create_engine(request.param)
     repo = PostgresAvisoRepository(engine)
     repo.create_schema()
+    with engine.begin() as conn:
+        conn.execute(delete(evidencias))
+        conn.execute(delete(avisos))
     return repo
 
 
