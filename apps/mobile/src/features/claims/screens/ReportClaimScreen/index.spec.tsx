@@ -31,6 +31,49 @@ const currentPlace = {
   gps: 'GPS 4.5981, -74.0760 (±12 m)',
 };
 
+function jsonResponse(body: unknown, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    blob: async () => new Blob([Uint8Array.from([0xff, 0xd8, 0xff])]),
+  };
+}
+
+function mockFiling() {
+  return jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    if (String(url).startsWith('file://')) {
+      return jsonResponse(null);
+    }
+
+    if (init?.method === 'PUT') {
+      return jsonResponse(null);
+    }
+
+    if (init?.method === 'POST' && String(url).endsWith('/movil/siniestros')) {
+      return jsonResponse({ id: 'aviso-1', estado: 'borrador' }, 201);
+    }
+
+    if (String(url).includes('/evidencias/cargas')) {
+      const payload = JSON.parse(init?.body ?? '{}') as { content_type: string; bytes: number };
+      return jsonResponse(
+        {
+          evidencia_id: 'ev-1',
+          upload_url: 'http://uploads.test/foto',
+          headers: { 'Content-Type': payload.content_type, 'Content-Length': String(payload.bytes) },
+        },
+        201,
+      );
+    }
+
+    if (String(url).endsWith('/confirmar')) {
+      return jsonResponse({ estado: 'disponible' });
+    }
+
+    return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
+  });
+}
+
 describe('ReportClaimScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
@@ -38,6 +81,7 @@ describe('ReportClaimScreen', () => {
     useClaimPhotosStore.getState().clear();
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
+    global.fetch = mockFiling() as typeof fetch;
   });
 
   it('shows the online report form', async () => {
@@ -95,6 +139,81 @@ describe('ReportClaimScreen', () => {
     await fireEvent.press(getByText('Listo'));
 
     expect(getByText('12/09/2026 11:30')).toBeTruthy();
+  });
+
+  it('shows a progress indicator while the report is filed', async () => {
+    let releaseFiling: (value: unknown) => void = () => undefined;
+    const filing = mockFiling();
+    global.fetch = jest.fn((url: string, init?: { method?: string; body?: string }) => {
+      if (init?.method === 'POST' && String(url).endsWith('/movil/siniestros')) {
+        return new Promise((resolve) => {
+          releaseFiling = () => resolve(filing(url, init));
+        });
+      }
+
+      return filing(url, init);
+    }) as typeof fetch;
+
+    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const { getByPlaceholderText, getByTestId, getByText, queryByText } = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(getByText('Enviar reporte'));
+
+    expect(getByTestId('button-progress')).toBeTruthy();
+    expect(queryByText('Enviando...')).toBeNull();
+    expect(queryByText('Enviar reporte')).toBeNull();
+    expect(getByTestId('submit-report').props.disabled).toBe(true);
+
+    releaseFiling(undefined);
+
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith(
+        'ClaimReport',
+        expect.objectContaining({
+          screen: 'ClaimDetail',
+          params: expect.objectContaining({
+            radicado: expect.stringMatching(/^SIN-\d{5}$/),
+            claimType: 'Accidente con vehículo de alquiler',
+            policy: 'Viaje Internacional · SLV-2026-03105',
+            location: currentPlace.address,
+            description: 'Golpe en la puerta',
+            evidences: [expect.objectContaining({ label: 'Foto 1' })],
+          }),
+        }),
+      );
+    });
+
+    const createCall = jest.mocked(fetch).mock.calls.find(([, init]) => {
+      const request = init as { method?: string; body?: string } | undefined;
+      return request?.method === 'POST' && request.body?.includes('poliza_id');
+    });
+    const body = JSON.parse((createCall?.[1] as { body: string }).body);
+    expect(body.poliza_id).toBe('SLV-2026-03105');
+    expect(body.tipo).toBe('Accidente con vehículo de alquiler');
+    expect(body.descripcion).toBe('Golpe en la puerta');
+    expect(body.ubicacion).toBe(currentPlace.address);
+    expect(body.ocurrido_en).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/);
+  });
+
+  it('keeps the form open when the report cannot be filed', async () => {
+    global.fetch = jest.fn(async () => jsonResponse({ detail: 'El archivo no pasó la validación.' }, 422)) as typeof fetch;
+    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const { findByText, getByPlaceholderText, getByText, queryByTestId } = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(getByText('Enviar reporte'));
+
+    expect(await findByText('El archivo no pasó la validación.')).toBeTruthy();
+    expect(queryByTestId('button-progress')).toBeNull();
+    expect(getByText('Enviar reporte')).toBeTruthy();
+    expect(useNavigation().navigate).not.toHaveBeenCalled();
   });
 
   it('opens the camera to take a photo', async () => {

@@ -2,8 +2,8 @@ import { View } from 'react-native';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { Button, Screen, VideoPlayer } from '../../../../shared/ui';
-import { formatFileSize, photoUri } from '../../photoUtils';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { formatFileSize, photoUri } from '../../photo';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -13,10 +13,10 @@ type Props = StaticScreenProps<{
 
 export default function VideoPreviewScreen({ route }: Props) {
   const navigation = useNavigation();
-  const video = useClaimPhotosStore((state) =>
+  const video = useClaimsStore((state) =>
     state.videos.find((item) => item.filePath === route.params.filePath),
   );
-  const removeVideo = useClaimPhotosStore((state) => state.removeVideo);
+  const removeVideo = useClaimsStore((state) => state.removeVideo);
 
   const remove = () => {
     if (!video) {

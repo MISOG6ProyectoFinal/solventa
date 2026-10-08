@@ -9,3 +9,22 @@ export function formatDate(date: Date): string {
 
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
+
+export function displayOccurredAt(value: string): string {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}:\d{2})$/);
+  if (!match) {
+    return value;
+  }
+
+  return `${match[3]}-${match[2]}-${match[1]} ${match[4]}`;
+}
+
+export function toIsoOccurredAt(value: string): string {
+  return `${displayOccurredAt(value).replace(' ', 'T')}:00`;
+}
+
+export function formatClock(date: Date): string {
+  const pad = (n: number): string => n.toString().padStart(2, '0');
+
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

@@ -2,9 +2,10 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
 import { photoLimit } from '../constants';
+import { formatClock } from '../utils';
 import { ClaimPhotos } from './types';
 
-export const useClaimPhotosStore = create<ClaimPhotos>()(
+export const useClaimsStore = create<ClaimPhotos>()(
   immer((set) => ({
     photos: [],
     videos: [],
@@ -17,6 +18,7 @@ export const useClaimPhotosStore = create<ClaimPhotos>()(
         state.photos.push({
           ...photo,
           label: `Foto ${state.photos.length + 1}`,
+          capturedAt: photo.capturedAt ?? formatClock(new Date()),
         });
       }),
     addVideo: (video) =>
@@ -28,6 +30,7 @@ export const useClaimPhotosStore = create<ClaimPhotos>()(
         state.videos.push({
           ...video,
           label: `Video ${state.videos.length + 1}`,
+          capturedAt: video.capturedAt ?? formatClock(new Date()),
         });
       }),
     removePhoto: (filePath) =>

@@ -6,8 +6,8 @@ import { Camera, useCameraPermission, usePhotoOutput } from 'react-native-vision
 import { AppText, Banner, Button, Screen } from '../../../../shared/ui';
 import { useLocation } from '../../../../shared/useLocation';
 import { maxEvidenceBytes, photoQuality } from '../../constants';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
-import { photoUri } from '../../photoUtils';
+import { useClaimsStore } from '../../store/useClaimsStore';
+import { photoUri } from '../../photo';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -23,7 +23,7 @@ export default function TakePhotoScreen() {
   const [captured, setCaptured] = useState<CapturedPhoto | null>(null);
   const [tooLarge, setTooLarge] = useState(false);
   const { location, failed: locationFailed } = useLocation();
-  const addPhoto = useClaimPhotosStore((state) => state.addPhoto);
+  const addPhoto = useClaimsStore((state) => state.addPhoto);
 
   useEffect(() => {
     if (!hasPermission) {

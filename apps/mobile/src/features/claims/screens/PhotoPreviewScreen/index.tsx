@@ -2,8 +2,8 @@ import { Image, View } from 'react-native';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { Button, Screen } from '../../../../shared/ui';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
-import { photoUri } from '../../photoUtils';
+import { useClaimsStore } from '../../store/useClaimsStore';
+import { photoUri } from '../../photo';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -13,10 +13,10 @@ type Props = StaticScreenProps<{
 
 export default function PhotoPreviewScreen({ route }: Props) {
   const navigation = useNavigation();
-  const photo = useClaimPhotosStore((state) =>
+  const photo = useClaimsStore((state) =>
     state.photos.find((item) => item.filePath === route.params.filePath),
   );
-  const removePhoto = useClaimPhotosStore((state) => state.removePhoto);
+  const removePhoto = useClaimsStore((state) => state.removePhoto);
 
   const remove = () => {
     if (!photo) {

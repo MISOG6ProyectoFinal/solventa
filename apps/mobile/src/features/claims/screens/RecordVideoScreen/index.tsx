@@ -12,8 +12,8 @@ import {
 import { AppText, Banner, Button, Screen, VideoPlayer } from '../../../../shared/ui';
 import { useLocation } from '../../../../shared/useLocation';
 import { maxEvidenceBytes, videoMaxDuration, videoTargetBitRate } from '../../constants';
-import { formatFileSize, photoUri } from '../../photoUtils';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { formatFileSize, photoUri } from '../../photo';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -45,7 +45,7 @@ export default function RecordVideoScreen() {
   const [tooLarge, setTooLarge] = useState(false);
   const recorderRef = useRef<Recorder | null>(null);
   const { location, failed: locationFailed } = useLocation();
-  const addVideo = useClaimPhotosStore((state) => state.addVideo);
+  const addVideo = useClaimsStore((state) => state.addVideo);
 
   useEffect(() => {
     if (!hasPermission) {

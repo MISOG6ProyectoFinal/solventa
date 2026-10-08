@@ -2,22 +2,26 @@ export type ClaimPhoto = {
   label: string;
   filePath: string;
   bytes: number;
+  capturedAt: string;
 };
 
 type NewPhoto = {
   filePath: string;
   bytes: number;
+  capturedAt?: string;
 };
 
 export type ClaimVideo = {
   label: string;
   filePath: string;
   bytes: number;
+  capturedAt: string;
 };
 
 type NewVideo = {
   filePath: string;
   bytes: number;
+  capturedAt?: string;
 };
 
 export type ClaimPhotos = {

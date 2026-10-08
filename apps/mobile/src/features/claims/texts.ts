@@ -21,6 +21,7 @@ export const texts = {
     takePhotoButton: 'Tomar foto',
     recordVideoButton: 'Grabar video',
     submitButton: 'Enviar reporte',
+    sendFailed: 'No se pudo enviar el reporte.',
     missingEvidence: 'Agrega al menos una evidencia',
     evidenceLimit: 'Este reporte ya tiene 10 evidencias.',
     fileTooLarge: 'El archivo supera 50 MB.',
@@ -48,6 +49,15 @@ export const texts = {
   savedPhoto: {
     screenTitle: 'Evidencia',
     removeButton: 'Eliminar',
+  },
+  detail: {
+    screenTitle: 'Detalle del reporte',
+    status: 'Radicado',
+    assistButton: 'Solicitar asistencia en sitio',
+    filedSuccess: (radicado: string) => `Siniestro #${radicado} radicado exitosamente.`,
+    occurred: (datetime: string, location: string) =>
+      location === '' ? `Ocurrió ${datetime}` : `Ocurrió ${datetime} · ${location}`,
+    evidences: (count: number) => `Evidencias (${count})`,
   },
   savedVideo: {
     screenTitle: 'Evidencia',

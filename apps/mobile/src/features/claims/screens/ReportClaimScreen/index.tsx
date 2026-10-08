@@ -15,13 +15,24 @@ import {
   TextField,
 } from '../../../../shared/ui';
 import { photoLimit } from '../../constants';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
-import { formatFileSize, photoUri } from '../../photoUtils';
+import { useClaimsStore } from '../../store/useClaimsStore';
+import { formatFileSize, photoUri } from '../../photo';
 import { claimReport } from '../../claimReport';
+import { submitAviso } from '../../api/submitAviso';
+import { newRadicado } from '../../radicado';
+import { ApiError } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
-import { formatDate } from '../../utils';
+import { displayOccurredAt, formatDate } from '../../utils';
+
+function filingMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.detail ?? texts.report.sendFailed;
+  }
+
+  return error instanceof Error && error.message !== '' ? error.message : texts.report.sendFailed;
+}
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
@@ -30,14 +41,58 @@ export default function ReportClaimScreen() {
   const [occurredAt, setOccurredAt] = useState(() => formatDate(new Date()));
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [filing, setFiling] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
   const { location, failed: locationFailed, refresh } = useLocation();
-  const photos = useClaimPhotosStore((state) => state.photos);
-  const videos = useClaimPhotosStore((state) => state.videos);
-  const clearEvidence = useClaimPhotosStore((state) => state.clear);
+  const photos = useClaimsStore((state) => state.photos);
+  const videos = useClaimsStore((state) => state.videos);
+  const clearEvidence = useClaimsStore((state) => state.clear);
   const evidenceCount = photos.length + videos.length;
   const descriptionMissing = submitted && description.trim() === '';
   const evidenceMissing = submitted && evidenceCount === 0;
+
+  const submit = async () => {
+    setSubmitted(true);
+    setSendError(null);
+    if (description.trim() === '' || evidenceCount === 0) {
+      return;
+    }
+
+    setFiling(true);
+    try {
+      await submitAviso({
+        policy,
+        claimType,
+        occurredAt,
+        location: location?.address ?? '',
+        description: description.trim(),
+        files: [
+          ...photos.map((photo) => ({ kind: 'photo' as const, filePath: photo.filePath, bytes: photo.bytes })),
+          ...videos.map((video) => ({ kind: 'video' as const, filePath: video.filePath, bytes: video.bytes })),
+        ],
+      });
+      navigation.navigate('ClaimReport', {
+        screen: 'ClaimDetail',
+        params: {
+          radicado: newRadicado(),
+          claimType,
+          policy,
+          occurredAt: displayOccurredAt(occurredAt),
+          location: location?.address ?? '',
+          description: description.trim(),
+          evidences: [...photos, ...videos].map((item) => ({
+            label: item.label,
+            capturedAt: item.capturedAt,
+          })),
+        },
+      });
+    } catch (error) {
+      setSendError(filingMessage(error));
+    } finally {
+      setFiling(false);
+    }
+  };
 
   const openCamera = (screen: 'TakePhoto' | 'RecordVideo') => {
     if (evidenceCount >= photoLimit) {
@@ -196,7 +251,15 @@ export default function ReportClaimScreen() {
             </AppText>
           ) : null}
         </Card>
-        <Button title={texts.report.submitButton} onPress={() => setSubmitted(true)} />
+        {sendError ? <Banner variant="error">{sendError}</Banner> : null}
+        <Button
+          testID="submit-report"
+          title={texts.report.submitButton}
+          loading={filing}
+          onPress={() => {
+            void submit();
+          }}
+        />
       </ScrollView>
     </Screen>
   );
