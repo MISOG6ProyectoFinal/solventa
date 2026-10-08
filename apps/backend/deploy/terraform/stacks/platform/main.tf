@@ -77,6 +77,11 @@ data "aws_iam_policy_document" "backend" {
     actions   = ["s3:GetObject", "s3:PutObject"]
     resources = ["${local.data.evidencias_bucket_arn}/*"]
   }
+  statement {
+    sid       = "CifrarEvidencias"
+    actions   = ["kms:Decrypt", "kms:GenerateDataKey"]
+    resources = [local.data.evidencias_kms_key_arn]
+  }
 }
 
 resource "aws_iam_role" "backend" {

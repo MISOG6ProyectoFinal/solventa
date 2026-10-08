@@ -36,7 +36,7 @@
     "tf-validate": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "for s in deploy/terraform/stacks/*/; do terraform -chdir=$s init -backend=false -input=false >/dev/null && terraform -chdir=$s validate || exit 1; done",
+        "command": "node deploy/scripts/tf-validate.mjs",
         "cwd": "apps/backend"
       }
     },

@@ -24,3 +24,7 @@ output "evidencias_bucket" {
 output "evidencias_bucket_arn" {
   value = module.evidencias.arn
 }
+
+output "evidencias_kms_key_arn" {
+  value = module.evidencias.kms_key_arn
+}
