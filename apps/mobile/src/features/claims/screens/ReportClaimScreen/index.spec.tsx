@@ -1,17 +1,21 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { useNavigation } from '@react-navigation/native';
+import { StackActions, useNavigation } from '@react-navigation/native';
 
 import { readLocation } from '../../../../shared/location';
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
+  const { StackActions } = jest.requireActual('@react-navigation/native');
   const goBack = jest.fn();
   const navigate = jest.fn();
+  const dispatch = jest.fn();
   return {
+    StackActions,
     useNavigation: () => ({
       goBack,
       navigate,
+      dispatch,
       canGoBack: () => true,
     }),
   };
@@ -78,7 +82,7 @@ describe('ReportClaimScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
     useNavigation().navigate.mockClear();
-    useClaimPhotosStore.getState().clear();
+    useClaimsStore.getState().clear();
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
     global.fetch = mockFiling() as typeof fetch;
@@ -154,7 +158,7 @@ describe('ReportClaimScreen', () => {
       return filing(url, init);
     }) as typeof fetch;
 
-    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { getByPlaceholderText, getByTestId, getByText, queryByText } = await render(<ReportClaimScreen />);
 
     await waitFor(() => {
@@ -171,19 +175,21 @@ describe('ReportClaimScreen', () => {
     releaseFiling(undefined);
 
     await waitFor(() => {
-      expect(useNavigation().navigate).toHaveBeenCalledWith(
-        'ClaimReport',
-        expect.objectContaining({
-          screen: 'ClaimDetail',
-          params: expect.objectContaining({
-            radicado: expect.stringMatching(/^SIN-\d{5}$/),
-            claimType: 'Accidente con vehículo de alquiler',
-            policy: 'Viaje Internacional · SLV-2026-03105',
-            location: currentPlace.address,
-            description: 'Golpe en la puerta',
-            evidences: [expect.objectContaining({ label: 'Foto 1' })],
+      expect(useNavigation().dispatch).toHaveBeenCalledWith(
+        StackActions.replace(
+          'ClaimReport',
+          expect.objectContaining({
+            screen: 'ClaimDetail',
+            params: expect.objectContaining({
+              radicado: expect.stringMatching(/^SIN-\d{5}$/),
+              claimType: 'Accidente con vehículo de alquiler',
+              policy: 'Viaje Internacional · SLV-2026-03105',
+              location: currentPlace.address,
+              description: 'Golpe en la puerta',
+              evidences: [expect.objectContaining({ label: 'Foto 1' })],
+            }),
           }),
-        }),
+        ),
       );
     });
 
@@ -197,11 +203,15 @@ describe('ReportClaimScreen', () => {
     expect(body.descripcion).toBe('Golpe en la puerta');
     expect(body.ubicacion).toBe(currentPlace.address);
     expect(body.ocurrido_en).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/);
+
+    const uploadCall = jest.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/evidencias/cargas'));
+    const upload = JSON.parse((uploadCall?.[1] as { body: string }).body) as { bytes: number };
+    expect(upload.bytes).toBe(3);
   });
 
   it('keeps the form open when the report cannot be filed', async () => {
     global.fetch = jest.fn(async () => jsonResponse({ detail: 'El archivo no pasó la validación.' }, 422)) as typeof fetch;
-    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { findByText, getByPlaceholderText, getByText, queryByTestId } = await render(<ReportClaimScreen />);
 
     await waitFor(() => {
@@ -234,7 +244,7 @@ describe('ReportClaimScreen', () => {
 
   it('tells the user when the report already has 10 files', async () => {
     for (let index = 0; index < 10; index += 1) {
-      useClaimPhotosStore.getState().addPhoto({ filePath: `/tmp/foto-${index}.jpg`, bytes: 100 });
+      useClaimsStore.getState().addPhoto({ filePath: `/tmp/foto-${index}.jpg`, bytes: 100 });
     }
     const { getByText, queryByText } = await render(<ReportClaimScreen />);
 
@@ -247,7 +257,7 @@ describe('ReportClaimScreen', () => {
   });
 
   it('opens a saved video', async () => {
-    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
+    useClaimsStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
     const { getByLabelText } = await render(<ReportClaimScreen />);
 
     await fireEvent.press(getByLabelText('Video 1'));
@@ -259,7 +269,7 @@ describe('ReportClaimScreen', () => {
   });
 
   it('accepts a video as evidence', async () => {
-    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
+    useClaimsStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
     const { getByText, getByPlaceholderText, queryByText } = await render(<ReportClaimScreen />);
 
     expect(getByText('Video 1')).toBeTruthy();
@@ -273,7 +283,7 @@ describe('ReportClaimScreen', () => {
   });
 
   it('opens a saved photo', async () => {
-    useClaimPhotosStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { getByLabelText } = await render(<ReportClaimScreen />);
 
     await fireEvent.press(getByLabelText('Foto 1'));

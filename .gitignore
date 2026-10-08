@@ -84,3 +84,5 @@ node_modules/
 vite.config.*.timestamp*
 
 .cursor/
+
+.env

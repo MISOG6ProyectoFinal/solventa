@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { theme } from '../../../../shared/theme';
 import ClaimDetailScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -40,7 +41,7 @@ describe('ClaimDetailScreen', () => {
     expect(getByText('Viaje Internacional · SLV-2026-03105')).toBeTruthy();
     expect(getByText('Ocurrió 2026-09-12 10:30 · Calle 85 #12-34, Chapinero, Bogotá')).toBeTruthy();
     expect(getByText('Descripción...')).toBeTruthy();
-    expect(getByText('Evidencias (1)')).toBeTruthy();
+    expect(getByText('Evidencias (1)')).toHaveStyle({ color: theme.colors.text });
     expect(getByText('Foto 1')).toBeTruthy();
     expect(getByText('00:45')).toBeTruthy();
     expect(getByText('Solicitar asistencia en sitio')).toBeTruthy();

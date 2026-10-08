@@ -9,7 +9,7 @@ apps/backend/
 ├── libs/solventa_common/     # Librería compartida
 ├── services/<servicio>/      # Un servicio por almacén (8), un módulo por componente
 ├── Dockerfile                # Imagen única: --build-arg SERVICE=<servicio>
-├── docker-compose.yml        # PostgreSQL, Redis y LocalStack para desarrollo
+├── docker-compose.yml        # PostgreSQL, Redis, LocalStack, Canales y Siniestros
 ├── scripts/                  # test-all.sh, build-images.sh
 └── deploy/
     ├── k8s/base              # Deployments, Services, HPA, PDB, Ingress, NetworkPolicy
@@ -105,10 +105,16 @@ poetry run ./scripts/test-all.sh
 Para correr un servicio contra PostgreSQL, Redis y LocalStack:
 
 ```bash
-docker compose up -d
+docker compose up -d postgres redis localstack
 cd services/cotizacion
 DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
   poetry run uvicorn cotizacion.main:app --reload
+```
+
+Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo:
+
+```bash
+docker compose up -d canales
 ```
 
 Todo el backend en minikube:
