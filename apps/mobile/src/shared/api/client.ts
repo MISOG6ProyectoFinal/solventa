@@ -1,4 +1,9 @@
-const apiBaseUrl = 'http://localhost:8000';
+const configuredApiBaseUrl = process.env.API_BASE_URL;
+if (configuredApiBaseUrl === undefined || configuredApiBaseUrl === '') {
+  throw new Error('Falta API_BASE_URL.');
+}
+
+const apiBaseUrl = configuredApiBaseUrl;
 
 export class ApiError extends Error {
   readonly status: number;
@@ -22,7 +27,7 @@ async function requestJson<T>(
     headers: payload === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
-  const body = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+  const body = (await response.json().catch(() => null)) as { detail?: unknown; } | null;
   if (!response.ok) {
     const detail = body && typeof body.detail === 'string' ? body.detail : null;
     throw new ApiError(response.status, detail);

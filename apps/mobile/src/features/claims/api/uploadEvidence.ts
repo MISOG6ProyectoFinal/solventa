@@ -19,16 +19,20 @@ type UploadTarget = {
   headers: Record<string, string>;
 };
 
-async function putEvidence(target: UploadTarget, filePath: string) {
+async function readEvidence(filePath: string) {
   const file = await fetch(photoUri(filePath));
   if (!file.ok) {
     throw new Error(texts.report.sendFailed);
   }
 
+  return file.blob();
+}
+
+async function putEvidence(target: UploadTarget, body: Blob) {
   const uploaded = await fetch(target.upload_url, {
     method: 'PUT',
     headers: target.headers,
-    body: await file.blob(),
+    body,
   });
   if (!uploaded.ok) {
     throw new Error(texts.report.sendFailed);
@@ -36,10 +40,12 @@ async function putEvidence(target: UploadTarget, filePath: string) {
 }
 
 export async function uploadEvidence(avisoId: string, file: EvidenceFile) {
+  // The camera buffer and the saved file can differ in size. Declare the bytes that are uploaded.
+  const body = await readEvidence(file.filePath);
   const target = await apiClient.post<UploadTarget>(`/movil/siniestros/${avisoId}/evidencias/cargas`, {
     content_type: contentType[file.kind],
-    bytes: file.bytes,
+    bytes: body.size,
   });
-  await putEvidence(target, file.filePath);
+  await putEvidence(target, body);
   await apiClient.post(`/movil/siniestros/${avisoId}/evidencias/${target.evidencia_id}/confirmar`);
 }

@@ -1,0 +1,208 @@
+{
+  "info": {
+    "name": "Solventa reporte móvil",
+    "description": "Prueba el reporte de siniestro a través de Canales. Ejecute las peticiones en orden. En Subir archivo elija un JPEG cuyo tamaño en bytes sea exactamente el valor enviado en Solicitar carga.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "avisoId",
+      "value": ""
+    },
+    {
+      "key": "evidenciaId",
+      "value": ""
+    },
+    {
+      "key": "uploadUrl",
+      "value": ""
+    },
+    {
+      "key": "uploadContentType",
+      "value": "image/jpeg"
+    },
+    {
+      "key": "uploadContentLength",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Canales está listo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health/ready"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Canales responde listo', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear aviso",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"poliza_id\": \"SLV-2026-03105\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"2026-09-12T10:30:00\",\n  \"descripcion\": \"Golpe en la puerta\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/siniestros"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El aviso queda en borrador', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().estado).to.eql('borrador');",
+              "});",
+              "pm.collectionVariables.set('avisoId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Solicitar carga",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content_type\": \"image/jpeg\",\n  \"bytes\": 1536\n}"
+        },
+        "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias/cargas",
+        "description": "Cambie bytes por el tamaño exacto del JPEG que va a subir."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('Devuelve la URL de carga', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(body.upload_url).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('evidenciaId', body.evidencia_id);",
+              "pm.collectionVariables.set('uploadUrl', body.upload_url);",
+              "pm.collectionVariables.set('uploadContentType', body.headers['Content-Type']);",
+              "pm.collectionVariables.set('uploadContentLength', body.headers['Content-Length']);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subir archivo",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "{{uploadContentType}}"
+          },
+          {
+            "key": "Content-Length",
+            "value": "{{uploadContentLength}}"
+          }
+        ],
+        "body": {
+          "mode": "file",
+          "file": {
+            "src": ""
+          }
+        },
+        "url": "{{uploadUrl}}",
+        "description": "Seleccione el JPEG. Su tamaño debe coincidir con bytes de Solicitar carga. Esta petición va a LocalStack, no a Canales."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El archivo queda guardado', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Confirmar carga",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias/{{evidenciaId}}/confirmar"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La evidencia queda disponible', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().estado).to.eql('disponible');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listar evidencias",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El aviso tiene una evidencia disponible', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const rows = pm.response.json();",
+              "  pm.expect(rows).to.be.an('array').that.is.not.empty;",
+              "  pm.expect(rows[0].estado).to.eql('disponible');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

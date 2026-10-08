@@ -1,8 +1,10 @@
-# Dependencias locales: PostgreSQL (una base por almacén), Redis y LocalStack (SNS, SQS, S3).
-# Para correr un servicio contra ellas:
-#   docker compose up -d
-#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
-#     DB_PASSWORD=solventa uvicorn cotizacion.main:app --reload
+# Dependencias locales y los servicios del reporte móvil.
+# Solo infraestructura: docker compose up -d postgres redis localstack
+# Reporte desde el teléfono: docker compose up -d canales
+# Canales publica el puerto 8000. Siniestros queda en la red de Compose.
+# La URL de carga usa AWS_ENDPOINT_URL (por defecto http://localstack:4566, solo visible
+# dentro de Compose). Para que el teléfono suba el archivo, defina en este directorio
+# AWS_ENDPOINT_URL=http://<ip-de-la-red>:4566 y vuelva a levantar siniestros.
 services:
   postgres:
     image: postgres:17
@@ -13,6 +15,11 @@ services:
     ports: ["5432:5432"]
     volumes:
       - ./deploy/k8s/overlays/local/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solventa -d solventa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   redis:
     image: redis:7
     ports: ["6379:6379"]
@@ -23,3 +30,56 @@ services:
     ports: ["4566:4566"]
     volumes:
       - ./deploy/k8s/overlays/local/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+    healthcheck:
+      test: ["CMD", "awslocal", "s3api", "head-bucket", "--bucket", "solventa-evidencias"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+  siniestros:
+    build:
+      context: .
+      args:
+        SERVICE: siniestros
+    ports: ["8001:8000"]
+    environment:
+      SERVICE_NAME: siniestros
+      DB_HOST: postgres
+      DB_NAME: siniestros
+      DB_USER: solventa
+      DB_PASSWORD: solventa
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      EVIDENCIAS_BUCKET: solventa-evidencias
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+  canales:
+    build:
+      context: .
+      args:
+        SERVICE: canales
+    ports: ["8000:8000"]
+    environment:
+      SERVICE_NAME: canales
+      SINIESTROS_URL: http://siniestros:8000
+    depends_on:
+      siniestros:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

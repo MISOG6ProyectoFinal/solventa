@@ -12,7 +12,7 @@ export type FiledReport = {
   occurredAt: string;
   location: string;
   description: string;
-  evidences: { label: string; capturedAt: string }[];
+  evidences: { label: string; capturedAt: string; }[];
 };
 
 type Props = StaticScreenProps<FiledReport>;
@@ -38,7 +38,9 @@ export default function ClaimDetailScreen({ route }: Props) {
           </AppText>
         </Card>
         <Card>
-          <AppText variant="button">{texts.detail.evidences(report.evidences.length)}</AppText>
+          <AppText variant="button" style={styles.title}>
+            {texts.detail.evidences(report.evidences.length)}
+          </AppText>
           <View style={styles.thumbs}>
             {report.evidences.map((evidence) => (
               <View key={evidence.label} style={styles.thumb}>

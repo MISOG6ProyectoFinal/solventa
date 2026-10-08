@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { StackActions, useNavigation } from '@react-navigation/native';
 
 import {
   AppText,
@@ -72,21 +72,23 @@ export default function ReportClaimScreen() {
           ...videos.map((video) => ({ kind: 'video' as const, filePath: video.filePath, bytes: video.bytes })),
         ],
       });
-      navigation.navigate('ClaimReport', {
-        screen: 'ClaimDetail',
-        params: {
-          radicado: newRadicado(),
-          claimType,
-          policy,
-          occurredAt: displayOccurredAt(occurredAt),
-          location: location?.address ?? '',
-          description: description.trim(),
-          evidences: [...photos, ...videos].map((item) => ({
-            label: item.label,
-            capturedAt: item.capturedAt,
-          })),
-        },
-      });
+      navigation.dispatch(
+        StackActions.replace('ClaimReport', {
+          screen: 'ClaimDetail',
+          params: {
+            radicado: newRadicado(),
+            claimType,
+            policy,
+            occurredAt: displayOccurredAt(occurredAt),
+            location: location?.address ?? '',
+            description: description.trim(),
+            evidences: [...photos, ...videos].map((item) => ({
+              label: item.label,
+              capturedAt: item.capturedAt,
+            })),
+          },
+        }),
+      );
     } catch (error) {
       setSendError(filingMessage(error));
     } finally {
