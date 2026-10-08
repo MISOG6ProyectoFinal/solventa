@@ -1,4 +1,12 @@
-import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  useAnimatedValue,
+  View,
+} from 'react-native';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
@@ -20,6 +28,7 @@ type ButtonProps = {
   variant?: ButtonVariant;
   icon?: IconName;
   disabled?: boolean;
+  loading?: boolean;
   onPress?: () => void;
   testID?: string;
 };
@@ -40,6 +49,7 @@ export function Button({
   variant = 'primary',
   icon,
   disabled = false,
+  loading = false,
   onPress,
   testID,
 }: ButtonProps) {
@@ -77,21 +87,25 @@ export function Button({
       <Pressable
         testID={testID}
         accessibilityRole="button"
-        disabled={disabled}
+        disabled={disabled || loading}
         onPress={onPress}
         onPressIn={() => {
-          if (!disabled) animatePressed(1);
+          if (!disabled && !loading) animatePressed(1);
         }}
         onPressOut={() => animatePressed(0)}
-        style={[styles.base, containerStyles[variant], disabled && styles.disabled]}
+        style={[styles.base, containerStyles[variant], disabled && !loading && styles.disabled]}
       >
         <View style={styles.content}>
-          {icon ? (
-            <Icon name={icon} size={20} color={disabled ? 'gray' : iconColor[variant]} />
-          ) : null}
-          <AppText variant="button" style={[labelStyles[variant], disabled && styles.disabledLabel]}>
-            {title}
-          </AppText>
+          {loading ? (
+            <ActivityIndicator color={labelStyles[variant].color} testID="button-progress" />
+          ) : (
+            <>
+              {icon ? <Icon name={icon} size={20} color={disabled ? 'gray' : iconColor[variant]} /> : null}
+              <AppText variant="button" style={[labelStyles[variant], disabled && styles.disabledLabel]}>
+                {title}
+              </AppText>
+            </>
+          )}
         </View>
       </Pressable>
     </Animated.View>
