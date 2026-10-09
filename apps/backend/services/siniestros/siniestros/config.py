@@ -1,5 +1,4 @@
 from pydantic import model_validator
-
 from solventa_common.settings import ServiceSettings
 
 
