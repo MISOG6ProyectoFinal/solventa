@@ -19,7 +19,7 @@ type UploadTarget = {
   headers: Record<string, string>;
 };
 
-async function readEvidence(filePath: string) {
+async function readEvidence(filePath: string): Promise<Blob> {
   const file = await fetch(photoUri(filePath));
   if (!file.ok) {
     throw new Error(texts.report.sendFailed);

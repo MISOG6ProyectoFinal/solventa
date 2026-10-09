@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository
 from siniestros.avisos.adapters.object_store import S3ObjectStore
-from siniestros.avisos.adapters.scanner import AcceptingScanner
 from siniestros.avisos.domain.use_cases import ConfirmarCargaUseCase, CrearAvisoUseCase, SolicitarCargaUseCase
 
 BUCKET = "solventa-evidencias"
@@ -19,6 +18,19 @@ def store(monkeypatch):
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
     monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
     return S3ObjectStore(BUCKET, "us-east-1")
+
+
+def test_presign_ignora_el_endpoint_del_entorno(monkeypatch):
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://192.168.1.52:4566")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
+    store = S3ObjectStore(BUCKET, "us-east-1")
+
+    url, _, _ = store.presign_put("avisos/a/evidencias/e", "image/jpeg", len(JPEG))
+
+    assert "192.168.1.52" not in url
+    assert "amazonaws.com" in url
 
 
 def test_presign_put_firma_tipo_y_tamano(store):
@@ -76,7 +88,7 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     repo = InMemoryAvisoRepository()
     crear = CrearAvisoUseCase(repo)
     solicitar = SolicitarCargaUseCase(repo, store, BUCKET)
-    confirmar = ConfirmarCargaUseCase(repo, store, AcceptingScanner())
+    confirmar = ConfirmarCargaUseCase(repo, store)
     created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe")
     carga = solicitar.execute(created.id, "image/jpeg", len(JPEG))
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
@@ -98,6 +110,22 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     result = confirmar.execute(created.id, carga.evidencia_id)
     assert result.estado == "disponible"
     assert result.url == f"s3://{BUCKET}/{evidencia.object_key}"
+
+
+def test_head_de_un_bucket_ausente_se_propaga(store, caplog):
+    stubber = _stubber(store)
+    stubber.add_client_error(
+        "head_object",
+        service_error_code="NoSuchBucket",
+        service_message="The specified bucket does not exist",
+        http_status_code=404,
+        expected_params={"Bucket": BUCKET, "Key": "missing"},
+    )
+    stubber.activate()
+    with caplog.at_level("ERROR"), pytest.raises(ClientError):
+        store.head("missing")
+    assert "NoSuchBucket" in caplog.text
+    assert BUCKET in caplog.text
 
 
 def test_un_error_distinto_de_404_se_propaga(store):

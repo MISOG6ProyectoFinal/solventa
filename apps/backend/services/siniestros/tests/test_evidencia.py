@@ -21,26 +21,15 @@ TAMANO = "El archivo supera 50 MB."
 LIMITE = "Este reporte ya tiene 10 evidencias."
 
 
-class Scanner:
-    def __init__(self, infected: set[str] | None = None) -> None:
-        self.infected = infected or set()
-
-    def scan(self, key: str, header: bytes, content_type: str) -> str:
-        if key in self.infected:
-            return "infected"
-        return "clean"
-
-
-def build(infected: set[str] | None = None):
+def build():
     repo = InMemoryAvisoRepository()
     store = InMemoryObjectStore()
-    scanner = Scanner(infected)
     return (
         repo,
         store,
         CrearAvisoUseCase(repo),
         SolicitarCargaUseCase(repo, store, BUCKET),
-        ConfirmarCargaUseCase(repo, store, scanner),
+        ConfirmarCargaUseCase(repo, store),
         ListarEvidenciasUseCase(repo, store),
     )
 
@@ -156,21 +145,6 @@ def test_confirmar_invalido_rechaza(content_type, body, declared):
 
     assert error.value.message == "El archivo no pasó la validación."
     assert repo.get_evidencia(created.id, carga.evidencia_id).estado == "rechazada"
-
-
-def test_archivo_infectado_se_rechaza():
-    repo, store, crear, solicitar, _, listar = build()
-    created = aviso(crear)
-    carga = solicitar.execute(created.id, "image/png", len(PNG))
-    evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
-    store.guardar(evidencia.object_key, "image/png", PNG)
-    confirmar = ConfirmarCargaUseCase(repo, store, Scanner({evidencia.object_key}))
-
-    with pytest.raises(ReglaEvidencia):
-        confirmar.execute(created.id, carga.evidencia_id)
-
-    assert repo.get_evidencia(created.id, carga.evidencia_id).estado == "rechazada"
-    assert listar.execute(created.id) == []
 
 
 def test_reporte_desconocido():

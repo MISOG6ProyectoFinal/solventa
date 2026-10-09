@@ -48,12 +48,13 @@ services:
       DB_NAME: siniestros
       DB_USER: solventa
       DB_PASSWORD: solventa
+      PERSISTENT_STORES: ${PERSISTENT_STORES}
       AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_EC2_METADATA_DISABLED: "true"
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
-      EVIDENCIAS_BUCKET: solventa-evidencias
+      EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET}
     depends_on:
       postgres:
         condition: service_healthy

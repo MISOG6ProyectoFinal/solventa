@@ -2,7 +2,9 @@ import pytest
 from fastapi.testclient import TestClient
 from siniestros.avisos import api
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
-from siniestros.avisos.adapters.scanner import AcceptingScanner
+from siniestros.avisos.adapters.object_store import S3ObjectStore
+from siniestros.avisos.adapters.repository import PostgresAvisoRepository
+from siniestros.config import SiniestrosSettings, settings
 from siniestros.main import app
 
 client = TestClient(app)
@@ -19,7 +21,24 @@ AVISO = {
 
 @pytest.fixture(autouse=True)
 def _avisos_en_memoria():
-    api.wire(InMemoryAvisoRepository(), InMemoryObjectStore(), AcceptingScanner())
+    api.wire(InMemoryAvisoRepository(), InMemoryObjectStore(), bucket="solventa-evidencias")
+
+
+def test_persistent_stores_wires_postgres_and_s3(monkeypatch):
+    monkeypatch.setattr(settings, "persistent_stores", True)
+    monkeypatch.setattr(settings, "database_url", "postgresql+psycopg://solventa:solventa@localhost:5432/siniestros")
+    monkeypatch.setattr(PostgresAvisoRepository, "create_schema", lambda self: None)
+
+    api._default_wire()
+
+    assert isinstance(api.object_store, S3ObjectStore)
+    assert "amazonaws.com" in api.object_store.client.meta.endpoint_url
+
+
+def test_persistent_stores_drop_the_localstack_endpoint():
+    configured = SiniestrosSettings(persistent_stores=True, aws_endpoint_url="http://localstack:4566")
+
+    assert configured.aws_endpoint_url is None
 
 
 def test_live():

@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from siniestros.avisos import api
 from siniestros.avisos.adapters.object_store import S3ObjectStore
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository
-from siniestros.avisos.adapters.scanner import AcceptingScanner
 from siniestros.config import settings
 from siniestros.main import app
 from solventa_common.db import build_engine
@@ -29,7 +28,7 @@ def _client() -> TestClient:
         store.client.head_bucket(Bucket=BUCKET)
     except Exception:
         store.client.create_bucket(Bucket=BUCKET)
-    api.wire(repository, store, AcceptingScanner(), bucket=BUCKET)
+    api.wire(repository, store, bucket=BUCKET)
     return TestClient(app)
 
 

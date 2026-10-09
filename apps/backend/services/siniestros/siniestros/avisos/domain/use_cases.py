@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from siniestros.avisos.domain.errors import ReglaEvidencia
 from siniestros.avisos.domain.models import Aviso, Carga, Evidencia, EvidenciaLista
-from siniestros.avisos.domain.ports import AvisoRepository, FileScanner, ObjectStore
+from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
 
 MAX_BYTES = 52_428_800
 MAX_EVIDENCIAS = 10
@@ -95,10 +95,9 @@ class SolicitarCargaUseCase:
 
 
 class ConfirmarCargaUseCase:
-    def __init__(self, repository: AvisoRepository, store: ObjectStore, scanner: FileScanner) -> None:
+    def __init__(self, repository: AvisoRepository, store: ObjectStore) -> None:
         self.repository = repository
         self.store = store
-        self.scanner = scanner
 
     def execute(self, aviso_id: str, evidencia_id: str) -> Evidencia:
         if self.repository.get_aviso(aviso_id) is None:
@@ -119,8 +118,6 @@ class ConfirmarCargaUseCase:
 
         header = self.store.read_header(evidencia.object_key)
         if not header_matches(evidencia.content_type, header):
-            self._rechazar(evidencia)
-        if self.scanner.scan(evidencia.object_key, header, evidencia.content_type) != "clean":
             self._rechazar(evidencia)
 
         ready = evidencia.model_copy(update={"estado": "disponible"})

@@ -33,6 +33,8 @@ spec:
         env:
         - name: SERVICE_NAME
           value: siniestros
+        - name: PERSISTENT_STORES
+          value: "true"
         envFrom:
         - configMapRef:
             name: solventa-platform

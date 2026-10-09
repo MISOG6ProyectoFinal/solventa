@@ -4,10 +4,9 @@ from solventa_common.db import build_engine
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
 from siniestros.avisos.adapters.object_store import S3ObjectStore
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository
-from siniestros.avisos.adapters.scanner import AcceptingScanner
 from siniestros.avisos.domain.errors import ReglaEvidencia
 from siniestros.avisos.domain.models import Evidencia, NuevaCarga, NuevoAviso
-from siniestros.avisos.domain.ports import AvisoRepository, FileScanner, ObjectStore
+from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
 from siniestros.avisos.domain.use_cases import (
     ConfirmarCargaUseCase,
     CrearAvisoUseCase,
@@ -22,7 +21,7 @@ casos: dict = {}
 object_store: ObjectStore
 
 
-def wire(repository: AvisoRepository, almacen: ObjectStore, scanner: FileScanner, bucket: str | None = None) -> None:
+def wire(repository: AvisoRepository, almacen: ObjectStore, bucket: str | None = None) -> None:
     global object_store
     if hasattr(repository, "create_schema"):
         repository.create_schema()
@@ -30,18 +29,18 @@ def wire(repository: AvisoRepository, almacen: ObjectStore, scanner: FileScanner
     name = bucket or settings.evidencias_bucket
     casos["crear"] = CrearAvisoUseCase(repository)
     casos["solicitar"] = SolicitarCargaUseCase(repository, almacen, name)
-    casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen, scanner)
+    casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen)
     casos["listar"] = ListarEvidenciasUseCase(repository, almacen)
 
 
 def _default_wire() -> None:
-    if settings.database_url:
+    if settings.persistent_stores:
         repository: AvisoRepository = PostgresAvisoRepository(build_engine(settings.database_url))
-        almacen: ObjectStore = S3ObjectStore(settings.evidencias_bucket, settings.aws_region, settings.aws_endpoint_url)
+        almacen: ObjectStore = S3ObjectStore(settings.evidencias_bucket, settings.aws_region, None)
     else:
         repository = InMemoryAvisoRepository()
         almacen = InMemoryObjectStore()
-    wire(repository, almacen, AcceptingScanner())
+    wire(repository, almacen)
 
 
 def _http(exc: ReglaEvidencia) -> HTTPException:
