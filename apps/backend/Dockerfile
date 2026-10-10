@@ -15,9 +15,8 @@ WORKDIR /app
 COPY libs/solventa_common /src/libs/solventa_common
 COPY services/${SERVICE} /src/services/${SERVICE}
 RUN pip install /src/libs/solventa_common /src/services/${SERVICE} \
-    && rm -rf /src
-
-RUN useradd --uid 10001 --no-create-home solventa
+    && rm -rf /src \
+    && useradd --uid 10001 --no-create-home solventa
 USER 10001
 
 ENV SERVICE=${SERVICE}

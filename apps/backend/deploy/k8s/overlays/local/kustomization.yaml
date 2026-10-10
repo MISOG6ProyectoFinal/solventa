@@ -1,6 +1,6 @@
 # Overlay para minikube/kind: dependencias dentro del clúster (PostgreSQL, Redis,
 # LocalStack) y una réplica por servicio.
-#   eval $(minikube docker-env) && TAG=latest ./scripts/build-images.sh   (desde apps/backend)
+#   eval $(minikube docker-env) && TAG=local ./scripts/build-images.sh   (desde apps/backend)
 #   kubectl apply -k deploy/k8s/overlays/local
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

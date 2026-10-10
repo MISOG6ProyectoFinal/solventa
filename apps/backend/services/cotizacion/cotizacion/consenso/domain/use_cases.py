@@ -7,7 +7,7 @@ from decimal import Decimal
 from cotizacion.catalogo.domain.models import Canal
 from cotizacion.catalogo.domain.ports import CatalogoRepository
 from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
-from cotizacion.consenso.domain.consensus import SinConsenso, votar
+from cotizacion.consenso.domain.consensus import votar
 from cotizacion.consenso.domain.models import CoberturaOferta, OfertaCotizacion, VigenciaPropuesta
 from cotizacion.consenso.domain.ports import CotizacionRepository
 from cotizacion.rating.domain.models import SolicitudCotizacion
@@ -42,10 +42,7 @@ class CotizarConConsensoUseCase:
         producto = self.validar_producto.execute(solicitud.producto_id, canal)
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
-        try:
-            prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
-        except SinConsenso:
-            raise
+        prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
         coberturas = [CoberturaOferta(id=c.id, nombre=c.nombre) for c in self.catalogo.list_coberturas(producto.id)]
         oferta = OfertaCotizacion(

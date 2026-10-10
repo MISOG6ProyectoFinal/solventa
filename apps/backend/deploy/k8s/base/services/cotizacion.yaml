@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/component: negocio
     spec:
       serviceAccountName: solventa-backend
+      automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       topologySpreadConstraints:
       - maxSkew: 1
@@ -28,7 +29,7 @@ spec:
             app.kubernetes.io/name: cotizacion
       containers:
       - name: cotizacion
-        image: solventa/cotizacion
+        image: solventa/cotizacion:local
         imagePullPolicy: IfNotPresent
         env:
         - name: SERVICE_NAME
@@ -44,9 +45,11 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
+            ephemeral-storage: 64Mi
           limits:
             cpu: 500m
             memory: 256Mi
+            ephemeral-storage: 256Mi
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
@@ -149,10 +152,11 @@ spec:
         app.kubernetes.io/component: negocio
     spec:
       serviceAccountName: solventa-backend
+      automountServiceAccountToken: false
       restartPolicy: Never
       containers:
       - name: bootstrap
-        image: solventa/cotizacion
+        image: solventa/cotizacion:local
         imagePullPolicy: IfNotPresent
         command: ["python", "-m", "cotizacion.bootstrap"]
         envFrom:
@@ -166,9 +170,11 @@ spec:
           requests:
             cpu: 50m
             memory: 128Mi
+            ephemeral-storage: 64Mi
           limits:
             cpu: 500m
             memory: 256Mi
+            ephemeral-storage: 256Mi
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false

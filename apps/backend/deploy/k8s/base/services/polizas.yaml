@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/component: negocio
     spec:
       serviceAccountName: solventa-backend
+      automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       topologySpreadConstraints:
       - maxSkew: 1
@@ -28,7 +29,7 @@ spec:
             app.kubernetes.io/name: polizas
       containers:
       - name: polizas
-        image: solventa/polizas
+        image: solventa/polizas:local
         imagePullPolicy: IfNotPresent
         env:
         - name: SERVICE_NAME
@@ -44,9 +45,11 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
+            ephemeral-storage: 64Mi
           limits:
             cpu: 500m
             memory: 256Mi
+            ephemeral-storage: 256Mi
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
