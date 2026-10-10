@@ -154,7 +154,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Instalar herramientas de diagnóstico
-        run: sudo apt-get update && sudo apt-get install -y jq curl
+        run: sudo apt-get update && sudo apt-get install -y jq curl bc
 
       - name: Descargar reportes de pruebas
         uses: actions/download-artifact@v4
@@ -196,8 +196,6 @@ jobs:
       - name: Sonarless Scan
         uses: gitricko/sonarless@v1.3
         id: sonarless-scan
-        env:
-          SONAR_SCANNER_OPTS: "-Dsonar.projectBaseDir=apps/backend -Dsonar.python.coverage.reportPaths=coverage.xml -Dsonar.python.xunit.reportPath=test-results.xml"
         with:
           sonar-source-path: "apps/backend"
           sonar-project-key: "solventa-backend"
@@ -342,75 +340,94 @@ jobs:
           echo ""
           echo "🚪 === VALIDACIÓN DE QUALITY GATES ==="
           
-          if [[ -z "$DUPLICATION" || -z "$CODE_SMELLS" || -z "$VIOLATIONS" || -z "$OPEN_ISSUES" || -z "$SECURITY_RATING" || -z "$SECURITY_HOTSPOTS" || -z "$BUGS" ]]; then
+          if [[ -z "$DUPLICATION" || -z "$CODE_SMELLS" || -z "$VIOLATIONS" || -z "$OPEN_ISSUES" || -z "$SECURITY_RATING" || -z "$SECURITY_HOTSPOTS" || -z "$BUGS" || -z "$VULNERABILITIES" || -z "$COVERAGE" ]]; then
             echo "❌ Error: alguna métrica está vacía"
             exit 1
           fi
           
-          # # Validar duplicación (debe mantenerse en 0%)
-          # if (( $(echo "$DUPLICATION > 0.0" | bc -l) )); then
-          #   echo "❌ Duplication density (${DUPLICATION}%) exceeds limit (0.0%)"
-          #   exit 1
-          # else
-          #   echo "✅ Duplication density: ${DUPLICATION}% (OK)"
-          # fi
-          
-          # # Validar code smells (límite: 129 - valor actual)
-          # if (( CODE_SMELLS > 129 )); then
-          #   echo "❌ Code smells (${CODE_SMELLS}) exceed limit (129)"
-          #   exit 1
-          # else
-          #   echo "✅ Code smells: ${CODE_SMELLS} (OK)"
-          # fi
-          
-          # # Validar violations (límite: 130 - valor actual)
-          # if (( VIOLATIONS > 130 )); then
-          #   echo "❌ Violations (${VIOLATIONS}) exceed limit (130)"
-          #   exit 1
-          # else
-          #   echo "✅ Violations: ${VIOLATIONS} (OK)"
-          # fi
-          
-          # # Validar open issues (límite: 130 - valor actual)
-          # if (( OPEN_ISSUES > 130 )); then
-          #   echo "❌ Open issues (${OPEN_ISSUES}) exceed limit (130)"
-          #   exit 1
-          # else
-          #   echo "✅ Open issues: ${OPEN_ISSUES} (OK)"
-          # fi
-          
-          # # Validar bugs (límite: 1 - valor actual)
-          # if (( BUGS > 1 )); then
-          #   echo "❌ Bugs (${BUGS}) exceed limit (1)"
-          #   exit 1
-          # else
-          #   echo "✅ Bugs: ${BUGS} (OK)"
-          # fi
-          
-          # # Validar security rating (debe mantenerse en 1.0)
-          # if (( $(echo "$SECURITY_RATING > 1.0" | bc -l) )); then
-          #   echo "❌ Security rating (${SECURITY_RATING}) exceeds limit (1.0)"
-          #   exit 1
-          # else
-          #   echo "✅ Security rating: ${SECURITY_RATING} (OK)"
-          # fi
-          
-          # # Validar security hotspots (debe mantenerse en 0)
-          # if (( SECURITY_HOTSPOTS > 0 )); then
-          #   echo "❌ Security hotspots (${SECURITY_HOTSPOTS}) exceed limit (0)"
-          #   exit 1
-          # else
-          #   echo "✅ Security hotspots: ${SECURITY_HOTSPOTS} (OK)"
-          # fi
-          
-          # # Validar vulnerabilidades (debe mantenerse en 0)
-          # if (( VULNERABILITIES > 0 )); then
-          #   echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed limit (0)"
-          #   exit 1
-          # else
-          #   echo "✅ Vulnerabilities: ${VULNERABILITIES} (OK)"
-          # fi
-          
+          # ============================================================
+          # BASELINE DE CALIDAD DEL PROYECTO
+          # ============================================================
+          # NO aumente estos límites para hacer pasar el pipeline.
+          #
+          # Si este job falla, revise primero "DETALLES DE PROBLEMAS"
+          # en este mismo pipeline y corrija la regresión que introdujo
+          # el cambio. El objetivo es mantener o reducir este baseline,
+          # nunca relajar los límites para dejar el deploy en verde.
+          # ============================================================
+
+          # Validar duplicación (debe mantenerse en 0%)
+          if (( $(echo "$DUPLICATION > 0.0" | bc -l) )); then
+            echo "❌ Duplication density (${DUPLICATION}%) exceeds limit (0.0%)"
+            exit 1
+          else
+            echo "✅ Duplication density: ${DUPLICATION}% (OK)"
+          fi
+
+          # Validar code smells (baseline: 5 TODO aceptados)
+          if (( CODE_SMELLS > 5 )); then
+            echo "❌ Code smells (${CODE_SMELLS}) exceed limit (5)"
+            exit 1
+          else
+            echo "✅ Code smells: ${CODE_SMELLS} (OK)"
+          fi
+
+          # Validar violations (baseline: 5 TODO aceptados)
+          if (( VIOLATIONS > 5 )); then
+            echo "❌ Violations (${VIOLATIONS}) exceed limit (5)"
+            exit 1
+          else
+            echo "✅ Violations: ${VIOLATIONS} (OK)"
+          fi
+
+          # Validar open issues (baseline: 5 TODO aceptados)
+          if (( OPEN_ISSUES > 5 )); then
+            echo "❌ Open issues (${OPEN_ISSUES}) exceed limit (5)"
+            exit 1
+          else
+            echo "✅ Open issues: ${OPEN_ISSUES} (OK)"
+          fi
+
+          # Validar bugs (debe ser 0)
+          if (( BUGS != 0 )); then
+            echo "❌ Bugs (${BUGS}) exceed limit (0)"
+            exit 1
+          else
+            echo "✅ Bugs: ${BUGS} (OK)"
+          fi
+
+          # Validar security rating (debe mantenerse en 1.0)
+          if (( $(echo "$SECURITY_RATING > 1.0" | bc -l) )); then
+            echo "❌ Security rating (${SECURITY_RATING}) exceeds limit (1.0)"
+            exit 1
+          else
+            echo "✅ Security rating: ${SECURITY_RATING} (OK)"
+          fi
+
+          # Validar security hotspots (baseline actual, sin resolver todavía)
+          if (( SECURITY_HOTSPOTS > 20 )); then
+            echo "❌ Security hotspots (${SECURITY_HOTSPOTS}) exceed limit (20)"
+            exit 1
+          else
+            echo "✅ Security hotspots: ${SECURITY_HOTSPOTS} (OK)"
+          fi
+
+          # Validar vulnerabilidades (debe ser 0)
+          if (( VULNERABILITIES != 0 )); then
+            echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed limit (0)"
+            exit 1
+          else
+            echo "✅ Vulnerabilities: ${VULNERABILITIES} (OK)"
+          fi
+
+          # Validar coverage importado por Sonar
+          if (( $(echo "$COVERAGE < 80.0" | bc -l) )); then
+            echo "❌ Coverage (${COVERAGE}%) is below limit (80.0%)"
+            exit 1
+          else
+            echo "✅ Coverage: ${COVERAGE}% (OK)"
+          fi
+
           echo ""
           echo "🎉 === TODOS LOS QUALITY GATES PASARON ==="
           echo "✅ === ANÁLISIS DE SONARLESS COMPLETADO ==="

@@ -46,11 +46,7 @@ class _Upstream:
             raise self.error
         return self.response
 
-    def get(self, path: str, **kwargs):
-        self.calls.append((path, kwargs))
-        if self.error:
-            raise self.error
-        return self.response
+    get = post
 
 
 def _status_error(status: int, message: str) -> httpx.HTTPStatusError:

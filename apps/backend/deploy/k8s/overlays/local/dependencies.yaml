@@ -11,6 +11,7 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: postgres}
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: postgres
           image: postgres:17
@@ -19,6 +20,15 @@ spec:
             - {name: POSTGRES_PASSWORD, value: solventa}
             - {name: POSTGRES_DB, value: solventa}
           ports: [{containerPort: 5432}]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+              ephemeral-storage: 1Gi
           volumeMounts:
             - {name: init, mountPath: /docker-entrypoint-initdb.d}
       volumes:
@@ -45,10 +55,20 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: redis}
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: redis
           image: redis:7
           ports: [{containerPort: 6379}]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+              ephemeral-storage: 32Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+              ephemeral-storage: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -70,6 +90,7 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: localstack}
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: localstack
           image: localstack/localstack:3
@@ -77,6 +98,15 @@ spec:
             - {name: SERVICES, value: "sns,sqs,s3"}
             - {name: LOCALSTACK_HOST, value: localstack}
           ports: [{containerPort: 4566}]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+              ephemeral-storage: 128Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+              ephemeral-storage: 1Gi
           volumeMounts:
             - {name: init, mountPath: /etc/localstack/init/ready.d}
       volumes:

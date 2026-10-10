@@ -57,3 +57,38 @@ def test_fallback_serves_last_known_good():
 def test_fallback_without_cached_value_raises():
     with pytest.raises(TimeoutError):
         call_with_fallback(CircuitBreaker("x"), InMemoryCache(), "k", boom)
+
+
+def test_memory_cache_returns_value_before_expiry():
+    clock = FakeClock()
+    cache = InMemoryCache(clock)
+    cache.set("k", {"prima": 10}, ttl_s=10)
+    clock.now = 9.9
+    assert cache.get("k") == {"prima": 10}
+
+
+def test_memory_cache_drops_expired_value():
+    clock = FakeClock()
+    cache = InMemoryCache(clock)
+    cache.set("k", {"prima": 10}, ttl_s=10)
+    clock.now = 10
+    assert cache.get("k") is None
+
+
+def test_fallback_uses_valid_cached_value():
+    clock = FakeClock()
+    cache = InMemoryCache(clock)
+    breaker = CircuitBreaker("x", failure_threshold=1)
+    assert call_with_fallback(breaker, cache, "k", lambda: {"prima": 10}, ttl_s=10) == ({"prima": 10}, False)
+    clock.now = 9.9
+    assert call_with_fallback(breaker, cache, "k", boom, ttl_s=10) == ({"prima": 10}, True)
+
+
+def test_fallback_does_not_use_expired_value():
+    clock = FakeClock()
+    cache = InMemoryCache(clock)
+    breaker = CircuitBreaker("x", failure_threshold=1)
+    assert call_with_fallback(breaker, cache, "k", lambda: {"prima": 10}, ttl_s=10) == ({"prima": 10}, False)
+    clock.now = 10
+    with pytest.raises(TimeoutError):
+        call_with_fallback(breaker, cache, "k", boom, ttl_s=10)

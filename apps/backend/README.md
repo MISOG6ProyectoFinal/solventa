@@ -123,7 +123,7 @@ Todo el backend en minikube:
 
 ```bash
 eval $(minikube docker-env)
-TAG=latest ./scripts/build-images.sh
+TAG=local ./scripts/build-images.sh
 kubectl apply -k deploy/k8s/overlays/local
 ```
 

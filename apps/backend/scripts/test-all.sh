@@ -77,6 +77,33 @@ if [ "$run_coverage" = "1" ]; then
   python -m coverage combine --keep 2>/dev/null || true
   python -m coverage report --fail-under=80 || status=1
   python -m coverage xml -o coverage.xml
+  python - "$ROOT" <<'PY' || status=1
+import sys
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+repo = Path(sys.argv[1]).resolve().parents[1]
+report = Path("coverage.xml")
+text = report.read_text(encoding="utf-8")
+text = text.replace("<source>libs</source>", "<source>apps/backend/libs</source>")
+text = text.replace("<source>services</source>", "<source>apps/backend/services</source>")
+report.write_text(text, encoding="utf-8")
+
+sources = [(node.text or "").strip() for node in ET.parse(report).getroot().find("sources")]
+expected = {"apps/backend/libs", "apps/backend/services"}
+if set(sources) != expected:
+    sys.stderr.write(f"sources inesperados en coverage.xml: {sources}\n")
+    sys.exit(1)
+missing = []
+for cls in ET.parse(report).getroot().iter("class"):
+    filename = cls.get("filename") or ""
+    if not any((repo / source / filename).is_file() for source in sources):
+        missing.append(filename)
+if missing:
+    preview = "\n".join(f"  {name}" for name in missing[:20])
+    sys.stderr.write(f"coverage.xml no resuelve {len(missing)} archivos desde la raíz:\n{preview}\n")
+    sys.exit(1)
+PY
 fi
 
 rm -rf "${JUNIT_PARTIALS}"
