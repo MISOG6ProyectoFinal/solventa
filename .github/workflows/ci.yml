@@ -211,28 +211,28 @@ jobs:
           # Esperar un poco para que SonarQube esté completamente listo
           sleep 10
           
+          SONAR_URL="http://localhost:9234"
+          SONAR_AUTH='admin:Son@rless123'
+          
           # Intentar obtener issues desde la API de SonarQube local
-          echo "Intentando conectar a SonarQube local..."
+          echo "Intentando conectar a SonarQube local en ${SONAR_URL}..."
           
-          # Probar diferentes puertos comunes de SonarQube
-          for port in 9000 9234 8080; do
-            echo "Probando puerto $port..."
-            if curl -s -u admin:admin "http://localhost:$port/api/system/status" > /dev/null 2>&1; then
-              echo "✅ SonarQube encontrado en puerto $port"
-              SONAR_PORT=$port
-              break
-            fi
-          done
-          
-          if [ -n "$SONAR_PORT" ]; then
-            echo "🔍 Obteniendo issues desde SonarQube..."
+          PROJECT_KEY=$(jq -r '.component.key // empty' sonar-metrics.json)
+          if [ -z "$PROJECT_KEY" ]; then
+            echo "❌ PROJECT_KEY vacío: no se pudo leer .component.key desde sonar-metrics.json"
+          else
+            echo "🔍 Obteniendo issues desde SonarQube para ${PROJECT_KEY}..."
             
             # Probar diferentes endpoints de la API
             echo "Probando diferentes endpoints de la API..."
             
             # Endpoint 1: Issues search
             echo "1. Probando /api/issues/search..."
-            curl -s -u admin:admin "http://localhost:$SONAR_PORT/api/issues/search?componentKeys=solventa-backend&resolved=false&ps=500" > sonar-issues.json
+            curl -s -G -u "$SONAR_AUTH" \
+              --data-urlencode "componentKeys=${PROJECT_KEY}" \
+              --data-urlencode "resolved=false" \
+              --data-urlencode "ps=500" \
+              "${SONAR_URL}/api/issues/search" > sonar-issues.json
             
             # Verificar si el archivo tiene contenido válido
             if [ -f "sonar-issues.json" ] && [ -s "sonar-issues.json" ] && jq empty sonar-issues.json 2>/dev/null; then
@@ -264,7 +264,10 @@ jobs:
               
               # Endpoint 2: Component measures
               echo "2. Probando /api/measures/component..."
-              curl -s -u admin:admin "http://localhost:$SONAR_PORT/api/measures/component?component=solventa-backend&metricKeys=issues,code_smells,bugs,vulnerabilities" > sonar-measures.json
+              curl -s -G -u "$SONAR_AUTH" \
+                --data-urlencode "component=${PROJECT_KEY}" \
+                --data-urlencode "metricKeys=issues,code_smells,bugs,vulnerabilities" \
+                "${SONAR_URL}/api/measures/component" > sonar-measures.json
               
               if [ -f "sonar-measures.json" ] && [ -s "sonar-measures.json" ] && jq empty sonar-measures.json 2>/dev/null; then
                 echo "✅ Medidas obtenidas exitosamente"
@@ -272,33 +275,10 @@ jobs:
                 echo "📊 === MEDIDAS DETALLADAS ==="
                 jq -r '.component.measures[]? | "📈 \(.metric): \(.value)"' sonar-measures.json
               else
-                echo "⚠️  Endpoint /api/measures/component tampoco funcionó"
-                
-                # Endpoint 3: Probar con credenciales diferentes
-                echo "3. Probando con credenciales alternativas..."
-                curl -s -u admin:Son@rless123 "http://localhost:$SONAR_PORT/api/issues/search?componentKeys=solventa-backend&resolved=false&ps=500" > sonar-issues-alt.json
-                
-                if [ -f "sonar-issues-alt.json" ] && [ -s "sonar-issues-alt.json" ] && jq empty sonar-issues-alt.json 2>/dev/null; then
-                  echo "✅ Issues obtenidos con credenciales alternativas"
-                  mv sonar-issues-alt.json sonar-issues.json
-                  
-                  TOTAL_ISSUES=$(jq '.total // 0' sonar-issues.json)
-                  echo "📊 Total de problemas encontrados: $TOTAL_ISSUES"
-                  
-                  if [ "$TOTAL_ISSUES" -gt 0 ]; then
-                    echo ""
-                    echo "🔍 === DETALLES DE PROBLEMAS ==="
-                    jq -r '.issues[]? | "📁 \(.component) - Línea \(.line)" as $location | "  • \(.message)" as $message | "  🏷️  Tipo: \(.type) | Severidad: \(.severity) | Regla: \(.rule)" as $details | "\($location)\n\($message)\n\($details)\n"' sonar-issues.json
-                  fi
-                else
-                  echo "❌ No se pudieron obtener los issues desde ningún endpoint"
-                  echo "   Esto puede indicar que la API no está disponible o las credenciales son incorrectas"
-                fi
+                echo "❌ No se pudieron obtener los issues desde ningún endpoint"
+                echo "   Esto puede indicar que la API no está disponible o las credenciales son incorrectas"
               fi
             fi
-          else
-            echo "❌ No se pudo conectar a SonarQube local"
-            echo "   Esto puede ser normal si Sonarless no expone la API"
           fi
 
       - name: Mostrar métricas de Sonarless

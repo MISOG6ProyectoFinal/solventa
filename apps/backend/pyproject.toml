@@ -21,6 +21,7 @@ ruff = "^0.6"
 [tool.coverage.run]
 branch = true
 parallel = true
+relative_files = true
 source = [
     "services",
     "libs",
