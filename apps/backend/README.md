@@ -108,6 +108,8 @@ Para correr un servicio contra PostgreSQL, Redis y LocalStack:
 docker compose up -d postgres redis localstack
 cd services/cotizacion
 DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
+  poetry run python -m cotizacion.bootstrap
+DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
   poetry run uvicorn cotizacion.main:app --reload
 ```
 

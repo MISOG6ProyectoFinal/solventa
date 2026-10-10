@@ -13,7 +13,12 @@ def info() -> dict:
 
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
-    return call_upstream(cotizacion.post, "/consenso/cotizaciones", json=solicitud)
+    return call_upstream(
+        cotizacion.post,
+        "/consenso/cotizaciones",
+        json=solicitud,
+        headers={"X-Canal": "web"},
+    )
 
 
 @router.get("/polizas/{poliza_id}")

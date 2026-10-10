@@ -5,6 +5,11 @@
 # La URL de carga usa AWS_ENDPOINT_URL (por defecto http://localstack:4566, solo visible
 # dentro de Compose). Para que el teléfono suba el archivo, defina en este directorio
 # AWS_ENDPOINT_URL=http://<ip-de-la-red>:4566 y vuelva a levantar siniestros.
+# Cotización contra PostgreSQL (una vez, antes de uvicorn):
+#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
+#     DB_PASSWORD=solventa python -m cotizacion.bootstrap
+#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
+#     DB_PASSWORD=solventa uvicorn cotizacion.main:app --reload
 services:
   postgres:
     image: postgres:17

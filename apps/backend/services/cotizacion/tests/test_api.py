@@ -20,3 +20,9 @@ def test_calcular():
     response = client.post("/cotizaciones/calcular", json=body)
     assert response.status_code == 200
     assert response.json()["prima"] == "900.00"
+    assert "coberturas" not in response.json()
+    assert "vigencia_propuesta" not in response.json()
+
+
+def test_catalogo_productos_montado():
+    assert client.get("/catalogo/productos").status_code == 200

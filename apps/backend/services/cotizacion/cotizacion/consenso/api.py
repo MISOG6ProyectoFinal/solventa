@@ -1,31 +1,49 @@
 """Validador de Consenso: la réplica que recibe la solicitud la reparte entre las
-tres réplicas (incluida ella misma) y responde con la prima mayoritaria."""
+tres réplicas (incluida ella misma) y responde con la oferta de negocio."""
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
 
-from cotizacion.config import settings
-from cotizacion.consenso.adapters.replicas import cotizar_en_replicas, resolver_replicas
-from cotizacion.consenso.domain.consensus import SinConsenso, votar
+from fastapi import APIRouter, Header, HTTPException
+
+from cotizacion.catalogo.domain.models import (
+    Canal,
+    ProductoInactivo,
+    ProductoNoDisponibleMobile,
+    ProductoNoEncontrado,
+)
+from cotizacion.consenso.domain.consensus import SinConsenso
+from cotizacion.consenso.domain.models import OfertaCotizacion
+from cotizacion.container import container
+from cotizacion.rating.domain.models import SolicitudCotizacion
+from cotizacion.rating.domain.rating import ProductoNoTarifado
 
 router = APIRouter(prefix="/consenso", tags=["Validador de Consenso"])
 
 
 @router.get("/")
 def info() -> dict:
+    from cotizacion.config import settings
+
     return {"component": "Validador de Consenso", "quorum": settings.quorum}
 
 
-@router.post("/cotizaciones")
-async def cotizar_con_consenso(solicitud: dict) -> dict:
+@router.post("/cotizaciones", response_model=OfertaCotizacion)
+async def cotizar_con_consenso(
+    solicitud: SolicitudCotizacion,
+    x_canal: Annotated[Canal, Header()],
+) -> OfertaCotizacion:
+    """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
     try:
-        ips = resolver_replicas(settings.cotizacion_replicas_host, settings.cotizacion_port)
-    except OSError as exc:
-        raise HTTPException(status_code=503, detail="Réplicas de cotización no disponibles") from exc
-    ips = ips[: settings.replicas_esperadas]
-    respuestas = await cotizar_en_replicas(ips, settings.cotizacion_port, solicitud, settings.consenso_timeout_s)
-    try:
-        prima = votar([r["prima"] for r in respuestas], settings.quorum)
+        return await container.cotizar_con_consenso.execute(solicitud, x_canal)
+    except ProductoNoEncontrado as exc:
+        raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
+    except ProductoInactivo as exc:
+        raise HTTPException(status_code=422, detail=f"Producto inactivo: {exc}") from exc
+    except ProductoNoDisponibleMobile as exc:
+        raise HTTPException(status_code=422, detail=f"Producto no disponible para cotización móvil: {exc}") from exc
+    except ProductoNoTarifado as exc:
+        raise HTTPException(status_code=422, detail=f"Producto sin tarifa: {exc}") from exc
     except SinConsenso as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    elegida = next(r for r in respuestas if r["prima"] == prima)
-    return {**elegida, "votos": sum(r["prima"] == prima for r in respuestas), "replicas": len(ips)}
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Réplicas de cotización no disponibles") from exc
