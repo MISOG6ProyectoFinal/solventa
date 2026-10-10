@@ -1,7 +1,7 @@
-"""Seed mínimo e idempotente del catálogo de desarrollo.
+"""Dataset inicial de desarrollo del catálogo.
 
-No es fuente de verdad en runtime: solo inicializa filas ausentes.
-La fuente de verdad es la BD `cotizacion` (o el repositorio inyectado).
+Lo ejecuta el bootstrap explícito, y solo si el catálogo está vacío.
+No corre en el arranque de las réplicas: PostgreSQL sigue siendo la fuente de verdad.
 """
 
 from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo

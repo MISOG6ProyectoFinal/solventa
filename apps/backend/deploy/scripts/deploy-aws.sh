@@ -55,6 +55,7 @@ k8s() {
   kubectl kustomize deploy/k8s/overlays/aws \
     | sed -E "s#image: solventa/([a-z0-9-]+)\$#image: ${host}/solventa/\1:${TAG}#" \
     | kubectl apply -f -
+  kubectl -n solventa wait --for=condition=complete job/cotizacion-bootstrap --timeout=5m
   kubectl -n solventa rollout status deployment --timeout=10m
 }
 

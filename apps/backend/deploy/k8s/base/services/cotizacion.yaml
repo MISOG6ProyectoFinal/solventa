@@ -131,3 +131,48 @@ spec:
       target:
         type: Utilization
         averageUtilization: 70
+---
+# Una sola vez, antes de que las réplicas atiendan tráfico. No corre en cada pod.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cotizacion-bootstrap
+  labels:
+    app.kubernetes.io/name: cotizacion-bootstrap
+    app.kubernetes.io/component: negocio
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cotizacion-bootstrap
+        app.kubernetes.io/component: negocio
+    spec:
+      serviceAccountName: solventa-backend
+      restartPolicy: Never
+      containers:
+      - name: bootstrap
+        image: solventa/cotizacion
+        imagePullPolicy: IfNotPresent
+        command: ["python", "-m", "cotizacion.bootstrap"]
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        - secretRef:
+            name: db-cotizacion
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL

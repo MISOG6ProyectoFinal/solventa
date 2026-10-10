@@ -42,13 +42,9 @@ class Container:
         self._wire()
 
     def use_postgres(self, engine: Engine) -> None:
-        catalogo = PostgresCatalogoRepository(engine)
-        catalogo.create_schema()
-        seed_catalogo(catalogo)
-        cotizaciones = PostgresCotizacionRepository(engine)
-        cotizaciones.create_schema()
-        self.catalogo = catalogo
-        self.cotizaciones = cotizaciones
+        """Conecta los repositorios. El schema y el seed viven en el bootstrap, no aquí."""
+        self.catalogo = PostgresCatalogoRepository(engine)
+        self.cotizaciones = PostgresCotizacionRepository(engine)
         self._wire()
 
     def use_local_fanout(self) -> None:
