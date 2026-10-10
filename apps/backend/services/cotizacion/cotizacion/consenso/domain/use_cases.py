@@ -4,8 +4,9 @@ from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
 from decimal import Decimal
 
+from cotizacion.catalogo.domain.models import Canal
 from cotizacion.catalogo.domain.ports import CatalogoRepository
-from cotizacion.catalogo.domain.use_cases import ValidarProductoMobileUseCase
+from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
 from cotizacion.consenso.domain.consensus import SinConsenso, votar
 from cotizacion.consenso.domain.models import CoberturaOferta, OfertaCotizacion, VigenciaPropuesta
 from cotizacion.consenso.domain.ports import CotizacionRepository
@@ -30,15 +31,15 @@ class CotizarConConsensoUseCase:
         quorum: int,
         vigencia_dias: int = VIGENCIA_DIAS_DEFAULT,
     ) -> None:
-        self.validar_producto = ValidarProductoMobileUseCase(catalogo)
+        self.validar_producto = ValidarProductoParaCanalUseCase(catalogo)
         self.catalogo = catalogo
         self.cotizaciones = cotizaciones
         self.fanout = fanout
         self.quorum = quorum
         self.vigencia_dias = vigencia_dias
 
-    async def execute(self, solicitud: SolicitudCotizacion) -> OfertaCotizacion:
-        producto = self.validar_producto.execute(solicitud.producto_id)
+    async def execute(self, solicitud: SolicitudCotizacion, canal: Canal) -> OfertaCotizacion:
+        producto = self.validar_producto.execute(solicitud.producto_id, canal)
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
         try:

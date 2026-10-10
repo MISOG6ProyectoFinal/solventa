@@ -48,3 +48,5 @@ def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
     assert data["version_reglas"] == "2026.10.0"
     mock_client.post.assert_called_once()
     assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
+    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "mobile"}
+    assert mock_client.post.call_args.kwargs["json"] == body

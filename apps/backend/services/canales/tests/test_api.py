@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import httpx
 from canales.main import app
 from fastapi.testclient import TestClient
@@ -10,6 +12,8 @@ AVISO = {
     "ocurrido_en": "2026-10-01T00:00:00Z",
     "descripcion": "Golpe en la puerta",
 }
+
+SOLICITUD = {"producto_id": "vida-temporal", "suma_asegurada": "1000000", "edad": 40}
 
 
 def test_live():
@@ -109,3 +113,23 @@ def test_movil_reenvia_422_y_409(monkeypatch):
 
 def test_siniestros_no_disponible_responde_503():
     assert client.post("/movil/siniestros", json=AVISO).status_code == 503
+
+
+@patch("canales.web.api.cotizacion")
+def test_bff_web_indica_canal_al_consenso(mock_client: MagicMock):
+    mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
+    response = client.post("/web/cotizaciones", json=SOLICITUD)
+    assert response.status_code == 200
+    assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
+    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "web"}
+    assert mock_client.post.call_args.kwargs["json"] == SOLICITUD
+
+
+@patch("canales.socios.api.cotizacion")
+def test_bff_socios_indica_canal_al_consenso(mock_client: MagicMock):
+    mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
+    response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers={"x-api-key": "test"})
+    assert response.status_code == 200
+    assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
+    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "socios"}
+    assert mock_client.post.call_args.kwargs["json"] == SOLICITUD

@@ -1,6 +1,16 @@
 """Modelos de dominio del Catálogo de Productos."""
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
+
+
+class Canal(StrEnum):
+    """Canal comercial que origina la cotización. No interviene en el cálculo de la prima."""
+
+    MOBILE = "mobile"
+    WEB = "web"
+    SOCIOS = "socios"
 
 
 class Ramo(BaseModel):

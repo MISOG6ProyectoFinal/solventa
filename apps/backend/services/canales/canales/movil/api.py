@@ -20,7 +20,12 @@ def listar_productos() -> list:
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
     """Delega en el consenso y devuelve la oferta de negocio completa."""
-    return call_upstream(cotizacion.post, "/consenso/cotizaciones", json=solicitud)
+    return call_upstream(
+        cotizacion.post,
+        "/consenso/cotizaciones",
+        json=solicitud,
+        headers={"X-Canal": "mobile"},
+    )
 
 
 @router.post("/siniestros", status_code=201)
