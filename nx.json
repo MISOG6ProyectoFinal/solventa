@@ -80,11 +80,7 @@
     }
   },
   "namedInputs": {
-    "sharedGlobals": [
-      "{workspaceRoot}/.github/workflows/ci.yml"
-    ],
-    "default": [
-      "sharedGlobals"
-    ]
+    "sharedGlobals": [],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"]
   }
 }
