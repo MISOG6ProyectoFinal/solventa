@@ -12,7 +12,16 @@
     </div>
   </div>
 
-  @if (!selectedPartner()) {
+  @if (loadError()) {
+    <slv-alert tone="error">
+      No fue posible cargar los socios.
+      <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">Reintentar</button>
+    </slv-alert>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground" role="status">Cargando socios…</p>
+  } @else if (!selectedPartner()) {
     <slv-partner-list 
       [partners]="partners()"
       (opened)="openPartner($event)"
@@ -27,7 +36,6 @@
 
   <slv-create-partner-modal 
     [open]="showCreateModal()"
-    [existingIdentifiers]="existingIdentifiers()"
     (closed)="showCreateModal.set(false)"
     (created)="onPartnerCreated($event)"
   />

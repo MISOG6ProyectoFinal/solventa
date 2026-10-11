@@ -34,6 +34,12 @@ npm start
 
 La aplicación estará disponible en `http://localhost:4200/`.
 
+Para trabajar contra el backend local (BFF `canales` en `http://localhost:8000`, ver `apps/backend/docker-compose.yml`):
+
+```bash
+npm run start:local
+```
+
 ## Compilación para Producción o Entornos
 
 Para compilar la aplicación para el entorno de producción:
