@@ -36,3 +36,15 @@ patches:
       - op: add
         path: /spec/progressDeadlineSeconds
         value: 300
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/enableServiceLinks
+        value: false
+  - target:
+      kind: Job
+    patch: |-
+      - op: add
+        path: /spec/template/spec/enableServiceLinks
+        value: false
