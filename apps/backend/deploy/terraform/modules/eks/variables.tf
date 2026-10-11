@@ -46,3 +46,20 @@ variable "node_iam_role_arn" {
   type        = string
   default     = null
 }
+
+variable "admin_principal_arns" {
+  description = "Usuarios o roles de IAM con administración completa del clúster, además de quien lo crea."
+  type        = list(string)
+  default     = []
+}
+
+variable "developer_principal_arns" {
+  description = "Usuarios o roles de IAM que despliegan en developer_namespaces."
+  type        = list(string)
+  default     = []
+}
+
+variable "developer_namespaces" {
+  type    = list(string)
+  default = ["solventa"]
+}
