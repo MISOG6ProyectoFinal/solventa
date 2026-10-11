@@ -35,6 +35,17 @@ jobs:
       - name: terraform fmt
         run: terraform fmt -check -recursive -diff apps/backend/deploy/terraform
 
+      # Varias APIs de AWS (security groups, ElastiCache) rechazan texto fuera de ASCII,
+      # y terraform validate lo deja pasar.
+      - name: Descripciones de recursos en ASCII
+        working-directory: apps/backend/deploy/terraform
+        run: |
+          if grep -rnP '^\s*(description|comment)\s*=.*[^\x00-\x7F]' modules stacks \
+              --include='main.tf' --exclude-dir=.terraform; then
+            echo "::error::Estas descripciones llegan a AWS y deben ir sin tildes ni eñes."
+            exit 1
+          fi
+
       - name: terraform validate
         working-directory: apps/backend
         run: node deploy/scripts/tf-validate.mjs
