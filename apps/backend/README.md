@@ -138,7 +138,7 @@ El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC,
 | `CI` | Pull request y `main` | Lint y pruebas |
 | `Backend Deploy Checks` | Pull request que toca `deploy/` | `terraform fmt` y `validate`, render de manifiestos, build de la imagen |
 | `Backend Infra` | Manual, desde `main` | `plan`, `apply` o `destroy` de Terraform, por stack o todos |
-| `Backend CD` | Merge a `main` que toca el backend | Publica las imágenes en ECR con el SHA del commit y actualiza los pods |
+| `Backend CD` | Al publicar un release (`v1.2.0`) | Construye las imágenes desde ese tag, las publica en ECR con esa versión y actualiza los pods |
 
 Preparación, una sola vez, con un usuario que administre IAM y el repositorio:
 
@@ -148,6 +148,8 @@ ENV=dev ./deploy/scripts/bootstrap-ci.sh
 ```
 
 Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
+
+El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `Backend CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
 `Backend CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 

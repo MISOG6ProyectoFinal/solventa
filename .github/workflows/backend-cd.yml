@@ -1,22 +1,23 @@
 name: Backend CD
 
-# Despliegue continuo del backend en EKS. Cada merge a main que toca el backend
-# publica las imágenes con el SHA del commit y actualiza los pods con rolling update.
-# La infraestructura (Terraform) va aparte, en backend-infra.yml.
+# Despliegue del backend en EKS. Corre cuando se publica un release del proyecto:
+#   1. construye las imágenes desde el tag del release y las publica en ECR con esa versión,
+#   2. fija esa versión en el overlay aws y lo aplica,
+#   3. espera el rolling update de los pods.
+# El tag del release (v1.2.0) es el registro de qué versión está desplegada.
+# Lanzarlo a mano con una versión ya publicada vuelve a esa versión (rollback).
+# La infraestructura va aparte, en backend-infra.yml.
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - apps/backend/services/**
-      - apps/backend/libs/**
-      - apps/backend/Dockerfile
-      - apps/backend/deploy/k8s/**
-      - apps/backend/deploy/scripts/deploy-aws.sh
-      - apps/backend/scripts/build-images.sh
-      - .github/workflows/backend-cd.yml
+  release:
+    types:
+      - published
   workflow_dispatch:
+    inputs:
+      version:
+        description: Tag de un release existente (por ejemplo v1.0.0)
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -29,6 +30,7 @@ concurrency:
 env:
   ENV: dev
   AWS_REGION: ${{ vars.AWS_REGION }}
+  VERSION: ${{ github.event.release.tag_name || inputs.version }}
 
 jobs:
   prepare:
@@ -40,14 +42,21 @@ jobs:
     outputs:
       services: ${{ steps.services.outputs.list }}
       cluster_ready: ${{ steps.cluster.outputs.ready }}
-      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Validar la versión
+        id: version
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' no es una versión válida. Usa el formato v1.2.3."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Tag de las imágenes
-        id: tag
-        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.version.outputs.version }}
 
       - name: Servicios a construir
         id: services
@@ -86,8 +95,10 @@ jobs:
       matrix:
         service: ${{ fromJson(needs.prepare.outputs.services) }}
     steps:
-      - name: Checkout
+      - name: Checkout del release
         uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.version }}
 
       - name: Credenciales de AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
@@ -104,11 +115,11 @@ jobs:
         env:
           SERVICE: ${{ matrix.service }}
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ needs.prepare.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.version }}
         run: |
           repository="solventa/${SERVICE//_/-}"
           echo "ref=$REGISTRY/$repository:$TAG" >> "$GITHUB_OUTPUT"
-          # Los tags de ECR son inmutables: al relanzar el workflow se reutiliza la imagen.
+          # Los tags de ECR son inmutables: una versión ya publicada se reutiliza tal cual.
           if aws ecr describe-images --repository-name "$repository" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -143,8 +154,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - name: Checkout
+      - name: Checkout del release
         uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.version }}
 
       - name: Credenciales de AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
@@ -152,10 +165,16 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Aplicar manifiestos y esperar el rollout
+      - name: Fijar la versión en el overlay aws
         working-directory: apps/backend
         env:
-          TAG: ${{ needs.prepare.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.version }}
+        run: |
+          account=$(aws sts get-caller-identity --query Account --output text)
+          ./deploy/scripts/set-image-tag.sh "$account.dkr.ecr.$AWS_REGION.amazonaws.com" "$TAG"
+
+      - name: Aplicar manifiestos y esperar el rollout
+        working-directory: apps/backend
         run: ./deploy/scripts/deploy-aws.sh k8s
 
       - name: Resumen
@@ -163,7 +182,7 @@ jobs:
         run: |
           {
             echo "### Backend en EKS"
-            echo "Imagen desplegada: \`${{ needs.prepare.outputs.tag }}\`"
+            echo "Versión desplegada: \`${{ needs.prepare.outputs.version }}\`"
             echo '```'
             kubectl -n solventa get deployments -o wide 2>&1 || true
             echo '```'

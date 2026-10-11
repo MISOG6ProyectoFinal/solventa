@@ -3,10 +3,10 @@
 #   deploy-aws.sh plan    [stack]   # terraform plan de un stack o de todos, en orden
 #   deploy-aws.sh infra   [stack]   # terraform apply: red → ... → platform (edge solo por nombre)
 #   deploy-aws.sh destroy [stack]   # terraform destroy, en orden inverso
-#   deploy-aws.sh images            # build + push a ECR
-#   deploy-aws.sh k8s               # kustomize overlay aws + kubectl apply + rollout
+#   deploy-aws.sh images            # build + push a ECR y fija el tag en el overlay aws
+#   deploy-aws.sh k8s               # aplica el overlay aws con las imágenes ya fijadas + rollout
 #   deploy-aws.sh all               # infra + images + k8s
-# Variables: ENV (dev), TAG (commit), AUTO_APPROVE=1 omite la confirmación de Terraform.
+# Variables: ENV (dev), TAG (commit, para images), AUTO_APPROVE=1 omite la confirmación de Terraform.
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # apps/backend
 
@@ -100,10 +100,11 @@ images() {
   host="$(registry_host)"
   aws ecr get-login-password | docker login --username AWS --password-stdin "$host"
   REGISTRY="$host/solventa" TAG="$TAG" PUSH=1 ./scripts/build-images.sh
+  ./deploy/scripts/set-image-tag.sh "$host" "$TAG"
 }
 
 rollback() {
-  echo "::error::El despliegue de $TAG no quedó sano; se vuelve a la revisión anterior"
+  echo "::error::El despliegue no quedó sano; se vuelve a la revisión anterior"
   kubectl -n "$NAMESPACE" get pods -o wide || true
   kubectl -n "$NAMESPACE" get events --sort-by=.lastTimestamp | tail -30 || true
   for deploy in $(kubectl -n "$NAMESPACE" get deployments -o name); do
@@ -113,17 +114,17 @@ rollback() {
 }
 
 k8s() {
-  local host
-  host="$(registry_host)"
+  local overlay=deploy/k8s/overlays/aws
+  # La versión la fija set-image-tag.sh: Backend CD con el tag del release, o 'images' a mano.
+  if ! grep -q '^images:' "$overlay/kustomization.yaml"; then
+    echo "::error::$overlay no tiene imágenes fijadas. Corre 'images' o Backend CD." >&2
+    exit 1
+  fi
   aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
 
   # Un Job es inmutable: se recrea para que corra con la imagen de este despliegue.
   kubectl -n "$NAMESPACE" delete job cotizacion-bootstrap --ignore-not-found
-
-  # Las imágenes del base (solventa/<servicio>:local) pasan a ECR con el tag del commit.
-  kubectl kustomize deploy/k8s/overlays/aws \
-    | sed -E "s#image: solventa/([a-z0-9-]+)(:local)?\$#image: ${host}/solventa/\1:${TAG}#" \
-    | kubectl apply -f -
+  kubectl apply -k "$overlay"
 
   # Rolling update: cada pod nuevo entra al Service solo cuando pasa su readinessProbe.
   if ! { kubectl -n "$NAMESPACE" wait --for=condition=complete job/cotizacion-bootstrap --timeout=5m \

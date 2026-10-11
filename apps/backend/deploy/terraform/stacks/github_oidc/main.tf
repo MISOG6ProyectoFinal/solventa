@@ -23,13 +23,14 @@ data "aws_iam_policy_document" "trust" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Solo dos orígenes: jobs que corren sobre la rama de despliegue y jobs ligados
-    # al Environment de GitHub. Un pull request o una rama de trabajo quedan fuera.
+    # Tres orígenes: la rama de despliegue, los tags de release y los jobs ligados al
+    # Environment de GitHub. Un pull request o una rama de trabajo quedan fuera.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
         "repo:${var.github_repository}:ref:refs/heads/${var.deploy_branch}",
+        "repo:${var.github_repository}:ref:refs/tags/${var.release_tag_pattern}",
         "repo:${var.github_repository}:environment:${var.environment}",
       ]
     }

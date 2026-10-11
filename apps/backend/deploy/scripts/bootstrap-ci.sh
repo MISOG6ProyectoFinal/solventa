@@ -41,17 +41,21 @@ terraform -chdir="$TF/stacks/$STACK" apply -input=false \
 ROLE_ARN="$(terraform -chdir="$TF/stacks/$STACK" output -raw deploy_role_arn)"
 
 echo "==> GitHub: environment '$ENV' y variables de $REPO"
-# El Environment solo acepta despliegues desde la rama de despliegue: una rama de
-# trabajo no puede usarlo para asumir el rol de AWS.
+# El Environment solo acepta despliegues desde la rama de despliegue y desde los tags
+# de release: una rama de trabajo no puede usarlo para asumir el rol de AWS.
 BRANCH="$(value terraform.tfvars deploy_branch)"
+TAGS="$(value terraform.tfvars release_tag_pattern)"
 gh api --method PUT "repos/$REPO/environments/$ENV" \
   -F "deployment_branch_policy[protected_branches]=false" \
   -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null
 gh api --method POST "repos/$REPO/environments/$ENV/deployment-branch-policies" \
   -f "name=$BRANCH" -f "type=branch" >/dev/null 2>&1 || true
+gh api --method POST "repos/$REPO/environments/$ENV/deployment-branch-policies" \
+  -f "name=$TAGS" -f "type=tag" >/dev/null 2>&1 || true
 gh variable set AWS_DEPLOY_ROLE_ARN --repo "$REPO" --body "$ROLE_ARN"
 gh variable set AWS_REGION --repo "$REPO" --body "$REGION"
 
 echo
 echo "Listo. El pipeline asume $ROLE_ARN"
 echo "Siguiente paso: Actions → Backend Infra → Run workflow (plan, luego apply)."
+echo "Después, cada release publicado (tag $TAGS) despliega el backend."

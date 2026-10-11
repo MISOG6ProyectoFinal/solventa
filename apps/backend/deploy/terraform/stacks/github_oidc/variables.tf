@@ -14,7 +14,13 @@ variable "github_repository" {
 }
 
 variable "deploy_branch" {
-  description = "Única rama desde la que el pipeline publica imágenes."
+  description = "Rama desde la que se aplica la infraestructura."
   type        = string
   default     = "main"
+}
+
+variable "release_tag_pattern" {
+  description = "Tags de release que disparan el despliegue."
+  type        = string
+  default     = "v*"
 }
