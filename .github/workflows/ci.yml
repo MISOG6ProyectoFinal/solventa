@@ -210,7 +210,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Instalar herramientas de diagnóstico
-        run: sudo apt-get update && sudo apt-get install -y jq curl
+        run: sudo apt-get update && sudo apt-get install -y jq curl bc
 
       - name: Descargar reportes de pruebas de Mobile
         uses: actions/download-artifact@v4
@@ -382,6 +382,115 @@ jobs:
             ' sonar-hotspots-mobile.json
             echo "Security Hotspots: ${HOTSPOT_TOTAL}"
           fi
+
+      - name: Enforce Mobile Quality Gate
+        run: |
+          set -u
+          if [ ! -f sonar-metrics-mobile.json ]; then
+            echo "❌ Missing Sonar metrics file: sonar-metrics-mobile.json"
+            exit 1
+          fi
+
+          metric() {
+            jq -r --arg metric "$1" '
+              [.component.measures[]?
+                | select(.metric == $metric)
+                | .value
+                | select(. != null and . != "")][0] // empty
+            ' sonar-metrics-mobile.json
+          }
+
+          COVERAGE=$(metric coverage)
+          DUPLICATION=$(metric duplicated_lines_density)
+          CODE_SMELLS=$(metric code_smells)
+          VIOLATIONS=$(metric violations)
+          OPEN_ISSUES=$(metric open_issues)
+          BUGS=$(metric bugs)
+          VULNERABILITIES=$(metric vulnerabilities)
+          SECURITY_HOTSPOTS=$(metric security_hotspots)
+          SECURITY_RATING=$(metric security_rating)
+
+          present() {
+            [ -n "$1" ] && [ "$1" != "null" ]
+          }
+
+          echo "Mobile Quality Gate"
+          echo "-------------------"
+          if present "$COVERAGE"; then echo "Coverage: ${COVERAGE}% (minimum 81.4%)"; else echo "Coverage: missing"; fi
+          if present "$DUPLICATION"; then echo "Duplication: ${DUPLICATION}% (maximum 0.0%)"; else echo "Duplication: missing"; fi
+          if present "$CODE_SMELLS"; then echo "Code Smells: ${CODE_SMELLS} (maximum 35)"; else echo "Code Smells: missing"; fi
+          if present "$VIOLATIONS"; then echo "Violations: ${VIOLATIONS} (maximum 35)"; else echo "Violations: missing"; fi
+          if present "$OPEN_ISSUES"; then echo "Open Issues: ${OPEN_ISSUES} (maximum 35)"; else echo "Open Issues: missing"; fi
+          if present "$BUGS"; then echo "Bugs: ${BUGS} (maximum 0)"; else echo "Bugs: missing"; fi
+          if present "$VULNERABILITIES"; then echo "Vulnerabilities: ${VULNERABILITIES} (maximum 0)"; else echo "Vulnerabilities: missing"; fi
+          if present "$SECURITY_HOTSPOTS"; then echo "Security Hotspots: ${SECURITY_HOTSPOTS} (maximum 2)"; else echo "Security Hotspots: missing"; fi
+          if present "$SECURITY_RATING"; then echo "Security Rating: ${SECURITY_RATING} (maximum 1.0)"; else echo "Security Rating: missing"; fi
+
+          failed=0
+          require_metric() {
+            if ! present "$2"; then
+              echo "❌ Missing Sonar metric: $1"
+              failed=1
+            fi
+          }
+          exceeds() {
+            echo "$1 > $2" | bc -l
+          }
+          below() {
+            echo "$1 < $2" | bc -l
+          }
+
+          require_metric coverage "$COVERAGE"
+          require_metric duplicated_lines_density "$DUPLICATION"
+          require_metric code_smells "$CODE_SMELLS"
+          require_metric violations "$VIOLATIONS"
+          require_metric open_issues "$OPEN_ISSUES"
+          require_metric bugs "$BUGS"
+          require_metric vulnerabilities "$VULNERABILITIES"
+          require_metric security_hotspots "$SECURITY_HOTSPOTS"
+          require_metric security_rating "$SECURITY_RATING"
+
+          if present "$COVERAGE" && [ "$(below "$COVERAGE" 81.4)" -eq 1 ]; then
+            echo "❌ Coverage (${COVERAGE}%) is below baseline (81.4%)"
+            failed=1
+          fi
+          if present "$DUPLICATION" && [ "$(exceeds "$DUPLICATION" 0.0)" -eq 1 ]; then
+            echo "❌ Duplication (${DUPLICATION}%) exceeds baseline (0.0%)"
+            failed=1
+          fi
+          if present "$CODE_SMELLS" && [ "$(exceeds "$CODE_SMELLS" 35)" -eq 1 ]; then
+            echo "❌ Code Smells (${CODE_SMELLS}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$VIOLATIONS" && [ "$(exceeds "$VIOLATIONS" 35)" -eq 1 ]; then
+            echo "❌ Violations (${VIOLATIONS}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$OPEN_ISSUES" && [ "$(exceeds "$OPEN_ISSUES" 35)" -eq 1 ]; then
+            echo "❌ Open Issues (${OPEN_ISSUES}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$BUGS" && [ "$(exceeds "$BUGS" 0)" -eq 1 ]; then
+            echo "❌ Bugs (${BUGS}) exceed baseline (0)"
+            failed=1
+          fi
+          if present "$VULNERABILITIES" && [ "$(exceeds "$VULNERABILITIES" 0)" -eq 1 ]; then
+            echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed baseline (0)"
+            failed=1
+          fi
+          if present "$SECURITY_HOTSPOTS" && [ "$(exceeds "$SECURITY_HOTSPOTS" 2)" -eq 1 ]; then
+            echo "❌ Security Hotspots (${SECURITY_HOTSPOTS}) exceed baseline (2)"
+            failed=1
+          fi
+          if present "$SECURITY_RATING" && [ "$(exceeds "$SECURITY_RATING" 1.0)" -eq 1 ]; then
+            echo "❌ Security Rating (${SECURITY_RATING}) exceeds baseline (1.0)"
+            failed=1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ Mobile Quality Gate passed"
 
       - name: Publicar métricas Sonar Mobile
         if: always()
