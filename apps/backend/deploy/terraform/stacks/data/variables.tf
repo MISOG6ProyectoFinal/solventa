@@ -33,3 +33,19 @@ variable "deletion_protection" {
   type    = bool
   default = true
 }
+
+variable "shared_instance" {
+  description = "Si se define, una sola instancia aloja una base por almacén en vez de una instancia por almacén."
+  type = object({
+    instance_class = optional(string, "db.t4g.micro")
+    multi_az       = optional(bool, false)
+    read_replica   = optional(bool, false)
+    enable_proxy   = optional(bool, false)
+  })
+  default = null
+}
+
+variable "redis_enabled" {
+  type    = bool
+  default = true
+}

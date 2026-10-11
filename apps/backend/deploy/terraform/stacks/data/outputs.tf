@@ -2,19 +2,24 @@ output "databases" {
   description = "Conexión por almacén; la consume el stack platform para crear los Secret db-*."
   sensitive   = true
   value = {
-    for name, db in module.postgres : name => {
-      host      = db.endpoint
-      port      = db.port
-      name      = db.db_name
-      username  = db.username
-      password  = db.password
-      read_host = db.read_endpoint
+    for name in keys(var.stores) : name => {
+      host      = module.postgres[var.shared_instance == null ? name : local.instancia_compartida].endpoint
+      port      = module.postgres[var.shared_instance == null ? name : local.instancia_compartida].port
+      name      = name
+      username  = module.postgres[var.shared_instance == null ? name : local.instancia_compartida].username
+      password  = module.postgres[var.shared_instance == null ? name : local.instancia_compartida].password
+      read_host = module.postgres[var.shared_instance == null ? name : local.instancia_compartida].read_endpoint
     }
   }
 }
 
+output "shared_instance" {
+  description = "true cuando todos los almacenes son bases de una misma instancia; platform las crea."
+  value       = var.shared_instance != null
+}
+
 output "redis_url" {
-  value = module.redis.url
+  value = var.redis_enabled ? module.redis[0].url : ""
 }
 
 output "evidencias_bucket" {

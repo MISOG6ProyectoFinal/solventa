@@ -42,3 +42,14 @@ variable "developer_principal_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "node_zones" {
+  description = "Zonas con nodos. null usa todas las de la red; 1 concentra el cómputo en una sola."
+  type        = number
+  default     = null
+}
+
+variable "node_capacity_type" {
+  type    = string
+  default = "ON_DEMAND"
+}

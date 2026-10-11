@@ -3,6 +3,8 @@
 #   deploy-aws.sh plan    [stack]   # terraform plan de un stack o de todos, en orden
 #   deploy-aws.sh infra   [stack]   # terraform apply: red → ... → platform → edge
 #   deploy-aws.sh destroy [stack]   # terraform destroy, en orden inverso
+#   deploy-aws.sh stop              # pausa: nodos en 0 e instancias de RDS detenidas
+#   deploy-aws.sh start             # reanuda lo que detuvo stop
 #   deploy-aws.sh images            # build + push a ECR y fija el tag en el overlay aws
 #   deploy-aws.sh k8s               # aplica el overlay aws con las imágenes ya fijadas + rollout
 #   deploy-aws.sh web               # compila el portal con la URL del backend y lo publica en S3 + CloudFront
@@ -75,7 +77,17 @@ infra() {
     echo "==> terraform apply $stack ($ENV)"
     tf_init "$stack"
     tf "$stack" apply -input=false "$(var_file "$stack")" ${AUTO_APPROVE:+-auto-approve}
+    if [[ "$stack" == "platform" ]]; then
+      restart_workloads
+    fi
   done
+}
+
+restart_workloads() {
+  aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  if [[ -n "$(kubectl -n "$NAMESPACE" get deployments -o name 2>/dev/null)" ]]; then
+    kubectl -n "$NAMESPACE" rollout restart deployment
+  fi
 }
 
 destroy() {
@@ -88,6 +100,56 @@ destroy() {
     echo "==> terraform destroy $stack ($ENV)"
     tf "$stack" destroy -input=false "$(var_file "$stack")" ${AUTO_APPROVE:+-auto-approve}
   done
+}
+
+PREFIX="$(tfvar network name | cut -d- -f1)"
+
+nodegroups() {
+  aws eks list-nodegroups --cluster-name "$CLUSTER" --query 'nodegroups[]' --output text
+}
+
+scale_nodegroups() {
+  local min=$1 desired=$2 max
+  for nodegroup in $(nodegroups); do
+    max="$(aws eks describe-nodegroup --cluster-name "$CLUSTER" --nodegroup-name "$nodegroup" \
+      --query 'nodegroup.scalingConfig.maxSize' --output text)"
+    echo "==> $nodegroup: $desired nodos"
+    aws eks update-nodegroup-config --cluster-name "$CLUSTER" --nodegroup-name "$nodegroup" \
+      --scaling-config "minSize=$min,maxSize=$max,desiredSize=$desired" >/dev/null
+  done
+}
+
+databases_in() {
+  aws rds describe-db-instances \
+    --query "DBInstances[?starts_with(DBInstanceIdentifier, '$PREFIX-') && DBInstanceStatus=='$1'].DBInstanceIdentifier" \
+    --output text
+}
+
+stop() {
+  scale_nodegroups 0 0
+  for database in $(databases_in available); do
+    echo "==> $database: detener"
+    aws rds stop-db-instance --db-instance-identifier "$database" >/dev/null
+  done
+  echo "Pausado. RDS vuelve a encender una instancia detenida a los 7 días."
+}
+
+start() {
+  for database in $(databases_in stopped); do
+    echo "==> $database: iniciar"
+    aws rds start-db-instance --db-instance-identifier "$database" >/dev/null
+  done
+  for database in $(databases_in starting); do
+    aws rds wait db-instance-available --db-instance-identifier "$database"
+  done
+  local sizes min desired
+  sizes="$(grep -E '^nodes_per_zone' "$TF/environments/$ENV/eks/terraform.tfvars")"
+  min="$(sed -E 's/.*min *= *([0-9]+).*/\1/' <<<"$sizes")"
+  desired="$(sed -E 's/.*desired *= *([0-9]+).*/\1/' <<<"$sizes")"
+  scale_nodegroups "$min" "$desired"
+  aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  kubectl wait --for=condition=Ready nodes --all --timeout=10m
+  kubectl -n "$NAMESPACE" rollout status deployment -l app.kubernetes.io/part-of=solventa --timeout=10m
 }
 
 registry_host() {
@@ -160,9 +222,11 @@ case "${1:-all}" in
   plan) plan "${2:-}" ;;
   infra) infra "${2:-}" ;;
   destroy) destroy "${2:-}" ;;
+  stop) stop ;;
+  start) start ;;
   images) images ;;
   k8s) k8s ;;
   web) web ;;
   all) infra; images; k8s; web ;;
-  *) echo "Uso: $0 [plan|infra|destroy|images|k8s|web|all] [stack]" >&2; exit 1 ;;
+  *) echo "Uso: $0 [plan|infra|destroy|stop|start|images|k8s|web|all] [stack]" >&2; exit 1 ;;
 esac

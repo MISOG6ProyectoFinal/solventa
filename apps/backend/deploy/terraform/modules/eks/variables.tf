@@ -12,8 +12,19 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_ids" {
-  description = "Una subred privada por zona; se crea un node group en cada una."
+  description = "Subredes privadas del plano de control, una por zona."
   type        = list(string)
+}
+
+variable "node_subnet_ids" {
+  description = "Subredes de los nodos; se crea un node group en cada una."
+  type        = list(string)
+}
+
+variable "node_capacity_type" {
+  description = "ON_DEMAND o SPOT."
+  type        = string
+  default     = "ON_DEMAND"
 }
 
 variable "endpoint_public_access" {

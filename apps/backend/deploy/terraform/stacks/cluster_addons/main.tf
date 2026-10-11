@@ -13,7 +13,7 @@ resource "helm_release" "ingress_nginx" {
 
   values = [yamlencode({
     controller = {
-      replicaCount = 2
+      replicaCount = var.ingress_replicas
       topologySpreadConstraints = [{
         maxSkew           = 1
         topologyKey       = "topology.kubernetes.io/zone"

@@ -17,8 +17,8 @@ metadata:
 spec:
   scaleTargetRef:
     name: siniestros-worker
-  minReplicaCount: 2 # una por zona de disponibilidad
-  maxReplicaCount: 60
+  minReplicaCount: 1
+  maxReplicaCount: 5
   pollingInterval: 5
   cooldownPeriod: 120
   triggers:

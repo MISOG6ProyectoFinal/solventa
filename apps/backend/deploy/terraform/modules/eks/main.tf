@@ -48,9 +48,10 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
-    for idx, subnet in var.private_subnet_ids : "zona-${idx}" => {
+    for idx, subnet in var.node_subnet_ids : "zona-${idx}" => {
       subnet_ids     = [subnet]
       instance_types = var.node_instance_types
+      capacity_type  = var.node_capacity_type
       ami_type       = "AL2023_x86_64_STANDARD"
       min_size       = var.nodes_per_zone.min
       desired_size   = var.nodes_per_zone.desired
