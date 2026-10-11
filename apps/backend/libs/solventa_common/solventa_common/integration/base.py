@@ -50,6 +50,9 @@ class ServiceClient(ExternalAdapter):
     def post(self, path: str, **kwargs: Any) -> Any:
         return self._request("POST", path, **kwargs)
 
+    def put(self, path: str, **kwargs: Any) -> Any:
+        return self._request("PUT", path, **kwargs)
+
 
 def _upstream_detail(response: httpx.Response) -> Any:
     """Conserva el detalle estructurado del servicio interno en vez de anidarlo como texto."""

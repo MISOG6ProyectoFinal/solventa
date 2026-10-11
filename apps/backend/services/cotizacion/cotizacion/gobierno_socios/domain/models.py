@@ -83,6 +83,11 @@ class Socio(BaseModel):
     alta_usuario: str
 
 
+class RamoResumen(BaseModel):
+    id: str
+    nombre: str
+
+
 class SocioResponse(BaseModel):
     """Vista del socio para el portal. Nunca incluye el secreto ni su hash."""
 
@@ -101,6 +106,7 @@ class SocioResponse(BaseModel):
     cuota_consumo: int
     alta_fecha: datetime
     alta_usuario: str
+    ramos_habilitados: list[RamoResumen] = Field(default_factory=list)
 
 
 class SocioCreadoResponse(SocioResponse):

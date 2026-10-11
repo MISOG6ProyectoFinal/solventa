@@ -47,6 +47,7 @@ class _Upstream:
         return self.response
 
     get = post
+    put = post
 
 
 def _status_error(status: int, message: str) -> httpx.HTTPStatusError:
@@ -195,4 +196,27 @@ def test_bff_web_conserva_el_motivo_del_identificador_duplicado(monkeypatch):
     response = client.post("/web/socios", json=ALTA_SOCIO)
 
     assert response.status_code == 409
+    assert response.json()["detail"] == detalle
+
+
+def test_bff_web_consulta_y_actualiza_la_configuracion_del_socio(monkeypatch):
+    vigente = {"socio_id": "s-1", "ramos": [{"id": "ramo-viaje", "habilitado": True, "coberturas": []}]}
+    upstream = _Upstream(response=vigente)
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+    cambio = {"ramos": [{"ramo_id": "ramo-viaje", "coberturas": []}], "actualizado_por": "Ana Gómez"}
+
+    assert client.get("/web/socios/s-1/configuracion").json() == vigente
+    assert client.put("/web/socios/s-1/configuracion", json=cambio).json() == vigente
+
+    assert upstream.calls[0][0] == "/gobierno-socios/socios/s-1/configuracion"
+    assert upstream.calls[1] == ("/gobierno-socios/socios/s-1/configuracion", {"json": cambio})
+
+
+def test_bff_socios_conserva_el_error_de_alcance_por_ramo(monkeypatch):
+    detalle = {"codigo": "ramo_no_habilitado", "mensaje": "El ramo 'Viaje' no está habilitado para este socio."}
+    monkeypatch.setattr("canales.socios.api.cotizacion", _Upstream(error=_error_json(403, detalle)))
+
+    response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=CREDENCIALES)
+
+    assert response.status_code == 403
     assert response.json()["detail"] == detalle
