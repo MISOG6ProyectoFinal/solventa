@@ -5,19 +5,31 @@
     "days": [
       {
         "day": 1,
-        "completedStoryPoints": 3
+        "completedStoryPoints": 0
       },
       {
         "day": 2,
-        "completedStoryPoints": 5
+        "completedStoryPoints": 0
       },
       {
         "day": 3,
-        "completedStoryPoints": 2
+        "completedStoryPoints": 0
       },
       {
         "day": 4,
-        "completedStoryPoints": 7
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 5,
+        "completedStoryPoints": 8
+      },
+      {
+        "day": 6,
+        "completedStoryPoints": 5
+      },
+      {
+        "day": 7,
+        "completedStoryPoints": 0
       }
     ]
   },
@@ -26,22 +38,22 @@
     {
       "week": 1,
       "planned": 19,
-      "actual": 12
+      "actual": 13
     },
     {
       "week": 2,
       "planned": 19,
-      "actual": 17
+      "actual": 0
     },
     {
       "week": 3,
       "planned": 23,
-      "actual": 11
+      "actual": 0
     },
     {
       "week": 4,
       "planned": 23,
-      "actual": 14
+      "actual": 0
     },
     {
       "week": 5,
@@ -55,7 +67,7 @@
     },
     {
       "week": 7,
-      "planned": 21,
+      "planned": 20,
       "actual": 0
     },
     {
@@ -71,11 +83,11 @@
     "dailyValues": [
       {
         "day": 1,
-        "valueDelivered": 2
+        "valueDelivered": 0
       },
       {
         "day": 2,
-        "valueDelivered": 3
+        "valueDelivered": 0
       },
       {
         "day": 3,
@@ -83,31 +95,19 @@
       },
       {
         "day": 4,
-        "valueDelivered": 1
+        "valueDelivered": 0
       },
       {
         "day": 5,
-        "valueDelivered": 2
+        "valueDelivered": 5
       },
       {
         "day": 6,
-        "valueDelivered": 4
+        "valueDelivered": 5
       },
       {
         "day": 7,
         "valueDelivered": 0
-      },
-      {
-        "day": 8,
-        "valueDelivered": 3
-      },
-      {
-        "day": 9,
-        "valueDelivered": 1
-      },
-      {
-        "day": 10,
-        "valueDelivered": 2
       }
     ]
   }
