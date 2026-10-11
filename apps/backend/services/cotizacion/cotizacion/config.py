@@ -5,7 +5,6 @@ class CotizacionSettings(ServiceSettings):
     service_name: str = "cotizacion"
     # Consenso: el Service headless devuelve la IP de cada réplica de este mismo servicio.
     cotizacion_replicas_host: str = "cotizacion-replicas"
-    # No se llama cotizacion_port: Kubernetes inyecta COTIZACION_PORT=tcp://<ip>:<puerto> por el Service.
     puerto_replicas: int = 8000
     replicas_esperadas: int = 3
     quorum: int = 2

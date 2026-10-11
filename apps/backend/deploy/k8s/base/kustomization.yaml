@@ -36,9 +36,6 @@ patches:
       - op: add
         path: /spec/progressDeadlineSeconds
         value: 300
-  # Kubernetes inyecta por cada Service variables como COTIZACION_PORT=tcp://<ip>:80,
-  # que pueden pisar un ajuste con el mismo nombre. Los servicios se encuentran por
-  # DNS, así que la inyección se desactiva en todos los pods.
   - target:
       kind: Deployment
     patch: |-
