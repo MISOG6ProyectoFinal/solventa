@@ -121,11 +121,78 @@ def test_bff_web_indica_canal_al_consenso(mock_client: MagicMock):
     assert mock_client.post.call_args.kwargs["json"] == SOLICITUD
 
 
+CREDENCIALES = {"X-Client-Id": "sv_live_demo_ab12", "X-Api-Key": "sv_sec_demo"}
+
+
 @patch("canales.socios.api.cotizacion")
-def test_bff_socios_indica_canal_al_consenso(mock_client: MagicMock):
+def test_bff_socios_envia_las_credenciales_a_gobierno_de_api(mock_client: MagicMock):
     mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
-    response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers={"x-api-key": "test"})
+    response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=CREDENCIALES)
     assert response.status_code == 200
-    assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
-    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "socios"}
+    assert mock_client.post.call_args.args[0] == "/gobierno-socios/cotizaciones"
+    assert mock_client.post.call_args.kwargs["headers"] == CREDENCIALES
     assert mock_client.post.call_args.kwargs["json"] == SOLICITUD
+
+
+def test_bff_socios_exige_client_id_y_secreto():
+    solo_secreto = {"X-Api-Key": CREDENCIALES["X-Api-Key"]}
+    assert client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=solo_secreto).status_code == 422
+
+
+def _error_json(status: int, detail) -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "http://cotizacion/gobierno-socios")
+    response = httpx.Response(status, json={"detail": detail}, request=request)
+    return httpx.HTTPStatusError(str(status), request=request, response=response)
+
+
+def test_bff_socios_conserva_el_rechazo_de_credenciales(monkeypatch):
+    detalle = {"codigo": "credencial_invalida", "mensaje": "Las credenciales del socio no son válidas."}
+    monkeypatch.setattr("canales.socios.api.cotizacion", _Upstream(error=_error_json(401, detalle)))
+
+    response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=CREDENCIALES)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == detalle
+
+
+ALTA_SOCIO = {
+    "nombre": "Fintech Demo",
+    "identificador": "FINTECH-DEMO",
+    "tipo": "Fintech",
+    "pais": "Colombia",
+    "correo_contacto": "ops@fintech.demo",
+    "alcances": ["cotizacion"],
+    "autorizado_por": "Ana Gómez",
+}
+
+
+def test_bff_web_da_de_alta_y_consulta_socios(monkeypatch):
+    creado = {"id": "s-1", "client_id": "sv_live_fintechdemo_ab12", "secreto": "sv_sec_x"}
+    upstream = _Upstream(response=creado)
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+
+    alta = client.post("/web/socios", json=ALTA_SOCIO)
+    assert alta.status_code == 201
+    assert alta.json() == creado
+    assert upstream.calls[0] == ("/gobierno-socios/socios", {"json": ALTA_SOCIO})
+
+    upstream.response = [{"id": "s-1"}]
+    assert client.get("/web/socios").json() == [{"id": "s-1"}]
+    assert upstream.calls[1][0] == "/gobierno-socios/socios"
+
+    upstream.response = {"id": "s-1"}
+    assert client.get("/web/socios/s-1").json() == {"id": "s-1"}
+    assert upstream.calls[2][0] == "/gobierno-socios/socios/s-1"
+
+
+def test_bff_web_conserva_el_motivo_del_identificador_duplicado(monkeypatch):
+    detalle = {
+        "codigo": "identificador_duplicado",
+        "mensaje": "Ya existe un socio con este identificador. No es posible crearlo de nuevo.",
+    }
+    monkeypatch.setattr("canales.web.api.cotizacion", _Upstream(error=_error_json(409, detalle)))
+
+    response = client.post("/web/socios", json=ALTA_SOCIO)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == detalle

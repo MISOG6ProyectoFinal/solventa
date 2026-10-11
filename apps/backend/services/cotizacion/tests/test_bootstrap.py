@@ -32,6 +32,7 @@ def test_use_postgres_no_ejecuta_seed_ni_crea_schema():
     with (
         patch("cotizacion.container.PostgresCatalogoRepository") as catalogo_cls,
         patch("cotizacion.container.PostgresCotizacionRepository") as cotizaciones_cls,
+        patch("cotizacion.container.PostgresSocioRepository") as socios_cls,
         patch("cotizacion.container.seed_catalogo") as seed,
     ):
         contenedor = Container()
@@ -41,6 +42,8 @@ def test_use_postgres_no_ejecuta_seed_ni_crea_schema():
     seed.assert_not_called()
     catalogo_cls.return_value.create_schema.assert_not_called()
     cotizaciones_cls.return_value.create_schema.assert_not_called()
+    socios_cls.return_value.create_schema.assert_not_called()
+    socios_cls.assert_called_once_with(engine)
     catalogo_cls.assert_called_once_with(engine)
     cotizaciones_cls.assert_called_once_with(engine)
     assert contenedor.catalogo is catalogo_cls.return_value
@@ -146,16 +149,19 @@ def test_tres_replicas_usan_bd_ya_inicializada_sin_crear_tablas():
 
 
 @patch("cotizacion.bootstrap.seed_catalogo")
+@patch("cotizacion.bootstrap.PostgresSocioRepository")
 @patch("cotizacion.bootstrap.PostgresCotizacionRepository")
 @patch("cotizacion.bootstrap.PostgresCatalogoRepository")
-def test_bootstrap_crea_schema_y_no_siembra_catalogo_con_datos(catalogo_cls, cotizaciones_cls, seed):
+def test_bootstrap_crea_schema_y_no_siembra_catalogo_con_datos(catalogo_cls, cotizaciones_cls, socios_cls, seed):
     catalogo_cls.return_value.list_productos.return_value = [MagicMock()]
     engine = MagicMock()
     bootstrap(engine)
     catalogo_cls.assert_called_once_with(engine)
     cotizaciones_cls.assert_called_once_with(engine)
+    socios_cls.assert_called_once_with(engine)
     catalogo_cls.return_value.create_schema.assert_called_once_with()
     cotizaciones_cls.return_value.create_schema.assert_called_once_with()
+    socios_cls.return_value.create_schema.assert_called_once_with()
     seed.assert_not_called()
 
 

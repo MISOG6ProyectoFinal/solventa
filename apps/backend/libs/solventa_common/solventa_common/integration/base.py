@@ -51,6 +51,17 @@ class ServiceClient(ExternalAdapter):
         return self._request("POST", path, **kwargs)
 
 
+def _upstream_detail(response: httpx.Response) -> Any:
+    """Conserva el detalle estructurado del servicio interno en vez de anidarlo como texto."""
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text
+    if isinstance(body, dict) and "detail" in body:
+        return body["detail"]
+    return response.text
+
+
 def call_upstream(fn, *args: Any, **kwargs: Any) -> Any:
     """Traduce fallas de un servicio interno a respuestas HTTP del BFF.
 
@@ -65,6 +76,6 @@ def call_upstream(fn, *args: Any, **kwargs: Any) -> Any:
     except CircuitOpenError as exc:
         raise HTTPException(status_code=503, detail=f"{exc} no disponible (circuito abierto)") from exc
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text) from exc
+        raise HTTPException(status_code=exc.response.status_code, detail=_upstream_detail(exc.response)) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=503, detail="Servicio interno no disponible") from exc

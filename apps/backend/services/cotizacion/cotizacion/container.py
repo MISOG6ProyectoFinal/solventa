@@ -15,6 +15,12 @@ from cotizacion.consenso.adapters.cotizacion_repository import (
 )
 from cotizacion.consenso.adapters.replicas import cotizar_en_replicas, resolver_replicas
 from cotizacion.consenso.domain.use_cases import CotizarConConsensoUseCase
+from cotizacion.gobierno_socios.adapters.repository import InMemorySocioRepository, PostgresSocioRepository
+from cotizacion.gobierno_socios.domain.use_cases import (
+    AutorizarSocioUseCase,
+    ConsultarSociosUseCase,
+    DarDeAltaSocioUseCase,
+)
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
@@ -41,6 +47,7 @@ class Container:
     def __init__(self) -> None:
         self.catalogo = InMemoryCatalogoRepository()
         self.cotizaciones = InMemoryCotizacionRepository()
+        self.socios = InMemorySocioRepository()
         seed_catalogo(self.catalogo)
         self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
         self._wire()
@@ -49,6 +56,7 @@ class Container:
         """Conecta los repositorios. El schema y el seed viven en el bootstrap, no aquí."""
         self.catalogo = PostgresCatalogoRepository(engine)
         self.cotizaciones = PostgresCotizacionRepository(engine)
+        self.socios = PostgresSocioRepository(engine)
         self._wire()
 
     def use_local_fanout(self) -> None:
@@ -63,6 +71,9 @@ class Container:
             fanout=self.fanout,
             quorum=settings.quorum,
         )
+        self.dar_de_alta_socio = DarDeAltaSocioUseCase(self.socios)
+        self.consultar_socios = ConsultarSociosUseCase(self.socios)
+        self.autorizar_socio = AutorizarSocioUseCase(self.socios)
 
 
 container = Container()

@@ -14,11 +14,15 @@ def info() -> dict:
 
 
 @router.post("/v1/cotizaciones")
-def cotizar(solicitud: dict, x_api_key: Annotated[str, Header()]) -> dict:
-    # TODO: validar x_api_key, alcances y cuota contra Socios y Gobierno de API (servicio cotizacion).
+def cotizar(
+    solicitud: dict,
+    x_client_id: Annotated[str, Header()],
+    x_api_key: Annotated[str, Header()],
+) -> dict:
+    """Gobierno de API reconoce las credenciales y el alcance antes de cotizar."""
     return call_upstream(
         cotizacion.post,
-        "/consenso/cotizaciones",
+        "/gobierno-socios/cotizaciones",
         json=solicitud,
-        headers={"X-Canal": "socios"},
+        headers={"X-Client-Id": x_client_id, "X-Api-Key": x_api_key},
     )
