@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import VideoPreviewScreen from './index';
 
@@ -31,9 +31,9 @@ const route = { params: { filePath: '/tmp/video.mp4' } };
 describe('VideoPreviewScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
-    useClaimPhotosStore.getState().clear();
-    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
-    useClaimPhotosStore.getState().addVideo({ filePath: '/tmp/otro.mp4', bytes: 2048 });
+    useClaimsStore.getState().clear();
+    useClaimsStore.getState().addVideo({ filePath: '/tmp/video.mp4', bytes: 1536 });
+    useClaimsStore.getState().addVideo({ filePath: '/tmp/otro.mp4', bytes: 2048 });
   });
 
   it('plays the saved video', async () => {
