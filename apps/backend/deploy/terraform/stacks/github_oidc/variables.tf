@@ -9,7 +9,12 @@ variable "environment" {
 }
 
 variable "github_repository" {
-  description = "Repositorio que puede asumir el rol, como <organización>/<repo>."
+  description = "Repositorio donde se configuran el Environment y las variables, como <organización>/<repo>."
+  type        = string
+}
+
+variable "github_subject_prefix" {
+  description = "Prefijo del claim sub del token OIDC. Sale de: gh api repos/<org>/<repo>/actions/oidc/customization/sub. Con sujeto inmutable incluye los ids: repo:<org>@<id>/<repo>@<id>."
   type        = string
 }
 
