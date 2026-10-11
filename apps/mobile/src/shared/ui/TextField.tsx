@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, type KeyboardTypeOptions } from 'react-native';
 
 import { theme } from '../theme';
 import { FieldFrame } from './FieldFrame';
@@ -12,6 +12,8 @@ type TextFieldProps = {
   multiline?: boolean;
   required?: boolean;
   error?: boolean;
+  errorMessage?: string;
+  keyboardType?: KeyboardTypeOptions;
   testID?: string;
 };
 
@@ -23,17 +25,20 @@ export function TextField({
   multiline = false,
   required = false,
   error = false,
+  errorMessage,
+  keyboardType,
   testID,
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  const failed = error || errorMessage != null;
 
   return (
     <FieldFrame
       label={label}
       required={required}
-      error={error}
+      error={failed}
       focused={focused}
-      message={error ? 'Obligatorio' : undefined}
+      message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
       testID={testID}
     >
       <TextInput
@@ -41,6 +46,7 @@ export function TextField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         multiline={multiline}
+        keyboardType={keyboardType}
         textAlignVertical={multiline ? 'top' : 'auto'}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

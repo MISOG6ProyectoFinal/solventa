@@ -1,9 +1,47 @@
+from datetime import date
+from typing import Literal
+
 from fastapi import APIRouter
+from pydantic import BaseModel, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 
 from canales.clients import cotizacion, siniestros
 
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
+
+
+class SolicitudCotizacionMovil(BaseModel):
+    producto_id: str
+    nombre: str
+    cedula: str
+    destino: Literal["Estados Unidos", "España", "México", "Otro país"]
+    fecha_salida: date
+    fecha_regreso: date
+    viajeros: int = Field(ge=1)
+
+    @field_validator("nombre")
+    @classmethod
+    def _nombre_obligatorio(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("El nombre es obligatorio")
+        return value.strip()
+
+    @field_validator("cedula")
+    @classmethod
+    def _cedula_numerica(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("La cédula es obligatoria")
+        if not value.isdigit():
+            raise ValueError("La cédula debe contener solo dígitos")
+        return value
+
+    @model_validator(mode="after")
+    def _fechas_validas(self) -> "SolicitudCotizacionMovil":
+        if self.fecha_salida < date.today():
+            raise ValueError("La fecha de salida no puede ser anterior a hoy")
+        if self.fecha_regreso <= self.fecha_salida:
+            raise ValueError("La fecha de regreso debe ser posterior a la salida")
+        return self
 
 
 @router.get("/")
@@ -13,17 +51,17 @@ def info() -> dict:
 
 @router.get("/productos")
 def listar_productos() -> list:
-    """Catálogo de productos habilitados para Mobile (vía servicio de Cotización)."""
+    """Catálogo de productos del canal Mobile (vía servicio de Cotización)."""
     return call_upstream(cotizacion.get, "/catalogo/productos")
 
 
 @router.post("/cotizaciones")
-def cotizar(solicitud: dict) -> dict:
-    """Delega en el consenso y devuelve la oferta de negocio completa."""
+def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
+    """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
     return call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json=solicitud,
+        json=solicitud.model_dump(mode="json", exclude={"nombre", "cedula"}),
         headers={"X-Canal": "mobile"},
     )
 

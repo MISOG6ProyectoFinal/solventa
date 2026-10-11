@@ -10,7 +10,7 @@ from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
 from cotizacion.consenso.domain.consensus import votar
 from cotizacion.consenso.domain.models import CoberturaOferta, OfertaCotizacion, VigenciaPropuesta
 from cotizacion.consenso.domain.ports import CotizacionRepository
-from cotizacion.rating.domain.models import SolicitudCotizacion
+from cotizacion.rating.domain.models import SolicitudCotizacionViaje, SolicitudRating
 
 FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 
@@ -38,7 +38,7 @@ class CotizarConConsensoUseCase:
         self.quorum = quorum
         self.vigencia_dias = vigencia_dias
 
-    async def execute(self, solicitud: SolicitudCotizacion, canal: Canal) -> OfertaCotizacion:
+    async def execute(self, solicitud: SolicitudRating, canal: Canal) -> OfertaCotizacion:
         producto = self.validar_producto.execute(solicitud.producto_id, canal)
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
@@ -49,8 +49,14 @@ class CotizarConConsensoUseCase:
             producto_id=producto.id,
             prima=prima_ganadora,
             coberturas=coberturas,
-            vigencia_propuesta=construir_vigencia_propuesta(dias=self.vigencia_dias),
+            vigencia_propuesta=self._vigencia_propuesta(solicitud),
             version_reglas=str(elegida["version_reglas"]),
         )
         self.cotizaciones.save(oferta)
         return oferta
+
+    def _vigencia_propuesta(self, solicitud: SolicitudRating) -> VigenciaPropuesta:
+        """En viaje la cobertura dura exactamente el viaje; el resto conserva la vigencia anual."""
+        if isinstance(solicitud, SolicitudCotizacionViaje):
+            return VigenciaPropuesta(desde=solicitud.fecha_salida, hasta=solicitud.fecha_regreso)
+        return construir_vigencia_propuesta(dias=self.vigencia_dias)

@@ -47,18 +47,41 @@ def test_use_postgres_no_ejecuta_seed_ni_crea_schema():
     assert contenedor.cotizaciones is cotizaciones_cls.return_value
 
 
+PRODUCTOS_SEED = {
+    "hogar",
+    "auto",
+    "vida-temporal",
+    "viaje-internacional",
+    "proteccion-celular",
+    "vida-esencial",
+}
+
+
 def test_bootstrap_crea_schema_e_inserta_dataset_inicial():
     catalogo = _Catalogo()
     cotizaciones = _Cotizaciones()
     inicializar_almacen(catalogo, cotizaciones)
     assert catalogo.esquemas == 1
     assert cotizaciones.esquemas == 1
-    assert {p.id for p in catalogo.list_productos()} == {"hogar", "auto", "vida-temporal"}
+    assert {p.id for p in catalogo.list_productos()} == PRODUCTOS_SEED
     assert {c.id for c in catalogo.list_coberturas()} >= {
         "hogar-incendio",
         "auto-rc",
         "vida-fallecimiento",
+        "viaje-gastos-medicos",
+        "celular-robo",
+        "vida-esencial-auxilio",
     }
+
+
+def test_dataset_inicial_marca_disponibilidad_mobile():
+    catalogo = _Catalogo()
+    cotizaciones = _Cotizaciones()
+    inicializar_almacen(catalogo, cotizaciones)
+    disponibilidad = {p.id: p.disponible_mobile for p in catalogo.list_productos()}
+    assert disponibilidad["viaje-internacional"] is True
+    assert disponibilidad["proteccion-celular"] is False
+    assert disponibilidad["vida-esencial"] is False
 
 
 def test_startup_no_reinserta_producto_eliminado():
@@ -79,7 +102,7 @@ def test_startup_no_reinserta_producto_eliminado():
     seed.assert_not_called()
     assert catalogo.esquemas == esquemas
     assert catalogo.get_producto("hogar") is None
-    assert {p.id for p in catalogo.list_productos()} == {"auto", "vida-temporal"}
+    assert {p.id for p in catalogo.list_productos()} == PRODUCTOS_SEED - {"hogar"}
     assert contenedor.catalogo is catalogo
 
 
@@ -90,8 +113,8 @@ def test_bootstrap_repetido_no_restaura_ni_duplica():
     del catalogo.productos["hogar"]
     inicializar_almacen(catalogo, cotizaciones)
     assert catalogo.get_producto("hogar") is None
-    assert {p.id for p in catalogo.list_productos()} == {"auto", "vida-temporal"}
-    assert len(catalogo.list_ramos()) == 3
+    assert {p.id for p in catalogo.list_productos()} == PRODUCTOS_SEED - {"hogar"}
+    assert len(catalogo.list_ramos()) == 6
     assert catalogo.esquemas == 2
     assert cotizaciones.esquemas == 2
 

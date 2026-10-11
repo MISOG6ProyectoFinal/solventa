@@ -26,4 +26,17 @@ describe('Card', () => {
 
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps a disabled card from being selected', async () => {
+    const { getByTestId } = await render(
+      <Card testID="card" disabled>
+        <AppText>Próximamente</AppText>
+      </Card>,
+    );
+
+    expect(getByTestId('card').props.accessibilityRole).toBe('button');
+    expect(getByTestId('card').props.accessibilityState).toEqual({ disabled: true });
+    expect(getByTestId('card')).toHaveStyle({ opacity: 0.5 });
+    expect(getByTestId('card').props.onPress).toBeUndefined();
+  });
 });

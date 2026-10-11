@@ -19,6 +19,7 @@ type SelectFieldProps = {
   onChange?: (value: string) => void;
   required?: boolean;
   error?: boolean;
+  errorMessage?: string;
   testID?: string;
 };
 
@@ -29,12 +30,14 @@ export function SelectField({
   onChange,
   required = false,
   error = false,
+  errorMessage,
   testID,
 }: SelectFieldProps) {
   const sheet = useRef<SheetHandle>(null);
   const [focused, setFocused] = useState(false);
   const selected = options.find((option) => option.value === value);
   const shown = selected?.label || value;
+  const failed = error || errorMessage != null;
 
   const choose = (next: string) => {
     onChange?.(next);
@@ -46,9 +49,9 @@ export function SelectField({
       <FieldFrame
         label={label}
         required={required}
-        error={error}
+        error={failed}
         focused={focused}
-        message={error ? 'Obligatorio' : undefined}
+        message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
         testID={testID}
         onPress={
           options.length > 0

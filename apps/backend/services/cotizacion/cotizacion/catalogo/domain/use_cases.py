@@ -1,7 +1,9 @@
+from cotizacion.catalogo.domain.catalogo_mobile import CATALOGO_MOBILE, PRODUCTOS_CATALOGO_MOBILE
 from cotizacion.catalogo.domain.models import (
     Canal,
     CoberturaResponse,
     Producto,
+    ProductoFueraCatalogoMobile,
     ProductoInactivo,
     ProductoMobileResponse,
     ProductoNoDisponibleMobile,
@@ -16,11 +18,12 @@ class ListarProductosMobileUseCase:
         self.catalogo = catalogo
 
     def execute(self) -> list[ProductoMobileResponse]:
-        ramos = {r.id: r for r in self.catalogo.list_ramos()}
-        productos = [p for p in self.catalogo.list_productos() if p.activo and p.disponible_mobile]
         resultado: list[ProductoMobileResponse] = []
-        for producto in productos:
-            ramo = ramos.get(producto.ramo_id)
+        for entrada in sorted(CATALOGO_MOBILE, key=lambda e: e.orden):
+            producto = self.catalogo.get_producto(entrada.producto_id)
+            if producto is None or not producto.activo:
+                continue
+            ramo = self.catalogo.get_ramo(producto.ramo_id)
             if ramo is None:
                 continue
             coberturas = [
@@ -30,6 +33,9 @@ class ListarProductosMobileUseCase:
                 ProductoMobileResponse(
                     id=producto.id,
                     nombre=producto.nombre,
+                    descripcion=entrada.descripcion,
+                    precio_desde=entrada.precio_desde,
+                    disponible=producto.disponible_mobile,
                     ramo=RamoResponse(id=ramo.id, nombre=ramo.nombre),
                     coberturas=coberturas,
                 )
@@ -53,13 +59,20 @@ class ValidarProductoUseCase:
 
 
 class ValidarProductoParaCanalUseCase:
-    """Aplica la validación general y, solo en Mobile, la disponibilidad del canal."""
+    """Aplica la validación general y, solo en Mobile, las reglas del canal.
+
+    En Mobile el producto debe pertenecer al catálogo Mobile (aparecer) y
+    tener disponible_mobile (poder cotizarse).
+    """
 
     def __init__(self, catalogo: CatalogoRepository) -> None:
         self.validar_producto = ValidarProductoUseCase(catalogo)
 
     def execute(self, producto_id: str, canal: Canal) -> Producto:
         producto = self.validar_producto.execute(producto_id)
-        if canal == Canal.MOBILE and not producto.disponible_mobile:
-            raise ProductoNoDisponibleMobile(producto_id)
+        if canal == Canal.MOBILE:
+            if producto.id not in PRODUCTOS_CATALOGO_MOBILE:
+                raise ProductoFueraCatalogoMobile(producto_id)
+            if not producto.disponible_mobile:
+                raise ProductoNoDisponibleMobile(producto_id)
         return producto
