@@ -1,3 +1,4 @@
+// Mobile CI validation
 export const colors = {
   background: '#F5F8FA',
   surface: '#FFFFFF',
