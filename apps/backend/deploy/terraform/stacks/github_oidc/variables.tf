@@ -29,3 +29,8 @@ variable "release_tag_pattern" {
   type        = string
   default     = "v*"
 }
+
+variable "cluster_admin_group" {
+  description = "Grupo de IAM cuyos miembros pueden asumir el rol de administración del clúster."
+  type        = string
+}
