@@ -1,5 +1,6 @@
 """Modelos de dominio del Catálogo de Productos."""
 
+from decimal import Decimal
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -45,6 +46,9 @@ class RamoResponse(BaseModel):
 class ProductoMobileResponse(BaseModel):
     id: str
     nombre: str
+    descripcion: str
+    precio_desde: Decimal
+    disponible: bool
     ramo: RamoResponse
     coberturas: list[CoberturaResponse] = Field(default_factory=list)
 
@@ -54,6 +58,10 @@ class ProductoNoEncontrado(LookupError):
 
 
 class ProductoNoDisponibleMobile(ValueError):
+    pass
+
+
+class ProductoFueraCatalogoMobile(ValueError):
     pass
 
 

@@ -18,6 +18,7 @@ type DateFieldProps = {
   onChange?: (value: string) => void;
   required?: boolean;
   error?: boolean;
+  errorMessage?: string;
   yearSelection?: boolean;
   timeSelection?: boolean;
   testID?: string;
@@ -29,10 +30,12 @@ export function DateField({
   onChange,
   required = false,
   error = false,
+  errorMessage,
   yearSelection = true,
   timeSelection = false,
   testID,
 }: DateFieldProps) {
+  const failed = error || errorMessage != null;
   const parsed = useMemo(() => parseDate(value), [value]);
   const sheet = useRef<SheetHandle>(null);
   const [focused, setFocused] = useState(false);
@@ -101,9 +104,9 @@ export function DateField({
       <FieldFrame
         label={label}
         required={required}
-        error={error}
+        error={failed}
         focused={focused}
-        message={error ? 'Obligatorio' : undefined}
+        message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
         testID={testID}
         onPress={open}
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}

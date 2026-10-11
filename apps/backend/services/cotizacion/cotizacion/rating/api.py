@@ -4,7 +4,7 @@ import socket
 
 from fastapi import APIRouter, HTTPException
 
-from cotizacion.rating.domain.models import Cotizacion, SolicitudCotizacion
+from cotizacion.rating.domain.models import Cotizacion, SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES, ProductoNoTarifado
 from cotizacion.rating.domain.use_cases import CotizarUseCase
 
@@ -18,7 +18,7 @@ def info() -> dict:
 
 
 @router.post("/calcular", response_model=Cotizacion)
-def calcular(solicitud: SolicitudCotizacion) -> Cotizacion:
+def calcular(solicitud: SolicitudRating) -> Cotizacion:
     try:
         return cotizar.execute(solicitud)
     except ProductoNoTarifado as exc:

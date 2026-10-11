@@ -7,6 +7,8 @@ import ComponentsScreen from '../features/components/screens/ComponentsScreen';
 import { ClaimReportStack } from '../features/claims/ClaimReportStack';
 import ClaimsScreen from '../features/claims/screens/ClaimsScreen';
 import HomeScreen from '../features/home/screens/HomeScreen';
+import { QuoteStack } from '../features/quote/QuoteStack';
+import ProductsScreen from '../features/quote/screens/ProductsScreen';
 import { TabBar } from '../shared/ui';
 import { EmptyTabScreen } from './emptyTabs';
 
@@ -32,7 +34,7 @@ const Tabs = createBottomTabNavigator({
     Home: HomeScreen,
     Policies: EmptyTabScreen,
     Claims: ClaimsScreen,
-    Buy: EmptyTabScreen,
+    Buy: ProductsScreen,
   },
 });
 
@@ -44,6 +46,7 @@ export const RootStack = createNativeStackNavigator({
   screens: {
     Main: Tabs,
     ClaimReport: ClaimReportStack,
+    Quote: QuoteStack,
     Components: ComponentsScreen,
     Component: ComponentScreen,
   },

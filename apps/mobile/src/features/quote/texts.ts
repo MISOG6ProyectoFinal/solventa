@@ -1,0 +1,32 @@
+export const texts = {
+  products: {
+    screenTitle: 'Comprar seguro',
+    screenSubtitle: 'Cotiza y activa tu cobertura',
+    comingSoon: 'Próximamente',
+    fromPrice: (amount: string) => `Desde ${amount}`,
+    loadFailed: 'No se pudieron cargar los productos.',
+  },
+  form: {
+    nameLabel: 'Nombre completo',
+    documentLabel: 'Cédula',
+    destinationLabel: 'Destino',
+    departureLabel: 'Fecha de salida',
+    returnLabel: 'Fecha de regreso',
+    travelersLabel: 'Número de viajeros',
+    calculateButton: 'Calcular cotización',
+    calculating: 'Calculando cotización...',
+    required: 'Obligatorio',
+    departureInPast: 'No puede ser anterior a hoy',
+    returnBeforeDeparture: 'Debe ser posterior a la salida',
+    travelersAtLeastOne: 'Debe ser un número mayor a 0',
+    quoteFailed: 'No se pudo calcular la cotización.',
+  },
+  result: {
+    screenTitle: 'Tu cotización',
+    validBadge: 'Cotización vigente',
+    reference: (ref: string) => `${ref} · Válida hasta hoy 23:59`,
+    taxesIncluded: 'Prima total, impuestos incluidos',
+    validity: (desde: string, hasta: string) => `Vigencia propuesta: ${desde} a ${hasta}`,
+    continueButton: 'Continuar al pago',
+  },
+};

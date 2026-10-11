@@ -7,6 +7,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from cotizacion.catalogo.domain.models import (
     Canal,
+    ProductoFueraCatalogoMobile,
     ProductoInactivo,
     ProductoNoDisponibleMobile,
     ProductoNoEncontrado,
@@ -14,7 +15,7 @@ from cotizacion.catalogo.domain.models import (
 from cotizacion.consenso.domain.consensus import SinConsenso
 from cotizacion.consenso.domain.models import OfertaCotizacion
 from cotizacion.container import container
-from cotizacion.rating.domain.models import SolicitudCotizacion
+from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import ProductoNoTarifado
 
 router = APIRouter(prefix="/consenso", tags=["Validador de Consenso"])
@@ -29,7 +30,7 @@ def info() -> dict:
 
 @router.post("/cotizaciones", response_model=OfertaCotizacion)
 async def cotizar_con_consenso(
-    solicitud: SolicitudCotizacion,
+    solicitud: SolicitudRating,
     x_canal: Annotated[Canal, Header()],
 ) -> OfertaCotizacion:
     """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
@@ -39,6 +40,8 @@ async def cotizar_con_consenso(
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:
         raise HTTPException(status_code=422, detail=f"Producto inactivo: {exc}") from exc
+    except ProductoFueraCatalogoMobile as exc:
+        raise HTTPException(status_code=422, detail=f"Producto fuera del catálogo móvil: {exc}") from exc
     except ProductoNoDisponibleMobile as exc:
         raise HTTPException(status_code=422, detail=f"Producto no disponible para cotización móvil: {exc}") from exc
     except ProductoNoTarifado as exc:

@@ -2,6 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 
+from pydantic import TypeAdapter
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
@@ -14,7 +15,7 @@ from cotizacion.consenso.adapters.cotizacion_repository import (
 )
 from cotizacion.consenso.adapters.replicas import cotizar_en_replicas, resolver_replicas
 from cotizacion.consenso.domain.use_cases import CotizarConConsensoUseCase
-from cotizacion.rating.domain.models import SolicitudCotizacion
+from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
 
@@ -25,10 +26,13 @@ async def _fanout_produccion(body: dict) -> list[dict]:
     return await cotizar_en_replicas(ips, settings.cotizacion_port, body, settings.consenso_timeout_s)
 
 
+_solicitud_rating = TypeAdapter(SolicitudRating)
+
+
 async def fanout_local(body: dict) -> list[dict]:
     """Simula tres réplicas locales (tests / entorno sin DNS headless)."""
     uc = CotizarUseCase(REGLAS_VIGENTES, instancia="local")
-    resultado = uc.execute(SolicitudCotizacion.model_validate(body))
+    resultado = uc.execute(_solicitud_rating.validate_python(body))
     payload = resultado.model_dump(mode="json")
     return [payload, payload, payload]
 

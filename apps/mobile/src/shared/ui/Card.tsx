@@ -16,13 +16,27 @@ type CardProps = {
   children: ReactNode;
   variant?: 'default' | 'inverse';
   onPress?: () => void;
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
-export function Card({ children, variant = 'default', onPress, style, testID }: CardProps) {
+export function Card({ children, variant = 'default', onPress, disabled = false, style, testID }: CardProps) {
   const pressed = useAnimatedValue(0);
   const surface = [styles.card, variant === 'inverse' && styles.inverse];
+
+  if (disabled) {
+    return (
+      <View
+        testID={testID}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: true }}
+        style={[surface, styles.disabled, style]}
+      >
+        {children}
+      </View>
+    );
+  }
 
   if (!onPress) {
     return (
@@ -90,5 +104,8 @@ const styles = StyleSheet.create({
   },
   fill: {
     flexGrow: 1,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

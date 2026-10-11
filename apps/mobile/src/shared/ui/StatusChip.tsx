@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { theme } from '../theme';
 import { AppText } from './AppText';
 
-type StatusChipVariant = 'tag' | 'active' | 'paid' | 'pending' | 'success';
+type StatusChipVariant = 'tag' | 'active' | 'paid' | 'pending' | 'success' | 'info';
 
 type StatusChipProps = {
   variant: StatusChipVariant;
@@ -58,6 +58,11 @@ const containerStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.success.border,
   },
+  info: {
+    backgroundColor: theme.colors.info.background,
+    borderWidth: 1,
+    borderColor: theme.colors.info.border,
+  },
 });
 
 const labelStyles = StyleSheet.create({
@@ -66,4 +71,5 @@ const labelStyles = StyleSheet.create({
   paid: { color: theme.colors.onNavy },
   pending: { color: theme.colors.warning.text },
   success: { color: theme.colors.success.text },
+  info: { color: theme.colors.info.text },
 });
