@@ -3,9 +3,17 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
-import { NewPartner, Partner, PartnerCreated } from '../../../core/models/partner.model';
+import { NewPartner, Partner, PartnerConfig, PartnerCreated } from '../../../core/models/partner.model';
 import { SessionService } from '../../../core/services/session.service';
-import { PartnerCreatedDto, PartnerDto, toNewPartnerDto, toPartner } from './partners-api.mapper';
+import {
+  PartnerConfigDto,
+  PartnerCreatedDto,
+  PartnerDto,
+  toNewPartnerDto,
+  toPartner,
+  toPartnerConfig,
+  toPartnerConfigUpdateDto,
+} from './partners-api.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class PartnersService {
@@ -47,7 +55,21 @@ export class PartnersService {
     );
   }
 
-  updatePartner(updated: Partner): void {
-    this.state.update((partners) => partners.map((p) => (p.id === updated.id ? updated : p)));
+  loadConfig(partnerId: string): Observable<PartnerConfig> {
+    return this.http.get<PartnerConfigDto>(API_ENDPOINTS.partnerConfig(partnerId)).pipe(map(toPartnerConfig));
+  }
+
+  /** Reemplaza la configuración del socio. Aplica a sus siguientes solicitudes. */
+  saveConfig(partnerId: string, config: PartnerConfig): Observable<PartnerConfig> {
+    const body = toPartnerConfigUpdateDto(config, this.session.userName());
+    return this.http.put<PartnerConfigDto>(API_ENDPOINTS.partnerConfig(partnerId), body).pipe(
+      map(toPartnerConfig),
+      tap((saved) => this.setEnabledRamos(partnerId, saved)),
+    );
+  }
+
+  private setEnabledRamos(partnerId: string, config: PartnerConfig): void {
+    const enabledRamos = config.ramos.filter((ramo) => ramo.enabled).map(({ id, name }) => ({ id, name }));
+    this.state.update((partners) => partners.map((p) => (p.id === partnerId ? { ...p, enabledRamos } : p)));
   }
 }

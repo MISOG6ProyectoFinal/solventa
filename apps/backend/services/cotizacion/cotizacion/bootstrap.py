@@ -16,6 +16,7 @@ from cotizacion.catalogo.adapters.seed import seed_catalogo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
 from cotizacion.config import settings
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
+from cotizacion.gobierno_socios.adapters.configuracion_repository import PostgresConfiguracionRepository
 from cotizacion.gobierno_socios.adapters.repository import PostgresSocioRepository
 
 
@@ -41,6 +42,7 @@ def bootstrap(engine: Engine) -> None:
         PostgresCatalogoRepository(engine),
         PostgresCotizacionRepository(engine),
         PostgresSocioRepository(engine),
+        PostgresConfiguracionRepository(engine),
     )
 
 

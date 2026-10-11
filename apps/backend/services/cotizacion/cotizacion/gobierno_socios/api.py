@@ -2,10 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from cotizacion.catalogo.domain.models import Canal
+from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
+from cotizacion.catalogo.domain.models import Canal, Producto
 from cotizacion.consenso.api import cotizar_con_consenso
 from cotizacion.consenso.domain.models import OfertaCotizacion
 from cotizacion.container import container
+from cotizacion.gobierno_socios.domain.configuracion import (
+    ActualizarConfiguracionRequest,
+    CoberturaFueraDelRamo,
+    ConfiguracionResponse,
+    RamoFueraDelCanal,
+    RamoNoHabilitado,
+)
 from cotizacion.gobierno_socios.domain.models import (
     Alcance,
     AlcanceNoAutorizado,
@@ -14,6 +22,7 @@ from cotizacion.gobierno_socios.domain.models import (
     ContratoSuspendido,
     CredencialInvalida,
     IdentificadorDuplicado,
+    RamoResumen,
     Socio,
     SocioCreadoResponse,
     SocioNoEncontrado,
@@ -42,6 +51,38 @@ def autorizar_socio(client_id: str, secreto: str, alcance: Alcance) -> Socio:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail) from exc
 
 
+def _socio_no_encontrado() -> HTTPException:
+    return HTTPException(status.HTTP_404_NOT_FOUND, _error("socio_no_encontrado", "El socio no existe."))
+
+
+def _vistas(socios: list[Socio]) -> list[SocioResponse]:
+    nombres = {ramo.id: ramo.nombre for ramo in container.catalogo.list_ramos()}
+    ramos_por_socio = container.configuraciones.ramos_por_socio()
+    return [
+        SocioResponse(
+            **socio.model_dump(),
+            ramos_habilitados=[
+                RamoResumen(id=ramo_id, nombre=nombres.get(ramo_id, ramo_id))
+                for ramo_id in sorted(ramos_por_socio.get(socio.id, []), key=RAMOS_CANAL_SOCIOS.index)
+            ],
+        )
+        for socio in socios
+    ]
+
+
+def autorizar_ramo(socio: Socio, producto_id: str) -> None:
+    producto: Producto | None = container.catalogo.get_producto(producto_id)
+    if producto is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Producto no encontrado: {producto_id}")
+    try:
+        container.autorizar_ramo.execute(socio, producto)
+    except RamoNoHabilitado as exc:
+        ramo = container.catalogo.get_ramo(producto.ramo_id)
+        nombre = ramo.nombre if ramo else producto.ramo_id
+        detail = _error("ramo_no_habilitado", f"El ramo '{nombre}' no está habilitado para este socio.")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail) from exc
+
+
 @router.get("/")
 def info() -> dict:
     return {"component": "Socios y Gobierno de API"}
@@ -62,16 +103,39 @@ def dar_de_alta(solicitud: AltaSocioRequest) -> SocioCreadoResponse:
 
 
 @router.get("/socios", response_model=list[SocioResponse])
-def listar_socios() -> list[Socio]:
-    return container.consultar_socios.listar()
+def listar_socios() -> list[SocioResponse]:
+    return _vistas(container.consultar_socios.listar())
 
 
 @router.get("/socios/{socio_id}", response_model=SocioResponse)
-def obtener_socio(socio_id: str) -> Socio:
+def obtener_socio(socio_id: str) -> SocioResponse:
     try:
-        return container.consultar_socios.obtener(socio_id)
+        return _vistas([container.consultar_socios.obtener(socio_id)])[0]
     except SocioNoEncontrado as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, _error("socio_no_encontrado", "El socio no existe.")) from exc
+        raise _socio_no_encontrado() from exc
+
+
+@router.get("/socios/{socio_id}/configuracion", response_model=ConfiguracionResponse)
+def consultar_configuracion(socio_id: str) -> ConfiguracionResponse:
+    try:
+        return container.consultar_configuracion.execute(socio_id)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+
+
+@router.put("/socios/{socio_id}/configuracion", response_model=ConfiguracionResponse)
+def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRequest) -> ConfiguracionResponse:
+    try:
+        configuracion = container.actualizar_configuracion.execute(socio_id, solicitud.ramos, solicitud.actualizado_por)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+    except RamoFueraDelCanal as exc:
+        detail = _error("ramo_fuera_del_canal", f"El ramo '{exc}' no pertenece al canal de socios.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail) from exc
+    except CoberturaFueraDelRamo as exc:
+        detail = _error("cobertura_fuera_del_ramo", f"La cobertura '{exc}' no pertenece al ramo indicado.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail) from exc
+    return container.consultar_configuracion.presentar(configuracion)
 
 
 @router.post("/cotizaciones", response_model=OfertaCotizacion)
@@ -80,6 +144,7 @@ async def cotizar_como_socio(
     client_id: Annotated[str, Header(alias="X-Client-Id")],
     secreto: Annotated[str, Header(alias="X-Api-Key")],
 ) -> OfertaCotizacion:
-    """Cotización del canal embebido: primero reconoce al socio y su alcance."""
-    autorizar_socio(client_id, secreto, Alcance.COTIZACION)
+    """Cotización del canal embebido: reconoce al socio, su alcance y el ramo del producto."""
+    socio = autorizar_socio(client_id, secreto, Alcance.COTIZACION)
+    autorizar_ramo(socio, solicitud.producto_id)
     return await cotizar_con_consenso(solicitud, Canal.SOCIOS)

@@ -21,15 +21,6 @@ export const RAMO_ICON: Record<RamoId, IconName> = {
   VIDA_HIPOTECARIO: 'vidaHipotecario',
 };
 
-export const COVERAGE_CATALOG: Record<RamoId, readonly string[]> = {
-  VIAJE: ['Gastos médicos en el exterior', 'Cancelación de viaje', 'Pérdida de equipaje', 'Asistencia en viaje'],
-  DISPOSITIVOS: ['Daño accidental', 'Robo', 'Daño por líquidos', 'Garantía extendida'],
-  MICROSEGURO_VIDA: ['Fallecimiento', 'Auxilio funerario', 'Incapacidad total y permanente'],
-  PARAMETRICO: ['Retraso de vuelo', 'Lluvia excesiva', 'Sequía'],
-  PROTECCION_PAGOS: ['Desempleo involuntario', 'Incapacidad temporal', 'Fallecimiento (saldo de la deuda)'],
-  VIDA_HIPOTECARIO: ['Fallecimiento (saldo del crédito)', 'Incapacidad total y permanente', 'Enfermedades graves'],
-};
-
 export const ALCANCES: readonly { id: Alcance; label: string }[] = [
   { id: 'cotizacion', label: 'Cotización' },
   { id: 'emision', label: 'Emisión' },

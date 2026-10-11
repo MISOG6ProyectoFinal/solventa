@@ -54,8 +54,4 @@ export class PartnersPageComponent implements OnInit {
     this.showCreateModal.set(false);
     this.selectedPartnerId.set(partner.id);
   }
-
-  onPartnerUpdated(partner: Partner): void {
-    this.partnersService.updatePartner(partner);
-  }
 }
