@@ -2,9 +2,9 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Partner } from '../../../core/models/partner.model';
-import { toPartner } from '../services/partners-api.mapper';
+import { toPartner, toPartnerConfig } from '../services/partners-api.mapper';
 import { PartnersService } from '../services/partners.service';
-import { PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
+import { PARTNER_CONFIG_DTO, PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
 import { PartnersPageComponent } from './partners-page.component';
 
 describe('PartnersPageComponent', () => {
@@ -25,7 +25,7 @@ describe('PartnersPageComponent', () => {
       partners.update((current) => [partner, ...current]);
       return of({ partner, secret: PARTNER_CREATED_DTO.secreto });
     }),
-    updatePartner: vi.fn(),
+    loadConfig: vi.fn(() => of(toPartnerConfig(PARTNER_CONFIG_DTO))),
   };
 
   const button = (text: string): HTMLButtonElement =>
@@ -60,6 +60,24 @@ describe('PartnersPageComponent', () => {
     expect(el.textContent).toContain('Fintech Demo');
     expect(el.textContent).toContain('FINTECH-DEMO');
     expect(el.textContent).toContain('Activo · v2');
+  });
+
+  it('lists the enabled lines of each partner', async () => {
+    partners.set([{ ...toPartner(PARTNER_DTO), enabledRamos: [{ id: 'ramo-viaje', name: 'Viaje' }, { id: 'ramo-parametrico', name: 'Paramétrico (clima / vuelo)' }] }]);
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Viaje, Paramétrico (clima / vuelo)');
+  });
+
+  it('shows the configuration of lines and coverages in the partner detail', async () => {
+    partners.set([toPartner(PARTNER_DTO)]);
+    await fixture.whenStable();
+
+    button('Abrir').click();
+    await fixture.whenStable();
+
+    expect(service.loadConfig).toHaveBeenCalledWith('s-1');
+    expect(el.querySelector('[data-testid=config-summary]')?.textContent).toContain('Protección de pagos: Desempleo involuntario');
   });
 
   it('shows the loading state', async () => {

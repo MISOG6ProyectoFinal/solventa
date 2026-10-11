@@ -1,8 +1,30 @@
-import { RamoId } from './ramo.model';
-
 export type Alcance = 'cotizacion' | 'emision' | 'consulta';
 
 export type PartnerType = 'Banco' | 'Aerolínea' | 'E-commerce' | 'Fintech' | 'Retailer';
+
+/** Ramo del canal embebido, identificado por el catálogo del backend. */
+export interface PartnerRamo {
+  id: string;
+  name: string;
+}
+
+export interface PartnerCoverageConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface PartnerRamoConfig extends PartnerRamo {
+  enabled: boolean;
+  coverages: PartnerCoverageConfig[];
+}
+
+/** Ramos y coberturas que el socio puede vender, con la traza del último cambio. */
+export interface PartnerConfig {
+  ramos: PartnerRamoConfig[];
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
 
 export interface Partner {
   id: string;
@@ -18,8 +40,7 @@ export interface Partner {
   apiContractStatus: 'Activo' | 'Suspendido';
   versionContratoApi: string;
   cuotaConsumo: number;
-  enabledRamos: RamoId[];
-  coveragesByRamo: Record<RamoId, string[]>;
+  enabledRamos: PartnerRamo[];
   altaFecha: string;
   altaUsuario: string;
 }

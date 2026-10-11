@@ -30,18 +30,29 @@ ALTA = {
     "alcances": ["cotizacion", "emision"],
     "autorizado_por": "Ana Gómez",
 }
-SOLICITUD = {"producto_id": "vida-temporal", "suma_asegurada": "1000000", "edad": 40}
+SOLICITUD = {
+    "producto_id": "viaje-internacional",
+    "destino": "España",
+    "fecha_salida": "2027-01-10",
+    "fecha_regreso": "2027-01-20",
+    "viajeros": 2,
+}
 
 
 @pytest.fixture(autouse=True)
 def socios_vacios():
     container.socios.socios.clear()
+    container.configuraciones.configuraciones.clear()
 
 
 def dar_de_alta(**cambios) -> dict:
     response = client.post("/gobierno-socios/socios", json={**ALTA, **cambios})
     assert response.status_code == 201, response.text
-    return response.json()
+    socio = response.json()
+    # El alta no habilita ramos; las pruebas de credenciales cotizan viaje.
+    configuracion = {"ramos": [{"ramo_id": "ramo-viaje", "coberturas": []}], "actualizado_por": "Ana Gómez"}
+    client.put(f"/gobierno-socios/socios/{socio['id']}/configuracion", json=configuracion)
+    return socio
 
 
 def credenciales_de(socio: dict) -> dict:
@@ -142,7 +153,7 @@ def test_credenciales_generadas_permiten_una_operacion_del_alcance():
     response = client.post("/gobierno-socios/cotizaciones", json=SOLICITUD, headers=credenciales_de(socio))
 
     assert response.status_code == 200
-    assert response.json()["producto_id"] == "vida-temporal"
+    assert response.json()["producto_id"] == "viaje-internacional"
 
 
 def test_secreto_incorrecto_o_socio_desconocido_son_rechazados():
@@ -178,7 +189,10 @@ def test_flujo_completo_alta_y_consulta_posterior():
     detalle = client.get(f"/gobierno-socios/socios/{primero['id']}").json()
 
     assert [s["identificador"] for s in listado] == ["BANCO-AURORA", "FINTECH-DEMO"]
-    assert detalle == {k: v for k, v in primero.items() if k != "secreto"}
+    assert detalle == {
+        **{k: v for k, v in primero.items() if k != "secreto"},
+        "ramos_habilitados": [{"id": "ramo-viaje", "nombre": "Viaje"}],
+    }
     assert detalle["alcances"] == ["cotizacion", "emision"]
     assert detalle["alta_usuario"] == "Ana Gómez"
     assert segundo["id"] != primero["id"]

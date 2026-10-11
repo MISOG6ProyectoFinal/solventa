@@ -14,6 +14,9 @@ SEED_RAMOS = (
     Ramo(id="ramo-viaje", nombre="Viaje"),
     Ramo(id="ramo-dispositivos", nombre="Protección de dispositivos"),
     Ramo(id="ramo-microseguro-vida", nombre="Microseguro de vida"),
+    Ramo(id="ramo-parametrico", nombre="Paramétrico (clima / vuelo)"),
+    Ramo(id="ramo-proteccion-pagos", nombre="Protección de pagos"),
+    Ramo(id="ramo-vida-hipotecario", nombre="Vida hipotecario"),
 )
 
 SEED_PRODUCTOS = (
@@ -59,6 +62,9 @@ SEED_PRODUCTOS = (
         activo=True,
         disponible_mobile=False,
     ),
+    Producto(id="parametrico-clima-vuelo", nombre="Paramétrico Clima y Vuelo", ramo_id="ramo-parametrico"),
+    Producto(id="proteccion-pagos", nombre="Protección de Pagos", ramo_id="ramo-proteccion-pagos"),
+    Producto(id="vida-hipotecario", nombre="Vida Hipotecario", ramo_id="ramo-vida-hipotecario"),
 )
 
 SEED_COBERTURAS = (
@@ -76,6 +82,17 @@ SEED_COBERTURAS = (
     Cobertura(id="celular-liquidos", nombre="Daño por líquidos", producto_id="proteccion-celular"),
     Cobertura(id="vida-esencial-fallecimiento", nombre="Fallecimiento", producto_id="vida-esencial"),
     Cobertura(id="vida-esencial-auxilio", nombre="Auxilio funerario", producto_id="vida-esencial"),
+    Cobertura(id="parametrico-retraso-vuelo", nombre="Retraso de vuelo", producto_id="parametrico-clima-vuelo"),
+    Cobertura(id="parametrico-lluvia", nombre="Lluvia excesiva", producto_id="parametrico-clima-vuelo"),
+    Cobertura(id="parametrico-sequia", nombre="Sequía", producto_id="parametrico-clima-vuelo"),
+    Cobertura(id="pagos-desempleo", nombre="Desempleo involuntario", producto_id="proteccion-pagos"),
+    Cobertura(id="pagos-incapacidad-temporal", nombre="Incapacidad temporal", producto_id="proteccion-pagos"),
+    Cobertura(id="pagos-fallecimiento", nombre="Fallecimiento (saldo de la deuda)", producto_id="proteccion-pagos"),
+    Cobertura(
+        id="hipotecario-fallecimiento", nombre="Fallecimiento (saldo del crédito)", producto_id="vida-hipotecario"
+    ),
+    Cobertura(id="hipotecario-incapacidad", nombre="Incapacidad total y permanente", producto_id="vida-hipotecario"),
+    Cobertura(id="hipotecario-enfermedades", nombre="Enfermedades graves", producto_id="vida-hipotecario"),
 )
 
 

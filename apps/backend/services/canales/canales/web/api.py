@@ -36,6 +36,16 @@ def obtener_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
 
 
+@router.get("/socios/{socio_id}/configuracion")
+def consultar_configuracion_socio(socio_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}/configuracion")
+
+
+@router.put("/socios/{socio_id}/configuracion")
+def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
+    return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
+
+
 @router.get("/polizas/{poliza_id}")
 def obtener_poliza(poliza_id: str) -> dict:
     return call_upstream(polizas.get, f"/polizas/{poliza_id}")

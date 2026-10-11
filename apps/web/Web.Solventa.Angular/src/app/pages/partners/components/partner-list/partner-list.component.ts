@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Partner } from '../../../../core/models/partner.model';
-import { RAMOS } from '../../../../shared/constants/ramos.constants';
+import { Partner, PartnerRamo } from '../../../../core/models/partner.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { BadgeComponent } from '../../../../ui/components/badge/badge.component';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
@@ -26,9 +25,8 @@ export class PartnerListComponent {
     return alcances.map(a => labels[a] || a).join(', ');
   }
 
-  getRamosLabel(ramosIds: string[]): string {
-    if (!ramosIds || ramosIds.length === 0) return '-';
-    return ramosIds.map(id => RAMOS.find(r => r.id === id)?.label ?? id).join(', ');
+  getRamosLabel(ramos: PartnerRamo[]): string {
+    return ramos.map(ramo => ramo.name).join(', ') || '-';
   }
 
   getContractTone(status: string): 'success' | 'error' | 'warning' {

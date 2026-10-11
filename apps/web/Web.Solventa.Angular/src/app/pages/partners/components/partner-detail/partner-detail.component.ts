@@ -30,7 +30,6 @@ export class PartnerDetailComponent {
   readonly partner = input.required<Partner>();
   
   readonly backRequested = output<void>();
-  readonly updateRequested = output<Partner>();
 
   readonly tabs = PARTNER_TABS;
   activeTab = signal('config');

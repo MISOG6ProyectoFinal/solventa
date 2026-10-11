@@ -34,7 +34,7 @@
 
     <div class="pt-5">
       @if (activeTab() === 'config') {
-        <slv-ramos-config [partner]="partner()" (updateRequested)="updateRequested.emit($event)" />
+        <slv-ramos-config [partner]="partner()" />
       } @else {
         <slv-operaciones-canal [partner]="partner()" />
       }
