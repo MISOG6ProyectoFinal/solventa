@@ -64,7 +64,7 @@ El APK se firma con la clave de depuración que ya trae el proyecto. Sirve para 
 ./scripts/build-apk.sh
 ```
 
-Si bash niega el permiso, ejecuta `chmod +x scripts/build-apk.sh` una vez. El job de GitHub instala Node, Java y el SDK antes de llamar al script. El APK queda en `dist/mobile-release.apk`.
+Si bash niega el permiso, ejecuta `chmod +x scripts/build-apk.sh` una vez. El job de GitHub instala Node, Java y el SDK antes de llamar al script. Corre al publicar un release y adjunta `mobile-release.apk` a ese release. En el job el archivo queda en `dist/mobile-release.apk`.
 
 Para instalar ese APK, conecta un dispositivo con depuración USB o deja un emulador abierto. `adb` tiene que estar en el `PATH`, o dentro de `platform-tools` del SDK. Si hay más de un dispositivo, pasa el serial que muestra `adb devices`.
 

@@ -1,0 +1,73 @@
+name: Mobile APK
+
+# Construye el APK al publicar un release y lo adjunta a ese release.
+# Un borrador no dispara este workflow: hace falta pulsar Publish release.
+# El script exige Node 26, Java y el NDK y CMake fijados en la app Android.
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-apk-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ github.event.release.tag_name }}
+
+jobs:
+  apk:
+    name: APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar NDK, CMake y la plataforma Android
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "::error::Este runner no trae ANDROID_HOME."
+            exit 1
+          fi
+          export PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${PATH}"
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          set -o pipefail
+          sdkmanager --install \
+            "platforms;android-37" \
+            "build-tools;37.0.0" \
+            "ndk;27.1.12297006" \
+            "cmake;3.31.6"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Prepare Mobile environment
+        run: cp apps/mobile/.env.example apps/mobile/.env
+
+      - name: Build APK
+        run: ./scripts/build-apk.sh
+
+      - name: Adjuntar el APK al release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$VERSION" dist/mobile-release.apk --clobber
