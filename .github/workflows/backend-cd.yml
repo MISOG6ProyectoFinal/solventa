@@ -1,9 +1,10 @@
-name: Backend CD
+name: CD
 
-# Despliegue del backend en EKS. Corre cuando se publica un release del proyecto:
+# Despliegue del backend en EKS y del portal web. Corre cuando se publica un release del proyecto:
 #   1. construye las imágenes desde el tag del release y las publica en ECR con esa versión,
 #   2. fija esa versión en el overlay aws y lo aplica,
-#   3. espera el rolling update de los pods.
+#   3. espera el rolling update de los pods,
+#   4. compila el portal con la URL del backend y lo publica en S3 + CloudFront.
 # El tag del release (v1.2.0) es el registro de qué versión está desplegada.
 # Lanzarlo a mano con una versión ya publicada vuelve a esa versión (rollback).
 # La infraestructura va aparte, en backend-infra.yml.
@@ -186,4 +187,49 @@ jobs:
             echo '```'
             kubectl -n solventa get deployments -o wide 2>&1 || true
             echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  web:
+    name: Publicar el portal web
+    needs: [prepare, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.version }}
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.4
+          terraform_wrapper: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: apps/web/Web.Solventa.Angular/package-lock.json
+
+      - name: Compilar con la URL del backend y publicar
+        working-directory: apps/backend
+        run: ./deploy/scripts/deploy-aws.sh web | tee "$RUNNER_TEMP/web.log"
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Portal web"
+            grep -E "Portal publicado|stack edge" "$RUNNER_TEMP/web.log" || true
           } >> "$GITHUB_STEP_SUMMARY"

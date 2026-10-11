@@ -1,10 +1,10 @@
 from cotizacion.config import CotizacionSettings
 
 SERVICE_LINKS = {
-    "COTIZACION_PORT": "tcp://172.20.6.32:80",
-    "COTIZACION_SERVICE_HOST": "172.20.6.32",
+    "COTIZACION_PORT": "tcp://cotizacion.solventa.svc:80",
+    "COTIZACION_SERVICE_HOST": "cotizacion.solventa.svc",
     "COTIZACION_SERVICE_PORT": "80",
-    "COTIZACION_PORT_80_TCP": "tcp://172.20.6.32:80",
+    "COTIZACION_PORT_80_TCP": "tcp://cotizacion.solventa.svc:80",
 }
 
 

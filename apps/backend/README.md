@@ -138,7 +138,7 @@ El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC,
 | `CI` | Pull request y `main` | Lint y pruebas |
 | `Backend Deploy Checks` | Pull request que toca `deploy/` | `terraform fmt` y `validate`, render de manifiestos, build de la imagen |
 | `Backend Infra` | Manual, desde `main` | `plan`, `apply` o `destroy` de Terraform, por stack o todos |
-| `Backend CD` | Al publicar un release (`v1.2.0`) | Construye las imágenes desde ese tag, las publica en ECR con esa versión y actualiza los pods |
+| `CD` | Al publicar un release (`v1.2.0`) | Construye las imágenes desde ese tag, las publica en ECR, actualiza los pods y publica el portal web |
 
 Preparación, una sola vez, con un usuario que administre IAM y el repositorio:
 
@@ -149,9 +149,9 @@ ENV=dev ./deploy/scripts/bootstrap-ci.sh
 
 Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
 
-El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `Backend CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
+El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
-`Backend CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
+`CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 
 `deploy-aws.sh` es el mismo script que usan los workflows y también corre a mano (`plan`, `infra`, `destroy`, `images`, `k8s`). `infra` aplica los stacks en este orden:
 
@@ -164,8 +164,9 @@ El backend se despliega al publicar un release en GitHub. El tag del release (`v
 | 5 | `messaging` | Tópico SNS, colas SQS, DLQ, alarmas | |
 | 6 | `cluster_addons` | NGINX Ingress (NLB), KEDA, metrics-server | 3 |
 | 7 | `platform` | Namespace, ConfigMap `solventa-platform`, Secret `db-*`, roles de Pod Identity | 3, 4, 5 |
+| 8 | `edge` | CloudFront + WAF, bucket del portal web | 3, 6 |
 
-El borde (CloudFront + WAF) se aplica aparte con el stack `edge`, cuando el NLB del ingress ya existe.
+CloudFront sirve el portal y la API bajo una misma dirección: el portal sale del bucket S3 y las rutas `/web`, `/movil` y `/socios` van al API Gateway. El paso `web` del `CD` compila el portal con esa dirección como URL del backend (`API_BASE_URL`), lo sube al bucket e invalida la caché.
 
 Para una cuenta de AWS Academy, `eks/terraform.tfvars` y `data/terraform.tfvars` reciben el ARN de `LabRole` en `cluster_iam_role_arn`, `node_iam_role_arn` y `proxy_role_arn`, y `platform/terraform.tfvars` usa `create_iam = false`.
 

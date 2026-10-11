@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Despliegue en AWS. Lo ejecutan los workflows de GitHub Actions; también corre a mano.
 #   deploy-aws.sh plan    [stack]   # terraform plan de un stack o de todos, en orden
-#   deploy-aws.sh infra   [stack]   # terraform apply: red → ... → platform (edge solo por nombre)
+#   deploy-aws.sh infra   [stack]   # terraform apply: red → ... → platform → edge
 #   deploy-aws.sh destroy [stack]   # terraform destroy, en orden inverso
 #   deploy-aws.sh images            # build + push a ECR y fija el tag en el overlay aws
 #   deploy-aws.sh k8s               # aplica el overlay aws con las imágenes ya fijadas + rollout
-#   deploy-aws.sh all               # infra + images + k8s
+#   deploy-aws.sh web               # compila el portal con la URL del backend y lo publica en S3 + CloudFront
+#   deploy-aws.sh all               # infra + images + k8s + web
 # Variables: ENV (dev), TAG (commit, para images), AUTO_APPROVE=1 omite la confirmación de Terraform.
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # apps/backend
@@ -14,10 +15,8 @@ ENV="${ENV:-dev}"
 TF=deploy/terraform
 TAG="${TAG:-$(git rev-parse --short=12 HEAD)}"
 NAMESPACE=solventa
-STACKS=(network container_registry eks data messaging cluster_addons platform)
-# El borde (CloudFront + WAF) es opcional y se pide por nombre: "infra edge".
-# Su origen es el NLB que crea cluster_addons, así que al destruir va primero.
-OPTIONAL_STACKS=(edge)
+STACKS=(network container_registry eks data messaging cluster_addons platform edge)
+WEB=../web/Web.Solventa.Angular
 
 tfvar() {
   grep -E "^$2[[:space:]]*=" "$TF/environments/$ENV/$1/terraform.tfvars" | cut -d'"' -f2
@@ -54,7 +53,7 @@ reversed() {
     echo "$1"
     return
   fi
-  printf '%s\n' "${STACKS[@]}" "${OPTIONAL_STACKS[@]}" | awk '{ lines[NR] = $0 } END { for (i = NR; i > 0; i--) print lines[i] }'
+  printf '%s\n' "${STACKS[@]}" | awk '{ lines[NR] = $0 } END { for (i = NR; i > 0; i--) print lines[i] }'
 }
 
 plan() {
@@ -136,12 +135,34 @@ k8s() {
   kubectl -n "$NAMESPACE" get deployments -o wide
 }
 
+web() {
+  tf_init edge
+  if [[ -z "$(tf edge state list 2>/dev/null)" ]]; then
+    echo "::notice::El stack edge aún no existe. Corre Backend Infra con apply para publicar el portal."
+    return 0
+  fi
+  local url bucket distribution dist="$WEB/dist/Web.Solventa.Angular/browser"
+  url="$(tf edge output -raw url)"
+  bucket="$(tf edge output -raw web_bucket)"
+  distribution="$(tf edge output -raw distribution_id)"
+
+  (cd "$WEB" && npm ci --no-audit --no-fund && API_BASE_URL="$url" ENVIRONMENT_NAME="$ENV" npm run build:deploy)
+
+  aws s3 sync "$dist" "s3://$bucket" --delete --exclude index.html --exclude "*.json" \
+    --cache-control "public,max-age=31536000,immutable"
+  aws s3 sync "$dist" "s3://$bucket" --exclude "*" --include index.html --include "*.json" \
+    --cache-control "no-cache"
+  aws cloudfront create-invalidation --distribution-id "$distribution" --paths "/*" >/dev/null
+  echo "Portal publicado en $url"
+}
+
 case "${1:-all}" in
   plan) plan "${2:-}" ;;
   infra) infra "${2:-}" ;;
   destroy) destroy "${2:-}" ;;
   images) images ;;
   k8s) k8s ;;
-  all) infra; images; k8s ;;
-  *) echo "Uso: $0 [plan|infra|destroy|images|k8s|all] [stack]" >&2; exit 1 ;;
+  web) web ;;
+  all) infra; images; k8s; web ;;
+  *) echo "Uso: $0 [plan|infra|destroy|images|k8s|web|all] [stack]" >&2; exit 1 ;;
 esac
