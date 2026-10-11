@@ -29,7 +29,7 @@
       },
       {
         "day": 7,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 10
       }
     ]
   },
@@ -38,7 +38,7 @@
     {
       "week": 1,
       "planned": 19,
-      "actual": 13
+      "actual": 23
     },
     {
       "week": 2,
@@ -107,7 +107,7 @@
       },
       {
         "day": 7,
-        "valueDelivered": 0
+        "valueDelivered": 8
       }
     ]
   }
