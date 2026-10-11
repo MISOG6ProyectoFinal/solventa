@@ -12,3 +12,8 @@ variable "metrics_server_version" {
   type    = string
   default = "3.12.2"
 }
+
+variable "ingress_replicas" {
+  type    = number
+  default = 2
+}

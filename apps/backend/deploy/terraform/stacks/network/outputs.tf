@@ -25,3 +25,7 @@ output "database_subnet_ids" {
 output "database_subnet_group_name" {
   value = module.network.database_subnet_group_name
 }
+
+output "nat_gateway" {
+  value = module.network.nat_gateway
+}

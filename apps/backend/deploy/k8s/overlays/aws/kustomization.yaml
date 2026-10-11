@@ -16,3 +16,23 @@ patches:
     patch: |-
       - op: remove
         path: /spec/replicas
+  - target:
+      kind: Deployment
+      name: (polizas|identidad|siniestros|pagos|auditoria)
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: canales
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 0

@@ -20,3 +20,9 @@ variable "single_nat_gateway" {
   type        = bool
   default     = false
 }
+
+variable "nat_gateway" {
+  description = "false elimina la NAT: los nodos van en subredes públicas con IP pública."
+  type        = bool
+  default     = true
+}

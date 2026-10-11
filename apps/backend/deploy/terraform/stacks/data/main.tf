@@ -9,9 +9,14 @@ locals {
   ]
 }
 
+locals {
+  instancia_compartida = "compartida"
+  instancias           = var.shared_instance == null ? var.stores : { (local.instancia_compartida) = var.shared_instance }
+}
+
 module "postgres" {
   source   = "../../modules/postgres"
-  for_each = var.stores
+  for_each = local.instancias
 
   prefix                     = var.prefix
   name                       = each.key
@@ -29,6 +34,7 @@ module "postgres" {
 
 module "redis" {
   source = "../../modules/redis"
+  count  = var.redis_enabled ? 1 : 0
 
   name                       = "${var.prefix}-cache"
   vpc_id                     = local.network.vpc_id

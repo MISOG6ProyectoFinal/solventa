@@ -170,6 +170,28 @@ CloudFront sirve el portal y la API bajo una misma dirección: el portal sale de
 
 Para una cuenta de AWS Academy, `eks/terraform.tfvars` y `data/terraform.tfvars` reciben el ARN de `LabRole` en `cluster_iam_role_arn`, `node_iam_role_arn` y `proxy_role_arn`, y `platform/terraform.tfvars` usa `create_iam = false`.
 
+### Costos del ambiente `dev`
+
+Los tfvars de `dev` usan el perfil más económico. Cada ahorro es un interruptor:
+
+| Ajuste | Archivo | Valor en `dev` | Para volver al modelo VC-004 |
+|---|---|---|---|
+| Zonas con nodos | `eks/terraform.tfvars` | `node_zones = 1` | Quitar la línea (usa las dos zonas) |
+| Tipo de capacidad | `eks/terraform.tfvars` | `node_capacity_type = "SPOT"` | `"ON_DEMAND"` |
+| NAT Gateway | `network/terraform.tfvars` | `nat_gateway = false` (nodos en subred pública) | `true` |
+| Instancias de RDS | `data/terraform.tfvars` | `shared_instance`: una instancia con una base por almacén | Quitar el bloque (una instancia por almacén) |
+| Redis | `data/terraform.tfvars` | `redis_enabled = false` | `true` |
+| Réplicas | `k8s/overlays/aws` | 1 por servicio; `cotizacion` conserva 3 por el consenso | Quitar los parches de réplicas |
+
+La VPC conserva subredes en dos zonas porque EKS y RDS las exigen; las subredes no tienen costo.
+
+`Backend Infra` ofrece dos formas de apagar:
+
+- `stop` y `start`: pausan y reanudan en minutos. `stop` deja los nodos en 0 y detiene RDS; se siguen pagando el plano de control de EKS, el balanceador y el almacenamiento. RDS enciende sola una instancia detenida a los 7 días.
+- `destroy`: elimina todo y lleva el costo a cero. Volver a crear el ambiente toma cerca de una hora y las bases quedan vacías.
+
+Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigente para que el Job de bootstrap cree las tablas.
+
 `destroy` recorre los stacks en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network).
 
 ## Siguientes pasos

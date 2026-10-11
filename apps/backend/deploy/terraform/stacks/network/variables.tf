@@ -15,3 +15,8 @@ variable "single_nat_gateway" {
   type    = bool
   default = false
 }
+
+variable "nat_gateway" {
+  type    = bool
+  default = true
+}

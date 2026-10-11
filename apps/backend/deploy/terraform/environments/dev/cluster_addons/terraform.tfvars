@@ -1,3 +1,4 @@
-region       = "us-east-1"
-environment  = "dev"
-state_bucket = "solventa-g6-terraform-state-dev"
+region           = "us-east-1"
+environment      = "dev"
+state_bucket     = "solventa-g6-terraform-state-dev"
+ingress_replicas = 1

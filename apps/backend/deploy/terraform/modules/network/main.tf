@@ -21,7 +21,8 @@ module "vpc" {
   database_subnets = [for i, _ in local.azs : cidrsubnet(var.cidr, 8, i + 100)]
 
   create_database_subnet_group = true
-  enable_nat_gateway           = true
+  enable_nat_gateway           = var.nat_gateway
+  map_public_ip_on_launch      = !var.nat_gateway
   # Una NAT por zona sostiene el activo-activo; una sola abarata los ambientes de prueba.
   single_nat_gateway   = var.single_nat_gateway
   enable_dns_hostnames = true

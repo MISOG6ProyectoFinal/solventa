@@ -1,10 +1,18 @@
+locals {
+  network          = data.terraform_remote_state.network.outputs
+  subnets_por_zona = try(local.network.nat_gateway, true) ? local.network.private_subnet_ids : local.network.public_subnet_ids
+  node_subnet_ids  = slice(local.subnets_por_zona, 0, coalesce(var.node_zones, length(local.subnets_por_zona)))
+}
+
 module "eks" {
   source = "../../modules/eks"
 
   cluster_name           = var.cluster_name
   cluster_version        = var.cluster_version
-  vpc_id                 = data.terraform_remote_state.network.outputs.vpc_id
-  private_subnet_ids     = data.terraform_remote_state.network.outputs.private_subnet_ids
+  vpc_id                 = local.network.vpc_id
+  private_subnet_ids     = local.network.private_subnet_ids
+  node_subnet_ids        = local.node_subnet_ids
+  node_capacity_type     = var.node_capacity_type
   endpoint_public_access = var.endpoint_public_access
   node_instance_types    = var.node_instance_types
   nodes_per_zone         = var.nodes_per_zone
