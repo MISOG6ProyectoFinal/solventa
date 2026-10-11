@@ -91,16 +91,103 @@ data "aws_cloudfront_origin_request_policy" "all_viewer" {
   name = "Managed-AllViewerExceptHostHeader"
 }
 
-resource "aws_cloudfront_distribution" "api" {
-  enabled         = true
-  comment         = "Solventa API (BFF web, BFF movil, API de socios)"
-  price_class     = "PriceClass_100"
-  web_acl_id      = aws_wafv2_web_acl.edge.arn
-  is_ipv6_enabled = true
+module "web" {
+  source = "../../modules/object_storage"
+
+  bucket_name    = "${var.prefix}-${var.environment}-web-${data.aws_caller_identity.current.account_id}"
+  force_destroy  = true
+  kms_encryption = false
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_cloudfront_origin_access_control" "web" {
+  name                              = "${var.prefix}-${var.environment}-web"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+data "aws_iam_policy_document" "web_bucket" {
+  statement {
+    sid       = "SoloCloudFront"
+    actions   = ["s3:GetObject"]
+    resources = ["${module.web.arn}/*"]
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.edge.arn]
+    }
+  }
+
+  statement {
+    sid       = "SoloHttps"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [module.web.arn, "${module.web.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "web" {
+  bucket = module.web.bucket
+  policy = data.aws_iam_policy_document.web_bucket.json
+}
+
+resource "aws_cloudfront_function" "spa_routes" {
+  name    = "${var.prefix}-${var.environment}-spa-routes"
+  runtime = "cloudfront-js-2.0"
+  comment = "Rutas del portal sin extension se sirven con index.html"
+  publish = true
+  code    = <<-EOT
+    function handler(event) {
+      var request = event.request;
+      if (!request.uri.split('/').pop().includes('.')) {
+        request.uri = '/index.html';
+      }
+      return request;
+    }
+  EOT
+}
+
+data "aws_cloudfront_cache_policy" "optimized" {
+  name = "Managed-CachingOptimized"
+}
+
+locals {
+  api_origin = "api-gateway"
+  web_origin = "web"
+}
+
+resource "aws_cloudfront_distribution" "edge" {
+  enabled             = true
+  comment             = "Solventa: portal web y API (BFF web, BFF movil, API de socios)"
+  price_class         = "PriceClass_100"
+  web_acl_id          = aws_wafv2_web_acl.edge.arn
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+
+  origin {
+    domain_name              = module.web.regional_domain_name
+    origin_id                = local.web_origin
+    origin_access_control_id = aws_cloudfront_origin_access_control.web.id
+  }
 
   origin {
     domain_name = local.origin_host
-    origin_id   = "api-gateway"
+    origin_id   = local.api_origin
     custom_origin_config {
       http_port  = 80
       https_port = 443
@@ -111,12 +198,30 @@ resource "aws_cloudfront_distribution" "api" {
   }
 
   default_cache_behavior {
-    target_origin_id         = "api-gateway"
-    viewer_protocol_policy   = "redirect-to-https"
-    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods           = ["GET", "HEAD"]
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+    target_origin_id       = local.web_origin
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_routes.arn
+    }
+  }
+
+  dynamic "ordered_cache_behavior" {
+    for_each = var.api_paths
+    content {
+      path_pattern             = ordered_cache_behavior.value
+      target_origin_id         = local.api_origin
+      viewer_protocol_policy   = "redirect-to-https"
+      allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+      cached_methods           = ["GET", "HEAD"]
+      cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+      origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+    }
   }
 
   restrictions {

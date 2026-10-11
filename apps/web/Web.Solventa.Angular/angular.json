@@ -23,6 +23,9 @@
             "production": {
               "target": "Web.Solventa.Angular:esbuild:production"
             },
+            "deploy": {
+              "target": "Web.Solventa.Angular:esbuild:deploy"
+            },
             "development": {
               "target": "Web.Solventa.Angular:esbuild:development",
               "dev": true
@@ -73,6 +76,27 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.prd.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "deploy": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.deploy.ts"
                 }
               ],
               "budgets": [

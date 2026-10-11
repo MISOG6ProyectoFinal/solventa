@@ -16,7 +16,7 @@ on:
           - apply
           - destroy
       stack:
-        description: Stack (all recorre todos en orden; edge solo por nombre)
+        description: Stack (all recorre todos en orden)
         type: choice
         required: true
         default: all

@@ -15,6 +15,8 @@ resource "aws_s3_bucket_versioning" "this" {
 # Clave propia: el rol de los pods firma el PUT y S3 cifra con esta clave.
 # La clave administrada de AWS no deja acotar kms:GenerateDataKey al bucket.
 resource "aws_kms_key" "evidencias" {
+  count = var.kms_encryption ? 1 : 0
+
   description             = "Cifrado de las evidencias de siniestros"
   deletion_window_in_days = 7
   enable_key_rotation     = true
@@ -24,10 +26,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   bucket = aws_s3_bucket.this.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.evidencias.arn
+      sse_algorithm     = var.kms_encryption ? "aws:kms" : "AES256"
+      kms_master_key_id = var.kms_encryption ? aws_kms_key.evidencias[0].arn : null
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = var.kms_encryption
   }
 }
 
