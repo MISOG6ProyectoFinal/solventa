@@ -53,7 +53,7 @@ jobs:
             echo "mobile_affected=false" >> "$GITHUB_OUTPUT"
           fi
 
-  main:
+  lint-build:
     needs: detect-affected
     runs-on: ubuntu-latest
 
@@ -201,7 +201,116 @@ jobs:
           name: mobile-test-reports
           path: apps/mobile/coverage/
 
-  sonarless:
+  sonarless-mobile:
+    name: Análisis de calidad con Sonarless (Mobile)
+    needs: mobile-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v7
+
+      - name: Instalar herramientas de diagnóstico
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Descargar reportes de pruebas de Mobile
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-test-reports
+          path: apps/mobile/coverage
+
+      - name: Verificar lcov de Mobile
+        run: |
+          if [ ! -f "apps/mobile/coverage/lcov.info" ]; then
+            echo "⚠️ lcov.info no está en apps/mobile/coverage/, buscando en subcarpetas..."
+            FOUND=$(find apps/mobile -name "lcov.info" | head -n 1)
+            if [ -n "$FOUND" ]; then
+              mkdir -p apps/mobile/coverage
+              mv "$FOUND" apps/mobile/coverage/lcov.info
+              echo "✅ lcov.info movido a apps/mobile/coverage/"
+            fi
+          fi
+
+          if [ ! -f "apps/mobile/coverage/lcov.info" ]; then
+            echo "❌ apps/mobile/coverage/lcov.info no encontrado. No se ejecuta Sonarless Mobile sin coverage."
+            exit 1
+          fi
+
+          echo "✅ apps/mobile/coverage/lcov.info listo"
+          ls -lh apps/mobile/coverage/lcov.info
+
+      - name: Configurar análisis Sonar Mobile
+        run: |
+          cat > sonar-project.properties <<'EOF'
+          sonar.javascript.lcov.reportPaths=apps/mobile/coverage/lcov.info
+          sonar.tests=apps/mobile/src
+          sonar.test.inclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          sonar.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          sonar.coverage.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          EOF
+
+      - name: Sonarless Scan
+        uses: gitricko/sonarless@v1.3
+        id: sonarless-scan
+        with:
+          sonar-source-path: "apps/mobile/src"
+          sonar-project-key: "solventa-mobile"
+          sonar-project-name: "Solventa-Mobile"
+          sonar-metrics-path: "sonar-metrics-mobile.json"
+
+      - name: Mostrar baseline Sonar Mobile
+        run: |
+          set -e
+          METRICS_FILE="sonar-metrics-mobile.json"
+          if [ ! -f "$METRICS_FILE" ]; then
+            echo "❌ No se generó ${METRICS_FILE}"
+            exit 1
+          fi
+
+          echo "📋 === ARCHIVO DE MÉTRICAS ==="
+          cat "$METRICS_FILE"
+
+          get_metric() {
+            jq -r --arg key "$1" '.component.measures[]? | select(.metric == $key) | .value // empty' "$METRICS_FILE"
+          }
+
+          show_metric() {
+            local label=$1
+            local key=$2
+            local suffix=${3:-}
+            local value
+            value=$(get_metric "$key")
+            if [ -z "$value" ]; then
+              echo "${label}: no disponible (métrica '${key}' ausente)"
+            else
+              echo "${label}: ${value}${suffix}"
+            fi
+          }
+
+          echo ""
+          echo "Mobile Sonar Baseline"
+          echo "---------------------"
+          show_metric "Coverage" "coverage" "%"
+          show_metric "Duplication" "duplicated_lines_density" "%"
+          show_metric "Code Smells" "code_smells"
+          show_metric "Violations" "violations"
+          show_metric "Open issues" "open_issues"
+          show_metric "Bugs" "bugs"
+          show_metric "Vulnerabilities" "vulnerabilities"
+          show_metric "Security Hotspots" "security_hotspots"
+          show_metric "Security Rating" "security_rating"
+          echo ""
+          echo "Métricas devueltas por Sonarless:"
+          jq -r '.component.measures[]? | "\(.metric)=\(.value)"' "$METRICS_FILE"
+
+      - name: Publicar métricas Sonar Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-sonar-metrics
+          path: sonar-metrics-mobile.json
+          if-no-files-found: warn
+
+  sonarless-backend:
     name: Análisis de calidad con Sonarless
     needs: backend-tests
     runs-on: ubuntu-latest
