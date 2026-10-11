@@ -107,6 +107,7 @@ rollback() {
   echo "::error::El despliegue no quedó sano; se vuelve a la revisión anterior"
   kubectl -n "$NAMESPACE" get pods -o wide || true
   kubectl -n "$NAMESPACE" get events --sort-by=.lastTimestamp | tail -30 || true
+  kubectl -n "$NAMESPACE" logs job/cotizacion-bootstrap --tail=20 || true
   for deploy in $(kubectl -n "$NAMESPACE" get deployments -o name); do
     kubectl -n "$NAMESPACE" rollout undo "$deploy" || true
   done
