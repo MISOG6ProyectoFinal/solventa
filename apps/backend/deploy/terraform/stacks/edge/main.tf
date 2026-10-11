@@ -93,7 +93,7 @@ data "aws_cloudfront_origin_request_policy" "all_viewer" {
 
 resource "aws_cloudfront_distribution" "api" {
   enabled         = true
-  comment         = "Solventa API (BFF web, BFF móvil, API de socios)"
+  comment         = "Solventa API (BFF web, BFF movil, API de socios)"
   price_class     = "PriceClass_100"
   web_acl_id      = aws_wafv2_web_acl.edge.arn
   is_ipv6_enabled = true

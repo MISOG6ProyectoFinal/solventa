@@ -7,7 +7,7 @@ resource "aws_elasticache_subnet_group" "this" {
 
 resource "aws_security_group" "this" {
   name        = "${var.name}-redis"
-  description = "Redis: acceso solo desde el clúster"
+  description = "Redis: acceso solo desde el cluster"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -27,7 +27,7 @@ resource "aws_security_group" "this" {
 
 resource "aws_elasticache_replication_group" "this" {
   replication_group_id = var.name
-  description          = "Caché de Perfil y Cotización"
+  description          = "Cache de perfil y cotizacion"
   engine               = "redis"
   engine_version       = "7.1"
   node_type            = var.node_type

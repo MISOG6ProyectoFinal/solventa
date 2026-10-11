@@ -24,7 +24,7 @@ resource "aws_secretsmanager_secret_version" "master" {
 
 resource "aws_security_group" "db" {
   name        = "${local.identifier}-db"
-  description = "PostgreSQL ${var.name}: acceso solo desde el clúster"
+  description = "PostgreSQL ${var.name}: acceso solo desde el cluster"
   vpc_id      = var.vpc_id
 
   ingress {
