@@ -57,7 +57,19 @@
         "iam:DeleteOpenIDConnectProvider",
         "iam:GetOpenIDConnectProvider",
         "iam:TagOpenIDConnectProvider",
-        "iam:PassRole"
+        "iam:PassRole",
+        "iam:UpdateRole",
+        "iam:ListRoleTags",
+        "iam:ListPolicies",
+        "iam:ListPolicyTags",
+        "iam:UntagPolicy",
+        "iam:ListEntitiesForPolicy",
+        "iam:SetDefaultPolicyVersion",
+        "iam:ListOpenIDConnectProviders",
+        "iam:ListOpenIDConnectProviderTags",
+        "iam:UntagOpenIDConnectProvider",
+        "iam:UpdateOpenIDConnectProviderThumbprint",
+        "iam:AddClientIDToOpenIDConnectProvider"
       ],
       "Resource": "*"
     },

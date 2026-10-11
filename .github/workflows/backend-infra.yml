@@ -1,0 +1,90 @@
+name: Backend Infra
+
+# Infraestructura de AWS con Terraform. Se lanza a mano porque crear o destruir
+# recursos tiene costo: primero plan, se revisa la salida, y luego apply.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Qué hacer
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - apply
+          - destroy
+      stack:
+        description: Stack (all recorre todos en orden; edge solo por nombre)
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - network
+          - container_registry
+          - eks
+          - data
+          - messaging
+          - cluster_addons
+          - platform
+          - edge
+
+permissions:
+  contents: read
+
+# Dos applies simultáneos sobre el mismo estado se bloquean entre sí.
+concurrency:
+  group: backend-infra-dev
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: terraform ${{ inputs.action }} (${{ inputs.stack }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ENV: dev
+      AUTO_APPROVE: "1"
+      TF_IN_AUTOMATION: "1"
+      TF_INPUT: "0"
+    steps:
+      - name: Solo desde main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::La infraestructura se aplica desde main."
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          # Crear EKS y las bases en un mismo apply supera la hora por defecto.
+          role-duration-seconds: 10800
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.4
+          terraform_wrapper: false
+
+      - name: terraform ${{ inputs.action }}
+        working-directory: apps/backend
+        env:
+          ACTION: ${{ inputs.action }}
+          STACK: ${{ inputs.stack }}
+        run: |
+          case "$ACTION" in
+            plan) ./deploy/scripts/deploy-aws.sh plan "$STACK" ;;
+            apply) ./deploy/scripts/deploy-aws.sh infra "$STACK" ;;
+            destroy) ./deploy/scripts/deploy-aws.sh destroy "$STACK" ;;
+          esac

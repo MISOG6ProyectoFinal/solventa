@@ -1,0 +1,170 @@
+name: Backend CD
+
+# Despliegue continuo del backend en EKS. Cada merge a main que toca el backend
+# publica las imágenes con el SHA del commit y actualiza los pods con rolling update.
+# La infraestructura (Terraform) va aparte, en backend-infra.yml.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/backend/services/**
+      - apps/backend/libs/**
+      - apps/backend/Dockerfile
+      - apps/backend/deploy/k8s/**
+      - apps/backend/deploy/scripts/deploy-aws.sh
+      - apps/backend/scripts/build-images.sh
+      - .github/workflows/backend-cd.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez; el siguiente espera en vez de cancelar un rollout a medias.
+concurrency:
+  group: backend-cd-dev
+  cancel-in-progress: false
+
+env:
+  ENV: dev
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  prepare:
+    name: Preparar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      services: ${{ steps.services.outputs.list }}
+      cluster_ready: ${{ steps.cluster.outputs.ready }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Tag de las imágenes
+        id: tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Servicios a construir
+        id: services
+        run: |
+          list=$(find apps/backend/services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | jq -R . | jq -sc .)
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Verificar que el clúster existe
+        id: cluster
+        run: |
+          cluster=$(grep -E '^cluster_name' "apps/backend/deploy/terraform/environments/$ENV/eks/terraform.tfvars" | cut -d'"' -f2)
+          status=$(aws eks describe-cluster --name "$cluster" --query cluster.status --output text 2>/dev/null || echo AUSENTE)
+          if [ "$status" = "ACTIVE" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::El clúster $cluster está $status. Primero corre Backend Infra con apply."
+          fi
+
+  build:
+    name: Imagen ${{ matrix.service }}
+    needs: prepare
+    if: needs.prepare.outputs.cluster_ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: true
+      matrix:
+        service: ${{ fromJson(needs.prepare.outputs.services) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login en ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Nombre de la imagen
+        id: image
+        env:
+          SERVICE: ${{ matrix.service }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          repository="solventa/${SERVICE//_/-}"
+          echo "ref=$REGISTRY/$repository:$TAG" >> "$GITHUB_OUTPUT"
+          # Los tags de ECR son inmutables: al relanzar el workflow se reutiliza la imagen.
+          if aws ecr describe-images --repository-name "$repository" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Buildx
+        if: steps.image.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Construir y publicar
+        if: steps.image.outputs.exists == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/backend
+          platforms: linux/amd64
+          build-args: SERVICE=${{ matrix.service }}
+          tags: ${{ steps.image.outputs.ref }}
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=backend-${{ matrix.service }}
+          cache-to: type=gha,scope=backend-${{ matrix.service }},mode=max
+
+  deploy:
+    name: Desplegar en EKS
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # El Environment permite exigir aprobación antes de tocar el clúster.
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Aplicar manifiestos y esperar el rollout
+        working-directory: apps/backend
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: ./deploy/scripts/deploy-aws.sh k8s
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Backend en EKS"
+            echo "Imagen desplegada: \`${{ needs.prepare.outputs.tag }}\`"
+            echo '```'
+            kubectl -n solventa get deployments -o wide 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

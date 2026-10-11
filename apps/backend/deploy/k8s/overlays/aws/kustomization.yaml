@@ -5,3 +5,13 @@ kind: Kustomization
 resources:
   - ../../base
   - keda-workers.yaml
+
+patches:
+  # Las réplicas de estos Deployments las gobierna el HPA o KEDA. Sin este parche,
+  # cada despliegue las devolvería al valor del manifiesto en mitad de un pico.
+  - target:
+      kind: Deployment
+      name: (canales|cotizacion|siniestros-worker)
+    patch: |-
+      - op: remove
+        path: /spec/replicas

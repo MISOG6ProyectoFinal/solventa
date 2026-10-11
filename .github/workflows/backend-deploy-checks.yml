@@ -1,0 +1,80 @@
+name: Backend Deploy Checks
+
+# Valida en cada pull request lo que despliega el backend: Terraform, manifiestos
+# de Kubernetes y la imagen. Corre sin credenciales de AWS.
+
+on:
+  pull_request:
+    paths:
+      - apps/backend/deploy/**
+      - apps/backend/Dockerfile
+      - apps/backend/scripts/build-images.sh
+      - .github/workflows/backend-*.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-deploy-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform fmt y validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.4
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff apps/backend/deploy/terraform
+
+      - name: terraform validate
+        working-directory: apps/backend
+        run: node deploy/scripts/tf-validate.mjs
+
+      - name: Política de IAM bien formada
+        run: jq empty apps/backend/deploy/iam/solventa-deployer-policy.json
+
+  manifests:
+    name: Manifiestos de Kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Renderizar overlays
+        working-directory: apps/backend
+        run: |
+          for overlay in aws local; do
+            kubectl kustomize "deploy/k8s/overlays/$overlay" > "/tmp/$overlay.yaml"
+            echo "$overlay: $(grep -c '^kind:' "/tmp/$overlay.yaml") recursos"
+          done
+
+      - name: Scripts de despliegue
+        run: shellcheck apps/backend/deploy/scripts/*.sh apps/backend/scripts/*.sh
+
+  image:
+    name: Imagen de un servicio
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Todos los servicios comparten Dockerfile: construir uno valida la receta.
+      - name: Construir sin publicar
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/backend
+          build-args: SERVICE=cotizacion
+          push: false
+          cache-from: type=gha,scope=backend-cotizacion
