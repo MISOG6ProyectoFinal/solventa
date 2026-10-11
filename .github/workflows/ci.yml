@@ -53,7 +53,7 @@ jobs:
             echo "mobile_affected=false" >> "$GITHUB_OUTPUT"
           fi
 
-  main:
+  lint-build:
     needs: detect-affected
     runs-on: ubuntu-latest
 
@@ -201,8 +201,310 @@ jobs:
           name: mobile-test-reports
           path: apps/mobile/coverage/
 
-  sonarless:
-    name: Análisis de calidad con Sonarless
+  sonarless-mobile:
+    name: mobile-sonar
+    needs: mobile-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v7
+
+      - name: Instalar herramientas de diagnóstico
+        run: sudo apt-get update && sudo apt-get install -y jq curl bc
+
+      - name: Descargar reportes de pruebas de Mobile
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-test-reports
+          path: apps/mobile/coverage
+
+      - name: Verificar lcov de Mobile
+        run: |
+          if [ ! -f "apps/mobile/coverage/lcov.info" ]; then
+            echo "⚠️ lcov.info no está en apps/mobile/coverage/, buscando en subcarpetas..."
+            FOUND=$(find apps/mobile -name "lcov.info" | head -n 1)
+            if [ -n "$FOUND" ]; then
+              mkdir -p apps/mobile/coverage
+              mv "$FOUND" apps/mobile/coverage/lcov.info
+              echo "✅ lcov.info movido a apps/mobile/coverage/"
+            fi
+          fi
+
+          if [ ! -f "apps/mobile/coverage/lcov.info" ]; then
+            echo "❌ apps/mobile/coverage/lcov.info no encontrado. No se ejecuta Sonarless Mobile sin coverage."
+            exit 1
+          fi
+
+          echo "✅ apps/mobile/coverage/lcov.info listo"
+          ls -lh apps/mobile/coverage/lcov.info
+
+      - name: Configurar análisis Sonar Mobile
+        run: |
+          cat > sonar-project.properties <<'EOF'
+          sonar.javascript.lcov.reportPaths=apps/mobile/coverage/lcov.info
+          sonar.tests=apps/mobile/src
+          sonar.test.inclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          sonar.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          sonar.coverage.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+          EOF
+
+      - name: Sonarless Scan
+        uses: gitricko/sonarless@v1.3
+        id: sonarless-scan
+        with:
+          sonar-source-path: "apps/mobile/src"
+          sonar-project-key: "solventa-mobile"
+          sonar-project-name: "Solventa-Mobile"
+          sonar-metrics-path: "sonar-metrics-mobile.json"
+
+      - name: Mostrar baseline Sonar Mobile
+        run: |
+          set -e
+          METRICS_FILE="sonar-metrics-mobile.json"
+          if [ ! -f "$METRICS_FILE" ]; then
+            echo "❌ No se generó ${METRICS_FILE}"
+            exit 1
+          fi
+
+          echo "📋 === ARCHIVO DE MÉTRICAS ==="
+          cat "$METRICS_FILE"
+
+          get_metric() {
+            jq -r --arg key "$1" '.component.measures[]? | select(.metric == $key) | .value // empty' "$METRICS_FILE"
+          }
+
+          show_metric() {
+            local label=$1
+            local key=$2
+            local suffix=${3:-}
+            local value
+            value=$(get_metric "$key")
+            if [ -z "$value" ]; then
+              echo "${label}: no disponible (métrica '${key}' ausente)"
+            else
+              echo "${label}: ${value}${suffix}"
+            fi
+          }
+
+          echo ""
+          echo "Mobile Sonar Baseline"
+          echo "---------------------"
+          show_metric "Coverage" "coverage" "%"
+          show_metric "Duplication" "duplicated_lines_density" "%"
+          show_metric "Code Smells" "code_smells"
+          show_metric "Violations" "violations"
+          show_metric "Open issues" "open_issues"
+          show_metric "Bugs" "bugs"
+          show_metric "Vulnerabilities" "vulnerabilities"
+          show_metric "Security Hotspots" "security_hotspots"
+          show_metric "Security Rating" "security_rating"
+          echo ""
+          echo "Métricas devueltas por Sonarless:"
+          jq -r '.component.measures[]? | "\(.metric)=\(.value)"' "$METRICS_FILE"
+
+      - name: Mostrar issues y hotspots Sonar Mobile
+        run: |
+          set -euo pipefail
+          # Sonarless v1.3 no exporta estas variables al paso siguiente.
+          # Son la URL y el usuario local con los que esa misma acción deja SonarQube en marcha.
+          SONAR_URL="http://localhost:9234"
+          SONAR_AUTH='admin:Son@rless123'
+          PROJECT_KEY="Solventa-Mobile"
+
+          curl -sS -G -u "$SONAR_AUTH" \
+            --data-urlencode "componentKeys=${PROJECT_KEY}" \
+            --data-urlencode "resolved=false" \
+            --data-urlencode "ps=500" \
+            "${SONAR_URL}/api/issues/search" > sonar-issues-mobile.json
+
+          if ! jq empty sonar-issues-mobile.json 2>/dev/null || jq -e '.errors' sonar-issues-mobile.json >/dev/null; then
+            echo "❌ /api/issues/search no devolvió un listado de issues"
+            cat sonar-issues-mobile.json
+            exit 1
+          fi
+
+          curl -sS -G -u "$SONAR_AUTH" \
+            --data-urlencode "projectKey=${PROJECT_KEY}" \
+            --data-urlencode "ps=500" \
+            "${SONAR_URL}/api/hotspots/search" > sonar-hotspots-mobile.json
+
+          if ! jq empty sonar-hotspots-mobile.json 2>/dev/null || jq -e '.errors' sonar-hotspots-mobile.json >/dev/null; then
+            echo "❌ /api/hotspots/search no devolvió un listado de hotspots"
+            cat sonar-hotspots-mobile.json
+            exit 1
+          fi
+
+          echo ""
+          echo "Mobile Sonar Issues"
+          echo "-------------------"
+          jq -r '
+            def path:
+              if . == null or . == "" then "-"
+              elif contains(":") then sub("^[^:]+:"; "")
+              else . end;
+            .issues[]? |
+              [
+                (.type // "-"),
+                (.severity // .impacts[0].severity // "-"),
+                ((.component | path) + ":" + ((.line // "-") | tostring)),
+                (.rule // "-"),
+                ((.message // "-") | gsub("\\s+"; " "))
+              ] | join(" | ")
+          ' sonar-issues-mobile.json
+          TOTAL_ISSUES=$(jq -r '.total // ((.issues // []) | length)' sonar-issues-mobile.json)
+          RETURNED_ISSUES=$(jq -r '(.issues // []) | length' sonar-issues-mobile.json)
+          echo "Total issues detallados: ${TOTAL_ISSUES}"
+          if [ "$TOTAL_ISSUES" != "$RETURNED_ISSUES" ]; then
+            echo "⚠️ La página devolvió ${RETURNED_ISSUES} de ${TOTAL_ISSUES} issues"
+          fi
+
+          echo ""
+          HOTSPOT_TOTAL=$(jq -r '.paging.total // ((.hotspots // []) | length)' sonar-hotspots-mobile.json)
+          if [ "$HOTSPOT_TOTAL" = "0" ] || [ "$HOTSPOT_TOTAL" = "null" ]; then
+            echo "Security Hotspots: 0"
+          else
+            echo "Mobile Sonar Hotspots"
+            echo "---------------------"
+            jq -r '
+              def path:
+                if . == null or . == "" then "-"
+                elif contains(":") then sub("^[^:]+:"; "")
+                else . end;
+              .hotspots[]? |
+                [
+                  "HOTSPOT",
+                  (.status // "-"),
+                  ((.component | path) + ":" + ((.line // "-") | tostring)),
+                  (.ruleKey // .rule // "-"),
+                  (.securityCategory // "-"),
+                  ((.message // .messageFormattings[0].message // "-") | gsub("\\s+"; " "))
+                ] | join(" | ")
+            ' sonar-hotspots-mobile.json
+            echo "Security Hotspots: ${HOTSPOT_TOTAL}"
+          fi
+
+      - name: Enforce Mobile Quality Gate
+        run: |
+          set -u
+          if [ ! -f sonar-metrics-mobile.json ]; then
+            echo "❌ Missing Sonar metrics file: sonar-metrics-mobile.json"
+            exit 1
+          fi
+
+          metric() {
+            jq -r --arg metric "$1" '
+              [.component.measures[]?
+                | select(.metric == $metric)
+                | .value
+                | select(. != null and . != "")][0] // empty
+            ' sonar-metrics-mobile.json
+          }
+
+          COVERAGE=$(metric coverage)
+          DUPLICATION=$(metric duplicated_lines_density)
+          CODE_SMELLS=$(metric code_smells)
+          VIOLATIONS=$(metric violations)
+          OPEN_ISSUES=$(metric open_issues)
+          BUGS=$(metric bugs)
+          VULNERABILITIES=$(metric vulnerabilities)
+          SECURITY_HOTSPOTS=$(metric security_hotspots)
+          SECURITY_RATING=$(metric security_rating)
+
+          present() {
+            [ -n "$1" ] && [ "$1" != "null" ]
+          }
+
+          echo "Mobile Quality Gate"
+          echo "-------------------"
+          if present "$COVERAGE"; then echo "Coverage: ${COVERAGE}% (minimum 81.4%)"; else echo "Coverage: missing"; fi
+          if present "$DUPLICATION"; then echo "Duplication: ${DUPLICATION}% (maximum 0.0%)"; else echo "Duplication: missing"; fi
+          if present "$CODE_SMELLS"; then echo "Code Smells: ${CODE_SMELLS} (maximum 35)"; else echo "Code Smells: missing"; fi
+          if present "$VIOLATIONS"; then echo "Violations: ${VIOLATIONS} (maximum 35)"; else echo "Violations: missing"; fi
+          if present "$OPEN_ISSUES"; then echo "Open Issues: ${OPEN_ISSUES} (maximum 35)"; else echo "Open Issues: missing"; fi
+          if present "$BUGS"; then echo "Bugs: ${BUGS} (maximum 0)"; else echo "Bugs: missing"; fi
+          if present "$VULNERABILITIES"; then echo "Vulnerabilities: ${VULNERABILITIES} (maximum 0)"; else echo "Vulnerabilities: missing"; fi
+          if present "$SECURITY_HOTSPOTS"; then echo "Security Hotspots: ${SECURITY_HOTSPOTS} (maximum 2)"; else echo "Security Hotspots: missing"; fi
+          if present "$SECURITY_RATING"; then echo "Security Rating: ${SECURITY_RATING} (maximum 1.0)"; else echo "Security Rating: missing"; fi
+
+          failed=0
+          require_metric() {
+            if ! present "$2"; then
+              echo "❌ Missing Sonar metric: $1"
+              failed=1
+            fi
+          }
+          exceeds() {
+            echo "$1 > $2" | bc -l
+          }
+          below() {
+            echo "$1 < $2" | bc -l
+          }
+
+          require_metric coverage "$COVERAGE"
+          require_metric duplicated_lines_density "$DUPLICATION"
+          require_metric code_smells "$CODE_SMELLS"
+          require_metric violations "$VIOLATIONS"
+          require_metric open_issues "$OPEN_ISSUES"
+          require_metric bugs "$BUGS"
+          require_metric vulnerabilities "$VULNERABILITIES"
+          require_metric security_hotspots "$SECURITY_HOTSPOTS"
+          require_metric security_rating "$SECURITY_RATING"
+
+          if present "$COVERAGE" && [ "$(below "$COVERAGE" 81.4)" -eq 1 ]; then
+            echo "❌ Coverage (${COVERAGE}%) is below baseline (81.4%)"
+            failed=1
+          fi
+          if present "$DUPLICATION" && [ "$(exceeds "$DUPLICATION" 0.0)" -eq 1 ]; then
+            echo "❌ Duplication (${DUPLICATION}%) exceeds baseline (0.0%)"
+            failed=1
+          fi
+          if present "$CODE_SMELLS" && [ "$(exceeds "$CODE_SMELLS" 35)" -eq 1 ]; then
+            echo "❌ Code Smells (${CODE_SMELLS}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$VIOLATIONS" && [ "$(exceeds "$VIOLATIONS" 35)" -eq 1 ]; then
+            echo "❌ Violations (${VIOLATIONS}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$OPEN_ISSUES" && [ "$(exceeds "$OPEN_ISSUES" 35)" -eq 1 ]; then
+            echo "❌ Open Issues (${OPEN_ISSUES}) exceed baseline (35)"
+            failed=1
+          fi
+          if present "$BUGS" && [ "$(exceeds "$BUGS" 0)" -eq 1 ]; then
+            echo "❌ Bugs (${BUGS}) exceed baseline (0)"
+            failed=1
+          fi
+          if present "$VULNERABILITIES" && [ "$(exceeds "$VULNERABILITIES" 0)" -eq 1 ]; then
+            echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed baseline (0)"
+            failed=1
+          fi
+          if present "$SECURITY_HOTSPOTS" && [ "$(exceeds "$SECURITY_HOTSPOTS" 2)" -eq 1 ]; then
+            echo "❌ Security Hotspots (${SECURITY_HOTSPOTS}) exceed baseline (2)"
+            failed=1
+          fi
+          if present "$SECURITY_RATING" && [ "$(exceeds "$SECURITY_RATING" 1.0)" -eq 1 ]; then
+            echo "❌ Security Rating (${SECURITY_RATING}) exceeds baseline (1.0)"
+            failed=1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ Mobile Quality Gate passed"
+
+      - name: Publicar métricas Sonar Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-sonar-metrics
+          path: |
+            sonar-metrics-mobile.json
+            sonar-issues-mobile.json
+            sonar-hotspots-mobile.json
+          if-no-files-found: warn
+
+  sonarless-backend:
+    name: backend-sonar
     needs: backend-tests
     runs-on: ubuntu-latest
     steps:
