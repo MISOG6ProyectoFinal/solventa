@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Iterable
 
 from fastapi import APIRouter, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from solventa_common.health import ReadinessCheck, build_health_router
 from solventa_common.logging import configure_logging
@@ -47,6 +48,10 @@ def create_app(
                 elapsed_ms,
             )
         return response
+
+    origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+    if origins:
+        app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
 
     app.include_router(build_health_router(settings.service_name, readiness_checks))
     for router in routers:

@@ -1,6 +1,7 @@
 # Dependencias locales y los servicios del reporte móvil.
 # Solo infraestructura: docker compose up -d postgres redis localstack
 # Reporte desde el teléfono: docker compose up -d canales
+# Portal web (ng serve en http://localhost:4200): docker compose up -d canales
 # Canales publica el puerto 8000. Siniestros queda en la red de Compose.
 # La URL de carga usa AWS_ENDPOINT_URL (por defecto http://localstack:4566, solo visible
 # dentro de Compose). Para que el teléfono suba el archivo, defina en este directorio
@@ -71,6 +72,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+  cotizacion-bootstrap:
+    build: &cotizacion-build
+      context: .
+      args:
+        SERVICE: cotizacion
+    command: ["python", "-m", "cotizacion.bootstrap"]
+    environment: &cotizacion-env
+      SERVICE_NAME: cotizacion
+      DB_HOST: postgres
+      DB_NAME: cotizacion
+      DB_USER: solventa
+      DB_PASSWORD: solventa
+    depends_on:
+      postgres:
+        condition: service_healthy
+  cotizacion:
+    build: *cotizacion-build
+    environment: *cotizacion-env
+    depends_on:
+      cotizacion-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
   canales:
     build:
       context: .
@@ -80,8 +108,12 @@ services:
     environment:
       SERVICE_NAME: canales
       SINIESTROS_URL: http://siniestros:8000
+      COTIZACION_URL: http://cotizacion:8000
+      CORS_ORIGINS: http://localhost:4200
     depends_on:
       siniestros:
+        condition: service_healthy
+      cotizacion:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]

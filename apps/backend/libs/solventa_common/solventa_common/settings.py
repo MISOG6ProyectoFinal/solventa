@@ -17,6 +17,8 @@ class ServiceSettings(BaseSettings):
     service_name: str = "solventa-service"
     environment: str = "local"
     log_level: str = "INFO"
+    # Orígenes del navegador autorizados (separados por coma). Solo lo usan los BFF.
+    cors_origins: str = ""
 
     # Persistencia (RDS PostgreSQL detrás de RDS Proxy en AWS)
     db_host: str | None = None
