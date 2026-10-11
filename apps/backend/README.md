@@ -131,35 +131,45 @@ Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backe
 
 ## Despliegue en AWS
 
-Requisitos: AWS CLI con credenciales, Terraform 1.10+, kubectl, Docker y un bucket S3 para los estados (`solventa-terraform-state-dev` en `environments/dev`).
+El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC, sin claves de acceso guardadas en el repositorio.
+
+| Workflow | Cuándo corre | Qué hace |
+|---|---|---|
+| `CI` | Pull request y `main` | Lint y pruebas |
+| `Backend Deploy Checks` | Pull request que toca `deploy/` | `terraform fmt` y `validate`, render de manifiestos, build de la imagen |
+| `Backend Infra` | Manual, desde `main` | `plan`, `apply` o `destroy` de Terraform, por stack o todos |
+| `Backend CD` | Al publicar un release (`v1.2.0`) | Construye las imágenes desde ese tag, las publica en ECR con esa versión y actualiza los pods |
+
+Preparación, una sola vez, con un usuario que administre IAM y el repositorio:
 
 ```bash
 cd apps/backend
-ENV=dev ./deploy/scripts/deploy-aws.sh all
+ENV=dev ./deploy/scripts/bootstrap-ci.sh
 ```
 
-`all` ejecuta tres pasos que también corren por separado:
+Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
 
-1. `infra`: aplica los stacks en orden.
+El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `Backend CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
-   | # | Stack | Crea | Depende de |
-   |---|---|---|---|
-   | 1 | `network` | VPC, subredes por zona, NAT | |
-   | 2 | `container_registry` | Un repositorio ECR por servicio | |
-   | 3 | `eks` | Clúster y node groups por zona | 1 |
-   | 4 | `data` | RDS por almacén, RDS Proxy, Redis, S3 | 1, 3 |
-   | 5 | `messaging` | Tópico SNS, colas SQS, DLQ, alarmas | |
-   | 6 | `cluster_addons` | NGINX Ingress (NLB), KEDA, metrics-server | 3 |
-   | 7 | `platform` | Namespace, ConfigMap `solventa-platform`, Secret `db-*`, roles de Pod Identity | 3, 4, 5 |
+`Backend CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 
-2. `images`: construye las 8 imágenes y las publica en ECR con el tag del commit.
-3. `k8s`: renderiza `deploy/k8s/overlays/aws` con las imágenes de ECR y lo aplica.
+`deploy-aws.sh` es el mismo script que usan los workflows y también corre a mano (`plan`, `infra`, `destroy`, `images`, `k8s`). `infra` aplica los stacks en este orden:
 
-El borde (CloudFront + WAF) se aplica aparte con `deploy-aws.sh edge`, cuando el NLB del ingress ya existe.
+| # | Stack | Crea | Depende de |
+|---|---|---|---|
+| 1 | `network` | VPC, subredes por zona, NAT | |
+| 2 | `container_registry` | Un repositorio ECR por servicio | |
+| 3 | `eks` | Clúster y node groups por zona | 1 |
+| 4 | `data` | RDS por almacén, RDS Proxy, Redis, S3 | 1, 3 |
+| 5 | `messaging` | Tópico SNS, colas SQS, DLQ, alarmas | |
+| 6 | `cluster_addons` | NGINX Ingress (NLB), KEDA, metrics-server | 3 |
+| 7 | `platform` | Namespace, ConfigMap `solventa-platform`, Secret `db-*`, roles de Pod Identity | 3, 4, 5 |
+
+El borde (CloudFront + WAF) se aplica aparte con el stack `edge`, cuando el NLB del ingress ya existe.
 
 Para una cuenta de AWS Academy, `eks/terraform.tfvars` y `data/terraform.tfvars` reciben el ARN de `LabRole` en `cluster_iam_role_arn`, `node_iam_role_arn` y `proxy_role_arn`, y `platform/terraform.tfvars` usa `create_iam = false`.
 
-Para destruir, se aplica `terraform destroy` en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network).
+`destroy` recorre los stacks en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network).
 
 ## Siguientes pasos
 

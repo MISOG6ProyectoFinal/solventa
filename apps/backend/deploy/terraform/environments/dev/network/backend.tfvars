@@ -1,4 +1,4 @@
-bucket       = "solventa-terraform-state-dev"
+bucket       = "solventa-g6-terraform-state-dev"
 key          = "network/terraform.tfstate"
 region       = "us-east-1"
 encrypt      = true

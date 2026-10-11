@@ -10,4 +10,7 @@ module "eks" {
   nodes_per_zone         = var.nodes_per_zone
   cluster_iam_role_arn   = var.cluster_iam_role_arn
   node_iam_role_arn      = var.node_iam_role_arn
+
+  admin_principal_arns     = var.admin_principal_arns
+  developer_principal_arns = var.developer_principal_arns
 }

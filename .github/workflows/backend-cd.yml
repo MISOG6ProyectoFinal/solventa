@@ -1,0 +1,189 @@
+name: Backend CD
+
+# Despliegue del backend en EKS. Corre cuando se publica un release del proyecto:
+#   1. construye las imágenes desde el tag del release y las publica en ECR con esa versión,
+#   2. fija esa versión en el overlay aws y lo aplica,
+#   3. espera el rolling update de los pods.
+# El tag del release (v1.2.0) es el registro de qué versión está desplegada.
+# Lanzarlo a mano con una versión ya publicada vuelve a esa versión (rollback).
+# La infraestructura va aparte, en backend-infra.yml.
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tag de un release existente (por ejemplo v1.0.0)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez; el siguiente espera en vez de cancelar un rollout a medias.
+concurrency:
+  group: backend-cd-dev
+  cancel-in-progress: false
+
+env:
+  ENV: dev
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  VERSION: ${{ github.event.release.tag_name || inputs.version }}
+
+jobs:
+  prepare:
+    name: Preparar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      services: ${{ steps.services.outputs.list }}
+      cluster_ready: ${{ steps.cluster.outputs.ready }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Validar la versión
+        id: version
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' no es una versión válida. Usa el formato v1.2.3."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.version.outputs.version }}
+
+      - name: Servicios a construir
+        id: services
+        run: |
+          list=$(find apps/backend/services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | jq -R . | jq -sc .)
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Verificar que el clúster existe
+        id: cluster
+        run: |
+          cluster=$(grep -E '^cluster_name' "apps/backend/deploy/terraform/environments/$ENV/eks/terraform.tfvars" | cut -d'"' -f2)
+          status=$(aws eks describe-cluster --name "$cluster" --query cluster.status --output text 2>/dev/null || echo AUSENTE)
+          if [ "$status" = "ACTIVE" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::El clúster $cluster está $status. Primero corre Backend Infra con apply."
+          fi
+
+  build:
+    name: Imagen ${{ matrix.service }}
+    needs: prepare
+    if: needs.prepare.outputs.cluster_ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: true
+      matrix:
+        service: ${{ fromJson(needs.prepare.outputs.services) }}
+    steps:
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.version }}
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login en ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Nombre de la imagen
+        id: image
+        env:
+          SERVICE: ${{ matrix.service }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ needs.prepare.outputs.version }}
+        run: |
+          repository="solventa/${SERVICE//_/-}"
+          echo "ref=$REGISTRY/$repository:$TAG" >> "$GITHUB_OUTPUT"
+          # Los tags de ECR son inmutables: una versión ya publicada se reutiliza tal cual.
+          if aws ecr describe-images --repository-name "$repository" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Buildx
+        if: steps.image.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Construir y publicar
+        if: steps.image.outputs.exists == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/backend
+          platforms: linux/amd64
+          build-args: SERVICE=${{ matrix.service }}
+          tags: ${{ steps.image.outputs.ref }}
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=backend-${{ matrix.service }}
+          cache-to: type=gha,scope=backend-${{ matrix.service }},mode=max
+
+  deploy:
+    name: Desplegar en EKS
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # El Environment permite exigir aprobación antes de tocar el clúster.
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout del release
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.version }}
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Fijar la versión en el overlay aws
+        working-directory: apps/backend
+        env:
+          TAG: ${{ needs.prepare.outputs.version }}
+        run: |
+          account=$(aws sts get-caller-identity --query Account --output text)
+          ./deploy/scripts/set-image-tag.sh "$account.dkr.ecr.$AWS_REGION.amazonaws.com" "$TAG"
+
+      - name: Aplicar manifiestos y esperar el rollout
+        working-directory: apps/backend
+        run: ./deploy/scripts/deploy-aws.sh k8s
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Backend en EKS"
+            echo "Versión desplegada: \`${{ needs.prepare.outputs.version }}\`"
+            echo '```'
+            kubectl -n solventa get deployments -o wide 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

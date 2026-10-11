@@ -13,6 +13,24 @@ module "eks" {
   cluster_endpoint_public_access           = var.endpoint_public_access
   enable_cluster_creator_admin_permissions = true
 
+  # Acceso a kubectl para el resto del equipo. Los permisos de IAM no lo dan.
+  access_entries = merge(
+    { for arn in var.admin_principal_arns : "admin-${basename(arn)}" => {
+      principal_arn = arn
+      policy_associations = { admin = {
+        policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+        access_scope = { type = "cluster" }
+      } }
+    } },
+    { for arn in var.developer_principal_arns : "dev-${basename(arn)}" => {
+      principal_arn = arn
+      policy_associations = { edit = {
+        policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+        access_scope = { type = "namespace", namespaces = var.developer_namespaces }
+      } }
+    } },
+  )
+
   # En cuentas sin permisos de IAM (AWS Academy) se reutiliza un rol existente.
   create_iam_role = var.cluster_iam_role_arn == null
   iam_role_arn    = var.cluster_iam_role_arn

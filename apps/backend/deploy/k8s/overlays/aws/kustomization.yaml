@@ -1,7 +1,18 @@
 # Overlay para EKS. El ConfigMap solventa-platform y los Secret db-* los crea
-# Terraform (stack platform). Las imágenes se fijan con deploy/scripts/deploy-aws.sh.
+# Terraform (stack platform). La versión de las imágenes la fija
+# deploy/scripts/set-image-tag.sh al desplegar; aquí no se commitea.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
   - keda-workers.yaml
+
+patches:
+  # Las réplicas de estos Deployments las gobierna el HPA o KEDA. Sin este parche,
+  # cada despliegue las devolvería al valor del manifiesto en mitad de un pico.
+  - target:
+      kind: Deployment
+      name: (canales|cotizacion|siniestros-worker)
+    patch: |-
+      - op: remove
+        path: /spec/replicas
