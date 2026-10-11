@@ -1,6 +1,6 @@
 region              = "us-east-1"
 environment         = "dev"
-state_bucket        = "solventa-tfstate-712589718837"
+state_bucket        = "solventa-terraform-state-dev-712589718837"
 cluster_name        = "solventa-dev"
 cluster_version     = "1.33"
 node_instance_types = ["t3.large"]

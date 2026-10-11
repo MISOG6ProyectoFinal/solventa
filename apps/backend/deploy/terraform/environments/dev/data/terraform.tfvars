@@ -1,6 +1,6 @@
 region              = "us-east-1"
 environment         = "dev"
-state_bucket        = "solventa-tfstate-712589718837"
+state_bucket        = "solventa-terraform-state-dev-712589718837"
 deletion_protection = false
 redis_node_count    = 1
 redis_node_type     = "cache.t4g.micro"
