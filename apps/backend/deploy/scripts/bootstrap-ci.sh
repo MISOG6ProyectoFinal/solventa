@@ -33,6 +33,15 @@ aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration St
 aws s3api put-public-access-block --bucket "$BUCKET" --public-access-block-configuration \
   BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 
+# El rol confía en el sujeto exacto que emite GitHub; si no coincide, AWS rechaza el token.
+EXPECTED="$(gh api "repos/$REPO/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty' 2>/dev/null || true)"
+EXPECTED="${EXPECTED:-repo:$REPO}"
+CONFIGURED="$(value terraform.tfvars github_subject_prefix)"
+if [[ "$CONFIGURED" != "$EXPECTED" ]]; then
+  echo "github_subject_prefix debe ser \"$EXPECTED\" en $TF/environments/$ENV/$STACK/terraform.tfvars" >&2
+  exit 1
+fi
+
 echo "==> Identidad del pipeline (stack $STACK)"
 terraform -chdir="$TF/stacks/$STACK" init -input=false -reconfigure \
   -backend-config="../../environments/$ENV/$STACK/backend.tfvars"

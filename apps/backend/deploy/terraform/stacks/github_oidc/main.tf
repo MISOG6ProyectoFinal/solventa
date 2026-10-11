@@ -29,9 +29,9 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:ref:refs/heads/${var.deploy_branch}",
-        "repo:${var.github_repository}:ref:refs/tags/${var.release_tag_pattern}",
-        "repo:${var.github_repository}:environment:${var.environment}",
+        "${var.github_subject_prefix}:ref:refs/heads/${var.deploy_branch}",
+        "${var.github_subject_prefix}:ref:refs/tags/${var.release_tag_pattern}",
+        "${var.github_subject_prefix}:environment:${var.environment}",
       ]
     }
   }
