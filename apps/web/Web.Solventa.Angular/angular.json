@@ -40,6 +40,11 @@
             "dev": true,
             "devServer": true,
             "port": 0
+          },
+          "configurations": {
+            "local": {
+              "target": "Web.Solventa.Angular:serve-original:local"
+            }
           }
         },
         "test": {
@@ -106,6 +111,11 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
@@ -121,6 +131,9 @@
             },
             "development": {
               "buildTarget": "Web.Solventa.Angular:esbuild:development"
+            },
+            "local": {
+              "buildTarget": "Web.Solventa.Angular:esbuild:local"
             }
           },
           "defaultConfiguration": "development",

@@ -5,6 +5,8 @@ export interface ApiResponse<T> {
 
 export interface ApiError {
   readonly status: number;
+  /** Código de negocio del backend, por ejemplo `identificador_duplicado`. */
+  readonly code?: string;
   readonly message: string;
   readonly details?: unknown;
 }

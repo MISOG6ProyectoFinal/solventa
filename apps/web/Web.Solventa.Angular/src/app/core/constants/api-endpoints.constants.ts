@@ -4,5 +4,5 @@ import { environment } from '../../../environments/environment';
 export const API_ENDPOINTS = {
   policies: `${environment.apiBaseUrl}/policies`,
   quotes: `${environment.apiBaseUrl}/quotes`,
-  partners: `${environment.apiBaseUrl}/partners`,
+  partners: `${environment.apiBaseUrl}/web/socios`,
 } as const;

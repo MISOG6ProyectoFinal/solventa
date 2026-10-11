@@ -23,3 +23,19 @@ export interface Partner {
   altaFecha: string;
   altaUsuario: string;
 }
+
+/** Datos que captura el formulario de alta. */
+export interface NewPartner {
+  name: string;
+  identifier: string;
+  tipo: PartnerType;
+  pais: string;
+  contactEmail: string;
+  alcances: Alcance[];
+}
+
+/** Resultado del alta: única vez que el secreto llega en claro. */
+export interface PartnerCreated {
+  partner: Partner;
+  secret: string;
+}
