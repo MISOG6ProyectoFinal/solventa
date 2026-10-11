@@ -140,7 +140,7 @@ def test_bff_socios_exige_client_id_y_secreto():
 
 
 def _error_json(status: int, detail) -> httpx.HTTPStatusError:
-    request = httpx.Request("POST", "http://cotizacion/gobierno-socios")
+    request = httpx.Request("POST", "https://cotizacion/gobierno-socios")
     response = httpx.Response(status, json={"detail": detail}, request=request)
     return httpx.HTTPStatusError(str(status), request=request, response=response)
 

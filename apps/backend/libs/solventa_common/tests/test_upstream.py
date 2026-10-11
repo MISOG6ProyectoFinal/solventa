@@ -6,7 +6,7 @@ from solventa_common.integration.base import call_upstream
 
 def _falla(response: httpx.Response):
     def llamar():
-        request = httpx.Request("GET", "http://servicio/recurso")
+        request = httpx.Request("GET", "https://servicio/recurso")
         response.request = request
         raise httpx.HTTPStatusError("error", request=request, response=response)
 
