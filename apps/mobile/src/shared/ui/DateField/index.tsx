@@ -12,6 +12,7 @@ import { formatDate, formatTime, months, parseDate, parseTime } from './date';
 import { MonthGrid } from './MonthGrid';
 import { TimePicker } from './TimePicker';
 
+// mobile.
 type DateFieldProps = {
   label: string;
   value?: string;
@@ -135,7 +136,7 @@ export function DateField({
               {`${pendingDay} de ${months[cursor.month - 1]} de ${cursor.year}`}
             </AppText>
             <TimePicker hour={clock.hour} minute={clock.minute} onHour={setHour} onMinute={setMinute} />
-            <View style={{height: theme.space.md}} />
+            <View style={{ height: theme.space.md }} />
             <Button title="Listo" onPress={confirmTime} />
             <Button title="Cambiar fecha" variant="text" onPress={() => setPendingDay(null)} />
           </>

@@ -1,5 +1,6 @@
 """Composición de dependencias del servicio de cotización."""
 
+# backend.
 from collections.abc import Awaitable, Callable
 
 from pydantic import TypeAdapter
