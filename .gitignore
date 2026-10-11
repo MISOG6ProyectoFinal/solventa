@@ -72,6 +72,7 @@ yarn-error.log
 
 # testing
 /coverage
+/apps/mobile/coverage/
 
 
 ## Nested node_modules

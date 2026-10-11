@@ -2,7 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePhotoOutput } from 'react-native-vision-camera';
 
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import TakePhotoScreen from './index';
 
@@ -52,7 +52,7 @@ describe('TakePhotoScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
     usePhotoOutput().capturePhoto.mockClear();
-    useClaimPhotosStore.getState().clear();
+    useClaimsStore.getState().clear();
   });
 
   it('shows the viewfinder for the damage photo', async () => {

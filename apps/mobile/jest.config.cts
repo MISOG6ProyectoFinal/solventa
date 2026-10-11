@@ -18,4 +18,12 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(@react-navigation|zustand)/)',
   ],
+  coverageThreshold: {
+    global: {
+      statements: 88,
+      branches: 73,
+      functions: 81,
+      lines: 88,
+    },
+  },
 };

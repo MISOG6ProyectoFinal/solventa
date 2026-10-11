@@ -1,9 +1,18 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useClaimPhotos } from '../../claimPhotos';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import PhotoPreviewScreen from './index';
+
+jest.mock('../../../../shared/location', () => ({
+  readLocation: jest.fn(() =>
+    Promise.resolve({
+      address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
+      gps: 'GPS 4.5981, -74.0760 (±12 m)',
+    }),
+  ),
+}));
 
 jest.mock('@react-navigation/native', () => {
   const goBack = jest.fn();
@@ -22,9 +31,9 @@ const route = { params: { filePath: '/tmp/foto.jpg' } };
 describe('PhotoPreviewScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
-    useClaimPhotos.getState().clear();
-    useClaimPhotos.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
-    useClaimPhotos.getState().addPhoto({ filePath: '/tmp/otra.jpg', bytes: 2048 });
+    useClaimsStore.getState().clear();
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/otra.jpg', bytes: 2048 });
   });
 
   it('shows the saved photo in full', async () => {
