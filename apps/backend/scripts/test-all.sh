@@ -75,7 +75,7 @@ fi
 if [ "$run_coverage" = "1" ]; then
   cd "$ROOT"
   python -m coverage combine --keep 2>/dev/null || true
-  python -m coverage report --fail-under=80 || status=1
+  python -m coverage report --fail-under=85 || status=1
   python -m coverage xml -o coverage.xml
   python - "$ROOT" <<'PY' || status=1
 import sys

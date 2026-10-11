@@ -35,6 +35,8 @@ const currentPlace = {
   gps: 'GPS 4.5981, -74.0760 (±12 m)',
 };
 
+const fixedNow = new Date(2026, 8, 12, 10, 30, 0);
+
 function jsonResponse(body: unknown, status = 200) {
   return {
     ok: status >= 200 && status < 300,
@@ -80,12 +82,17 @@ function mockFiling() {
 
 describe('ReportClaimScreen', () => {
   beforeEach(() => {
+    jest.useFakeTimers({ now: fixedNow, advanceTimers: true });
     useNavigation().goBack.mockClear();
     useNavigation().navigate.mockClear();
     useClaimsStore.getState().clear();
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
     global.fetch = mockFiling() as typeof fetch;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('shows the online report form', async () => {

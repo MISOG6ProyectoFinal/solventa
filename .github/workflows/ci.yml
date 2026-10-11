@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend_affected: ${{ steps.backend.outputs.backend_affected }}
+      mobile_affected: ${{ steps.mobile.outputs.mobile_affected }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -41,6 +42,15 @@ jobs:
             echo "backend_affected=true" >> "$GITHUB_OUTPUT"
           else
             echo "backend_affected=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect mobile affected
+        id: mobile
+        run: |
+          if npx nx show projects --affected | grep -qx 'mobile'; then
+            echo "mobile_affected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mobile_affected=false" >> "$GITHUB_OUTPUT"
           fi
 
   main:
@@ -144,6 +154,49 @@ jobs:
           path: |
             apps/backend/coverage.xml
             apps/backend/test-results.xml
+
+  mobile-tests:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.mobile_affected == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.3
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Typecheck Mobile
+        run: npm run typecheck-mobile
+
+      - name: Run mobile tests with coverage
+        run: npx nx run mobile:test --configuration=ci
+
+      - name: Verificar coverage de Mobile
+        if: always()
+        run: |
+          if [ ! -f "apps/mobile/coverage/lcov.info" ]; then
+            echo "❌ apps/mobile/coverage/lcov.info no generado"
+            exit 1
+          fi
+          echo "✅ apps/mobile/coverage/lcov.info generado correctamente"
+
+      - name: Publicar reportes de pruebas de Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-test-reports
+          path: apps/mobile/coverage/
 
   sonarless:
     name: Análisis de calidad con Sonarless
@@ -421,8 +474,8 @@ jobs:
           fi
 
           # Validar coverage importado por Sonar
-          if (( $(echo "$COVERAGE < 80.0" | bc -l) )); then
-            echo "❌ Coverage (${COVERAGE}%) is below limit (80.0%)"
+          if (( $(echo "$COVERAGE < 85.0" | bc -l) )); then
+            echo "❌ Coverage (${COVERAGE}%) is below limit (85.0%)"
             exit 1
           else
             echo "✅ Coverage: ${COVERAGE}% (OK)"

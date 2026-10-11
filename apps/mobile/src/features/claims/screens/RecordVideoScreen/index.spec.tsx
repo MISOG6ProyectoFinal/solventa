@@ -2,7 +2,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useVideoOutput } from 'react-native-vision-camera';
 
-import { useClaimPhotosStore } from '../../store/useClaimPhotosStore';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import RecordVideoScreen from './index';
 
@@ -72,7 +72,7 @@ describe('RecordVideoScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
     useVideoOutput().createRecorder.mockClear();
-    useClaimPhotosStore.getState().clear();
+    useClaimsStore.getState().clear();
     jest.requireMock('react-native-vision-camera').recorder.recordedFileSize = 1536;
   });
 
