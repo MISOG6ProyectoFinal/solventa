@@ -202,7 +202,7 @@ jobs:
           path: apps/mobile/coverage/
 
   sonarless-mobile:
-    name: Análisis de calidad con Sonarless (Mobile)
+    name: mobile-sonar
     needs: mobile-tests
     runs-on: ubuntu-latest
     steps:
@@ -311,7 +311,7 @@ jobs:
           if-no-files-found: warn
 
   sonarless-backend:
-    name: Análisis de calidad con Sonarless
+    name: backend-sonar
     needs: backend-tests
     runs-on: ubuntu-latest
     steps:
