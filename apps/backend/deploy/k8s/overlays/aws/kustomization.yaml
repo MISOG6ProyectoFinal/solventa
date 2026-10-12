@@ -36,3 +36,17 @@ patches:
       - op: replace
         path: /spec/minAvailable
         value: 0
+  - target:
+      kind: Deployment
+      name: (canales|cotizacion|siniestros-worker)
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 50m
+  - target:
+      kind: Deployment
+      name: (polizas|identidad|siniestros|pagos|auditoria|health-monitor)
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m
