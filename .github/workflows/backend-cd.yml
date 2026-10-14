@@ -1,10 +1,11 @@
 name: CD
 
-# Despliegue del backend en EKS y del portal web. Corre cuando se publica un release del proyecto:
+# Despliegue del backend en EKS, del portal web y del APK. Corre cuando se publica un release del proyecto:
 #   1. construye las imágenes desde el tag del release y las publica en ECR con esa versión,
 #   2. fija esa versión en el overlay aws y lo aplica,
 #   3. espera el rolling update de los pods,
-#   4. compila el portal con la URL del backend y lo publica en S3 + CloudFront.
+#   4. compila el portal con la URL del backend y lo publica en S3 + CloudFront,
+#   5. compila el APK con esa misma URL pública y lo adjunta al release.
 # El tag del release (v1.2.0) es el registro de qué versión está desplegada.
 # Lanzarlo a mano con una versión ya publicada vuelve a esa versión (rollback).
 # La infraestructura va aparte, en backend-infra.yml.
@@ -233,3 +234,13 @@ jobs:
             echo "### Portal web"
             grep -E "Portal publicado|stack edge" "$RUNNER_TEMP/web.log" || true
           } >> "$GITHUB_STEP_SUMMARY"
+
+  mobile:
+    name: Publicar APK Mobile
+    needs: [prepare, deploy]
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/mobile-apk.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
