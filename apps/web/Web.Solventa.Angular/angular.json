@@ -54,6 +54,13 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "buildTarget": "Web.Solventa.Angular:esbuild:development"
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "coverage": true,
+              "coverageReporters": ["lcov", "text-summary"]
+            }
           }
         },
         "esbuild": {
