@@ -635,6 +635,9 @@ jobs:
             esac
           done < "$LCOV" > "$tmp"
           mv "$tmp" "$LCOV"
+          chmod 644 "$LCOV"
+          stat -c '%a %n' "$LCOV"
+          test -r "$LCOV"
 
           echo "SF después:"
           grep -m 3 '^SF:' "$LCOV"
@@ -692,6 +695,16 @@ jobs:
           METRICS_FILE="sonar-metrics-web.json"
           if [ ! -f "$METRICS_FILE" ]; then
             echo "❌ No se generó ${METRICS_FILE}"
+            exit 1
+          fi
+
+          if ! jq -e '
+            .component.measures
+            | map(select(.metric == "coverage"))
+            | length > 0
+          ' "$METRICS_FILE" >/dev/null; then
+            echo "❌ Sonarless Web no produjo métricas válidas"
+            cat "$METRICS_FILE"
             exit 1
           fi
 
