@@ -7,9 +7,9 @@
 # dentro de Compose). Para que el teléfono suba el archivo, defina en este directorio
 # AWS_ENDPOINT_URL=http://<ip-de-la-red>:4566 y vuelva a levantar siniestros.
 # Cotización contra PostgreSQL (una vez, antes de uvicorn):
-#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
+#   cd services/cotizacion && DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa \
 #     DB_PASSWORD=solventa python -m cotizacion.bootstrap
-#   cd services/cotizacion && DB_HOST=localhost DB_NAME=cotizacion DB_USER=solventa \
+#   cd services/cotizacion && DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa \
 #     DB_PASSWORD=solventa uvicorn cotizacion.main:app --reload
 services:
   postgres:
@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: solventa
       POSTGRES_PASSWORD: solventa
       POSTGRES_DB: solventa
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes:
       - ./deploy/k8s/overlays/local/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
@@ -99,6 +99,27 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+  identidad:
+    build:
+      context: .
+      args:
+        SERVICE: identidad
+    environment:
+      SERVICE_NAME: identidad
+      DB_HOST: postgres
+      DB_NAME: identidad
+      DB_USER: solventa
+      DB_PASSWORD: solventa
+      SESION_SECRETO: solventa-local-sesion
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
   canales:
     build:
       context: .
@@ -109,11 +130,15 @@ services:
       SERVICE_NAME: canales
       SINIESTROS_URL: http://siniestros:8000
       COTIZACION_URL: http://cotizacion:8000
+      IDENTIDAD_URL: http://identidad:8000
+      SESION_SECRETO: solventa-local-sesion
       CORS_ORIGINS: http://localhost:4200
     depends_on:
       siniestros:
         condition: service_healthy
       cotizacion:
+        condition: service_healthy
+      identidad:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]

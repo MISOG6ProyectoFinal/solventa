@@ -8,4 +8,5 @@ data:
   COTIZACION_URL: http://cotizacion
   POLIZAS_URL: http://polizas
   SINIESTROS_URL: http://siniestros
+  IDENTIDAD_URL: http://identidad
   COTIZACION_REPLICAS_HOST: cotizacion-replicas

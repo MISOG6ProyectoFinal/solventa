@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "Solventa acceso móvil",
+    "description": "Registra un cliente e inicia sesión a través de Canales. Ejecute las peticiones en orden. Si el correo ya existe, cambie la variable correo antes de volver a registrar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "correo",
+      "value": "ana@solventa.test"
+    },
+    {
+      "key": "contrasena",
+      "value": "clave-nueva"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "clienteId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Canales está listo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health/ready"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Canales responde listo', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar cliente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/registros"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('La cuenta queda creada y con sesión', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(body.token).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.cliente_id).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('token', body.token);",
+              "pm.collectionVariables.set('clienteId', body.cliente_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar sesión",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/sesion"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La sesión corresponde al cliente', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().cliente_id).to.eql(pm.collectionVariables.get('clienteId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Iniciar sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/sesiones"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('El ingreso devuelve la sesión del mismo cliente', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(body.cliente_id).to.eql(pm.collectionVariables.get('clienteId'));",
+              "  pm.expect(body.token).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('token', body.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar el mismo correo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/registros"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El correo ya registrado se rechaza', function () {",
+              "  pm.response.to.have.status(409);",
+              "  pm.expect(pm.response.json().detail).to.eql('Ya existe una cuenta con este correo.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Iniciar sesión con contraseña incorrecta",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"clave-incorrecta\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/sesiones"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La contraseña incorrecta no abre sesión', function () {",
+              "  pm.response.to.have.status(401);",
+              "  pm.expect(pm.response.json().detail).to.eql('Correo o contraseña incorrectos');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar sesión sin token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/movil/sesion"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Sin token la sesión se rechaza', function () {",
+              "  pm.response.to.have.status(401);",
+              "  pm.expect(pm.response.json().detail).to.eql('La sesión no es válida');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
