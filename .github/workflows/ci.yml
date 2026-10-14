@@ -611,7 +611,7 @@ jobs:
           fi
 
           echo "SF antes:"
-          grep '^SF:' "$LCOV" | head -n 3
+          grep -m 3 '^SF:' "$LCOV"
 
           tmp="$(mktemp)"
           while IFS= read -r line || [ -n "$line" ]; do
@@ -637,7 +637,7 @@ jobs:
           mv "$tmp" "$LCOV"
 
           echo "SF después:"
-          grep '^SF:' "$LCOV" | head -n 3
+          grep -m 3 '^SF:' "$LCOV"
 
           total=0
           resolved_count=0
