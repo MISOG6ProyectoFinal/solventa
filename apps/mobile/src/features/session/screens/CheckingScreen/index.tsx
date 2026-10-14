@@ -7,7 +7,10 @@ export default function CheckingScreen() {
   const restore = useSessionStore((state) => state.restore);
 
   useEffect(() => {
-    void restore();
+    const load = async () => {
+      await restore();
+    };
+    void load();
   }, [restore]);
 
   return <Screen testID="session-checking" header={{ hide: true }} />;

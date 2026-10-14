@@ -36,7 +36,7 @@ def test_registro_crea_la_cuenta_e_inicia_sesion():
 def test_registro_guarda_el_nombre_recortado_y_el_ingreso_lo_conserva():
     cuenta = {
         "correo": "ana@solventa.test",
-        "contrasena": "clave-nueva",
+        "contrasena": CONTRASENA,
         "nombre": "  Ana  ",
         "apellido": "  Rojas  ",
     }
@@ -95,11 +95,11 @@ def test_registro_con_campos_vacios_es_validacion():
 
     sin_nombre = client.post(
         "/identidad/clientes",
-        json={"correo": "nueva3@solventa.test", "contrasena": "clave-nueva", "nombre": "  ", "apellido": "Rojas"},
+        json={"correo": "nueva3@solventa.test", "contrasena": CONTRASENA, "nombre": "  ", "apellido": "Rojas"},
     )
     sin_apellido = client.post(
         "/identidad/clientes",
-        json={"correo": "nueva4@solventa.test", "contrasena": "clave-nueva", "nombre": "Ana", "apellido": ""},
+        json={"correo": "nueva4@solventa.test", "contrasena": CONTRASENA, "nombre": "Ana", "apellido": ""},
     )
 
     assert vacio.status_code == 422

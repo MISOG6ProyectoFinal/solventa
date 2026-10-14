@@ -15,20 +15,9 @@ def _engine():
 def _tabla_anterior(engine) -> None:
     with engine.begin() as conn:
         conn.execute(
-            text(
-                "CREATE TABLE clientes ("
-                "id VARCHAR(36) PRIMARY KEY, "
-                "correo VARCHAR(254) NOT NULL UNIQUE, "
-                "password_hash VARCHAR(64) NOT NULL, "
-                "salt VARCHAR(32) NOT NULL)"
-            )
+            text("CREATE TABLE clientes (" "id VARCHAR(36) PRIMARY KEY, " "correo VARCHAR(254) NOT NULL UNIQUE)")
         )
-        conn.execute(
-            text(
-                "INSERT INTO clientes (id, correo, password_hash, salt) "
-                "VALUES ('c1', 'viejo@solventa.test', 'hash', 'salt')"
-            )
-        )
+        conn.execute(text("INSERT INTO clientes (id, correo) VALUES ('c1', 'viejo@solventa.test')"))
 
 
 def test_la_migracion_agrega_el_nombre_conserva_la_fila_y_se_puede_repetir():
@@ -64,7 +53,7 @@ def test_main_exige_base_de_datos():
 @patch("identidad.kyc.migrate.build_engine")
 @patch("identidad.kyc.migrate.settings")
 def test_main_ejecuta_la_migracion_con_el_engine(settings, build_engine, migrate_fn):
-    settings.database_url = "postgresql+psycopg://solventa:solventa@localhost/identidad"
+    settings.database_url = "postgresql+psycopg://localhost/identidad"
     build_engine.return_value = MagicMock()
 
     main()

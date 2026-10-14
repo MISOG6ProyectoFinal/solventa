@@ -16,6 +16,9 @@ export default function HomeDrawerContent(props: Readonly<DrawerContentComponent
   const email = useSessionStore((state) => state.email);
   const signOut = useSessionStore((state) => state.signOut);
   const name = displayName(firstName, lastName);
+  const leave = async () => {
+    await signOut();
+  };
 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.content}>
@@ -24,7 +27,7 @@ export default function HomeDrawerContent(props: Readonly<DrawerContentComponent
         {email ? <AppText variant="bodySmall">{email}</AppText> : null}
       </View>
       <View style={styles.signOut}>
-        <Button title={texts.home.signOutButton} variant="secondary" onPress={() => void signOut()} />
+        <Button title={texts.home.signOutButton} variant="secondary" onPress={() => void leave()} />
       </View>
     </DrawerContentScrollView>
   );
