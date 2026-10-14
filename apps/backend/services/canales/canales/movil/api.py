@@ -1,11 +1,13 @@
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
+from solventa_common.sesion import InvalidToken, verify_token
 
-from canales.clients import cotizacion, siniestros
+from canales.clients import cotizacion, identidad, siniestros
+from canales.config import settings
 
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
@@ -44,9 +46,51 @@ class SolicitudCotizacionMovil(BaseModel):
         return self
 
 
+class SolicitudSesion(BaseModel):
+    correo: str
+    contrasena: str
+
+    @field_validator("correo", "contrasena")
+    @classmethod
+    def _obligatorio(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("El campo es obligatorio")
+        return stripped
+
+
+def _bearer(authorization: str | None) -> str:
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+    return token
+
+
 @router.get("/")
 def info() -> dict:
     return {"component": "BFF Móvil"}
+
+
+@router.post("/sesiones")
+def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
+    return call_upstream(identidad.post, "/identidad/sesiones", json=solicitud.model_dump())
+
+
+@router.post("/registros", status_code=status.HTTP_201_CREATED)
+def registrar(solicitud: SolicitudSesion) -> dict:
+    return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump())
+
+
+@router.get("/sesion")
+def sesion_actual(authorization: Annotated[str | None, Header()] = None) -> dict:
+    token = _bearer(authorization)
+    try:
+        payload = verify_token(token, settings.sesion_secreto)
+    except InvalidToken as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida") from exc
+    return {"cliente_id": payload.client_id}
 
 
 @router.get("/productos")
