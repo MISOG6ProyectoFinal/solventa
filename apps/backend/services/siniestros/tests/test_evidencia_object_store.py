@@ -21,7 +21,7 @@ def store(monkeypatch):
 
 
 def test_presign_ignora_el_endpoint_del_entorno(monkeypatch):
-    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://192.168.1.52:4566")
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "https://localstack:4566")
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
     monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
@@ -29,7 +29,7 @@ def test_presign_ignora_el_endpoint_del_entorno(monkeypatch):
 
     url, _, _ = store.presign_put("avisos/a/evidencias/e", "image/jpeg", len(JPEG))
 
-    assert "192.168.1.52" not in url
+    assert "localstack" not in url
     assert "amazonaws.com" in url
 
 

@@ -601,19 +601,56 @@ jobs:
               if [ "$TOTAL_ISSUES" -gt 0 ]; then
                 echo ""
                 echo "🔍 === DETALLES DE PROBLEMAS ==="
-                
-                # Mostrar cada problema con detalles
-                jq -r '.issues[]? | "📁 \(.component) - Línea \(.line)" as $location | "  • \(.message)" as $message | "  🏷️  Tipo: \(.type) | Severidad: \(.severity) | Regla: \(.rule)" as $details | "\($location)\n\($message)\n\($details)\n"' sonar-issues.json
-                
-                echo ""
-                echo "📊 === RESUMEN POR TIPO ==="
-                jq -r '.issues | group_by(.type) | .[] | "\(.[0].type): \(length) problemas"' sonar-issues.json
-                
-                echo ""
-                echo "📊 === RESUMEN POR SEVERIDAD ==="
-                jq -r '.issues | group_by(.severity) | .[] | "\(.[0].severity): \(length) problemas"' sonar-issues.json
+                jq -r '
+                  def path:
+                    if . == null or . == "" then "-"
+                    elif contains(":") then sub("^[^:]+:"; "")
+                    else . end;
+                  .issues[]? |
+                    [
+                      (.type // "-"),
+                      (.severity // .impacts[0].severity // "-"),
+                      ((.component | path) + ":" + ((.line // "-") | tostring)),
+                      (.rule // "-"),
+                      ((.message // "-") | gsub("\\s+"; " "))
+                    ] | join(" | ")
+                ' sonar-issues.json
               else
                 echo "✅ No se encontraron problemas de calidad"
+              fi
+
+              echo "Obteniendo security hotspots..."
+              curl -s -G -u "$SONAR_AUTH" \
+                --data-urlencode "projectKey=${PROJECT_KEY}" \
+                --data-urlencode "ps=500" \
+                "${SONAR_URL}/api/hotspots/search" > sonar-hotspots.json
+
+              if [ -f "sonar-hotspots.json" ] && [ -s "sonar-hotspots.json" ] && jq empty sonar-hotspots.json 2>/dev/null && ! jq -e '.errors' sonar-hotspots.json >/dev/null; then
+                HOTSPOT_TOTAL=$(jq -r '.paging.total // ((.hotspots // []) | length)' sonar-hotspots.json)
+                if [ "$HOTSPOT_TOTAL" != "0" ] && [ "$HOTSPOT_TOTAL" != "null" ]; then
+                  echo ""
+                  echo "🔍 === DETALLES DE HOTSPOTS ==="
+                  jq -r '
+                    def path:
+                      if . == null or . == "" then "-"
+                      elif contains(":") then sub("^[^:]+:"; "")
+                      else . end;
+                    .hotspots[]? |
+                      [
+                        "HOTSPOT",
+                        (.status // "-"),
+                        ((.component | path) + ":" + ((.line // "-") | tostring)),
+                        (.ruleKey // .rule // "-"),
+                        ((.message // "-") | gsub("\\s+"; " "))
+                      ] | join(" | ")
+                  ' sonar-hotspots.json
+                  echo "Security Hotspots: ${HOTSPOT_TOTAL}"
+                else
+                  echo "✅ No se encontraron security hotspots"
+                fi
+              else
+                echo "⚠️  /api/hotspots/search no devolvió un listado de hotspots"
+                cat sonar-hotspots.json || true
               fi
             else
               echo "⚠️  Endpoint /api/issues/search no funcionó, probando alternativas..."

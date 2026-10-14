@@ -14,9 +14,7 @@ def _engine():
 
 def _tabla_anterior(engine) -> None:
     with engine.begin() as conn:
-        conn.execute(
-            text("CREATE TABLE clientes (" "id VARCHAR(36) PRIMARY KEY, " "correo VARCHAR(254) NOT NULL UNIQUE)")
-        )
+        conn.execute(text("CREATE TABLE clientes (id VARCHAR(36) PRIMARY KEY, correo VARCHAR(254) NOT NULL UNIQUE)"))
         conn.execute(text("INSERT INTO clientes (id, correo) VALUES ('c1', 'viejo@solventa.test')"))
 
 
