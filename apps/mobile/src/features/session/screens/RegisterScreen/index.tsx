@@ -82,7 +82,7 @@ export default function RegisterScreen() {
             error={emailEmpty}
           />
           <TextField
-            label={texts.register.passwordLabel}
+            label={texts.register.credentialLabel}
             value={password}
             onChangeText={setPassword}
             autoCapitalize="none"

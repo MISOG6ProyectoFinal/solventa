@@ -2,7 +2,7 @@ export const texts = {
   login: {
     title: 'Iniciar sesión',
     emailLabel: 'Correo',
-    passwordLabel: 'Contraseña',
+    credentialLabel: 'Contraseña',
     submit: 'Iniciar sesión',
     createAccount: 'Crear cuenta',
     failed: 'No se pudo iniciar sesión.',
@@ -12,7 +12,7 @@ export const texts = {
     firstNameLabel: 'Nombre',
     lastNameLabel: 'Apellido',
     emailLabel: 'Correo',
-    passwordLabel: 'Contraseña',
+    credentialLabel: 'Contraseña',
     submit: 'Crear cuenta',
     signIn: 'Ya tengo cuenta',
     failed: 'No se pudo crear la cuenta.',

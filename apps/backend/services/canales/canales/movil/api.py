@@ -11,6 +11,8 @@ from canales.config import settings
 
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
+INVALID_SESSION = "La sesión no es válida"
+
 
 class SolicitudCotizacionMovil(BaseModel):
     producto_id: str
@@ -74,10 +76,10 @@ class SolicitudRegistro(SolicitudSesion):
 
 def _bearer(authorization: str | None) -> str:
     if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     return token
 
 
@@ -102,7 +104,7 @@ def sesion_actual(authorization: Annotated[str | None, Header()] = None) -> dict
     try:
         payload = verify_token(token, settings.sesion_secreto)
     except InvalidToken as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida") from exc
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION) from exc
     return {
         "cliente_id": payload.client_id,
         "correo": payload.email,

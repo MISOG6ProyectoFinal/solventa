@@ -87,7 +87,7 @@ export default function LoginScreen() {
             error={emailEmpty}
           />
           <TextField
-            label={texts.login.passwordLabel}
+            label={texts.login.credentialLabel}
             value={password}
             onChangeText={setPassword}
             autoCapitalize="none"

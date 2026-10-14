@@ -35,10 +35,13 @@ def test_cliente_registrado_recibe_token_y_cliente_id():
 
 def test_contrasena_incorrecta_y_correo_desconocido_responden_igual():
     correo = "existe@solventa.test"
-    assert client.post(
-        "/identidad/clientes",
-        json={"correo": correo, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
-    ).status_code == 201
+    assert (
+        client.post(
+            "/identidad/clientes",
+            json={"correo": correo, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
+        ).status_code
+        == 201
+    )
     desconocido = client.post(
         "/identidad/sesiones",
         json={"correo": "nadie@solventa.test", "contrasena": CONTRASENA},

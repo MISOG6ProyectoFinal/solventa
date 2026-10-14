@@ -24,10 +24,19 @@ type SessionState = {
 
 let restoreGeneration = 0;
 
-function withProfile(token: string, profile: ClientProfile) {
+type SessionSnapshot = {
+  status: Status;
+  token: string | null;
+  clienteId: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+function withProfile(token: string, profile: ClientProfile): SessionSnapshot {
   setAccessToken(token);
   return {
-    status: 'signedIn' as const,
+    status: 'signedIn',
     token,
     clienteId: profile.cliente_id,
     email: profile.correo,
@@ -36,10 +45,10 @@ function withProfile(token: string, profile: ClientProfile) {
   };
 }
 
-function withoutProfile(token: string) {
+function withoutProfile(token: string): SessionSnapshot {
   setAccessToken(token);
   return {
-    status: 'signedIn' as const,
+    status: 'signedIn',
     token,
     clienteId: null,
     email: null,
@@ -48,10 +57,10 @@ function withoutProfile(token: string) {
   };
 }
 
-function signedOut() {
+function signedOut(): SessionSnapshot {
   setAccessToken(null);
   return {
-    status: 'signedOut' as const,
+    status: 'signedOut',
     token: null,
     clienteId: null,
     email: null,

@@ -10,7 +10,7 @@ function displayName(firstName: string | null, lastName: string | null) {
   return [firstName, lastName].filter((part) => part).join(' ');
 }
 
-export default function HomeDrawerContent(props: DrawerContentComponentProps) {
+export default function HomeDrawerContent(props: Readonly<DrawerContentComponentProps>) {
   const firstName = useSessionStore((state) => state.firstName);
   const lastName = useSessionStore((state) => state.lastName);
   const email = useSessionStore((state) => state.email);

@@ -78,7 +78,7 @@ def verify_token(token: str, secret: str, *, now: datetime | None = None) -> Ses
         first_name = payload["nombre"]
         last_name = payload["apellido"]
         expires = int(payload["exp"])
-    except (InvalidToken, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+    except (InvalidToken, KeyError, TypeError, ValueError) as exc:
         raise InvalidToken from exc
     if (
         expires <= int(now.timestamp())

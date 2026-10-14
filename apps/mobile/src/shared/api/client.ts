@@ -20,8 +20,8 @@ export class ApiError extends Error {
 }
 
 export function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) {
-    return error.detail || fallback;
+  if (error instanceof ApiError && error.detail) {
+    return error.detail;
   }
   if (error instanceof Error && error.message !== '') {
     return error.message;
