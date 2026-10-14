@@ -26,7 +26,7 @@ configMapGenerator:
       - QUEUE_URL_SINIESTROS_PARAMETRICO=http://localstack:4566/000000000000/solventa-siniestros-parametrico
       - QUEUE_URL_AUDITORIA=http://localstack:4566/000000000000/solventa-auditoria
       - EVIDENCIAS_BUCKET=solventa-evidencias
-      - SESION_SECRETO=solventa-local-sesion
+      # SESION_SECRETO no va en este archivo. Está en apps/backend/.env y, en el clúster, fuera del repositorio.
   - name: postgres-init
     files:
       - init-databases.sql

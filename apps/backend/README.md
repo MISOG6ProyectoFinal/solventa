@@ -113,13 +113,13 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
   poetry run uvicorn cotizacion.main:app --reload
 ```
 
-Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo:
+Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo. Copie `.env.example` a `.env` y defina `SESION_SECRETO`: identidad firma la sesión y canales la verifica con esa clave.
 
 ```bash
 docker compose up -d canales
 ```
 
-Todo el backend en minikube:
+Todo el backend en minikube. El overlay local no trae `SESION_SECRETO`: hay que ponerlo en el ConfigMap `solventa-platform` al aplicar el clúster.
 
 ```bash
 eval $(minikube docker-env)
