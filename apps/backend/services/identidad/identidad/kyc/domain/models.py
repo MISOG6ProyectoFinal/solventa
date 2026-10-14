@@ -4,6 +4,8 @@ from pydantic import BaseModel
 class Client(BaseModel):
     id: str
     email: str
+    first_name: str
+    last_name: str
     password_hash: str
     salt: str
 

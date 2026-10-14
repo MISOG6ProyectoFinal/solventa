@@ -25,6 +25,19 @@ class SolicitudSesion(BaseModel):
         return value.lower()
 
 
+class SolicitudRegistro(SolicitudSesion):
+    nombre: str
+    apellido: str
+
+    @field_validator("nombre", "apellido")
+    @classmethod
+    def _nombre_obligatorio(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("El campo es obligatorio")
+        return stripped
+
+
 @router.get("/")
 def info() -> dict:
     return {"component": "Identidad, Consentimiento y KYC"}
@@ -40,9 +53,14 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
 
 
 @router.post("/clientes", status_code=status.HTTP_201_CREATED)
-def registrar_cliente(solicitud: SolicitudSesion) -> dict:
+def registrar_cliente(solicitud: SolicitudRegistro) -> dict:
     try:
-        session = container.register_client.execute(solicitud.correo, solicitud.contrasena)
+        session = container.register_client.execute(
+            solicitud.correo,
+            solicitud.contrasena,
+            solicitud.nombre,
+            solicitud.apellido,
+        )
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este correo.") from exc
     return {"token": session.token, "cliente_id": session.client_id}

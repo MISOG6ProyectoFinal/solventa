@@ -83,6 +83,10 @@ jest.mock('react-native', () => {
       OS: 'android',
       select: (options: { android?: unknown }) => options.android,
     },
+    Keyboard: {
+      addListener: () => ({ remove: () => undefined }),
+    },
+    KeyboardAvoidingView: host('KeyboardAvoidingView'),
     PermissionsAndroid: {
       PERMISSIONS: { ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION' },
       RESULTS: { GRANTED: 'granted', DENIED: 'denied' },
@@ -100,6 +104,12 @@ jest.mock('react-native', () => {
     },
   };
 });
+
+jest.mock('react-native-keychain', () => ({
+  getGenericPassword: jest.fn(async () => false),
+  setGenericPassword: jest.fn(async () => true),
+  resetGenericPassword: jest.fn(async () => true),
+}));
 
 jest.mock('react-native-video', () => {
   const React = require('react');

@@ -11,6 +11,8 @@ from canales.config import settings
 
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
+INVALID_SESSION = "La sesión no es válida"
+
 
 class SolicitudCotizacionMovil(BaseModel):
     producto_id: str
@@ -59,12 +61,25 @@ class SolicitudSesion(BaseModel):
         return stripped
 
 
+class SolicitudRegistro(SolicitudSesion):
+    nombre: str
+    apellido: str
+
+    @field_validator("nombre", "apellido")
+    @classmethod
+    def _nombre_obligatorio(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("El campo es obligatorio")
+        return stripped
+
+
 def _bearer(authorization: str | None) -> str:
     if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     return token
 
 
@@ -79,7 +94,7 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
 
 
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
-def registrar(solicitud: SolicitudSesion) -> dict:
+def registrar(solicitud: SolicitudRegistro) -> dict:
     return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump())
 
 
@@ -89,8 +104,13 @@ def sesion_actual(authorization: Annotated[str | None, Header()] = None) -> dict
     try:
         payload = verify_token(token, settings.sesion_secreto)
     except InvalidToken as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida") from exc
-    return {"cliente_id": payload.client_id}
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION) from exc
+    return {
+        "cliente_id": payload.client_id,
+        "correo": payload.email,
+        "nombre": payload.first_name,
+        "apellido": payload.last_name,
+    }
 
 
 @router.get("/productos")

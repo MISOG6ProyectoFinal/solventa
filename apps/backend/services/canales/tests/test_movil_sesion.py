@@ -9,6 +9,7 @@ from solventa_common.sesion import sign_token
 client = TestClient(app)
 
 CUERPO = {"correo": "cliente@solventa.test", "contrasena": "solventa-local"}
+REGISTRO = {**CUERPO, "nombre": "Ana", "apellido": "Rojas"}
 SESION = {"token": "token-firmado", "cliente_id": "cliente-demo"}
 
 
@@ -32,7 +33,14 @@ def _error_json(status: int, detail) -> httpx.HTTPStatusError:
 
 
 def _token(*, expires_at: datetime, client_id: str = "cliente-demo") -> str:
-    return sign_token(client_id, CUERPO["correo"], settings.sesion_secreto, expires_at=expires_at)
+    return sign_token(
+        client_id,
+        CUERPO["correo"],
+        settings.sesion_secreto,
+        first_name="Ana",
+        last_name="Rojas",
+        expires_at=expires_at,
+    )
 
 
 def test_movil_reenvia_el_inicio_de_sesion(monkeypatch):
@@ -60,18 +68,18 @@ def test_movil_reenvia_el_registro(monkeypatch):
     upstream = _Upstream(response=SESION)
     monkeypatch.setattr("canales.movil.api.identidad", upstream)
 
-    response = client.post("/movil/registros", json=CUERPO)
+    response = client.post("/movil/registros", json=REGISTRO)
 
     assert response.status_code == 201
     assert response.json() == SESION
-    assert upstream.calls == [("/identidad/clientes", {"json": CUERPO})]
+    assert upstream.calls == [("/identidad/clientes", {"json": REGISTRO})]
 
 
 def test_movil_conserva_el_correo_duplicado(monkeypatch):
     detalle = "Ya existe una cuenta con este correo."
     monkeypatch.setattr("canales.movil.api.identidad", _Upstream(error=_error_json(409, detalle)))
 
-    response = client.post("/movil/registros", json=CUERPO)
+    response = client.post("/movil/registros", json=REGISTRO)
 
     assert response.status_code == 409
     assert response.json()["detail"] == detalle
@@ -111,4 +119,9 @@ def test_movil_sesion_vigente_devuelve_el_cliente_sin_consultar_identidad(monkey
     response = client.get("/movil/sesion", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
-    assert response.json() == {"cliente_id": "cliente-demo"}
+    assert response.json() == {
+        "cliente_id": "cliente-demo",
+        "correo": "cliente@solventa.test",
+        "nombre": "Ana",
+        "apellido": "Rojas",
+    }

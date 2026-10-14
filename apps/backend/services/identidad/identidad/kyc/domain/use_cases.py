@@ -14,7 +14,14 @@ _DUMMY_HASH = hash_password("not-a-client-password", _DUMMY_SALT)
 
 def issue_session(client: Client, secret: str) -> Session:
     expires_at = datetime.now(UTC) + timedelta(days=SESSION_DAYS)
-    token = sign_token(client.id, client.email, secret, expires_at=expires_at)
+    token = sign_token(
+        client.id,
+        client.email,
+        secret,
+        first_name=client.first_name,
+        last_name=client.last_name,
+        expires_at=expires_at,
+    )
     return Session(token=token, client_id=client.id)
 
 
@@ -39,7 +46,7 @@ class RegisterClient:
         self.clients = clients
         self.secret = secret
 
-    def execute(self, email: str, password: str) -> Session:
+    def execute(self, email: str, password: str, first_name: str, last_name: str) -> Session:
         normalized = email.lower()
         if self.clients.get_by_email(normalized) is not None:
             raise EmailAlreadyRegistered
@@ -47,6 +54,8 @@ class RegisterClient:
         client = Client(
             id=str(uuid4()),
             email=normalized,
+            first_name=first_name,
+            last_name=last_name,
             password_hash=hash_password(password, salt),
             salt=salt,
         )

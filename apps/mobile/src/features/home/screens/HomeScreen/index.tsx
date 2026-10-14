@@ -1,13 +1,15 @@
 import { ScrollView, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { useSessionStore } from '../../../session/store/useSessionStore';
 import { homeSummary, type HomeDestination } from '../../homeSummary';
 import { texts } from '../../texts';
 import styles from './styles';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const firstName = useSessionStore((state) => state.firstName);
   const { renewal } = homeSummary;
 
   const openDestination = (destination: HomeDestination) => {
@@ -19,11 +21,12 @@ export default function HomeScreen() {
       testID="home-screen"
       withTabBar
       header={{
-        title: texts.home.greeting,
+        title: firstName ? texts.home.greeting(firstName) : texts.home.greetingWithoutName,
         subtitle: texts.home.screenSubtitle,
         leadingIcon: {
           icon: 'menu',
           label: texts.home.menuLabel,
+          onPress: () => navigation.dispatch(DrawerActions.openDrawer()),
           onLongPress: __DEV__ ? () => navigation.navigate('Components') : undefined,
         },
       }}
