@@ -9,19 +9,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { ApiError } from '../../../../shared/api/client';
+import { errorMessage } from '../../../../shared/api/client';
 import Logo from '../../../../shared/brand/solventa-logo.svg';
 import { AppText, Banner, Button, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
 import { texts } from '../../texts';
 import styles from './styles';
-
-function message(error: unknown, fallback: string) {
-  if (error instanceof ApiError && error.detail) {
-    return error.detail;
-  }
-  return fallback;
-}
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -63,7 +56,7 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
     } catch (cause) {
-      setError(message(cause, texts.login.failed));
+      setError(errorMessage(cause, texts.login.failed));
     } finally {
       setSubmitting(false);
     }

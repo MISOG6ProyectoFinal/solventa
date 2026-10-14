@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { ApiError } from '../../../../shared/api/client';
+import { errorMessage } from '../../../../shared/api/client';
 import { AppText, Banner, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { getProducts } from '../../api/getProducts';
 import { useQuoteStore } from '../../store/useQuoteStore';
@@ -10,14 +10,6 @@ import { texts } from '../../texts';
 import { ProductoMovil } from '../../types';
 import { formatMoney } from '../../utils';
 import styles from './styles';
-
-function loadErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail ?? texts.products.loadFailed;
-  }
-
-  return error instanceof Error && error.message !== '' ? error.message : texts.products.loadFailed;
-}
 
 export default function ProductsScreen() {
   const navigation = useNavigation();
@@ -37,7 +29,7 @@ export default function ProductsScreen() {
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setError(loadErrorMessage(cause));
+          setError(errorMessage(cause, texts.products.loadFailed));
         }
       })
       .finally(() => {

@@ -20,19 +20,11 @@ import { formatFileSize, photoUri } from '../../photo';
 import { claimReport } from '../../claimReport';
 import { submitAviso } from '../../api/submitAviso';
 import { newRadicado } from '../../radicado';
-import { ApiError } from '../../../../shared/api/client';
+import { errorMessage } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
 import { displayOccurredAt, formatDate } from '../../utils';
-
-function filingMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail ?? texts.report.sendFailed;
-  }
-
-  return error instanceof Error && error.message !== '' ? error.message : texts.report.sendFailed;
-}
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
@@ -90,7 +82,7 @@ export default function ReportClaimScreen() {
         }),
       );
     } catch (error) {
-      setSendError(filingMessage(error));
+      setSendError(errorMessage(error, texts.report.sendFailed));
     } finally {
       setFiling(false);
     }

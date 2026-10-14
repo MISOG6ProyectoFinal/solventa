@@ -19,6 +19,16 @@ export class ApiError extends Error {
   }
 }
 
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    return error.detail || fallback;
+  }
+  if (error instanceof Error && error.message !== '') {
+    return error.message;
+  }
+  return fallback;
+}
+
 function requestHeaders(payload: unknown): Record<string, string> | undefined {
   const headers: Record<string, string> = {};
   if (payload !== undefined) {

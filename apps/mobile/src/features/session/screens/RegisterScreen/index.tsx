@@ -2,18 +2,11 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { ApiError } from '../../../../shared/api/client';
+import { errorMessage } from '../../../../shared/api/client';
 import { Banner, Button, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
 import { texts } from '../../texts';
 import styles from './styles';
-
-function message(error: unknown, fallback: string) {
-  if (error instanceof ApiError && error.detail) {
-    return error.detail;
-  }
-  return fallback;
-}
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
@@ -47,7 +40,7 @@ export default function RegisterScreen() {
     try {
       await register(email, password, firstName, lastName);
     } catch (cause) {
-      setError(message(cause, texts.register.failed));
+      setError(errorMessage(cause, texts.register.failed));
     } finally {
       setSubmitting(false);
     }
