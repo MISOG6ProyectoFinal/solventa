@@ -599,6 +599,74 @@ jobs:
           echo "✅ apps/web/Web.Solventa.Angular/coverage/Web.Solventa.Angular/lcov.info listo"
           ls -lh apps/web/Web.Solventa.Angular/coverage/Web.Solventa.Angular/lcov.info
 
+      - name: Normalizar y validar rutas LCOV de Web
+        run: |
+          set -euo pipefail
+          LCOV="apps/web/Web.Solventa.Angular/coverage/Web.Solventa.Angular/lcov.info"
+          PREFIX="apps/web/Web.Solventa.Angular"
+
+          if [ ! -f "$LCOV" ]; then
+            echo "❌ $LCOV no encontrado"
+            exit 1
+          fi
+
+          echo "SF antes:"
+          grep '^SF:' "$LCOV" | head -n 3
+
+          tmp="$(mktemp)"
+          while IFS= read -r line || [ -n "$line" ]; do
+            line="${line%$'\r'}"
+            case "$line" in
+              SF:*)
+                path="${line#SF:}"
+                path="${path//\\//}"
+                if [ -f "$path" ]; then
+                  resolved="$path"
+                elif [[ "$path" != "$PREFIX/"* ]] && [ -f "$PREFIX/$path" ]; then
+                  resolved="$PREFIX/$path"
+                else
+                  resolved="$path"
+                fi
+                printf 'SF:%s\n' "$resolved"
+                ;;
+              *)
+                printf '%s\n' "$line"
+                ;;
+            esac
+          done < "$LCOV" > "$tmp"
+          mv "$tmp" "$LCOV"
+
+          echo "SF después:"
+          grep '^SF:' "$LCOV" | head -n 3
+
+          total=0
+          resolved_count=0
+          unresolved=0
+          unresolved_list=""
+          while IFS= read -r line || [ -n "$line" ]; do
+            line="${line%$'\r'}"
+            path="${line#SF:}"
+            total=$((total + 1))
+            if [ -f "$path" ]; then
+              resolved_count=$((resolved_count + 1))
+            else
+              unresolved=$((unresolved + 1))
+              unresolved_list="${unresolved_list}${path}"$'\n'
+            fi
+          done < <(grep '^SF:' "$LCOV")
+
+          echo ""
+          echo "LCOV path validation"
+          echo "--------------------"
+          echo "Total SF entries: ${total}"
+          echo "Resolved: ${resolved_count}"
+          echo "Unresolved: ${unresolved}"
+          if [ "$unresolved" -ne 0 ]; then
+            echo "Rutas sin resolver:"
+            printf '%s' "$unresolved_list"
+            exit 1
+          fi
+
       - name: Configurar análisis Sonar Web
         run: |
           cat > sonar-project.properties <<'EOF'
