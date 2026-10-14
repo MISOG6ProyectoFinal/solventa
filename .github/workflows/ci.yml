@@ -825,6 +825,122 @@ jobs:
             echo "Security Hotspots: ${HOTSPOT_TOTAL}"
           fi
 
+      - name: Enforce Web Quality Gate
+        run: |
+          set -u
+          # ============================================================
+          # BASELINE DE CALIDAD WEB
+          # ============================================================
+          # No aumente estos límites para hacer pasar el pipeline.
+          # Si este job falla, corrija la regresión introducida.
+          # El objetivo es mantener o mejorar este baseline.
+          # ============================================================
+          if [ ! -f sonar-metrics-web.json ]; then
+            echo "❌ Missing Sonar metrics file: sonar-metrics-web.json"
+            exit 1
+          fi
+
+          metric() {
+            jq -r --arg metric "$1" '
+              [.component.measures[]?
+                | select(.metric == $metric)
+                | .value
+                | select(. != null and . != "")][0] // empty
+            ' sonar-metrics-web.json
+          }
+
+          COVERAGE=$(metric coverage)
+          DUPLICATION=$(metric duplicated_lines_density)
+          CODE_SMELLS=$(metric code_smells)
+          VIOLATIONS=$(metric violations)
+          OPEN_ISSUES=$(metric open_issues)
+          BUGS=$(metric bugs)
+          VULNERABILITIES=$(metric vulnerabilities)
+          SECURITY_HOTSPOTS=$(metric security_hotspots)
+          SECURITY_RATING=$(metric security_rating)
+
+          present() {
+            [ -n "$1" ] && [ "$1" != "null" ]
+          }
+
+          echo "Web Quality Gate"
+          echo "----------------"
+          if present "$COVERAGE"; then echo "Coverage: ${COVERAGE}% (minimum 90.8%)"; else echo "Coverage: missing"; fi
+          if present "$DUPLICATION"; then echo "Duplication: ${DUPLICATION}% (maximum 0.0%)"; else echo "Duplication: missing"; fi
+          if present "$CODE_SMELLS"; then echo "Code Smells: ${CODE_SMELLS} (maximum 8)"; else echo "Code Smells: missing"; fi
+          if present "$VIOLATIONS"; then echo "Violations: ${VIOLATIONS} (maximum 10)"; else echo "Violations: missing"; fi
+          if present "$OPEN_ISSUES"; then echo "Open Issues: ${OPEN_ISSUES} (maximum 10)"; else echo "Open Issues: missing"; fi
+          if present "$BUGS"; then echo "Bugs: ${BUGS} (maximum 2)"; else echo "Bugs: missing"; fi
+          if present "$VULNERABILITIES"; then echo "Vulnerabilities: ${VULNERABILITIES} (maximum 0)"; else echo "Vulnerabilities: missing"; fi
+          if present "$SECURITY_HOTSPOTS"; then echo "Security Hotspots: ${SECURITY_HOTSPOTS} (maximum 2)"; else echo "Security Hotspots: missing"; fi
+          if present "$SECURITY_RATING"; then echo "Security Rating: ${SECURITY_RATING} (maximum 1.0)"; else echo "Security Rating: missing"; fi
+
+          failed=0
+          require_metric() {
+            if ! present "$2"; then
+              echo "❌ Missing Sonar metric: $1"
+              failed=1
+            fi
+          }
+          exceeds() {
+            echo "$1 > $2" | bc -l
+          }
+          below() {
+            echo "$1 < $2" | bc -l
+          }
+
+          require_metric coverage "$COVERAGE"
+          require_metric duplicated_lines_density "$DUPLICATION"
+          require_metric code_smells "$CODE_SMELLS"
+          require_metric violations "$VIOLATIONS"
+          require_metric open_issues "$OPEN_ISSUES"
+          require_metric bugs "$BUGS"
+          require_metric vulnerabilities "$VULNERABILITIES"
+          require_metric security_hotspots "$SECURITY_HOTSPOTS"
+          require_metric security_rating "$SECURITY_RATING"
+
+          if present "$COVERAGE" && [ "$(below "$COVERAGE" 90.8)" -eq 1 ]; then
+            echo "❌ Coverage (${COVERAGE}%) is below baseline (90.8%)"
+            failed=1
+          fi
+          if present "$DUPLICATION" && [ "$(exceeds "$DUPLICATION" 0.0)" -eq 1 ]; then
+            echo "❌ Duplication (${DUPLICATION}%) exceeds baseline (0.0%)"
+            failed=1
+          fi
+          if present "$CODE_SMELLS" && [ "$(exceeds "$CODE_SMELLS" 8)" -eq 1 ]; then
+            echo "❌ Code Smells (${CODE_SMELLS}) exceed baseline (8)"
+            failed=1
+          fi
+          if present "$VIOLATIONS" && [ "$(exceeds "$VIOLATIONS" 10)" -eq 1 ]; then
+            echo "❌ Violations (${VIOLATIONS}) exceed baseline (10)"
+            failed=1
+          fi
+          if present "$OPEN_ISSUES" && [ "$(exceeds "$OPEN_ISSUES" 10)" -eq 1 ]; then
+            echo "❌ Open Issues (${OPEN_ISSUES}) exceed baseline (10)"
+            failed=1
+          fi
+          if present "$BUGS" && [ "$(exceeds "$BUGS" 2)" -eq 1 ]; then
+            echo "❌ Bugs (${BUGS}) exceed baseline (2)"
+            failed=1
+          fi
+          if present "$VULNERABILITIES" && [ "$(exceeds "$VULNERABILITIES" 0)" -eq 1 ]; then
+            echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed baseline (0)"
+            failed=1
+          fi
+          if present "$SECURITY_HOTSPOTS" && [ "$(exceeds "$SECURITY_HOTSPOTS" 2)" -eq 1 ]; then
+            echo "❌ Security Hotspots (${SECURITY_HOTSPOTS}) exceed baseline (2)"
+            failed=1
+          fi
+          if present "$SECURITY_RATING" && [ "$(exceeds "$SECURITY_RATING" 1.0)" -eq 1 ]; then
+            echo "❌ Security Rating (${SECURITY_RATING}) exceeds baseline (1.0)"
+            failed=1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ Web Quality Gate passed"
+
       - name: Publicar métricas Sonar Web
         if: always()
         uses: actions/upload-artifact@v4
