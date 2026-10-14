@@ -1,0 +1,22 @@
+{
+  "name": "web.solventa.angular",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web/Web.Solventa.Angular/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "cwd": "apps/web/Web.Solventa.Angular",
+        "command": "npx ng test"
+      },
+      "configurations": {
+        "ci": {
+          "command": "npx ng test --configuration=ci"
+        }
+      }
+    }
+  }
+}
