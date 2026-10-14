@@ -1,0 +1,115 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+
+import { ApiError } from '../../../../shared/api/client';
+import Logo from '../../../../shared/brand/solventa-logo.svg';
+import { AppText, Banner, Button, Screen, TextField } from '../../../../shared/ui';
+import { useSessionStore } from '../../store/useSessionStore';
+import { texts } from '../../texts';
+import styles from './styles';
+
+function message(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.detail) {
+    return error.detail;
+  }
+  return fallback;
+}
+
+export default function LoginScreen() {
+  const navigation = useNavigation();
+  const signIn = useSessionStore((state) => state.signIn);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [emailEmpty, setEmailEmpty] = useState(false);
+  const [passwordEmpty, setPasswordEmpty] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, () => {
+      setKeyboardOpen(true);
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardOpen(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const submit = async () => {
+    const emailMissing = email.trim() === '';
+    const passwordMissing = password.trim() === '';
+    setEmailEmpty(emailMissing);
+    setPasswordEmpty(passwordMissing);
+    if (emailMissing || passwordMissing) {
+      return;
+    }
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      await signIn(email, password);
+    } catch (cause) {
+      setError(message(cause, texts.login.failed));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Screen testID="login-screen" header={{ hide: true }}>
+      <KeyboardAvoidingView style={styles.avoiding} behavior="padding">
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, keyboardOpen && styles.contentWithKeyboard]}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <View style={styles.logo}>
+            <Logo width={88} height={103} />
+            <AppText variant="sectionTitle">Solventa</AppText>
+          </View>
+          {error ? <Banner variant="error">{error}</Banner> : null}
+          <TextField
+            label={texts.login.emailLabel}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            required
+            error={emailEmpty}
+          />
+          <TextField
+            label={texts.login.passwordLabel}
+            value={password}
+            onChangeText={setPassword}
+            autoCapitalize="none"
+            secureTextEntry
+            required
+            error={passwordEmpty}
+          />
+          <Button title={texts.login.submit} loading={submitting} onPress={() => void submit()} />
+          <Button
+            title={texts.login.createAccount}
+            variant="text"
+            onPress={() => navigation.navigate('Register')}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Screen>
+  );
+}

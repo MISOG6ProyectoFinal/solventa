@@ -11,13 +11,22 @@ clients = Table(
     metadata,
     Column("id", String(36), primary_key=True),
     Column("correo", String(254), nullable=False, unique=True),
+    Column("nombre", String(120), nullable=False),
+    Column("apellido", String(120), nullable=False),
     Column("password_hash", String(64), nullable=False),
     Column("salt", String(32), nullable=False),
 )
 
 
 def _client(row) -> Client:
-    return Client(id=row["id"], email=row["correo"], password_hash=row["password_hash"], salt=row["salt"])
+    return Client(
+        id=row["id"],
+        email=row["correo"],
+        first_name=row["nombre"],
+        last_name=row["apellido"],
+        password_hash=row["password_hash"],
+        salt=row["salt"],
+    )
 
 
 class PostgresClientRepository:
@@ -34,6 +43,8 @@ class PostgresClientRepository:
                     insert(clients).values(
                         id=client.id,
                         correo=client.email,
+                        nombre=client.first_name,
+                        apellido=client.last_name,
                         password_hash=client.password_hash,
                         salt=client.salt,
                     )

@@ -1,0 +1,134 @@
+import { create } from 'zustand';
+
+import { setAccessToken } from '../../../shared/api/accessToken';
+import { ApiError } from '../../../shared/api/client';
+import { getSession, type ClientProfile } from '../api/getSession';
+import { registerClient } from '../api/registerClient';
+import { startSession } from '../api/startSession';
+import { deleteToken, readToken, saveToken } from '../storage';
+
+type Status = 'checking' | 'signedIn' | 'signedOut';
+
+type SessionState = {
+  status: Status;
+  token: string | null;
+  clienteId: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  restore: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+let restoreGeneration = 0;
+
+function withProfile(token: string, profile: ClientProfile) {
+  setAccessToken(token);
+  return {
+    status: 'signedIn' as const,
+    token,
+    clienteId: profile.cliente_id,
+    email: profile.correo,
+    firstName: profile.nombre,
+    lastName: profile.apellido,
+  };
+}
+
+function withoutProfile(token: string) {
+  setAccessToken(token);
+  return {
+    status: 'signedIn' as const,
+    token,
+    clienteId: null,
+    email: null,
+    firstName: null,
+    lastName: null,
+  };
+}
+
+function signedOut() {
+  setAccessToken(null);
+  return {
+    status: 'signedOut' as const,
+    token: null,
+    clienteId: null,
+    email: null,
+    firstName: null,
+    lastName: null,
+  };
+}
+
+async function rememberProfile(token: string, generation: number): Promise<void> {
+  setAccessToken(token);
+  try {
+    const profile = await getSession();
+    if (generation !== restoreGeneration) {
+      return;
+    }
+    useSessionStore.setState(withProfile(token, profile));
+  } catch (error) {
+    if (generation !== restoreGeneration) {
+      return;
+    }
+    if (error instanceof ApiError && error.status === 401) {
+      await deleteToken();
+      useSessionStore.setState(signedOut());
+      throw error;
+    }
+    // Offline, the stored token still opens the app.
+    useSessionStore.setState(withoutProfile(token));
+  }
+}
+
+export const useSessionStore = create<SessionState>((set) => ({
+  status: 'checking',
+  token: null,
+  clienteId: null,
+  email: null,
+  firstName: null,
+  lastName: null,
+  restore: async () => {
+    const generation = ++restoreGeneration;
+    const token = await readToken();
+    if (generation !== restoreGeneration) {
+      return;
+    }
+    if (!token) {
+      set(signedOut());
+      return;
+    }
+    try {
+      await rememberProfile(token, generation);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return;
+      }
+      throw error;
+    }
+  },
+  signIn: async (email, password) => {
+    const generation = ++restoreGeneration;
+    const session = await startSession(email.trim(), password);
+    await saveToken(session.token);
+    if (generation !== restoreGeneration) {
+      return;
+    }
+    await rememberProfile(session.token, generation);
+  },
+  register: async (email, password, firstName, lastName) => {
+    const generation = ++restoreGeneration;
+    const session = await registerClient(email.trim(), password, firstName.trim(), lastName.trim());
+    await saveToken(session.token);
+    if (generation !== restoreGeneration) {
+      return;
+    }
+    await rememberProfile(session.token, generation);
+  },
+  signOut: async () => {
+    restoreGeneration += 1;
+    await deleteToken();
+    set(signedOut());
+  },
+}));

@@ -17,7 +17,10 @@ def _sqlite():
 
 
 def test_cliente_registrado_recibe_token_y_cliente_id():
-    alta = client.post("/identidad/clientes", json={"correo": CORREO, "contrasena": CONTRASENA})
+    alta = client.post(
+        "/identidad/clientes",
+        json={"correo": CORREO, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
+    )
     assert alta.status_code == 201
 
     response = client.post("/identidad/sesiones", json={"correo": CORREO, "contrasena": CONTRASENA})
@@ -32,7 +35,10 @@ def test_cliente_registrado_recibe_token_y_cliente_id():
 
 def test_contrasena_incorrecta_y_correo_desconocido_responden_igual():
     correo = "existe@solventa.test"
-    assert client.post("/identidad/clientes", json={"correo": correo, "contrasena": CONTRASENA}).status_code == 201
+    assert client.post(
+        "/identidad/clientes",
+        json={"correo": correo, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
+    ).status_code == 201
     desconocido = client.post(
         "/identidad/sesiones",
         json={"correo": "nadie@solventa.test", "contrasena": CONTRASENA},
@@ -60,9 +66,10 @@ def test_cliente_guardado_en_la_base_puede_iniciar_sesion():
     container.use_postgres(engine)
     container.use_postgres(engine)
     cuenta = {"correo": "guardado@solventa.test", "contrasena": CONTRASENA}
+    registro = {**cuenta, "nombre": "Ana", "apellido": "Rojas"}
     try:
         assert client.post("/identidad/sesiones", json=cuenta).status_code == 401
-        assert client.post("/identidad/clientes", json=cuenta).status_code == 201
+        assert client.post("/identidad/clientes", json=registro).status_code == 201
         response = client.post("/identidad/sesiones", json=cuenta)
         assert response.status_code == 200
         assert response.json()["cliente_id"]
