@@ -148,6 +148,14 @@ start() {
   desired="$(sed -E 's/.*desired *= *([0-9]+).*/\1/' <<<"$sizes")"
   scale_nodegroups "$min" "$desired"
   aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  local deadline=$((SECONDS + 600))
+  until [[ -n "$(kubectl get nodes -o name 2>/dev/null)" ]]; do
+    if ((SECONDS > deadline)); then
+      echo "::error::Ningún nodo se registró en el clúster en 10 minutos" >&2
+      exit 1
+    fi
+    sleep 15
+  done
   kubectl wait --for=condition=Ready nodes --all --timeout=10m
   kubectl -n "$NAMESPACE" rollout status deployment -l app.kubernetes.io/part-of=solventa --timeout=10m
 }
