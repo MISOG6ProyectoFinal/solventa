@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Reporte de la prueba de carga a partir de los JSON de Newman de load-tests/run.sh.
-//   node load-tests/report.mjs <carpeta> [--umbral-p95 1000] [--umbral-errores 1] [--usuarios 5]
+//   node load-tests/report.mjs <carpeta> [--umbral-p95 1000] [--umbral-cotizacion 400] [--umbral-errores 1] [--usuarios 5]
 // Genera en la carpeta: reporte.html (gráficas), resumen.md, resumen.csv y resumen.json.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,6 +11,7 @@ const CHART_JS = {
   integrity: 'sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD',
 };
 const TOTAL = 'Total';
+const COTIZACION = /^Cotizar/;
 
 export function percentile(sorted, p) {
   if (sorted.length === 0) return 0;
@@ -100,22 +101,29 @@ export function histograma(lista, cubetas = 20) {
   }));
 }
 
-export function analizar(corridas, { umbralP95, umbralErrores, usuarios }) {
+export function analizar(corridas, { umbralP95, umbralErrores, umbralCotizacion = umbralP95, usuarios }) {
   const lista = corridas.flatMap(({ corrida, usuario }) => muestras(corrida, usuario));
   const inicio = Math.min(...corridas.map(({ corrida }) => corrida.run.timings.started));
   const fin = Math.max(...corridas.map(({ corrida }) => corrida.run.timings.completed));
   const duracionS = Math.max((fin - inicio) / 1000, 0.001);
-  const filas = porPeticion(lista);
+  const filas = porPeticion(lista).map((fila) => {
+    if (fila.peticion === TOTAL) return { ...fila, objetivo: null, cumple: fila.pctErrores <= umbralErrores };
+    const objetivo = COTIZACION.test(fila.peticion) ? umbralCotizacion : umbralP95;
+    return { ...fila, objetivo, cumple: fila.p95 <= objetivo && fila.pctErrores <= umbralErrores };
+  });
   const total = filas.at(-1);
-  const cumple = total.p95 <= umbralP95 && total.pctErrores <= umbralErrores;
+  const cotizaciones = estadisticas(lista.filter((m) => COTIZACION.test(m.peticion)));
   return {
     inicio: new Date(inicio).toISOString(),
     duracionS,
     usuarios: usuarios ?? corridas.length,
     rendimiento: total.peticiones / duracionS,
+    cotizacionesPorMinuto: (cotizaciones.peticiones / duracionS) * 60,
+    p95Cotizaciones: cotizaciones.p95,
     umbralP95,
+    umbralCotizacion,
     umbralErrores,
-    cumple,
+    cumple: filas.every((fila) => fila.cumple),
     filas,
     linea: lineaDeTiempo(lista),
     histograma: histograma(lista),
@@ -126,9 +134,24 @@ const ms = (valor) => Math.round(valor).toString();
 const pct = (valor) => valor.toFixed(2);
 
 export function csv(analisis) {
-  const encabezado = 'peticion,peticiones,errores,pct_errores,promedio_ms,min_ms,p50_ms,p90_ms,p95_ms,p99_ms,max_ms';
+  const encabezado =
+    'peticion,peticiones,errores,pct_errores,promedio_ms,min_ms,p50_ms,p90_ms,p95_ms,p99_ms,max_ms,objetivo_p95_ms,cumple';
   const filas = analisis.filas.map((f) =>
-    [`"${f.peticion}"`, f.peticiones, f.errores, pct(f.pctErrores), ms(f.promedio), f.min, f.p50, f.p90, f.p95, f.p99, f.max].join(','),
+    [
+      `"${f.peticion}"`,
+      f.peticiones,
+      f.errores,
+      pct(f.pctErrores),
+      ms(f.promedio),
+      f.min,
+      f.p50,
+      f.p90,
+      f.p95,
+      f.p99,
+      f.max,
+      f.objetivo ?? '',
+      f.cumple ? 'si' : 'no',
+    ].join(','),
   );
   return [encabezado, ...filas].join('\n') + '\n';
 }
@@ -142,16 +165,17 @@ export function markdown(analisis) {
     `- **Usuarios en paralelo:** ${analisis.usuarios}`,
     `- **Duración:** ${analisis.duracionS.toFixed(1)} s`,
     `- **Rendimiento:** ${analisis.rendimiento.toFixed(2)} peticiones/s`,
-    `- **Resultado:** ${veredicto} (p95 <= ${analisis.umbralP95} ms y errores <= ${analisis.umbralErrores} %)`,
+    `- **Cotizaciones:** ${Math.round(analisis.cotizacionesPorMinuto)} por minuto con p95 de ${analisis.p95Cotizaciones} ms`,
+    `- **Resultado:** ${veredicto}`,
     '',
-    '| Petición | Peticiones | Errores (%) | Promedio | p50 | p90 | p95 | p99 | Máx |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|',
+    '| Petición | Peticiones | Errores (%) | Promedio | p50 | p90 | p95 | p99 | Máx | Objetivo p95 | Cumple |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ...analisis.filas.map(
       (f) =>
-        `| ${f.peticion === TOTAL ? `**${TOTAL}**` : f.peticion} | ${f.peticiones} | ${pct(f.pctErrores)} | ${ms(f.promedio)} | ${f.p50} | ${f.p90} | ${f.p95} | ${f.p99} | ${f.max} |`,
+        `| ${f.peticion === TOTAL ? `**${TOTAL}**` : f.peticion} | ${f.peticiones} | ${pct(f.pctErrores)} | ${ms(f.promedio)} | ${f.p50} | ${f.p90} | ${f.p95} | ${f.p99} | ${f.max} | ${f.objetivo ?? '-'} | ${f.cumple ? 'Sí' : 'No'} |`,
     ),
     '',
-    'Tiempos en milisegundos.',
+    `Tiempos en milisegundos. Las cotizaciones se miden contra ${analisis.umbralCotizacion} ms (ASR-01) y el resto contra ${analisis.umbralP95} ms. Cada fila y el total cumplen además si los errores no superan ${analisis.umbralErrores} %.`,
   ];
   return lineas.join('\n') + '\n';
 }
@@ -171,7 +195,7 @@ export function html(analisis) {
   const tabla = analisis.filas
     .map(
       (f) =>
-        `<tr${f.peticion === TOTAL ? ' class="total"' : ''}><td>${escapar(f.peticion)}</td><td>${f.peticiones}</td><td>${pct(f.pctErrores)}</td><td>${ms(f.promedio)}</td><td>${f.p50}</td><td>${f.p90}</td><td>${f.p95}</td><td>${f.p99}</td><td>${f.max}</td></tr>`,
+        `<tr${f.peticion === TOTAL ? ' class="total"' : ''}><td>${escapar(f.peticion)}</td><td>${f.peticiones}</td><td>${pct(f.pctErrores)}</td><td>${ms(f.promedio)}</td><td>${f.p50}</td><td>${f.p90}</td><td>${f.p95}</td><td>${f.p99}</td><td>${f.max}</td><td>${f.objetivo ?? '-'}</td><td class="${f.cumple ? 'ok' : 'mal'}">${f.cumple ? 'Sí' : 'No'}</td></tr>`,
     )
     .join('\n');
   return `<!doctype html>
@@ -214,18 +238,20 @@ tr.total td { font-weight: 700; }
   <div class="kpi"><span>Resultado</span><strong class="${analisis.cumple ? 'ok' : 'mal'}">${analisis.cumple ? 'Cumple' : 'No cumple'}</strong></div>
   <div class="kpi"><span>Peticiones</span><strong>${total.peticiones}</strong></div>
   <div class="kpi"><span>Rendimiento</span><strong>${analisis.rendimiento.toFixed(2)} /s</strong></div>
-  <div class="kpi"><span>p95 (umbral ${analisis.umbralP95} ms)</span><strong>${total.p95} ms</strong></div>
+  <div class="kpi"><span>p95 cotizaciones (ASR-01: ${analisis.umbralCotizacion} ms)</span><strong>${analisis.p95Cotizaciones} ms</strong></div>
+  <div class="kpi"><span>Cotizaciones por minuto (ASR-04: 50.000)</span><strong>${Math.round(analisis.cotizacionesPorMinuto)}</strong></div>
+  <div class="kpi"><span>p95 total</span><strong>${total.p95} ms</strong></div>
   <div class="kpi"><span>Errores (umbral ${analisis.umbralErrores} %)</span><strong>${pct(total.pctErrores)} %</strong></div>
 </section>
 <section class="graficas">
-  <div class="panel"><h2>Latencia por petición (ms, umbral p95 ${analisis.umbralP95})</h2><div class="lienzo"><canvas id="latencia"></canvas></div></div>
+  <div class="panel"><h2>Latencia por petición (ms)</h2><div class="lienzo" style="height: ${Math.max(280, peticiones.length * 34)}px"><canvas id="latencia"></canvas></div></div>
   <div class="panel"><h2>Peticiones y errores por segundo</h2><div class="lienzo"><canvas id="rendimiento"></canvas></div></div>
   <div class="panel"><h2>Latencia en el tiempo (ms)</h2><div class="lienzo"><canvas id="tiempo"></canvas></div></div>
   <div class="panel"><h2>Distribución de latencias</h2><div class="lienzo"><canvas id="histograma"></canvas></div></div>
 </section>
 <section class="panel tabla">
 <table>
-<thead><tr><th>Petición</th><th>Peticiones</th><th>Errores %</th><th>Promedio</th><th>p50</th><th>p90</th><th>p95</th><th>p99</th><th>Máx</th></tr></thead>
+<thead><tr><th>Petición</th><th>Peticiones</th><th>Errores %</th><th>Promedio</th><th>p50</th><th>p90</th><th>p95</th><th>p99</th><th>Máx</th><th>Objetivo p95</th><th>Cumple</th></tr></thead>
 <tbody>
 ${tabla}
 </tbody>
@@ -252,7 +278,7 @@ new Chart(document.getElementById('latencia'), {
       { label: 'p99', data: datos.peticiones.map((p) => p.p99), backgroundColor: color('--s3') },
     ],
   },
-  options: { indexAxis: 'y', scales: { x: { beginAtZero: true } } },
+  options: { indexAxis: 'y', scales: { x: { beginAtZero: true }, y: { ticks: { autoSkip: false } } } },
 });
 
 const segundos = datos.linea.map((s) => s.segundo + ' s');
@@ -313,7 +339,9 @@ function opcion(args, nombre, porDefecto) {
 export function main(args) {
   const carpeta = args[0];
   if (!carpeta) {
-    console.error('Uso: node load-tests/report.mjs <carpeta> [--umbral-p95 1000] [--umbral-errores 1] [--usuarios N]');
+    console.error(
+      'Uso: node load-tests/report.mjs <carpeta> [--umbral-p95 1000] [--umbral-cotizacion 400] [--umbral-errores 1] [--usuarios N]',
+    );
     return 2;
   }
   const corridas = leerCorridas(carpeta);
@@ -324,6 +352,7 @@ export function main(args) {
   const analisis = analizar(corridas, {
     umbralP95: opcion(args, '--umbral-p95', 1000),
     umbralErrores: opcion(args, '--umbral-errores', 1),
+    umbralCotizacion: opcion(args, '--umbral-cotizacion', 400),
     usuarios: opcion(args, '--usuarios', undefined),
   });
   writeFileSync(join(carpeta, 'resumen.json'), JSON.stringify(analisis, null, 2));

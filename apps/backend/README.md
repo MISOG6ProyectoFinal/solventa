@@ -196,7 +196,13 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 ## Prueba de carga
 
-`postman/carga-canales.postman_collection.json` recorre Canales como un usuario: catálogo, cotización con consenso, registro, sesión, aviso de siniestro y socios del portal. `load-tests/run.sh` la ejecuta con Newman en varios usuarios en paralelo y genera el reporte.
+`postman/carga-canales.postman_collection.json` cubre los endpoints que hoy ofrece Canales, agrupados por canal:
+
+- **Móvil:** catálogo, cotización, registro, sesión y reporte de siniestro con carga, confirmación y listado de evidencia.
+- **Portal web:** cotización asistida, listado, detalle y configuración de socios.
+- **API de socios:** cotización embebida con las credenciales de un socio (ASR-01 y ASR-04).
+
+`load-tests/run.sh` crea un socio de prueba con el ramo de viaje habilitado, ejecuta la colección con Newman en varios usuarios en paralelo y genera el reporte.
 
 ```bash
 USUARIOS=10 ITERACIONES=20 RAMPA_S=10 ./load-tests/run.sh
@@ -209,12 +215,14 @@ USUARIOS=10 ITERACIONES=20 RAMPA_S=10 ./load-tests/run.sh
 | `ITERACIONES` | 10 | Recorridos por usuario |
 | `RAMPA_S` | 0 | Segundos para arrancar a todos los usuarios |
 | `PAUSA_MS` | 0 | Pausa entre peticiones de un usuario |
-| `UMBRAL_P95_MS` | 1000 | p95 máximo aceptado |
-| `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores |
+| `UMBRAL_COTIZACION_MS` | 400 | p95 máximo de cada cotización (ASR-01) |
+| `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
+| `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
+| `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
 
-Los resultados quedan en `load-tests/resultados/<fecha>/`: `reporte.html` con las gráficas de latencia por petición, peticiones por segundo, latencia en el tiempo y distribución, más `resumen.md`, `resumen.csv` y `resumen.json`. El script termina con código 1 si no cumple los umbrales. Para regenerar el reporte de una corrida: `node load-tests/report.mjs <carpeta>`.
+Los resultados quedan en `load-tests/resultados/<fecha>/`: `reporte.html` con las gráficas de latencia por petición, peticiones por segundo, latencia en el tiempo y distribución, más `resumen.md`, `resumen.csv` y `resumen.json`. El reporte muestra el p95 de las cotizaciones y las cotizaciones por minuto, que son las medidas de ASR-01 y ASR-04. El script termina con código 1 si alguna petición no cumple. Para regenerar el reporte de una corrida: `node load-tests/report.mjs <carpeta>`.
 
-Cada iteración crea un cliente y un aviso de siniestro en la base del ambiente.
+Cada corrida crea un socio, y cada iteración un cliente, un aviso de siniestro y una evidencia en el ambiente.
 
 ## Siguientes pasos
 

@@ -96,6 +96,45 @@ test('analizar calcula rendimiento y veredicto con los umbrales', () => {
   assert.equal(analizar(corridas, { umbralP95: 500, umbralErrores: 10 }).cumple, false);
 });
 
+test('las cotizaciones se miden contra su propio umbral y se reportan por minuto', () => {
+  const corridas = [
+    {
+      usuario: 1,
+      corrida: corrida(
+        [ejecucion('Cotizar como socio', { ms: 450 }), ejecucion('Cotizar desde el móvil', { ms: 350 }), ejecucion('Listar socios', { ms: 450 })],
+        60000,
+      ),
+    },
+  ];
+  const estricto = analizar(corridas, { umbralP95: 500, umbralCotizacion: 400, umbralErrores: 1 });
+  assert.equal(estricto.cotizacionesPorMinuto, 2);
+  assert.equal(estricto.p95Cotizaciones, 450);
+  assert.deepEqual(
+    estricto.filas.map((f) => [f.peticion, f.objetivo, f.cumple]),
+    [
+      ['Cotizar como socio', 400, false],
+      ['Cotizar desde el móvil', 400, true],
+      ['Listar socios', 500, true],
+      ['Total', null, true],
+    ],
+  );
+  assert.equal(estricto.cumple, false);
+  assert.equal(analizar(corridas, { umbralP95: 500, umbralCotizacion: 500, umbralErrores: 1 }).cumple, true);
+});
+
+test('una petición rápida con errores no cumple', () => {
+  const corridas = [{ usuario: 1, corrida: corrida([ejecucion('a', { ms: 10, codigo: 500 }), ejecucion('b', { ms: 10 })]) }];
+  const filas = analizar(corridas, { umbralP95: 500, umbralErrores: 1 }).filas;
+  assert.deepEqual(
+    filas.map((f) => [f.peticion, f.cumple]),
+    [
+      ['a', false],
+      ['b', true],
+      ['Total', false],
+    ],
+  );
+});
+
 test('los formatos de salida incluyen cada petición y el total', () => {
   const analisis = analizar([{ usuario: 1, corrida: corrida([ejecucion('Cotizar <x>')]) }], {
     umbralP95: 1000,
