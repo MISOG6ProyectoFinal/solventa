@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Solventa carga Canales",
-    "description": "Prueba de carga de los tres canales de Canales (móvil, portal web y API de socios) con Newman. Cada iteración crea un cliente, un aviso de siniestro y una evidencia. La API de socios necesita socioId, socioClientId y socioSecreto: load-tests/run.sh crea el socio y los entrega. Para correrla suelta, cree el socio con load-tests/socio.mjs.",
+    "name": "Solventa recorrido Canales",
+    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro y una evidencia. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

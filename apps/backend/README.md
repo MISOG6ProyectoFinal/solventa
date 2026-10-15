@@ -196,33 +196,51 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 ## Prueba de carga
 
-`postman/carga-canales.postman_collection.json` cubre los endpoints que hoy ofrece Canales, agrupados por canal:
+`load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
 
 - **Móvil:** catálogo, cotización, registro, sesión y reporte de siniestro con carga, confirmación y listado de evidencia.
 - **Portal web:** cotización asistida, listado, detalle y configuración de socios.
-- **API de socios:** cotización embebida con las credenciales de un socio (ASR-01 y ASR-04).
+- **API de socios:** cotización embebida con las credenciales de un socio.
 
-`load-tests/run.sh` crea un socio de prueba con el ramo de viaje habilitado, ejecuta la colección con Newman en varios usuarios en paralelo y genera el reporte.
+Antes de empezar, k6 crea un socio de prueba con el ramo de viaje habilitado. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
-USUARIOS=10 ITERACIONES=20 RAMPA_S=10 ./load-tests/run.sh
+PERFIL=humo ./load-tests/run.sh
+PERFIL=carga DURACION=5m ./load-tests/run.sh
+PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
 ```
+
+| Perfil | Qué ejecuta |
+|---|---|
+| `humo` | Una iteración por canal, para validar el ambiente |
+| `carga` | Usuarios constantes en móvil y portal web, más cotizaciones de socios a tasa fija |
+| `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
 
 | Variable | Por defecto | Uso |
 |---|---|---|
 | `BASE_URL` | URL de CloudFront en `dev` | Ambiente a probar |
-| `USUARIOS` | 5 | Usuarios virtuales en paralelo |
-| `ITERACIONES` | 10 | Recorridos por usuario |
-| `RAMPA_S` | 0 | Segundos para arrancar a todos los usuarios |
-| `PAUSA_MS` | 0 | Pausa entre peticiones de un usuario |
+| `DURACION` | `2m` | Duración del perfil `carga` |
+| `USUARIOS_MOVIL`, `USUARIOS_WEB` | 5 y 2 | Usuarios virtuales por recorrido en `carga` |
+| `TASA_SOCIOS` | 600 | Cotizaciones de socios por minuto en `carga` |
+| `TASA_INICIAL`, `TASA_OBJETIVO` | 500 y 50.000 | Cotizaciones por minuto al inicio y al final de la rampa en `asr04` |
+| `RAMPA`, `SOSTENIDO` | `60s` y `5m` | Duración de la subida y del tramo sostenido en `asr04` |
+| `VUS_INICIALES`, `VUS_MAXIMOS` | 50 y 1000 | Usuarios virtuales que k6 reserva para sostener la tasa |
 | `UMBRAL_COTIZACION_MS` | 400 | p95 máximo de cada cotización (ASR-01) |
 | `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
 | `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
 | `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
 
-Los resultados quedan en `load-tests/resultados/<fecha>/`: `reporte.html` con las gráficas de latencia por petición, peticiones por segundo, latencia en el tiempo y distribución, más `resumen.md`, `resumen.csv` y `resumen.json`. El reporte muestra el p95 de las cotizaciones y las cotizaciones por minuto, que son las medidas de ASR-01 y ASR-04. El script termina con código 1 si alguna petición no cumple. Para regenerar el reporte de una corrida: `node load-tests/report.mjs <carpeta>`.
+Los resultados quedan en `load-tests/resultados/<fecha>-<perfil>/`:
 
-Cada corrida crea un socio, y cada iteración un cliente, un aviso de siniestro y una evidencia en el ambiente.
+- `reporte.html`: veredicto, p95 de cotizaciones, cotizaciones por minuto y latencia de cada petición frente a su objetivo.
+- `dashboard.html`: el reporte de k6 con las gráficas en el tiempo (peticiones por segundo, latencia, errores y usuarios virtuales).
+- `resumen.md`, `resumen.csv` y `resumen.json`: la misma tabla para documentos, hojas de cálculo o comparar corridas.
+
+k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test load-tests/`.
+
+Cada corrida crea un socio, y cada recorrido móvil un cliente, un aviso de siniestro y una evidencia en el ambiente.
+
+`postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman.
 
 ## Siguientes pasos
 
