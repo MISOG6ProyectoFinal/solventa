@@ -1,0 +1,294 @@
+{
+  "info": {
+    "name": "Solventa carga Canales",
+    "description": "Recorrido de un usuario por Canales para la prueba de carga con Newman: catálogo, cotización con consenso, registro, sesión, aviso de siniestro y socios del portal. Cada iteración crea un cliente y un aviso nuevos. Se ejecuta con load-tests/run.sh.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://dzwq94g5om86y.cloudfront.net"
+    },
+    {
+      "key": "productoId",
+      "value": "viaje-internacional"
+    },
+    {
+      "key": "correo",
+      "value": ""
+    },
+    {
+      "key": "contrasena",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "BFF móvil disponible",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/movil/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Canales responde', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catálogo de productos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/movil/productos"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const productos = pm.response.json();",
+              "pm.test('El catálogo trae productos', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(productos).to.be.an('array').that.is.not.empty;",
+              "});",
+              "const viaje = productos.find((p) => p.id === pm.collectionVariables.get('productoId'));",
+              "pm.test('El producto de viaje está disponible', function () {",
+              "  pm.expect(viaje, 'producto ' + pm.collectionVariables.get('productoId')).to.be.an('object');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cotizar con consenso",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/cotizaciones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const dia = (desplazamiento) => {",
+              "  const fecha = new Date();",
+              "  fecha.setDate(fecha.getDate() + desplazamiento);",
+              "  return fecha.toISOString().slice(0, 10);",
+              "};",
+              "pm.variables.set('fechaSalida', dia(30));",
+              "pm.variables.set('fechaRegreso', dia(40));",
+              "pm.variables.set('cedula', String(Math.floor(1e9 + Math.random() * 9e9)));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const oferta = pm.response.json();",
+              "pm.test('El consenso devuelve una oferta', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+              "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar cliente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/registros",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Prueba\",\n  \"apellido\": \"Carga\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const sufijo = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
+              "pm.collectionVariables.set('correo', 'carga-' + sufijo + '@solventa.test');",
+              "pm.collectionVariables.set('contrasena', pm.variables.replaceIn('{{$randomPassword}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const cuenta = pm.response.json();",
+              "pm.test('La cuenta queda creada y con sesión', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(cuenta.token).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Iniciar sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/sesiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const sesion = pm.response.json();",
+              "pm.test('La sesión entrega un token', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(sesion.token).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('token', sesion.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar sesión",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/sesion"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La sesión corresponde al cliente', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().correo).to.eql(pm.collectionVariables.get('correo'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reportar siniestro",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/movil/siniestros",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"poliza_id\": \"SLV-2026-03105\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso generado por la prueba de carga\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);",
+              "pm.variables.set('ocurridoEn', ayer.toISOString().slice(0, 19));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El aviso queda en borrador', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().estado).to.eql('borrador');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listar socios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/web/socios"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El portal lista los socios', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

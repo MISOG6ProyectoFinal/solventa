@@ -194,6 +194,28 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 `destroy` recorre los stacks en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network).
 
+## Prueba de carga
+
+`postman/carga-canales.postman_collection.json` recorre Canales como un usuario: catálogo, cotización con consenso, registro, sesión, aviso de siniestro y socios del portal. `load-tests/run.sh` la ejecuta con Newman en varios usuarios en paralelo y genera el reporte.
+
+```bash
+USUARIOS=10 ITERACIONES=20 RAMPA_S=10 ./load-tests/run.sh
+```
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `BASE_URL` | URL de CloudFront en `dev` | Ambiente a probar |
+| `USUARIOS` | 5 | Usuarios virtuales en paralelo |
+| `ITERACIONES` | 10 | Recorridos por usuario |
+| `RAMPA_S` | 0 | Segundos para arrancar a todos los usuarios |
+| `PAUSA_MS` | 0 | Pausa entre peticiones de un usuario |
+| `UMBRAL_P95_MS` | 1000 | p95 máximo aceptado |
+| `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores |
+
+Los resultados quedan en `load-tests/resultados/<fecha>/`: `reporte.html` con las gráficas de latencia por petición, peticiones por segundo, latencia en el tiempo y distribución, más `resumen.md`, `resumen.csv` y `resumen.json`. El script termina con código 1 si no cumple los umbrales. Para regenerar el reporte de una corrida: `node load-tests/report.mjs <carpeta>`.
+
+Cada iteración crea un cliente y un aviso de siniestro en la base del ambiente.
+
 ## Siguientes pasos
 
 - Región secundaria del VC-004: réplica asíncrona de RDS en otra región, clúster pasivo y replicación del bus y de S3.
