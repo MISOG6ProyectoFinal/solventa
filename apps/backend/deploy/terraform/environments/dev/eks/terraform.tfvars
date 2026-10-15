@@ -8,6 +8,8 @@ node_capacity_type  = "SPOT"
 node_zones          = 1
 nodes_per_zone      = { min = 1, desired = 1, max = 2 }
 
+control_plane_log_types = []
+
 admin_principal_arns     = ["arn:aws:iam::712589718837:role/solventa-dev-cluster-admin"]
 developer_principal_arns = []
 
