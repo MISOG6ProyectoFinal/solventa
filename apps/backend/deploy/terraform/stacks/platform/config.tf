@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.36"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
   # bucket, key y region llegan de environments/<env>/platform/backend.tfvars
   backend "s3" {}
