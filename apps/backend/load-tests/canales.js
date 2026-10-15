@@ -79,6 +79,10 @@ export const options = {
   setupTimeout: '60s',
 };
 
+function aleatorio(bytes) {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 function fecha(desplazamientoDias) {
   const valor = new Date(Date.now() + desplazamientoDias * 24 * 60 * 60 * 1000);
   return valor.toISOString().slice(0, 10);
@@ -171,11 +175,11 @@ export function movil() {
   cotizar('Cotizar desde el móvil', `${BASE_URL}/movil/cotizaciones`, {
     ...solicitudViaje(),
     nombre: 'Prueba Carga',
-    cedula: String(Math.floor(1e9 + Math.random() * 9e9)),
+    cedula: String(1e9 + (Number.parseInt(aleatorio(4), 16) % 9e9)),
   });
 
   const correo = `carga-${Date.now()}-${__VU}-${__ITER}@solventa.test`;
-  const contrasena = `Clave-${Math.random().toString(36).slice(2)}-${__VU}`;
+  const contrasena = `Clave-${aleatorio(12)}`;
   const cuenta = pedir(
     'Registrar cliente',
     'POST',
