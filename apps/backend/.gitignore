@@ -17,3 +17,4 @@ htmlcov/
 *.tfstate
 *.tfstate.*
 crash.log
+load-tests/resultados/
