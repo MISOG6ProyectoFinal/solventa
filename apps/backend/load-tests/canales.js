@@ -114,7 +114,9 @@ function pedir(nombre, metodo, url, cuerpo, { estado = 200, headers = {}, valida
     { name: nombre },
   );
   errores.add(!ok, { name: nombre });
-  return ok ? (json ?? (respuesta.body ? safeJson(respuesta) : null)) : null;
+  if (!ok) return null;
+  if (json !== null) return json;
+  return respuesta.body ? safeJson(respuesta) : null;
 }
 
 function safeJson(respuesta) {
