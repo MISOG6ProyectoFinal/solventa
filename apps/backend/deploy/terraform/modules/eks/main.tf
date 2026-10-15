@@ -13,6 +13,10 @@ module "eks" {
   cluster_endpoint_public_access           = var.endpoint_public_access
   enable_cluster_creator_admin_permissions = true
 
+  cluster_enabled_log_types              = var.control_plane_log_types
+  create_cloudwatch_log_group            = length(var.control_plane_log_types) > 0
+  cloudwatch_log_group_retention_in_days = var.control_plane_log_retention_days
+
   # Acceso a kubectl para el resto del equipo. Los permisos de IAM no lo dan.
   access_entries = merge(
     { for arn in var.admin_principal_arns : "admin-${basename(arn)}" => {
