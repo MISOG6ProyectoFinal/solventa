@@ -11,7 +11,7 @@ type Props = StaticScreenProps<{
   filePath: string;
 }>;
 
-export default function PhotoPreviewScreen({ route }: Props) {
+export default function PhotoPreviewScreen({ route }: Readonly<Props>) {
   const navigation = useNavigation();
   const photo = useClaimsStore((state) =>
     state.photos.find((item) => item.filePath === route.params.filePath),

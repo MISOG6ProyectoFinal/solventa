@@ -14,7 +14,7 @@ type VideoPlayerProps = {
   testID?: string;
 };
 
-export function VideoPlayer({ uri, playLabel, pauseLabel, caption, testID }: VideoPlayerProps) {
+export function VideoPlayer({ uri, playLabel, pauseLabel, caption, testID }: Readonly<VideoPlayerProps>) {
   const videoRef = useRef<VideoRef>(null);
   const finished = useRef(false);
   const [playing, setPlaying] = useState(false);

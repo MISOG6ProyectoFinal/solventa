@@ -12,7 +12,7 @@ type IconButtonProps = {
   onLongPress?: () => void;
 };
 
-export function IconButton({ label, icon, color = 'onNavy', onPress, onLongPress }: IconButtonProps) {
+export function IconButton({ label, icon, color = 'onNavy', onPress, onLongPress }: Readonly<IconButtonProps>) {
   const pressed = useAnimatedValue(0);
 
   const animatePressed = (toValue: number) => {

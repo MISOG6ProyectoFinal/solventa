@@ -9,7 +9,7 @@ type ThumbnailProps = {
   testID?: string;
 };
 
-export function Thumbnail({ name, size, testID }: ThumbnailProps) {
+export function Thumbnail({ name, size, testID }: Readonly<ThumbnailProps>) {
   return (
     <View style={styles.item}>
       <View testID={testID} style={styles.preview} />

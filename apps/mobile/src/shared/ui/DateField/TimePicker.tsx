@@ -17,7 +17,7 @@ function pad(value: number) {
   return String(value).padStart(2, '0');
 }
 
-function TimePart({ label, value, max, onChange }: TimePartProps) {
+function TimePart({ label, value, max, onChange }: Readonly<TimePartProps>) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(pad(value));
 
@@ -57,7 +57,7 @@ type TimePickerProps = {
   onMinute: (minute: number) => void;
 };
 
-export function TimePicker({ hour, minute, onHour, onMinute }: TimePickerProps) {
+export function TimePicker({ hour, minute, onHour, onMinute }: Readonly<TimePickerProps>) {
   return (
     <View style={styles.row}>
       <TimePart label="Hora" value={hour} max={23} onChange={onHour} />

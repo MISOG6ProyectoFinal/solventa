@@ -27,7 +27,7 @@ export const monthLabels = months.map(
 export function parseDate(value?: string): DateParts | null {
   if (!value) return null;
 
-  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?$/);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?$/.exec(value);
   if (iso) {
     return {
       year: Number(iso[1]),
@@ -37,7 +37,7 @@ export function parseDate(value?: string): DateParts | null {
     };
   }
 
-  const local = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}:\d{2}))?$/);
+  const local = /^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}:\d{2}))?$/.exec(value);
   if (local) {
     return {
       day: Number(local[1]),

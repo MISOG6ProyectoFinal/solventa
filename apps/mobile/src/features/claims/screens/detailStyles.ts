@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
-import { theme } from '../../../../shared/theme';
-import { outfitFont } from '../../../../shared/theme/fonts';
+import { theme } from '../../../shared/theme';
+import { outfitFont } from '../../../shared/theme/fonts';
 
 export default StyleSheet.create({
   scroll: {
@@ -42,7 +42,7 @@ export default StyleSheet.create({
     lineHeight: 14,
     ...outfitFont('400'),
   },
-  thumbTime: {
+  thumbMeta: {
     color: theme.colors.textMuted,
     fontSize: 10,
     lineHeight: 14,

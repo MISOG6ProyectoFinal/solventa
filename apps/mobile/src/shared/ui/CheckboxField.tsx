@@ -20,7 +20,7 @@ export function CheckboxField({
   required = false,
   error = false,
   testID,
-}: CheckboxFieldProps) {
+}: Readonly<CheckboxFieldProps>) {
   const fill = useAnimatedValue(checked ? 1 : 0);
   const mark = useAnimatedValue(checked ? 1 : 0);
 

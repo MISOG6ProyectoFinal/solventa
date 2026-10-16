@@ -8,9 +8,16 @@ import { listEvidencias, type Evidencia } from '../../api/listEvidencias';
 import { type Aviso } from '../../api/listAvisos';
 import { texts } from '../../texts';
 import { formatOccurredAt } from '../../utils';
+import detailStyles from '../detailStyles';
 import styles from './styles';
 
 type Props = StaticScreenProps<{ aviso: Aviso }>;
+
+type DetailBodyProps = {
+  aviso: Aviso;
+  evidencias: Evidencia[];
+  error: string | null;
+};
 
 function formatSize(bytes: number): string {
   if (bytes >= 1_000_000) {
@@ -34,9 +41,65 @@ function evidenceTiles(items: Evidencia[]): { id: string; label: string; size: s
   });
 }
 
-export default function AvisoDetailScreen({ route }: Props) {
-  const aviso = route.params.aviso;
+function bannerText(aviso: Aviso): string | null {
+  if (aviso.radicado) {
+    return texts.detail.filedSuccess(aviso.radicado);
+  }
+  if (aviso.estado === 'radicado') {
+    return texts.detail.filed;
+  }
+  return null;
+}
+
+function AvisoDetailBody({ aviso, evidencias, error }: Readonly<DetailBodyProps>) {
   const filed = aviso.estado === 'radicado';
+  const banner = bannerText(aviso);
+  const tiles = evidenceTiles(evidencias);
+  const statusLabel = filed ? texts.detail.status : texts.claims.statusDraft;
+
+  return (
+    <ScrollView style={detailStyles.scroll} contentContainerStyle={detailStyles.content}>
+      {banner ? <Banner variant="success">{banner}</Banner> : null}
+      {error ? <Banner variant="error">{error}</Banner> : null}
+      <Card>
+        <View style={detailStyles.titleRow}>
+          <AppText variant="button" style={detailStyles.title}>
+            {aviso.tipo}
+          </AppText>
+          <StatusChip variant={filed ? 'success' : 'pending'}>{statusLabel}</StatusChip>
+        </View>
+        <AppText variant="bodySmall">{aviso.poliza_id}</AppText>
+        <AppText variant="bodySmall">
+          {texts.detail.occurred(formatOccurredAt(aviso.ocurrido_en), aviso.ubicacion ?? '')}
+        </AppText>
+        <AppText variant="bodySmall" style={detailStyles.description}>
+          {aviso.descripcion}
+        </AppText>
+      </Card>
+      <Card>
+        <AppText variant="button" style={detailStyles.title}>
+          {texts.detail.evidences(tiles.length)}
+        </AppText>
+        <View style={detailStyles.thumbs}>
+          {tiles.map((tile) => (
+            <View key={tile.id} style={detailStyles.thumb}>
+              <AppText variant="caption" style={detailStyles.thumbLabel}>
+                {tile.label}
+              </AppText>
+              <AppText variant="caption" style={detailStyles.thumbMeta}>
+                {tile.size}
+              </AppText>
+            </View>
+          ))}
+        </View>
+      </Card>
+      {filed ? <Button title={texts.detail.assistButton} variant="secondary" /> : null}
+    </ScrollView>
+  );
+}
+
+export default function AvisoDetailScreen({ route }: Readonly<Props>) {
+  const aviso = route.params.aviso;
   const [evidencias, setEvidencias] = useState<Evidencia[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,58 +132,12 @@ export default function AvisoDetailScreen({ route }: Props) {
     };
   }, [aviso.id]);
 
-  const tiles = evidenceTiles(evidencias ?? []);
-
   return (
     <Screen testID="aviso-detail-screen" header={{ title: texts.detail.screenTitle }}>
-      {loading ? (
+      {loading || evidencias === null ? (
         <ActivityIndicator testID="aviso-detail-loading" style={styles.loading} />
       ) : (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-          {aviso.radicado ? (
-            <Banner variant="success">{texts.detail.filedSuccess(aviso.radicado)}</Banner>
-          ) : filed ? (
-            <Banner variant="success">{texts.detail.filed}</Banner>
-          ) : null}
-          {error ? <Banner variant="error">{error}</Banner> : null}
-          <Card>
-            <View style={styles.titleRow}>
-              <AppText variant="button" style={styles.title}>
-                {aviso.tipo}
-              </AppText>
-              <StatusChip variant={filed ? 'success' : 'pending'}>
-                {filed ? texts.detail.status : texts.claims.statusDraft}
-              </StatusChip>
-            </View>
-            <AppText variant="bodySmall">{aviso.poliza_id}</AppText>
-            <AppText variant="bodySmall">
-              {texts.detail.occurred(formatOccurredAt(aviso.ocurrido_en), aviso.ubicacion ?? '')}
-            </AppText>
-            <AppText variant="bodySmall" style={styles.description}>
-              {aviso.descripcion}
-            </AppText>
-          </Card>
-          {evidencias ? (
-            <Card>
-              <AppText variant="button" style={styles.title}>
-                {texts.detail.evidences(tiles.length)}
-              </AppText>
-              <View style={styles.thumbs}>
-                {tiles.map((tile) => (
-                  <View key={tile.id} style={styles.thumb}>
-                    <AppText variant="caption" style={styles.thumbLabel}>
-                      {tile.label}
-                    </AppText>
-                    <AppText variant="caption" style={styles.thumbSize}>
-                      {tile.size}
-                    </AppText>
-                  </View>
-                ))}
-              </View>
-            </Card>
-          ) : null}
-          {filed ? <Button title={texts.detail.assistButton} variant="secondary" /> : null}
-        </ScrollView>
+        <AvisoDetailBody aviso={aviso} evidencias={evidencias} error={error} />
       )}
     </Screen>
   );

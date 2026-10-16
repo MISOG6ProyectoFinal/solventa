@@ -11,7 +11,7 @@ type StatProps = {
   testID?: string;
 };
 
-export function Stat({ label, value, detail, variant = 'default', testID }: StatProps) {
+export function Stat({ label, value, detail, variant = 'default', testID }: Readonly<StatProps>) {
   const inverse = variant === 'inverse';
 
   return (

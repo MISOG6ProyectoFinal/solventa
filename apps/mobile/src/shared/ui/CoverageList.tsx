@@ -7,7 +7,7 @@ type CoverageListProps = {
   items: string[];
 };
 
-export function CoverageList({ items }: CoverageListProps) {
+export function CoverageList({ items }: Readonly<CoverageListProps>) {
   return (
     <View style={styles.list}>
       {items.map((item) => (

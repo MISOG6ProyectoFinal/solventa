@@ -22,7 +22,7 @@ const iconColor: Record<BannerVariant, IconColor> = {
   error: 'error',
 };
 
-export function Banner({ variant, icon, children, testID }: BannerProps) {
+export function Banner({ variant, icon, children, testID }: Readonly<BannerProps>) {
   return (
     <View
       testID={testID}

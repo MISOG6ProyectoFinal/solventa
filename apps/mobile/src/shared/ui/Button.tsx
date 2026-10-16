@@ -52,7 +52,7 @@ export function Button({
   loading = false,
   onPress,
   testID,
-}: ButtonProps) {
+}: Readonly<ButtonProps>) {
   const pressed = useAnimatedValue(0);
 
   const animatePressed = (toValue: number) => {

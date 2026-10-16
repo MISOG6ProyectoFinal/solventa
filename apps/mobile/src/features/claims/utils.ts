@@ -10,8 +10,10 @@ export function formatDate(date: Date): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+const displayOccurredAtPattern = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}:\d{2})$/;
+
 export function displayOccurredAt(value: string): string {
-  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}:\d{2})$/);
+  const match = displayOccurredAtPattern.exec(value);
   if (!match) {
     return value;
   }
@@ -23,8 +25,10 @@ export function toIsoOccurredAt(value: string): string {
   return `${displayOccurredAt(value).replace(' ', 'T')}:00`;
 }
 
+const occurredAtPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/;
+
 export function formatOccurredAt(value: string): string {
-  const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  const match = occurredAtPattern.exec(value);
   if (!match) {
     return value;
   }

@@ -26,7 +26,24 @@ export type AppHeaderProps = {
   };
 };
 
-export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action }: AppHeaderProps) {
+function leadingControl(displayBackBtn: boolean, leadingIcon: LeadingIcon | undefined, onBack: () => void) {
+  if (displayBackBtn) {
+    return <IconButton label="Volver" icon="volver" onPress={onBack} />;
+  }
+  if (!leadingIcon) {
+    return null;
+  }
+  return (
+    <IconButton
+      label={leadingIcon.label}
+      icon={leadingIcon.icon}
+      onPress={leadingIcon.onPress}
+      onLongPress={leadingIcon.onLongPress}
+    />
+  );
+}
+
+export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action }: Readonly<AppHeaderProps>) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
@@ -37,16 +54,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>
       <StatusBar barStyle="light-content" />
       <View testID="app-header-row" style={styles.row}>
-        {displayBackBtn ? (
-          <IconButton label="Volver" icon="volver" onPress={() => navigation.goBack()} />
-        ) : leadingIcon ? (
-          <IconButton
-            label={leadingIcon.label}
-            icon={leadingIcon.icon}
-            onPress={leadingIcon.onPress}
-            onLongPress={leadingIcon.onLongPress}
-          />
-        ) : null}
+        {leadingControl(displayBackBtn, leadingIcon, () => navigation.goBack())}
         <View style={[styles.copy, !hasLeadingIcon && styles.noLeadingSpace]}>
           <AppText variant="screenTitle" numberOfLines={1} style={styles.title}>
             {title}

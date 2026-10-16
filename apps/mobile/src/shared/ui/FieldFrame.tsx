@@ -26,7 +26,7 @@ export function FieldFrame({
   trailing,
   onPress,
   children,
-}: FieldFrameProps) {
+}: Readonly<FieldFrameProps>) {
   const active = focused && !error;
   const focus = useAnimatedValue(active ? 1 : 0);
 

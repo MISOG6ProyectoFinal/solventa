@@ -32,7 +32,7 @@ export function TextField({
   autoCapitalize,
   secureTextEntry = false,
   testID,
-}: TextFieldProps) {
+}: Readonly<TextFieldProps>) {
   const [focused, setFocused] = useState(false);
   const failed = error || errorMessage != null;
 

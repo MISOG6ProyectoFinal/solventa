@@ -16,7 +16,7 @@ type ScreenProps = {
   header: ScreenHeaderProps | { hide: true };
 };
 
-export function Screen({ children, testID, withTabBar = false, header }: ScreenProps) {
+export function Screen({ children, testID, withTabBar = false, header }: Readonly<ScreenProps>) {
   const showHeader = !header.hide;
   // The header occupies the top inset. The tab bar occupies the bottom inset.
   const edges: Edge[] = ['left', 'right'];

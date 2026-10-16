@@ -29,7 +29,7 @@ type TabBarProps = {
   onChange: (id: TabId) => void;
 };
 
-export function TabBar({ value, onChange }: TabBarProps) {
+export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
   const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = useState(0);
   const selectedIndex = Math.max(

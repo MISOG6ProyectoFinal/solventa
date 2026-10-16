@@ -21,7 +21,7 @@ type CardProps = {
   testID?: string;
 };
 
-export function Card({ children, variant = 'default', onPress, disabled = false, style, testID }: CardProps) {
+export function Card({ children, variant = 'default', onPress, disabled = false, style, testID }: Readonly<CardProps>) {
   const pressed = useAnimatedValue(0);
   const surface = [styles.card, variant === 'inverse' && styles.inverse];
 
