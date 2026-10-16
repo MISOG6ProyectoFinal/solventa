@@ -6,6 +6,7 @@ import { errorMessage } from '../../../../shared/api/client';
 import { theme } from '../../../../shared/theme';
 import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { listAvisos, type Aviso } from '../../api/listAvisos';
+import { listReports, type StoredReport } from '../../offline/listReports';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -19,6 +20,7 @@ function claimStatus(estado: string): { label: string; variant: 'pending' | 'suc
 export default function ClaimsScreen() {
   const navigation = useNavigation();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [pending, setPending] = useState<StoredReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export default function ClaimsScreen() {
     } else {
       setRefreshing(true);
     }
+
+    const saved = listReports().catch(() => [] as StoredReport[]);
 
     listAvisos()
       .then((items) => {
@@ -53,11 +57,14 @@ export default function ClaimsScreen() {
         setError(errorMessage(cause, texts.claims.loadFailed));
       })
       .finally(() => {
-        if (requestId.current !== id) {
-          return;
-        }
-        setLoading(false);
-        setRefreshing(false);
+        saved.then((reports) => {
+          if (requestId.current !== id) {
+            return;
+          }
+          setPending(reports);
+          setLoading(false);
+          setRefreshing(false);
+        });
       });
   }, []);
 
@@ -77,7 +84,7 @@ export default function ClaimsScreen() {
       header={{
         title: texts.claims.screenTitle,
         hideBackButton: true,
-        action: avisos.length > 0 ? { title: texts.claims.reportShort, onPress: report } : undefined,
+        action: avisos.length > 0 || pending.length > 0 ? { title: texts.claims.reportShort, onPress: report } : undefined,
       }}
     >
       {loading ? (
@@ -97,7 +104,8 @@ export default function ClaimsScreen() {
           }
         >
           {error ? <Banner variant="error">{error}</Banner> : null}
-          {avisos.length === 0 && error === null ? (
+          {pending.length > 0 ? <Banner variant="info">{texts.claims.savedOnDevice}</Banner> : null}
+          {avisos.length === 0 && pending.length === 0 && error === null ? (
             <Card style={styles.empty}>
               <AppText variant="bodySmall" style={styles.emptyMessage}>
                 {texts.claims.emptyMessage}
@@ -105,25 +113,42 @@ export default function ClaimsScreen() {
               <Button title={texts.claims.reportButton} onPress={report} />
             </Card>
           ) : (
-            avisos.map((aviso) => {
-              const status = claimStatus(aviso.estado);
-
-              return (
+            <>
+              {pending.map((saved) => (
                 <Card
-                  key={aviso.id}
+                  key={`pending-${saved.poliza_id}`}
                   testID="claim-item"
-                  onPress={() => navigation.navigate('AvisoDetail', { aviso })}
+                  onPress={() => navigation.navigate('ClaimReport')}
                 >
                   <View style={styles.titleRow}>
                     <AppText variant="button" style={styles.title}>
-                      {aviso.tipo}
+                      {saved.tipo}
                     </AppText>
-                    <StatusChip variant={status.variant}>{status.label}</StatusChip>
+                    <StatusChip variant="pending">{texts.claims.statusPendingSync}</StatusChip>
                   </View>
-                  <AppText variant="bodySmall">{aviso.poliza_id}</AppText>
+                  <AppText variant="bodySmall">{saved.poliza_id}</AppText>
                 </Card>
-              );
-            })
+              ))}
+              {avisos.map((aviso) => {
+                const status = claimStatus(aviso.estado);
+
+                return (
+                  <Card
+                    key={aviso.id}
+                    testID="claim-item"
+                    onPress={() => navigation.navigate('AvisoDetail', { aviso })}
+                  >
+                    <View style={styles.titleRow}>
+                      <AppText variant="button" style={styles.title}>
+                        {aviso.tipo}
+                      </AppText>
+                      <StatusChip variant={status.variant}>{status.label}</StatusChip>
+                    </View>
+                    <AppText variant="bodySmall">{aviso.poliza_id}</AppText>
+                  </Card>
+                );
+              })}
+            </>
           )}
         </ScrollView>
       )}

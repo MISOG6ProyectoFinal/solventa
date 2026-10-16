@@ -14,12 +14,16 @@ function policyId(policy: string): string {
   return parts[parts.length - 1] ?? policy;
 }
 
-export function createAviso(aviso: NewAviso): Promise<{ id: string }> {
-  return apiClient.post('/movil/siniestros', {
+export function avisoPayload(aviso: NewAviso) {
+  return {
     poliza_id: policyId(aviso.policy),
     tipo: aviso.claimType,
     ocurrido_en: toIsoOccurredAt(aviso.occurredAt),
     descripcion: aviso.description,
     ...(aviso.location === '' ? {} : { ubicacion: aviso.location }),
-  });
+  };
+}
+
+export function createAviso(aviso: NewAviso): Promise<{ id: string }> {
+  return apiClient.post('/movil/siniestros', avisoPayload(aviso));
 }

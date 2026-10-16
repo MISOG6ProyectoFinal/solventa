@@ -1,7 +1,11 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { theme } from '../../../../shared/theme';
+import { deleteReport } from '../../offline/deleteReport';
+import { saveReport } from '../../offline/saveReport';
 import ClaimsScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -53,10 +57,27 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
+const savedBanner =
+  'Tu reporte quedó guardado en este dispositivo. Ábrelo de nuevo y envíalo cuando tengas señal.';
+
+async function savePendingReport() {
+  mkdirSync(dirname('/tmp/foto.jpg'), { recursive: true });
+  writeFileSync('/tmp/foto.jpg', Uint8Array.from([0xff, 0xd8, 0xff]));
+  await saveReport({
+    policy: 'Viaje Internacional · SLV-2026-03105',
+    claimType: 'Emergencia médica',
+    occurredAt: '12/09/2026 10:30',
+    location: 'Carrera 7 #32-16, La Candelaria, Bogotá',
+    description: 'Golpe en la puerta',
+    files: [{ kind: 'photo', filePath: '/tmp/foto.jpg', bytes: 3, capturedAt: '10:30' }],
+  });
+}
+
 describe('ClaimsScreen', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     useNavigation().navigate.mockClear();
     useNavigation().goBack.mockClear();
+    await deleteReport();
     global.fetch = jest.fn(async () => jsonResponse([])) as typeof fetch;
   });
 
@@ -119,6 +140,22 @@ describe('ClaimsScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('AvisoDetail', {
       aviso: expect.objectContaining({ id: 'aviso-2', estado: 'radicado' }),
     });
+  });
+
+  it('shows the pending report when the avisos cannot be loaded', async () => {
+    await savePendingReport();
+    global.fetch = jest.fn(async () => jsonResponse({ detail: 'Siniestros no disponible.' }, 503)) as typeof fetch;
+    const { findByText, getByText } = await render(<ClaimsScreen />);
+
+    expect(await findByText('Siniestros no disponible.')).toBeTruthy();
+    expect(getByText('Emergencia médica')).toBeTruthy();
+    expect(getByText('Pendiente de sincronización')).toBeTruthy();
+    expect(getByText(savedBanner)).toBeTruthy();
+    expect(getByText('SLV-2026-03105')).toBeTruthy();
+
+    await fireEvent.press(getByText('Emergencia médica'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('ClaimReport');
   });
 
   it('shows a banner when the avisos cannot be loaded', async () => {

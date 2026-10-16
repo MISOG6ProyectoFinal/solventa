@@ -1,7 +1,12 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { StackActions, useNavigation } from '@react-navigation/native';
 
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import { readLocation } from '../../../../shared/location';
+import { deleteReport } from '../../offline/deleteReport';
+import { listReports } from '../../offline/listReports';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from './index';
 
@@ -84,12 +89,37 @@ function mockFiling() {
   });
 }
 
+const otherPlace = {
+  address: 'Calle 85 #12-34, Chapinero, Bogotá',
+  gps: 'GPS 4.7110, -74.0721 (±8 m)',
+};
+
+function mockCreateFailure() {
+  return jest.fn(async (url: string, init?: { method?: string }) => {
+    if (String(url).startsWith('file://')) {
+      return jsonResponse(null);
+    }
+
+    if (init?.method === 'POST' && String(url).endsWith('/movil/siniestros')) {
+      return jsonResponse({ detail: 'Sin conexión.' }, 503);
+    }
+
+    return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
+  });
+}
+
+const capturedPhoto = '/tmp/foto.jpg';
+
 describe('ReportClaimScreen', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    mkdirSync(dirname(capturedPhoto), { recursive: true });
+    writeFileSync(capturedPhoto, Uint8Array.from([0xff, 0xd8, 0xff]));
     jest.useFakeTimers({ now: fixedNow, advanceTimers: true });
     useNavigation().goBack.mockClear();
     useNavigation().navigate.mockClear();
+    useNavigation().dispatch.mockClear();
     useClaimsStore.getState().clear();
+    await deleteReport();
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
     global.fetch = mockFiling() as typeof fetch;
@@ -143,6 +173,7 @@ describe('ReportClaimScreen', () => {
 
     expect(queryByText('Obligatorio')).toBeNull();
     expect(getByText('Agrega al menos una evidencia')).toBeTruthy();
+    expect(await listReports()).toEqual([]);
   });
 
   it('changes the occurrence time', async () => {
@@ -215,6 +246,8 @@ describe('ReportClaimScreen', () => {
     expect(body.ubicacion).toBe(currentPlace.address);
     expect(body.ocurrido_en).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/);
 
+    expect(await listReports()).toEqual([]);
+
     expect(jest.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/movil/siniestros/aviso-1/radicar'))).toBe(
       true,
     );
@@ -224,8 +257,18 @@ describe('ReportClaimScreen', () => {
     expect(upload.bytes).toBe(3);
   });
 
-  it('keeps the form open when the report cannot be filed', async () => {
-    global.fetch = jest.fn(async () => jsonResponse({ detail: 'El archivo no pasó la validación.' }, 422)) as typeof fetch;
+  it('keeps the form open when the aviso was created but a later step fails', async () => {
+    global.fetch = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (String(url).startsWith('file://')) {
+        return jsonResponse(null);
+      }
+
+      if (init?.method === 'POST' && String(url).endsWith('/movil/siniestros')) {
+        return jsonResponse({ id: 'aviso-1', estado: 'borrador' }, 201);
+      }
+
+      return jsonResponse({ detail: 'El archivo no pasó la validación.' }, 422);
+    }) as typeof fetch;
     useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
     const { findByText, getByPlaceholderText, getByText, queryByTestId } = await render(<ReportClaimScreen />);
 
@@ -239,6 +282,221 @@ describe('ReportClaimScreen', () => {
     expect(queryByTestId('button-progress')).toBeNull();
     expect(getByText('Enviar reporte')).toBeTruthy();
     expect(useNavigation().navigate).not.toHaveBeenCalled();
+    expect(await listReports()).toEqual([]);
+  });
+
+  it('saves the report on the phone when the aviso is not created', async () => {
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+
+    await form.unmount();
+
+    const [saved] = await listReports();
+    expect(saved?.descripcion).toBe('Golpe en la puerta');
+    expect(saved?.poliza_id).toBe('SLV-2026-03105');
+    expect(saved?.tipo).toBe('Accidente con vehículo de alquiler');
+
+    const restored = await render(<ReportClaimScreen />);
+
+    expect(await restored.findByDisplayValue('Golpe en la puerta')).toBeTruthy();
+    expect(restored.getByText('Foto 1')).toBeTruthy();
+    expect(restored.getByText('1/10')).toBeTruthy();
+    expect(restored.queryByText('Foto 2')).toBeNull();
+    expect(restored.getByTestId('evidence-photo')).toBeTruthy();
+  });
+
+  it('shows the saved photo once when that picture is still in memory', async () => {
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await form.unmount();
+
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const restored = await render(<ReportClaimScreen />);
+
+    expect(await restored.findByDisplayValue('Golpe en la puerta')).toBeTruthy();
+    expect(restored.getByText('Foto 1')).toBeTruthy();
+    expect(restored.getByText('1/10')).toBeTruthy();
+    expect(restored.queryByText('Foto 2')).toBeNull();
+  });
+
+  it('reads the saved report again after the form is closed', async () => {
+    jest
+      .mocked(readLocation)
+      .mockReset()
+      .mockResolvedValueOnce(currentPlace)
+      .mockResolvedValueOnce(otherPlace)
+      .mockResolvedValue(currentPlace);
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.press(form.getByText('Viaje Internacional · SLV-2026-03105'));
+    await fireEvent.press(form.getByLabelText('Protección Celular · SLV-2025-01820'));
+    await fireEvent.press(form.getByText('Accidente con vehículo de alquiler'));
+    await fireEvent.press(form.getByLabelText('Pérdida de equipaje'));
+    await fireEvent.press(form.getByText('12/09/2026 10:30'));
+    await fireEvent.press(form.getByLabelText('12 de septiembre de 2026'));
+    await fireEvent.changeText(form.getByLabelText('Hora'), '11');
+    await fireEvent.press(form.getByText('Listo'));
+    await fireEvent.press(form.getByLabelText('Actualizar ubicación'));
+    await waitFor(() => {
+      expect(form.getByText(otherPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Choque en la calle 85');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await form.unmount();
+
+    const [saved] = await listReports();
+    expect(saved?.descripcion).toBe('Choque en la calle 85');
+    expect(Array.from(readFileSync(saved.files[0].filePath))).toEqual([0xff, 0xd8, 0xff]);
+
+    const restored = await render(<ReportClaimScreen />);
+
+    expect(await restored.findByDisplayValue('Choque en la calle 85')).toBeTruthy();
+    expect(restored.getByText('Protección Celular · SLV-2025-01820')).toBeTruthy();
+    expect(restored.getByText('Pérdida de equipaje')).toBeTruthy();
+    expect(restored.getByText('12/09/2026 11:30')).toBeTruthy();
+    expect(restored.getByText(otherPlace.address)).toBeTruthy();
+    expect(restored.getByText('Foto 1')).toBeTruthy();
+    expect(Array.from(readFileSync((await listReports())[0].files[0].filePath))).toEqual([0xff, 0xd8, 0xff]);
+  });
+
+  it('replaces the saved report when a later send fails before the aviso exists', async () => {
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await form.unmount();
+
+    const restored = await render(<ReportClaimScreen />);
+    expect(await restored.findByDisplayValue('Golpe en la puerta')).toBeTruthy();
+    await fireEvent.changeText(restored.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en el parabrisas');
+    await fireEvent.press(restored.getByText('Enviar reporte'));
+
+    await waitFor(async () => {
+      expect((await listReports())[0]?.descripcion).toBe('Golpe en el parabrisas');
+    });
+    await restored.unmount();
+  });
+
+  it('deletes the saved report after it is sent', async () => {
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await form.unmount();
+
+    global.fetch = mockFiling() as typeof fetch;
+    useNavigation().dispatch.mockClear();
+    const restored = await render(<ReportClaimScreen />);
+    expect(await restored.findByDisplayValue('Golpe en la puerta')).toBeTruthy();
+    expect(await restored.findByText('Foto 1')).toBeTruthy();
+    await fireEvent.press(restored.getByText('Enviar reporte'));
+
+    await waitFor(() => {
+      expect(useNavigation().dispatch).toHaveBeenCalledWith(
+        StackActions.replace('ClaimReport', expect.objectContaining({ screen: 'ClaimDetail' })),
+      );
+    });
+    expect(await listReports()).toEqual([]);
+  });
+
+  it('shows the new photo when a later report replaces the saved one', async () => {
+    const secondPhoto = '/tmp/foto-2.jpg';
+    const secondBytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47]);
+    writeFileSync(secondPhoto, secondBytes);
+
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: capturedPhoto, bytes: 1536 });
+    const first = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(first.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(first.getByPlaceholderText('Describe lo ocurrido'), 'Primer golpe');
+    await fireEvent.press(first.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await first.unmount();
+
+    const firstRestored = await render(<ReportClaimScreen />);
+    expect(await firstRestored.findByDisplayValue('Primer golpe')).toBeTruthy();
+    const firstUri = firstRestored.getByTestId('evidence-photo').props.source.uri as string;
+
+    global.fetch = mockFiling() as typeof fetch;
+    useNavigation().dispatch.mockClear();
+    useNavigation().navigate.mockClear();
+    await fireEvent.press(firstRestored.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().dispatch).toHaveBeenCalled();
+    });
+    await firstRestored.unmount();
+
+    global.fetch = mockCreateFailure() as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: secondPhoto, bytes: secondBytes.byteLength });
+    const second = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(second.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(second.getByPlaceholderText('Describe lo ocurrido'), 'Segundo golpe');
+    await fireEvent.press(second.getByText('Enviar reporte'));
+    await waitFor(() => {
+      expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Claims' });
+    });
+    await second.unmount();
+
+    const secondRestored = await render(<ReportClaimScreen />);
+    expect(await secondRestored.findByDisplayValue('Segundo golpe')).toBeTruthy();
+    expect(secondRestored.getByTestId('evidence-photo').props.source.uri).not.toBe(firstUri);
+    expect(Array.from(readFileSync((await listReports())[0].files[0].filePath))).toEqual([
+      0x89, 0x50, 0x4e, 0x47,
+    ]);
   });
 
   it('opens the camera to take a photo', async () => {

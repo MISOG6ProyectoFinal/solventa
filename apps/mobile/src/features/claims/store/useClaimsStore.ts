@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import { photoLimit } from '../constants';
 import { formatClock } from '../utils';
-import { ClaimPhotos } from './types';
+import { ClaimPhoto, ClaimPhotos, ClaimVideo } from './types';
 
 export const useClaimsStore = create<ClaimPhotos>()(
   immer((set) => ({
@@ -32,6 +32,34 @@ export const useClaimsStore = create<ClaimPhotos>()(
           label: `Video ${state.videos.length + 1}`,
           capturedAt: video.capturedAt ?? formatClock(new Date()),
         });
+      }),
+    replaceEvidence: (files) =>
+      set((state) => {
+        const nextPhotos: ClaimPhoto[] = [];
+        const nextVideos: ClaimVideo[] = [];
+        for (const file of files) {
+          if (nextPhotos.length + nextVideos.length >= photoLimit) {
+            break;
+          }
+          const capturedAt = file.capturedAt ?? formatClock(new Date());
+          if (file.kind === 'photo') {
+            nextPhotos.push({
+              filePath: file.filePath,
+              bytes: file.bytes,
+              capturedAt,
+              label: `Foto ${nextPhotos.length + 1}`,
+            });
+          } else {
+            nextVideos.push({
+              filePath: file.filePath,
+              bytes: file.bytes,
+              capturedAt,
+              label: `Video ${nextVideos.length + 1}`,
+            });
+          }
+        }
+        state.photos = nextPhotos;
+        state.videos = nextVideos;
       }),
     removePhoto: (filePath) =>
       set((state) => {
