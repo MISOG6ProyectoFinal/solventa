@@ -1,4 +1,4 @@
-import random
+import secrets
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
@@ -79,7 +79,7 @@ class ListarAvisosUseCase:
 
 
 def nuevo_radicado() -> str:
-    return f"SIN-{random.randint(10000, 99999)}"
+    return f"SIN-{10000 + secrets.randbelow(90000)}"
 
 
 class RadicarAvisoUseCase:

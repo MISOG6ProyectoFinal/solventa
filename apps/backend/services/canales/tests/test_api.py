@@ -53,7 +53,7 @@ class _Upstream:
 
 
 def _status_error(status: int, message: str) -> httpx.HTTPStatusError:
-    request = httpx.Request("POST", "http://siniestros/siniestros/avisos")
+    request = httpx.Request("POST", "https://siniestros/siniestros/avisos")
     response = httpx.Response(status, text=message, request=request)
     return httpx.HTTPStatusError(str(status), request=request, response=response)
 

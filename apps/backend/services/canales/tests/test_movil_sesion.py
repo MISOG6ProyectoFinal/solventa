@@ -28,7 +28,7 @@ class _Upstream:
 
 
 def _error_json(status: int, detail) -> httpx.HTTPStatusError:
-    request = httpx.Request("POST", "http://identidad/identidad/sesiones")
+    request = httpx.Request("POST", "https://identidad/identidad/sesiones")
     response = httpx.Response(status, json={"detail": detail}, request=request)
     return httpx.HTTPStatusError(str(status), request=request, response=response)
 

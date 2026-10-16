@@ -38,7 +38,7 @@ def test_persistent_stores_wires_postgres_and_s3(monkeypatch):
 
 
 def test_persistent_stores_drop_the_localstack_endpoint():
-    configured = SiniestrosSettings(persistent_stores=True, aws_endpoint_url="http://localstack:4566")
+    configured = SiniestrosSettings(persistent_stores=True, aws_endpoint_url="https://localstack:4566")
 
     assert configured.aws_endpoint_url is None
 

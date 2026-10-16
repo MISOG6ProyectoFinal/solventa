@@ -191,7 +191,7 @@ resource "aws_cloudfront_distribution" "edge" {
     custom_origin_config {
       http_port  = 80
       https_port = 443
-      # TODO: certificado ACM en el NLB y https-only cuando exista dominio propio.
+      # El NLB todavía no tiene certificado. El origen sigue en claro hasta que exista un dominio propio.
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
