@@ -44,7 +44,15 @@ jest.mock('react-native', () => {
     Image: host('Image'),
     TextInput: host('TextInput'),
     Pressable: host('Pressable'),
-    ScrollView: host('ScrollView'),
+    ScrollView: ({
+      children,
+      refreshControl,
+      ...props
+    }: {
+      children?: unknown;
+      refreshControl?: unknown;
+    }) => React.createElement('ScrollView', props, refreshControl, children),
+    RefreshControl: host('RefreshControl'),
     ActivityIndicator: host('ActivityIndicator'),
     Modal: ({ children, visible, ...props }: { children?: unknown; visible?: boolean }) =>
       visible ? React.createElement('Modal', props, children) : null,

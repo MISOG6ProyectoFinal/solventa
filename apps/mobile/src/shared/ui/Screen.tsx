@@ -37,6 +37,7 @@ export function Screen({ children, testID, withTabBar = false, header }: ScreenP
           subtitle={header.subtitle}
           leadingIcon={header.leadingIcon}
           hideBackButton={header.hideBackButton}
+          action={header.action}
         />
       ) : null}
       {children}

@@ -76,6 +76,10 @@ function mockFiling() {
       return jsonResponse({ estado: 'disponible' });
     }
 
+    if (String(url).endsWith('/radicar')) {
+      return jsonResponse({ id: 'aviso-1', estado: 'radicado' });
+    }
+
     return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
   });
 }
@@ -210,6 +214,10 @@ describe('ReportClaimScreen', () => {
     expect(body.descripcion).toBe('Golpe en la puerta');
     expect(body.ubicacion).toBe(currentPlace.address);
     expect(body.ocurrido_en).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/);
+
+    expect(jest.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/movil/siniestros/aviso-1/radicar'))).toBe(
+      true,
+    );
 
     const uploadCall = jest.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/evidencias/cargas'));
     const upload = JSON.parse((uploadCall?.[1] as { body: string }).body) as { bytes: number };

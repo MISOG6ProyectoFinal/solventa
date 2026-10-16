@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ComponentScreen from '../features/components/screens/ComponentScreen';
 import ComponentsScreen from '../features/components/screens/ComponentsScreen';
 import { ClaimReportStack } from '../features/claims/ClaimReportStack';
+import AvisoDetailScreen from '../features/claims/screens/AvisoDetailScreen';
 import ClaimsScreen from '../features/claims/screens/ClaimsScreen';
 import { QuoteStack } from '../features/quote/QuoteStack';
 import ProductsScreen from '../features/quote/screens/ProductsScreen';
@@ -70,6 +71,7 @@ export const RootStack = createNativeStackNavigator({
       screens: {
         Main: Tabs,
         ClaimReport: ClaimReportStack,
+        AvisoDetail: AvisoDetailScreen,
         Quote: QuoteStack,
         Components: ComponentsScreen,
         Component: ComponentScreen,

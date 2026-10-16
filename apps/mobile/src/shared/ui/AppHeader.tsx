@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
+import { Button } from './Button';
 import { IconButton } from './IconButton';
 import { type IconName } from './icons';
 
@@ -19,9 +20,13 @@ export type AppHeaderProps = {
   subtitle?: string;
   leadingIcon?: LeadingIcon;
   hideBackButton?: boolean;
+  action?: {
+    title: string;
+    onPress: () => void;
+  };
 };
 
-export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
@@ -52,6 +57,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppH
             </AppText>
           ) : null}
         </View>
+        {action ? <Button title={action.title} variant="accent" onPress={action.onPress} /> : null}
       </View>
     </View>
   );

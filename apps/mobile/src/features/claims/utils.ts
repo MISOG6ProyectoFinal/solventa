@@ -23,6 +23,15 @@ export function toIsoOccurredAt(value: string): string {
   return `${displayOccurredAt(value).replace(' ', 'T')}:00`;
 }
 
+export function formatOccurredAt(value: string): string {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  if (!match) {
+    return value;
+  }
+
+  return `${match[1]} ${match[2]}`;
+}
+
 export function formatClock(date: Date): string {
   const pad = (n: number): string => n.toString().padStart(2, '0');
 

@@ -7,6 +7,7 @@ export default StyleSheet.create({
     flex: 1,
   },
   content: {
+    flexGrow: 1,
     padding: theme.space.lg,
     gap: theme.space.md,
   },
@@ -16,5 +17,21 @@ export default StyleSheet.create({
   },
   emptyMessage: {
     textAlign: 'center',
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.space.lg,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.space.sm,
+  },
+  title: {
+    flex: 1,
+    color: theme.colors.text,
   },
 });
