@@ -1,10 +1,14 @@
 import os
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository, avisos, evidencias
 from siniestros.avisos.domain.models import Aviso, Evidencia
 from sqlalchemy import create_engine, delete, inspect
+
+# Ids these tests insert. A previous run may have left them committed.
+_TEST_AVISO_IDS = {"aviso-1", "aviso-2"}
 
 
 def _postgres_url() -> str | None:
@@ -28,6 +32,14 @@ def _params():
     return params
 
 
+def _purge(engine, aviso_ids: set[str]) -> None:
+    if not aviso_ids:
+        return
+    with engine.begin() as conn:
+        conn.execute(delete(evidencias).where(evidencias.c.aviso_id.in_(aviso_ids)))
+        conn.execute(delete(avisos).where(avisos.c.id.in_(aviso_ids)))
+
+
 @pytest.fixture(params=_params())
 def repository(request):
     if request.param is None:
@@ -35,10 +47,26 @@ def repository(request):
     engine = create_engine(request.param)
     repo = PostgresAvisoRepository(engine)
     repo.create_schema()
-    with engine.begin() as conn:
-        conn.execute(delete(evidencias))
-        conn.execute(delete(avisos))
-    return repo
+    inserted: set[str] = set()
+    add_aviso = repo.add_aviso
+    add_evidencia = repo.add_evidencia
+
+    def tracking_add_aviso(aviso: Aviso) -> None:
+        inserted.add(aviso.id)
+        add_aviso(aviso)
+
+    def tracking_add_evidencia(evidencia: Evidencia) -> None:
+        inserted.add(evidencia.aviso_id)
+        add_evidencia(evidencia)
+
+    repo.add_aviso = tracking_add_aviso
+    repo.add_evidencia = tracking_add_evidencia
+    _purge(engine, set(_TEST_AVISO_IDS))
+    try:
+        yield repo
+    finally:
+        _purge(engine, inserted | _TEST_AVISO_IDS)
+        engine.dispose()
 
 
 def _aviso(aviso_id: str = "aviso-1") -> Aviso:
@@ -73,12 +101,13 @@ def test_create_schema_crea_las_tablas(repository):
 
 
 def test_el_listado_trae_solo_los_avisos_del_cliente(repository):
-    propio = _aviso()
-    ajeno = _aviso("aviso-2").model_copy(update={"cliente_id": "otro"})
+    cliente = f"cliente-{uuid4()}"
+    propio = _aviso().model_copy(update={"cliente_id": cliente})
+    ajeno = _aviso("aviso-2").model_copy(update={"cliente_id": f"cliente-{uuid4()}"})
     repository.add_aviso(propio)
     repository.add_aviso(ajeno)
 
-    listed = repository.list_avisos("cliente-1")
+    listed = repository.list_avisos(cliente)
 
     assert [item.id for item in listed] == [propio.id]
 

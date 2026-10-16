@@ -1,14 +1,16 @@
 import os
+from contextlib import contextmanager
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 from siniestros.avisos import api
 from siniestros.avisos.adapters.object_store import S3ObjectStore
-from siniestros.avisos.adapters.repository import PostgresAvisoRepository
+from siniestros.avisos.adapters.repository import PostgresAvisoRepository, avisos, evidencias
 from siniestros.config import settings
 from siniestros.main import app
 from solventa_common.db import build_engine
+from sqlalchemy import delete
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DB_HOST") or not os.getenv("AWS_ENDPOINT_URL"),
@@ -21,7 +23,30 @@ GIF = b"GIF89a" + b"\x00" * 16
 BUCKET = "solventa-evidencias"
 
 
-def _client() -> TestClient:
+def _purge(engine, store: S3ObjectStore, aviso_ids: list[str]) -> None:
+    if not aviso_ids:
+        return
+    with engine.begin() as conn:
+        conn.execute(delete(evidencias).where(evidencias.c.aviso_id.in_(aviso_ids)))
+        conn.execute(delete(avisos).where(avisos.c.id.in_(aviso_ids)))
+    for aviso_id in aviso_ids:
+        prefix = f"avisos/{aviso_id}/"
+        token = None
+        while True:
+            kwargs = {"Bucket": store.bucket, "Prefix": prefix}
+            if token:
+                kwargs["ContinuationToken"] = token
+            page = store.client.list_objects_v2(**kwargs)
+            keys = [{"Key": item["Key"]} for item in page.get("Contents", [])]
+            if keys:
+                store.client.delete_objects(Bucket=store.bucket, Delete={"Objects": keys})
+            if not page.get("IsTruncated"):
+                break
+            token = page.get("NextContinuationToken")
+
+
+@contextmanager
+def _client():
     engine = build_engine(settings.database_url)
     repository = PostgresAvisoRepository(engine)
     store = S3ObjectStore(BUCKET, settings.aws_region, settings.aws_endpoint_url)
@@ -30,10 +55,15 @@ def _client() -> TestClient:
     except Exception:
         store.client.create_bucket(Bucket=BUCKET)
     api.wire(repository, store, bucket=BUCKET)
-    return TestClient(app)
+    created: list[str] = []
+    try:
+        yield TestClient(app), created
+    finally:
+        _purge(engine, store, created)
+        engine.dispose()
 
 
-def _aviso(client: TestClient) -> str:
+def _aviso(client: TestClient, created: list[str]) -> str:
     response = client.post(
         "/siniestros/avisos",
         json={
@@ -45,50 +75,52 @@ def _aviso(client: TestClient) -> str:
         },
     )
     assert response.status_code == 201
-    return response.json()["id"]
+    aviso_id = response.json()["id"]
+    created.append(aviso_id)
+    return aviso_id
 
 
 def test_la_carga_queda_disponible_y_un_gif_se_rechaza():
-    client = _client()
-    aviso_id = _aviso(client)
-    carga = client.post(
-        f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
-        json={"content_type": "image/jpeg", "bytes": len(JPEG)},
-        headers=CLIENTE,
-    )
-    assert carga.status_code == 201
-    body = carga.json()
-    put = httpx.put(body["upload_url"], content=JPEG, headers=body["headers"])
-    assert put.status_code in {200, 204}
+    with _client() as (client, created):
+        aviso_id = _aviso(client, created)
+        carga = client.post(
+            f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
+            json={"content_type": "image/jpeg", "bytes": len(JPEG)},
+            headers=CLIENTE,
+        )
+        assert carga.status_code == 201
+        body = carga.json()
+        put = httpx.put(body["upload_url"], content=JPEG, headers=body["headers"])
+        assert put.status_code in {200, 204}
 
-    confirmed = client.post(
-        f"/siniestros/avisos/{aviso_id}/evidencias/{body['evidencia_id']}/confirmar",
-        headers=CLIENTE,
-    )
-    assert confirmed.status_code == 200
-    assert confirmed.json()["url"].startswith(f"s3://{BUCKET}/avisos/")
+        confirmed = client.post(
+            f"/siniestros/avisos/{aviso_id}/evidencias/{body['evidencia_id']}/confirmar",
+            headers=CLIENTE,
+        )
+        assert confirmed.status_code == 200
+        assert confirmed.json()["url"].startswith(f"s3://{BUCKET}/avisos/")
 
-    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias", headers=CLIENTE)
-    assert listed.status_code == 200
-    items = listed.json()
-    assert len(items) == 1
-    downloaded = httpx.get(items[0]["download_url"])
-    assert downloaded.status_code == 200
-    assert downloaded.content == JPEG
+        listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias", headers=CLIENTE)
+        assert listed.status_code == 200
+        items = listed.json()
+        assert len(items) == 1
+        downloaded = httpx.get(items[0]["download_url"])
+        assert downloaded.status_code == 200
+        assert downloaded.content == JPEG
 
-    otro_id = _aviso(client)
-    falsa = client.post(
-        f"/siniestros/avisos/{otro_id}/evidencias/cargas",
-        json={"content_type": "image/jpeg", "bytes": len(GIF)},
-        headers=CLIENTE,
-    )
-    assert falsa.status_code == 201
-    falsa_body = falsa.json()
-    httpx.put(falsa_body["upload_url"], content=GIF, headers=falsa_body["headers"])
-    rejected = client.post(
-        f"/siniestros/avisos/{otro_id}/evidencias/{falsa_body['evidencia_id']}/confirmar",
-        headers=CLIENTE,
-    )
-    assert rejected.status_code == 422
-    assert rejected.json()["detail"] == "El archivo no pasó la validación."
-    assert client.get(f"/siniestros/avisos/{otro_id}/evidencias", headers=CLIENTE).json() == []
+        otro_id = _aviso(client, created)
+        falsa = client.post(
+            f"/siniestros/avisos/{otro_id}/evidencias/cargas",
+            json={"content_type": "image/jpeg", "bytes": len(GIF)},
+            headers=CLIENTE,
+        )
+        assert falsa.status_code == 201
+        falsa_body = falsa.json()
+        httpx.put(falsa_body["upload_url"], content=GIF, headers=falsa_body["headers"])
+        rejected = client.post(
+            f"/siniestros/avisos/{otro_id}/evidencias/{falsa_body['evidencia_id']}/confirmar",
+            headers=CLIENTE,
+        )
+        assert rejected.status_code == 422
+        assert rejected.json()["detail"] == "El archivo no pasó la validación."
+        assert client.get(f"/siniestros/avisos/{otro_id}/evidencias", headers=CLIENTE).json() == []
