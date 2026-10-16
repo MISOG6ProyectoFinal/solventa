@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 from canales.main import app
 from fastapi.testclient import TestClient
 
+from tests.movil_auth import authorization
+
 client = TestClient(app)
 
 SALIDA = date.today()
@@ -62,7 +64,7 @@ def solicitud_viaje(**overrides) -> dict:
 @patch("canales.movil.api.cotizacion")
 def test_bff_movil_lista_productos_via_servicio_cotizacion(mock_client: MagicMock):
     mock_client.get.return_value = PRODUCTOS
-    response = client.get("/movil/productos")
+    response = client.get("/movil/productos", headers=authorization())
     assert response.status_code == 200
     assert response.json() == PRODUCTOS
     mock_client.get.assert_called_once_with("/catalogo/productos")
@@ -71,7 +73,7 @@ def test_bff_movil_lista_productos_via_servicio_cotizacion(mock_client: MagicMoc
 @patch("canales.movil.api.cotizacion")
 def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
     mock_client.post.return_value = OFERTA
-    response = client.post("/movil/cotizaciones", json=solicitud_viaje())
+    response = client.post("/movil/cotizaciones", json=solicitud_viaje(), headers=authorization())
     assert response.status_code == 200
     data = response.json()
     assert data["prima"] == "149940.00"
@@ -86,7 +88,7 @@ def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
 @patch("canales.movil.api.cotizacion")
 def test_bff_movil_no_propaga_pii_a_cotizacion(mock_client: MagicMock):
     mock_client.post.return_value = OFERTA
-    response = client.post("/movil/cotizaciones", json=solicitud_viaje())
+    response = client.post("/movil/cotizaciones", json=solicitud_viaje(), headers=authorization())
     assert response.status_code == 200
     enviado = mock_client.post.call_args.kwargs["json"]
     assert enviado == {
@@ -114,8 +116,9 @@ def test_bff_movil_valida_el_formulario_antes_de_delegar(mock_client: MagicMock)
         solicitud_viaje(viajeros=0),
         solicitud_viaje(viajeros=-2),
     )
+    headers = authorization()
     for body in invalidas:
-        response = client.post("/movil/cotizaciones", json=body)
+        response = client.post("/movil/cotizaciones", json=body, headers=headers)
         assert response.status_code == 422, body
     mock_client.post.assert_not_called()
 
@@ -123,8 +126,9 @@ def test_bff_movil_valida_el_formulario_antes_de_delegar(mock_client: MagicMock)
 @patch("canales.movil.api.cotizacion")
 def test_bff_movil_exige_todos_los_campos(mock_client: MagicMock):
     completa = solicitud_viaje()
+    headers = authorization()
     for campo in completa:
         body = {k: v for k, v in completa.items() if k != campo}
-        response = client.post("/movil/cotizaciones", json=body)
+        response = client.post("/movil/cotizaciones", json=body, headers=headers)
         assert response.status_code == 422, campo
     mock_client.post.assert_not_called()

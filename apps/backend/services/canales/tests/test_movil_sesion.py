@@ -1,6 +1,7 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
+import pytest
 from canales.config import settings
 from canales.main import app
 from fastapi.testclient import TestClient
@@ -83,6 +84,45 @@ def test_movil_conserva_el_correo_duplicado(monkeypatch):
 
     assert response.status_code == 409
     assert response.json()["detail"] == detalle
+
+
+def _rutas_protegidas() -> list[tuple[str, str, dict | None]]:
+    salida = date.today()
+    return [
+        ("GET", "/movil/productos", None),
+        (
+            "POST",
+            "/movil/cotizaciones",
+            {
+                "producto_id": "viaje-internacional",
+                "nombre": "Ana",
+                "cedula": "1020304050",
+                "destino": "España",
+                "fecha_salida": salida.isoformat(),
+                "fecha_regreso": (salida + timedelta(days=1)).isoformat(),
+                "viajeros": 1,
+            },
+        ),
+        ("POST", "/movil/siniestros", {"poliza_id": "POL-1"}),
+        ("POST", "/movil/siniestros/aviso-1/evidencias/cargas", {"content_type": "image/jpeg"}),
+        ("POST", "/movil/siniestros/aviso-1/evidencias/ev-1/confirmar", None),
+        ("GET", "/movil/siniestros/aviso-1/evidencias", None),
+    ]
+
+
+@pytest.mark.parametrize(("method", "path", "body"), _rutas_protegidas())
+def test_movil_exige_sesion(method: str, path: str, body: dict | None):
+    response = client.request(method, path, json=body)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "La sesión no es válida"
+
+
+def test_movil_producto_con_token_invalido_responde_401():
+    response = client.get("/movil/productos", headers={"Authorization": "Bearer no-es-un-token"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "La sesión no es válida"
 
 
 def test_movil_sesion_sin_token_responde_401():

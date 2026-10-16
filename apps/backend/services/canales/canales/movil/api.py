@@ -1,10 +1,10 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
-from solventa_common.sesion import InvalidToken, verify_token
+from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 
 from canales.clients import cotizacion, identidad, siniestros
 from canales.config import settings
@@ -83,6 +83,16 @@ def _bearer(authorization: str | None) -> str:
     return token
 
 
+def require_session(authorization: Annotated[str | None, Header()] = None) -> SessionToken:
+    try:
+        return verify_token(_bearer(authorization), settings.sesion_secreto)
+    except InvalidToken as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION) from exc
+
+
+authenticated = APIRouter(dependencies=[Depends(require_session)])
+
+
 @router.get("/")
 def info() -> dict:
     return {"component": "BFF Móvil"}
@@ -98,13 +108,8 @@ def registrar(solicitud: SolicitudRegistro) -> dict:
     return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump())
 
 
-@router.get("/sesion")
-def sesion_actual(authorization: Annotated[str | None, Header()] = None) -> dict:
-    token = _bearer(authorization)
-    try:
-        payload = verify_token(token, settings.sesion_secreto)
-    except InvalidToken as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION) from exc
+@authenticated.get("/sesion")
+def sesion_actual(payload: Annotated[SessionToken, Depends(require_session)]) -> dict:
     return {
         "cliente_id": payload.client_id,
         "correo": payload.email,
@@ -113,13 +118,13 @@ def sesion_actual(authorization: Annotated[str | None, Header()] = None) -> dict
     }
 
 
-@router.get("/productos")
+@authenticated.get("/productos")
 def listar_productos() -> list:
     """Catálogo de productos del canal Mobile (vía servicio de Cotización)."""
     return call_upstream(cotizacion.get, "/catalogo/productos")
 
 
-@router.post("/cotizaciones")
+@authenticated.post("/cotizaciones")
 def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
     """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
     return call_upstream(
@@ -130,12 +135,12 @@ def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
     )
 
 
-@router.post("/siniestros", status_code=201)
+@authenticated.post("/siniestros", status_code=201)
 def reportar_siniestro(aviso: dict) -> dict:
     return call_upstream(siniestros.post, "/siniestros/avisos", json=aviso)
 
 
-@router.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)
+@authenticated.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)
 def solicitar_carga(aviso_id: str, carga: dict) -> dict:
     return call_upstream(
         siniestros.post,
@@ -144,7 +149,7 @@ def solicitar_carga(aviso_id: str, carga: dict) -> dict:
     )
 
 
-@router.post("/siniestros/{aviso_id}/evidencias/{evidencia_id}/confirmar")
+@authenticated.post("/siniestros/{aviso_id}/evidencias/{evidencia_id}/confirmar")
 def confirmar_carga(aviso_id: str, evidencia_id: str) -> dict:
     return call_upstream(
         siniestros.post,
@@ -152,6 +157,9 @@ def confirmar_carga(aviso_id: str, evidencia_id: str) -> dict:
     )
 
 
-@router.get("/siniestros/{aviso_id}/evidencias")
+@authenticated.get("/siniestros/{aviso_id}/evidencias")
 def listar_evidencias(aviso_id: str):
     return call_upstream(siniestros.get, f"/siniestros/avisos/{aviso_id}/evidencias")
+
+
+router.include_router(authenticated)
