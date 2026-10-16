@@ -82,10 +82,11 @@ def abrir_aviso(body: NuevoAviso) -> dict:
             ocurrido_en=body.ocurrido_en,
             descripcion=body.descripcion,
             ubicacion=body.ubicacion,
+            cliente_id=body.cliente_id,
         )
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
-    return {"id": created.id, "estado": created.estado}
+    return {"id": created.id, "estado": created.estado, "cliente_id": created.cliente_id}
 
 
 @router.post("/avisos/{aviso_id}/evidencias/cargas", status_code=201)

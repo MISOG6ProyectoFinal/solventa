@@ -9,6 +9,7 @@ avisos = Table(
     "avisos",
     metadata,
     Column("id", String(64), primary_key=True),
+    Column("cliente_id", String(64), nullable=False),
     Column("poliza_id", String(64), nullable=False),
     Column("tipo", String(64), nullable=False),
     Column("ocurrido_en", DateTime(timezone=True), nullable=False),
@@ -35,6 +36,7 @@ evidencias = Table(
 def _aviso(row) -> Aviso:
     return Aviso(
         id=row["id"],
+        cliente_id=row["cliente_id"],
         poliza_id=row["poliza_id"],
         tipo=row["tipo"],
         ocurrido_en=row["ocurrido_en"],

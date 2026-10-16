@@ -41,6 +41,7 @@ def aviso(crear: CrearAvisoUseCase):
         ocurrido_en=datetime(2026, 10, 1, tzinfo=UTC),
         descripcion="Golpe en la puerta",
         ubicacion="Bogotá",
+        cliente_id="cliente-1",
     )
 
 
@@ -49,6 +50,21 @@ def test_crear_aviso_queda_en_borrador():
     created = aviso(crear)
     assert created.id
     assert created.estado == "borrador"
+
+
+def test_crear_aviso_queda_asociado_al_cliente():
+    repo, _, crear, _, _, _ = build()
+    created = crear.execute(
+        poliza_id="POL-1",
+        tipo="choque",
+        ocurrido_en=datetime(2026, 10, 1, tzinfo=UTC),
+        descripcion="Golpe en la puerta",
+        cliente_id="cliente-demo",
+    )
+    loaded = repo.get_aviso(created.id)
+    assert loaded is not None
+    assert loaded.cliente_id == "cliente-demo"
+    assert created.cliente_id == "cliente-demo"
 
 
 def test_solicitar_carga_jpeg_queda_pendiente():

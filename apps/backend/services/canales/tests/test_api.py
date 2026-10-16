@@ -58,6 +58,20 @@ def _status_error(status: int, message: str) -> httpx.HTTPStatusError:
     return httpx.HTTPStatusError(str(status), request=request, response=response)
 
 
+def test_movil_asocia_el_aviso_con_el_cliente_de_la_sesion(monkeypatch):
+    upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.post(
+        "/movil/siniestros",
+        json={**AVISO, "cliente_id": "otro-cliente"},
+        headers=authorization(),
+    )
+
+    assert response.status_code == 201
+    assert upstream.calls[0][1]["json"] == {**AVISO, "cliente_id": "cliente-demo"}
+
+
 def test_movil_reenvia_aviso_y_evidencias(monkeypatch):
     upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
     monkeypatch.setattr("canales.movil.api.siniestros", upstream)
@@ -67,7 +81,7 @@ def test_movil_reenvia_aviso_y_evidencias(monkeypatch):
     assert created.status_code == 201
     assert created.json() == {"id": "aviso-1", "estado": "borrador"}
     assert upstream.calls[0][0] == "/siniestros/avisos"
-    assert upstream.calls[0][1]["json"] == AVISO
+    assert upstream.calls[0][1]["json"] == {**AVISO, "cliente_id": "cliente-demo"}
 
     upstream.response = {"evidencia_id": "ev-1", "upload_url": "https://upload.local/x"}
     carga = {"content_type": "image/jpeg", "bytes": 10}

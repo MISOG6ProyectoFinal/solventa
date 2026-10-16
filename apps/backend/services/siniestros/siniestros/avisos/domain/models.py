@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Aviso(BaseModel):
     id: str
+    cliente_id: str
     poliza_id: str
     tipo: str
     ocurrido_en: datetime
@@ -14,6 +15,7 @@ class Aviso(BaseModel):
 
 
 class NuevoAviso(BaseModel):
+    cliente_id: str
     poliza_id: str
     tipo: str
     ocurrido_en: datetime

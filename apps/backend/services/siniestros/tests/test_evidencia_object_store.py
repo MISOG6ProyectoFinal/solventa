@@ -89,7 +89,7 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     crear = CrearAvisoUseCase(repo)
     solicitar = SolicitarCargaUseCase(repo, store, BUCKET)
     confirmar = ConfirmarCargaUseCase(repo, store)
-    created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe")
+    created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe", cliente_id="cliente-1")
     carga = solicitar.execute(created.id, "image/jpeg", len(JPEG))
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     assert evidencia is not None

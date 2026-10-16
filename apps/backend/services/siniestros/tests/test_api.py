@@ -12,6 +12,7 @@ client = TestClient(app)
 JPEG = b"\xff\xd8\xff" + b"\x00" * 16
 GIF = b"GIF89a" + b"\x00" * 16
 AVISO = {
+    "cliente_id": "cliente-1",
     "poliza_id": "POL-1",
     "tipo": "choque",
     "ocurrido_en": "2026-10-01T00:00:00Z",
@@ -55,6 +56,13 @@ def _abrir() -> str:
     assert response.status_code == 201
     assert response.json()["estado"] == "borrador"
     return response.json()["id"]
+
+
+def test_abrir_aviso_queda_asociado_al_cliente():
+    response = client.post("/siniestros/avisos", json={**AVISO, "cliente_id": "cliente-demo"})
+
+    assert response.status_code == 201
+    assert response.json()["cliente_id"] == "cliente-demo"
 
 
 def test_abrir_aviso_y_solicitar_carga():

@@ -36,6 +36,7 @@ def _aviso(client: TestClient) -> str:
     response = client.post(
         "/siniestros/avisos",
         json={
+            "cliente_id": "cliente-1",
             "poliza_id": "POL-1",
             "tipo": "choque",
             "ocurrido_en": "2026-10-01T00:00:00Z",

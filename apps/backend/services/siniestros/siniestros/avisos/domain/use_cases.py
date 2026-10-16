@@ -42,9 +42,12 @@ class CrearAvisoUseCase:
         ocurrido_en,
         descripcion: str,
         ubicacion: str | None = None,
+        *,
+        cliente_id: str,
     ) -> Aviso:
         aviso = Aviso(
             id=str(uuid.uuid4()),
+            cliente_id=cliente_id,
             poliza_id=poliza_id,
             tipo=tipo,
             ocurrido_en=ocurrido_en,

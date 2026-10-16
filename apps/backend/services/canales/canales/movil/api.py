@@ -136,8 +136,12 @@ def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
 
 
 @authenticated.post("/siniestros", status_code=201)
-def reportar_siniestro(aviso: dict) -> dict:
-    return call_upstream(siniestros.post, "/siniestros/avisos", json=aviso)
+def reportar_siniestro(aviso: dict, session: Annotated[SessionToken, Depends(require_session)]) -> dict:
+    return call_upstream(
+        siniestros.post,
+        "/siniestros/avisos",
+        json={**aviso, "cliente_id": session.client_id},
+    )
 
 
 @authenticated.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)

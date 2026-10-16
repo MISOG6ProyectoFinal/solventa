@@ -44,6 +44,7 @@ def repository(request):
 def _aviso(aviso_id: str = "aviso-1") -> Aviso:
     return Aviso(
         id=aviso_id,
+        cliente_id="cliente-1",
         poliza_id="POL-1",
         tipo="choque",
         ocurrido_en=datetime(2026, 10, 1, 12, 0, tzinfo=UTC),
@@ -76,6 +77,7 @@ def test_un_borrador_se_lee_por_id(repository):
     repository.add_aviso(saved)
     loaded = repository.get_aviso(saved.id)
     assert loaded is not None
+    assert loaded.cliente_id == saved.cliente_id
     assert loaded.poliza_id == saved.poliza_id
     assert loaded.estado == "borrador"
     assert loaded.descripcion == saved.descripcion
