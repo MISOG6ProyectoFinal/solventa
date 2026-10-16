@@ -70,7 +70,7 @@ def test_crear_aviso_queda_asociado_al_cliente():
 def test_solicitar_carga_jpeg_queda_pendiente():
     repo, _, crear, solicitar, _, _ = build()
     created = aviso(crear)
-    carga = solicitar.execute(created.id, "image/jpeg", 1200)
+    carga = solicitar.execute(created.id, "image/jpeg", 1200, cliente_id="cliente-1")
     assert carga.upload_url
     assert carga.headers["Content-Type"] == "image/jpeg"
     assert carga.headers["Content-Length"] == "1200"
@@ -84,7 +84,7 @@ def test_solicitar_carga_jpeg_queda_pendiente():
 def test_png_y_mp4_se_aceptan(content_type):
     _, _, crear, solicitar, _, _ = build()
     created = aviso(crear)
-    carga = solicitar.execute(created.id, content_type, 10)
+    carga = solicitar.execute(created.id, content_type, 10, cliente_id="cliente-1")
     assert carga.evidencia_id
 
 
@@ -93,7 +93,7 @@ def test_tipo_no_permitido(content_type):
     _, _, crear, solicitar, _, _ = build()
     created = aviso(crear)
     with pytest.raises(ReglaEvidencia) as error:
-        solicitar.execute(created.id, content_type, 10)
+        solicitar.execute(created.id, content_type, 10, cliente_id="cliente-1")
     assert error.value.message == TIPO
 
 
@@ -102,23 +102,23 @@ def test_tamano_fuera_de_rango(size):
     _, _, crear, solicitar, _, _ = build()
     created = aviso(crear)
     with pytest.raises(ReglaEvidencia) as error:
-        solicitar.execute(created.id, "image/jpeg", size)
+        solicitar.execute(created.id, "image/jpeg", size, cliente_id="cliente-1")
     assert error.value.message == TAMANO
 
 
 def test_la_evidencia_11_se_rechaza_y_una_rechazada_no_cuenta():
     repo, _, crear, solicitar, confirmar, _ = build()
     created = aviso(crear)
-    rejected = solicitar.execute(created.id, "image/jpeg", len(JPEG))
+    rejected = solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
     with pytest.raises(ReglaEvidencia):
-        confirmar.execute(created.id, rejected.evidencia_id)
+        confirmar.execute(created.id, rejected.evidencia_id, cliente_id="cliente-1")
     assert repo.get_evidencia(created.id, rejected.evidencia_id).estado == "rechazada"
 
     for _ in range(10):
-        solicitar.execute(created.id, "image/jpeg", len(JPEG))
+        solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
 
     with pytest.raises(ReglaEvidencia) as error:
-        solicitar.execute(created.id, "image/jpeg", len(JPEG))
+        solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
     assert error.value.message == LIMITE
 
 
@@ -129,11 +129,11 @@ def test_la_evidencia_11_se_rechaza_y_una_rechazada_no_cuenta():
 def test_confirmar_con_cabecera_valida_la_deja_disponible(content_type, body):
     repo, store, crear, solicitar, confirmar, _ = build()
     created = aviso(crear)
-    carga = solicitar.execute(created.id, content_type, len(body))
+    carga = solicitar.execute(created.id, content_type, len(body), cliente_id="cliente-1")
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     store.guardar(evidencia.object_key, content_type, body)
 
-    result = confirmar.execute(created.id, carga.evidencia_id)
+    result = confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
 
     assert result.estado == "disponible"
     assert result.url == f"s3://{BUCKET}/{evidencia.object_key}"
@@ -151,22 +151,37 @@ def test_confirmar_invalido_rechaza(content_type, body, declared):
     repo, store, crear, solicitar, confirmar, _ = build()
     created = aviso(crear)
     size = declared if declared is not None else len(JPEG)
-    carga = solicitar.execute(created.id, content_type, size)
+    carga = solicitar.execute(created.id, content_type, size, cliente_id="cliente-1")
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     if body is not None:
         store.guardar(evidencia.object_key, content_type, body)
 
     with pytest.raises(ReglaEvidencia) as error:
-        confirmar.execute(created.id, carga.evidencia_id)
+        confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
 
     assert error.value.message == "El archivo no pasó la validación."
     assert repo.get_evidencia(created.id, carga.evidencia_id).estado == "rechazada"
 
 
+def test_otro_cliente_no_opera_el_reporte():
+    _, _, crear, solicitar, confirmar, listar = build()
+    created = aviso(crear)
+
+    for action in (
+        lambda: solicitar.execute(created.id, "image/jpeg", 10, cliente_id="otro"),
+        lambda: confirmar.execute(created.id, "ev-1", cliente_id="otro"),
+        lambda: listar.execute(created.id, cliente_id="otro"),
+    ):
+        with pytest.raises(ReglaEvidencia) as error:
+            action()
+        assert error.value.status == 404
+        assert error.value.message == "No se encontró el reporte."
+
+
 def test_reporte_desconocido():
     _, _, _, solicitar, _, _ = build()
     with pytest.raises(ReglaEvidencia) as error:
-        solicitar.execute("no-existe", "image/jpeg", 10)
+        solicitar.execute("no-existe", "image/jpeg", 10, cliente_id="cliente-1")
     assert error.value.message == "No se encontró el reporte."
     assert error.value.status == 404
 
@@ -174,12 +189,12 @@ def test_reporte_desconocido():
 def test_confirmar_con_content_type_distinto_rechaza():
     repo, store, crear, solicitar, confirmar, _ = build()
     created = aviso(crear)
-    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG))
+    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     store.guardar(evidencia.object_key, "text/plain", JPEG)
 
     with pytest.raises(ReglaEvidencia) as error:
-        confirmar.execute(created.id, carga.evidencia_id)
+        confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
 
     assert error.value.message == "El archivo no pasó la validación."
     assert repo.get_evidencia(created.id, carga.evidencia_id).estado == "rechazada"
@@ -188,13 +203,13 @@ def test_confirmar_con_content_type_distinto_rechaza():
 def test_el_listado_solo_incluye_disponibles_con_url_de_descarga():
     repo, store, crear, solicitar, confirmar, listar = build()
     created = aviso(crear)
-    pending = solicitar.execute(created.id, "video/mp4", len(MP4))
-    ready = solicitar.execute(created.id, "image/png", len(PNG))
+    pending = solicitar.execute(created.id, "video/mp4", len(MP4), cliente_id="cliente-1")
+    ready = solicitar.execute(created.id, "image/png", len(PNG), cliente_id="cliente-1")
     ready_row = repo.get_evidencia(created.id, ready.evidencia_id)
     store.guardar(ready_row.object_key, "image/png", PNG)
-    confirmar.execute(created.id, ready.evidencia_id)
+    confirmar.execute(created.id, ready.evidencia_id, cliente_id="cliente-1")
 
-    listed = listar.execute(created.id)
+    listed = listar.execute(created.id, cliente_id="cliente-1")
 
     assert [item.id for item in listed] == [ready.evidencia_id]
     assert pending.evidencia_id not in [item.id for item in listed]

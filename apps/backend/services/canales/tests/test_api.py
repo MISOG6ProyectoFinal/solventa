@@ -90,18 +90,21 @@ def test_movil_reenvia_aviso_y_evidencias(monkeypatch):
     assert uploaded.json()["evidencia_id"] == "ev-1"
     assert upstream.calls[1][0] == "/siniestros/avisos/aviso-1/evidencias/cargas"
     assert upstream.calls[1][1]["json"] == carga
+    assert upstream.calls[1][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
     upstream.response = {"id": "ev-1", "estado": "disponible"}
     confirmed = client.post("/movil/siniestros/aviso-1/evidencias/ev-1/confirmar", headers=headers)
     assert confirmed.status_code == 200
     assert confirmed.json()["estado"] == "disponible"
     assert upstream.calls[2][0] == "/siniestros/avisos/aviso-1/evidencias/ev-1/confirmar"
+    assert upstream.calls[2][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
     upstream.response = [{"id": "ev-1"}]
     listed = client.get("/movil/siniestros/aviso-1/evidencias", headers=headers)
     assert listed.status_code == 200
     assert listed.json() == [{"id": "ev-1"}]
     assert upstream.calls[3][0] == "/siniestros/avisos/aviso-1/evidencias"
+    assert upstream.calls[3][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
 
 def test_movil_reenvia_422_y_409(monkeypatch):

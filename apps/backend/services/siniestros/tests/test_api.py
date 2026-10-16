@@ -18,6 +18,7 @@ AVISO = {
     "ocurrido_en": "2026-10-01T00:00:00Z",
     "descripcion": "Golpe en la puerta",
 }
+CLIENTE = {"X-Cliente-Id": AVISO["cliente_id"]}
 
 
 @pytest.fixture(autouse=True)
@@ -65,11 +66,28 @@ def test_abrir_aviso_queda_asociado_al_cliente():
     assert response.json()["cliente_id"] == "cliente-demo"
 
 
+def test_otro_cliente_no_encuentra_el_reporte():
+    aviso_id = _abrir()
+    ajeno = {"X-Cliente-Id": "otro"}
+    carga = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
+        json={"content_type": "image/jpeg", "bytes": 10},
+        headers=ajeno,
+    )
+    assert carga.status_code == 404
+    assert carga.json()["detail"] == "No se encontró el reporte."
+    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias", headers=ajeno)
+    assert listed.status_code == 404
+    confirmed = client.post(f"/siniestros/avisos/{aviso_id}/evidencias/ev-1/confirmar", headers=ajeno)
+    assert confirmed.status_code == 404
+
+
 def test_abrir_aviso_y_solicitar_carga():
     aviso_id = _abrir()
     response = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": len(JPEG)},
+        headers=CLIENTE,
     )
     assert response.status_code == 201
     body = response.json()
@@ -83,6 +101,7 @@ def test_tipo_tamano_limite_y_reporte_desconocido():
     tipo = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/gif", "bytes": 10},
+        headers=CLIENTE,
     )
     assert tipo.status_code == 422
     assert tipo.json()["detail"] == "Tipo de archivo no permitido. Use JPEG, PNG o MP4."
@@ -90,6 +109,7 @@ def test_tipo_tamano_limite_y_reporte_desconocido():
     tamano = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/png", "bytes": 52_428_801},
+        headers=CLIENTE,
     )
     assert tamano.status_code == 422
     assert tamano.json()["detail"] == "El archivo supera 50 MB."
@@ -97,6 +117,7 @@ def test_tipo_tamano_limite_y_reporte_desconocido():
     missing = client.post(
         "/siniestros/avisos/no-existe/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": 10},
+        headers=CLIENTE,
     )
     assert missing.status_code == 404
     assert missing.json()["detail"] == "No se encontró el reporte."
@@ -106,12 +127,14 @@ def test_tipo_tamano_limite_y_reporte_desconocido():
             client.post(
                 f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
                 json={"content_type": "video/mp4", "bytes": 10},
+                headers=CLIENTE,
             ).status_code
             == 201
         )
     limited = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "video/mp4", "bytes": 10},
+        headers=CLIENTE,
     )
     assert limited.status_code == 409
     assert limited.json()["detail"] == "Este reporte ya tiene 10 evidencias."
@@ -122,9 +145,13 @@ def test_confirmar_disponible_y_rechazada_fuera_del_listado():
     ready = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": len(JPEG)},
+        headers=CLIENTE,
     ).json()
     api.object_store.guardar(f"avisos/{aviso_id}/evidencias/{ready['evidencia_id']}", "image/jpeg", JPEG)
-    confirmed = client.post(f"/siniestros/avisos/{aviso_id}/evidencias/{ready['evidencia_id']}/confirmar")
+    confirmed = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/{ready['evidencia_id']}/confirmar",
+        headers=CLIENTE,
+    )
     assert confirmed.status_code == 200
     assert confirmed.json()["estado"] == "disponible"
     assert confirmed.json()["url"].startswith("s3://solventa-evidencias/avisos/")
@@ -132,13 +159,17 @@ def test_confirmar_disponible_y_rechazada_fuera_del_listado():
     rejected = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": len(GIF)},
+        headers=CLIENTE,
     ).json()
     api.object_store.guardar(f"avisos/{aviso_id}/evidencias/{rejected['evidencia_id']}", "image/jpeg", GIF)
-    failed = client.post(f"/siniestros/avisos/{aviso_id}/evidencias/{rejected['evidencia_id']}/confirmar")
+    failed = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/{rejected['evidencia_id']}/confirmar",
+        headers=CLIENTE,
+    )
     assert failed.status_code == 422
     assert failed.json()["detail"] == "El archivo no pasó la validación."
 
-    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias")
+    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias", headers=CLIENTE)
     assert listed.status_code == 200
     assert [item["id"] for item in listed.json()] == [ready["evidencia_id"]]
     assert listed.json()[0]["download_url"]

@@ -91,6 +91,11 @@ def require_session(authorization: Annotated[str | None, Header()] = None) -> Se
 
 
 authenticated = APIRouter(dependencies=[Depends(require_session)])
+Session = Annotated[SessionToken, Depends(require_session)]
+
+
+def _cliente(session: SessionToken) -> dict[str, str]:
+    return {"X-Cliente-Id": session.client_id}
 
 
 @router.get("/")
@@ -109,7 +114,7 @@ def registrar(solicitud: SolicitudRegistro) -> dict:
 
 
 @authenticated.get("/sesion")
-def sesion_actual(payload: Annotated[SessionToken, Depends(require_session)]) -> dict:
+def sesion_actual(payload: Session) -> dict:
     return {
         "cliente_id": payload.client_id,
         "correo": payload.email,
@@ -136,7 +141,7 @@ def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
 
 
 @authenticated.post("/siniestros", status_code=201)
-def reportar_siniestro(aviso: dict, session: Annotated[SessionToken, Depends(require_session)]) -> dict:
+def reportar_siniestro(aviso: dict, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         "/siniestros/avisos",
@@ -145,25 +150,31 @@ def reportar_siniestro(aviso: dict, session: Annotated[SessionToken, Depends(req
 
 
 @authenticated.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)
-def solicitar_carga(aviso_id: str, carga: dict) -> dict:
+def solicitar_carga(aviso_id: str, carga: dict, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json=carga,
+        headers=_cliente(session),
     )
 
 
 @authenticated.post("/siniestros/{aviso_id}/evidencias/{evidencia_id}/confirmar")
-def confirmar_carga(aviso_id: str, evidencia_id: str) -> dict:
+def confirmar_carga(aviso_id: str, evidencia_id: str, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/evidencias/{evidencia_id}/confirmar",
+        headers=_cliente(session),
     )
 
 
 @authenticated.get("/siniestros/{aviso_id}/evidencias")
-def listar_evidencias(aviso_id: str):
-    return call_upstream(siniestros.get, f"/siniestros/avisos/{aviso_id}/evidencias")
+def listar_evidencias(aviso_id: str, session: Session):
+    return call_upstream(
+        siniestros.get,
+        f"/siniestros/avisos/{aviso_id}/evidencias",
+        headers=_cliente(session),
+    )
 
 
 router.include_router(authenticated)

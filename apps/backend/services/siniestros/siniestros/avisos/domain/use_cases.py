@@ -21,6 +21,13 @@ def object_key(aviso_id: str, evidencia_id: str) -> str:
     return f"avisos/{aviso_id}/evidencias/{evidencia_id}"
 
 
+def aviso_del_cliente(repository: AvisoRepository, aviso_id: str, cliente_id: str) -> Aviso:
+    aviso = repository.get_aviso(aviso_id)
+    if aviso is None or aviso.cliente_id != cliente_id:
+        raise ReglaEvidencia(404, MSG_REPORTE)
+    return aviso
+
+
 def header_matches(content_type: str, header: bytes) -> bool:
     if content_type == "image/jpeg":
         return header.startswith(b"\xff\xd8\xff")
@@ -65,9 +72,8 @@ class SolicitarCargaUseCase:
         self.store = store
         self.bucket = bucket
 
-    def execute(self, aviso_id: str, content_type: str, size: int) -> Carga:
-        if self.repository.get_aviso(aviso_id) is None:
-            raise ReglaEvidencia(404, MSG_REPORTE)
+    def execute(self, aviso_id: str, content_type: str, size: int, *, cliente_id: str) -> Carga:
+        aviso_del_cliente(self.repository, aviso_id, cliente_id)
         if content_type not in ALLOWED_TYPES:
             raise ReglaEvidencia(422, MSG_TIPO)
         if size < 1 or size > MAX_BYTES:
@@ -102,9 +108,8 @@ class ConfirmarCargaUseCase:
         self.repository = repository
         self.store = store
 
-    def execute(self, aviso_id: str, evidencia_id: str) -> Evidencia:
-        if self.repository.get_aviso(aviso_id) is None:
-            raise ReglaEvidencia(404, MSG_REPORTE)
+    def execute(self, aviso_id: str, evidencia_id: str, *, cliente_id: str) -> Evidencia:
+        aviso_del_cliente(self.repository, aviso_id, cliente_id)
         evidencia = self.repository.get_evidencia(aviso_id, evidencia_id)
         if evidencia is None:
             raise ReglaEvidencia(404, MSG_REPORTE)
@@ -137,9 +142,8 @@ class ListarEvidenciasUseCase:
         self.repository = repository
         self.store = store
 
-    def execute(self, aviso_id: str) -> list[EvidenciaLista]:
-        if self.repository.get_aviso(aviso_id) is None:
-            raise ReglaEvidencia(404, MSG_REPORTE)
+    def execute(self, aviso_id: str, *, cliente_id: str) -> list[EvidenciaLista]:
+        aviso_del_cliente(self.repository, aviso_id, cliente_id)
         listed: list[EvidenciaLista] = []
         for evidencia in self.repository.list_evidencias(aviso_id):
             if evidencia.estado != "disponible":

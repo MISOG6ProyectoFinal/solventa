@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Header, HTTPException
 from solventa_common.db import build_engine
 
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
@@ -90,9 +92,9 @@ def abrir_aviso(body: NuevoAviso) -> dict:
 
 
 @router.post("/avisos/{aviso_id}/evidencias/cargas", status_code=201)
-def solicitar_carga(aviso_id: str, body: NuevaCarga) -> dict:
+def solicitar_carga(aviso_id: str, body: NuevaCarga, x_cliente_id: Annotated[str, Header()]) -> dict:
     try:
-        carga = casos["solicitar"].execute(aviso_id, body.content_type, body.tamano)
+        carga = casos["solicitar"].execute(aviso_id, body.content_type, body.tamano, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return {
@@ -104,18 +106,18 @@ def solicitar_carga(aviso_id: str, body: NuevaCarga) -> dict:
 
 
 @router.post("/avisos/{aviso_id}/evidencias/{evidencia_id}/confirmar")
-def confirmar_carga(aviso_id: str, evidencia_id: str) -> dict:
+def confirmar_carga(aviso_id: str, evidencia_id: str, x_cliente_id: Annotated[str, Header()]) -> dict:
     try:
-        evidencia = casos["confirmar"].execute(aviso_id, evidencia_id)
+        evidencia = casos["confirmar"].execute(aviso_id, evidencia_id, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return _evidencia_body(evidencia)
 
 
 @router.get("/avisos/{aviso_id}/evidencias")
-def listar_evidencias(aviso_id: str) -> list[dict]:
+def listar_evidencias(aviso_id: str, x_cliente_id: Annotated[str, Header()]) -> list[dict]:
     try:
-        rows = casos["listar"].execute(aviso_id)
+        rows = casos["listar"].execute(aviso_id, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return [_lista_body(row) for row in rows]

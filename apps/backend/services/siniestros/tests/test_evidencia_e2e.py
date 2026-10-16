@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 JPEG = b"\xff\xd8\xff" + b"\x00" * 16
+CLIENTE = {"X-Cliente-Id": "cliente-1"}
 GIF = b"GIF89a" + b"\x00" * 16
 BUCKET = "solventa-evidencias"
 
@@ -53,17 +54,21 @@ def test_la_carga_queda_disponible_y_un_gif_se_rechaza():
     carga = client.post(
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": len(JPEG)},
+        headers=CLIENTE,
     )
     assert carga.status_code == 201
     body = carga.json()
     put = httpx.put(body["upload_url"], content=JPEG, headers=body["headers"])
     assert put.status_code in {200, 204}
 
-    confirmed = client.post(f"/siniestros/avisos/{aviso_id}/evidencias/{body['evidencia_id']}/confirmar")
+    confirmed = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/{body['evidencia_id']}/confirmar",
+        headers=CLIENTE,
+    )
     assert confirmed.status_code == 200
     assert confirmed.json()["url"].startswith(f"s3://{BUCKET}/avisos/")
 
-    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias")
+    listed = client.get(f"/siniestros/avisos/{aviso_id}/evidencias", headers=CLIENTE)
     assert listed.status_code == 200
     items = listed.json()
     assert len(items) == 1
@@ -75,11 +80,15 @@ def test_la_carga_queda_disponible_y_un_gif_se_rechaza():
     falsa = client.post(
         f"/siniestros/avisos/{otro_id}/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": len(GIF)},
+        headers=CLIENTE,
     )
     assert falsa.status_code == 201
     falsa_body = falsa.json()
     httpx.put(falsa_body["upload_url"], content=GIF, headers=falsa_body["headers"])
-    rejected = client.post(f"/siniestros/avisos/{otro_id}/evidencias/{falsa_body['evidencia_id']}/confirmar")
+    rejected = client.post(
+        f"/siniestros/avisos/{otro_id}/evidencias/{falsa_body['evidencia_id']}/confirmar",
+        headers=CLIENTE,
+    )
     assert rejected.status_code == 422
     assert rejected.json()["detail"] == "El archivo no pasó la validación."
-    assert client.get(f"/siniestros/avisos/{otro_id}/evidencias").json() == []
+    assert client.get(f"/siniestros/avisos/{otro_id}/evidencias", headers=CLIENTE).json() == []

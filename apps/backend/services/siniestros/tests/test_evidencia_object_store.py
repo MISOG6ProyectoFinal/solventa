@@ -90,7 +90,7 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     solicitar = SolicitarCargaUseCase(repo, store, BUCKET)
     confirmar = ConfirmarCargaUseCase(repo, store)
     created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe", cliente_id="cliente-1")
-    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG))
+    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     assert evidencia is not None
 
@@ -107,7 +107,7 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     )
     stubber.activate()
 
-    result = confirmar.execute(created.id, carga.evidencia_id)
+    result = confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
     assert result.estado == "disponible"
     assert result.url == f"s3://{BUCKET}/{evidencia.object_key}"
 
