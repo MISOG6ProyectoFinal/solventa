@@ -1,4 +1,6 @@
+import random
 import uuid
+from collections.abc import Callable
 from datetime import timedelta
 
 from siniestros.avisos.domain.errors import ReglaEvidencia
@@ -12,6 +14,7 @@ URL_TTL = timedelta(minutes=15)
 
 MSG_REPORTE = "No se encontró el reporte."
 MSG_EVIDENCIA = "Agrega al menos una evidencia"
+MSG_RADICADO = "No se pudo asignar un número de radicado."
 MSG_TIPO = "Tipo de archivo no permitido. Use JPEG, PNG o MP4."
 MSG_TAMANO = "El archivo supera 50 MB."
 MSG_LIMITE = "Este reporte ya tiene 10 evidencias."
@@ -75,9 +78,14 @@ class ListarAvisosUseCase:
         return self.repository.list_avisos(cliente_id)
 
 
+def nuevo_radicado() -> str:
+    return f"SIN-{random.randint(10000, 99999)}"
+
+
 class RadicarAvisoUseCase:
-    def __init__(self, repository: AvisoRepository) -> None:
+    def __init__(self, repository: AvisoRepository, radicado_factory: Callable[[], str] = nuevo_radicado) -> None:
         self.repository = repository
+        self.radicado_factory = radicado_factory
 
     def execute(self, aviso_id: str, *, cliente_id: str) -> Aviso:
         aviso = aviso_del_cliente(self.repository, aviso_id, cliente_id)
@@ -86,9 +94,16 @@ class RadicarAvisoUseCase:
         disponibles = [item for item in self.repository.list_evidencias(aviso_id) if item.estado == "disponible"]
         if not disponibles:
             raise ReglaEvidencia(422, MSG_EVIDENCIA)
-        filed = aviso.model_copy(update={"estado": "radicado"})
+        filed = aviso.model_copy(update={"estado": "radicado", "radicado": self._radicado_libre()})
         self.repository.update_aviso(filed)
         return filed
+
+    def _radicado_libre(self) -> str:
+        for _ in range(5):
+            candidato = self.radicado_factory()
+            if self.repository.get_by_radicado(candidato) is None:
+                return candidato
+        raise ReglaEvidencia(409, MSG_RADICADO)
 
 
 class SolicitarCargaUseCase:

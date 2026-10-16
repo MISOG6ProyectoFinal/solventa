@@ -44,10 +44,24 @@ def test_la_migracion_agrega_cliente_id_conserva_la_fila_y_se_puede_repetir():
     migrate(engine)
 
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT cliente_id FROM avisos")).mappings().one()
+        row = conn.execute(text("SELECT cliente_id, radicado FROM avisos")).mappings().one()
     assert row["cliente_id"] == ""
+    assert row["radicado"] is None
     columnas = {column["name"] for column in inspect(engine).get_columns("avisos")}
-    assert "cliente_id" in columnas
+    assert {"cliente_id", "radicado"} <= columnas
+
+
+def test_la_migracion_agrega_radicado_cuando_cliente_id_ya_existe():
+    engine = _engine()
+    _tabla_anterior(engine)
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE avisos ADD COLUMN cliente_id VARCHAR(64) NOT NULL DEFAULT ''"))
+
+    migrate(engine)
+    migrate(engine)
+
+    columnas = {column["name"] for column in inspect(engine).get_columns("avisos")}
+    assert "radicado" in columnas
 
 
 def test_sin_tabla_la_migracion_no_crea_nada():

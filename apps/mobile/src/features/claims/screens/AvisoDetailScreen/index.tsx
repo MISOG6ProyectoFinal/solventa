@@ -77,7 +77,11 @@ export default function AvisoDetailScreen({ route }: Props) {
         <ActivityIndicator testID="aviso-detail-loading" style={styles.loading} />
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-          {filed ? <Banner variant="success">{texts.detail.filed}</Banner> : null}
+          {aviso.radicado ? (
+            <Banner variant="success">{texts.detail.filedSuccess(aviso.radicado)}</Banner>
+          ) : filed ? (
+            <Banner variant="success">{texts.detail.filed}</Banner>
+          ) : null}
           {error ? <Banner variant="error">{error}</Banner> : null}
           <Card>
             <View style={styles.titleRow}>

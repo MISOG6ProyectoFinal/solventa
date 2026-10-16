@@ -9,6 +9,7 @@ export type Aviso = {
   descripcion: string;
   ubicacion: string | null;
   estado: string;
+  radicado: string | null;
 };
 
 export function listAvisos(): Promise<Aviso[]> {

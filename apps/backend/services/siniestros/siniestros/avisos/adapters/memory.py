@@ -18,6 +18,9 @@ class InMemoryAvisoRepository:
     def update_aviso(self, aviso: Aviso) -> None:
         self.avisos[aviso.id] = aviso
 
+    def get_by_radicado(self, radicado: str) -> Aviso | None:
+        return next((item for item in self.avisos.values() if item.radicado == radicado), None)
+
     def list_avisos(self, cliente_id: str) -> list[Aviso]:
         return [aviso for aviso in reversed(self.avisos.values()) if aviso.cliente_id == cliente_id]
 

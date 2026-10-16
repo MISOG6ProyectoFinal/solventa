@@ -101,7 +101,7 @@ def radicar_aviso(aviso_id: str, x_cliente_id: Annotated[str, Header()]) -> dict
         filed = casos["radicar"].execute(aviso_id, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
-    return {"id": filed.id, "estado": filed.estado, "cliente_id": filed.cliente_id}
+    return {"id": filed.id, "estado": filed.estado, "cliente_id": filed.cliente_id, "radicado": filed.radicado}
 
 
 @router.get("/avisos")

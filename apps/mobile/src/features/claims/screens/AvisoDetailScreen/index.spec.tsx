@@ -25,6 +25,7 @@ const FILED: Aviso = {
   descripcion: 'La maleta no llegó',
   ubicacion: 'Madrid',
   estado: 'radicado',
+  radicado: 'SIN-18247',
 };
 
 const DRAFT: Aviso = {
@@ -35,6 +36,7 @@ const DRAFT: Aviso = {
   descripcion: 'Golpe en la puerta',
   ubicacion: null,
   estado: 'borrador',
+  radicado: null,
 };
 
 const EVIDENCIAS = [
@@ -95,7 +97,7 @@ describe('AvisoDetailScreen', () => {
     const { findByText, getByText } = await render(<AvisoDetailScreen route={{ params: { aviso: FILED } }} />);
 
     expect(getByText('Detalle del reporte')).toBeTruthy();
-    expect(await findByText('Siniestro radicado exitosamente.')).toBeTruthy();
+    expect(await findByText('Siniestro #SIN-18247 radicado exitosamente.')).toBeTruthy();
     expect(getByText('Pérdida de equipaje')).toBeTruthy();
     expect(getByText('Radicado')).toBeTruthy();
     expect(getByText('SLV-2026-03105')).toBeTruthy();
@@ -122,7 +124,7 @@ describe('AvisoDetailScreen', () => {
     expect(await findByText('Borrador')).toBeTruthy();
     expect(getByText('Ocurrió 2026-09-12 15:30')).toBeTruthy();
     expect(getByText('Golpe en la puerta')).toBeTruthy();
-    expect(queryByText('Siniestro radicado exitosamente.')).toBeNull();
+    expect(queryByText('Siniestro #SIN-18247 radicado exitosamente.')).toBeNull();
     expect(queryByText('Solicitar asistencia en sitio')).toBeNull();
     expect(await findByText('Evidencias (0)')).toBeTruthy();
   });

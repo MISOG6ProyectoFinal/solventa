@@ -30,6 +30,7 @@ const AVISOS = [
     descripcion: 'La maleta no llegó',
     ubicacion: 'Madrid',
     estado: 'radicado',
+    radicado: 'SIN-18247',
   },
   {
     id: 'aviso-1',
@@ -40,6 +41,7 @@ const AVISOS = [
     descripcion: 'Golpe en la puerta',
     ubicacion: null,
     estado: 'borrador',
+    radicado: null,
   },
 ];
 

@@ -72,12 +72,38 @@ def test_radicar_deja_el_aviso_radicado_cuando_hay_evidencia():
     store.guardar(repo.get_evidencia(created.id, carga.evidencia_id).object_key, "image/jpeg", JPEG)
     confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
 
-    filed = RadicarAvisoUseCase(repo).execute(created.id, cliente_id="cliente-1")
+    filed = RadicarAvisoUseCase(repo, lambda: "SIN-18247").execute(created.id, cliente_id="cliente-1")
     again = RadicarAvisoUseCase(repo).execute(created.id, cliente_id="cliente-1")
 
     assert filed.estado == "radicado"
-    assert again.estado == "radicado"
-    assert repo.get_aviso(created.id).estado == "radicado"
+    assert filed.radicado == "SIN-18247"
+    assert again.radicado == "SIN-18247"
+    assert repo.get_aviso(created.id).radicado == "SIN-18247"
+
+
+def test_radicar_no_repite_un_numero_en_uso():
+    repo, store, crear, solicitar, confirmar, _ = build()
+    primero = aviso(crear)
+    carga = solicitar.execute(primero.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
+    store.guardar(repo.get_evidencia(primero.id, carga.evidencia_id).object_key, "image/jpeg", JPEG)
+    confirmar.execute(primero.id, carga.evidencia_id, cliente_id="cliente-1")
+    RadicarAvisoUseCase(repo, lambda: "SIN-11111").execute(primero.id, cliente_id="cliente-1")
+
+    segundo = crear.execute(
+        poliza_id="POL-2",
+        tipo="choque",
+        ocurrido_en=datetime(2026, 10, 2, tzinfo=UTC),
+        descripcion="Segundo golpe",
+        cliente_id="cliente-1",
+    )
+    carga = solicitar.execute(segundo.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
+    store.guardar(repo.get_evidencia(segundo.id, carga.evidencia_id).object_key, "image/jpeg", JPEG)
+    confirmar.execute(segundo.id, carga.evidencia_id, cliente_id="cliente-1")
+    numeros = iter(["SIN-11111", "SIN-22222"])
+
+    filed = RadicarAvisoUseCase(repo, lambda: next(numeros)).execute(segundo.id, cliente_id="cliente-1")
+
+    assert filed.radicado == "SIN-22222"
 
 
 def test_crear_aviso_queda_asociado_al_cliente():

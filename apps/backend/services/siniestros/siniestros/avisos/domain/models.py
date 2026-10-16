@@ -12,6 +12,7 @@ class Aviso(BaseModel):
     descripcion: str
     ubicacion: str | None = None
     estado: str = "borrador"
+    radicado: str | None = None
 
 
 class NuevoAviso(BaseModel):

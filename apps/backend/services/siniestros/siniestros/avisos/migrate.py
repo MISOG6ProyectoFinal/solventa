@@ -1,4 +1,4 @@
-"""Adds cliente_id to avisos created before a report was stored for a client.
+"""Adds cliente_id and radicado to avisos created before those columns existed.
 
 Running it again leaves an already migrated table unchanged.
 It is not part of service startup:
@@ -18,10 +18,26 @@ def migrate(engine: Engine) -> None:
     if not inspector.has_table("avisos"):
         return
     present = {column["name"] for column in inspector.get_columns("avisos")}
-    if "cliente_id" in present:
+    with engine.begin() as conn:
+        if "cliente_id" not in present:
+            conn.execute(text("ALTER TABLE avisos ADD COLUMN cliente_id VARCHAR(64) NOT NULL DEFAULT ''"))
+        if "radicado" not in present:
+            conn.execute(text("ALTER TABLE avisos ADD COLUMN radicado VARCHAR(16)"))
+    if _radicado_es_unico(engine):
         return
     with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE avisos ADD COLUMN cliente_id VARCHAR(64) NOT NULL DEFAULT ''"))
+        conn.execute(text("CREATE UNIQUE INDEX ix_avisos_radicado ON avisos (radicado)"))
+
+
+def _radicado_es_unico(engine: Engine) -> bool:
+    inspector = inspect(engine)
+    for index in inspector.get_indexes("avisos"):
+        if index["unique"] and "radicado" in index["column_names"]:
+            return True
+    for constraint in inspector.get_unique_constraints("avisos"):
+        if "radicado" in constraint["column_names"]:
+            return True
+    return False
 
 
 def main() -> None:

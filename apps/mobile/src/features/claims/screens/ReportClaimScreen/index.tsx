@@ -19,7 +19,6 @@ import { useClaimsStore } from '../../store/useClaimsStore';
 import { formatFileSize, photoUri } from '../../photo';
 import { claimReport } from '../../claimReport';
 import { submitAviso } from '../../api/submitAviso';
-import { newRadicado } from '../../radicado';
 import { errorMessage } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
@@ -53,7 +52,7 @@ export default function ReportClaimScreen() {
 
     setFiling(true);
     try {
-      await submitAviso({
+      const filed = await submitAviso({
         policy,
         claimType,
         occurredAt,
@@ -68,7 +67,7 @@ export default function ReportClaimScreen() {
         StackActions.replace('ClaimReport', {
           screen: 'ClaimDetail',
           params: {
-            radicado: newRadicado(),
+            radicado: filed.radicado,
             claimType,
             policy,
             occurredAt: displayOccurredAt(occurredAt),

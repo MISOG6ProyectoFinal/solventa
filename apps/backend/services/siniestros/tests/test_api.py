@@ -108,8 +108,10 @@ def test_radicar_pasa_el_borrador_a_radicado():
     filed = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE)
     assert filed.status_code == 200
     assert filed.json()["estado"] == "radicado"
-    assert client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE).json()["estado"] == "radicado"
-    assert client.get("/siniestros/avisos", headers=CLIENTE).json()[0]["estado"] == "radicado"
+    assert filed.json()["radicado"].startswith("SIN-")
+    otra_vez = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE).json()
+    assert otra_vez["radicado"] == filed.json()["radicado"]
+    assert client.get("/siniestros/avisos", headers=CLIENTE).json()[0]["radicado"] == filed.json()["radicado"]
 
     ajeno = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers={"X-Cliente-Id": "otro"})
     assert ajeno.status_code == 404

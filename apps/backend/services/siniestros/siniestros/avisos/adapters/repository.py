@@ -16,6 +16,7 @@ avisos = Table(
     Column("descripcion", String, nullable=False),
     Column("ubicacion", String(255)),
     Column("estado", String(32), nullable=False),
+    Column("radicado", String(16), unique=True),
     Column("creado_en", DateTime(timezone=True), server_default=func.now(), nullable=False),
 )
 
@@ -43,6 +44,7 @@ def _aviso(row) -> Aviso:
         descripcion=row["descripcion"],
         ubicacion=row["ubicacion"],
         estado=row["estado"],
+        radicado=row["radicado"],
     )
 
 
@@ -80,6 +82,11 @@ class PostgresAvisoRepository:
         aviso_id = values.pop("id")
         with self.engine.begin() as conn:
             conn.execute(update(avisos).where(avisos.c.id == aviso_id).values(**values))
+
+    def get_by_radicado(self, radicado: str) -> Aviso | None:
+        with self.engine.connect() as conn:
+            row = conn.execute(select(avisos).where(avisos.c.radicado == radicado)).mappings().first()
+        return _aviso(row) if row else None
 
     def list_avisos(self, cliente_id: str) -> list[Aviso]:
         query = select(avisos).where(avisos.c.cliente_id == cliente_id).order_by(avisos.c.creado_en.desc())

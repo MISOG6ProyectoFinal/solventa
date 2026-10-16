@@ -77,7 +77,7 @@ function mockFiling() {
     }
 
     if (String(url).endsWith('/radicar')) {
-      return jsonResponse({ id: 'aviso-1', estado: 'radicado' });
+      return jsonResponse({ id: 'aviso-1', estado: 'radicado', radicado: 'SIN-18247' });
     }
 
     return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
@@ -192,7 +192,7 @@ describe('ReportClaimScreen', () => {
           expect.objectContaining({
             screen: 'ClaimDetail',
             params: expect.objectContaining({
-              radicado: expect.stringMatching(/^SIN-\d{5}$/),
+              radicado: 'SIN-18247',
               claimType: 'Accidente con vehículo de alquiler',
               policy: 'Viaje Internacional · SLV-2026-03105',
               location: currentPlace.address,
