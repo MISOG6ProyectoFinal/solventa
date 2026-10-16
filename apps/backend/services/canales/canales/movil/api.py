@@ -140,6 +140,11 @@ def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
     )
 
 
+@authenticated.get("/siniestros")
+def listar_siniestros(session: Session) -> list:
+    return call_upstream(siniestros.get, "/siniestros/avisos", headers=_cliente(session))
+
+
 @authenticated.post("/siniestros", status_code=201)
 def reportar_siniestro(aviso: dict, session: Session) -> dict:
     return call_upstream(

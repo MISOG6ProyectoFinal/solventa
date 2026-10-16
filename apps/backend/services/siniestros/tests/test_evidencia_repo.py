@@ -72,6 +72,17 @@ def test_create_schema_crea_las_tablas(repository):
     assert "evidencias" in names
 
 
+def test_el_listado_trae_solo_los_avisos_del_cliente(repository):
+    propio = _aviso()
+    ajeno = _aviso("aviso-2").model_copy(update={"cliente_id": "otro"})
+    repository.add_aviso(propio)
+    repository.add_aviso(ajeno)
+
+    listed = repository.list_avisos("cliente-1")
+
+    assert [item.id for item in listed] == [propio.id]
+
+
 def test_un_borrador_se_lee_por_id(repository):
     saved = _aviso()
     repository.add_aviso(saved)

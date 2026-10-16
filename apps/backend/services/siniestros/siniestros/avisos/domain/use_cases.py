@@ -66,6 +66,14 @@ class CrearAvisoUseCase:
         return aviso
 
 
+class ListarAvisosUseCase:
+    def __init__(self, repository: AvisoRepository) -> None:
+        self.repository = repository
+
+    def execute(self, *, cliente_id: str) -> list[Aviso]:
+        return self.repository.list_avisos(cliente_id)
+
+
 class SolicitarCargaUseCase:
     def __init__(self, repository: AvisoRepository, store: ObjectStore, bucket: str) -> None:
         self.repository = repository

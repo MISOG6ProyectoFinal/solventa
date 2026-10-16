@@ -75,6 +75,12 @@ class PostgresAvisoRepository:
             row = conn.execute(select(avisos).where(avisos.c.id == aviso_id)).mappings().first()
         return _aviso(row) if row else None
 
+    def list_avisos(self, cliente_id: str) -> list[Aviso]:
+        query = select(avisos).where(avisos.c.cliente_id == cliente_id).order_by(avisos.c.creado_en.desc())
+        with self.engine.connect() as conn:
+            rows = conn.execute(query).mappings().all()
+        return [_aviso(row) for row in rows]
+
     def add_evidencia(self, evidencia: Evidencia) -> None:
         with self.engine.begin() as conn:
             conn.execute(insert(evidencias).values(**_evidencia_values(evidencia)))

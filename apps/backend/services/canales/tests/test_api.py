@@ -58,6 +58,19 @@ def _status_error(status: int, message: str) -> httpx.HTTPStatusError:
     return httpx.HTTPStatusError(str(status), request=request, response=response)
 
 
+def test_movil_lista_los_avisos_del_cliente_de_la_sesion(monkeypatch):
+    avisos = [{"id": "aviso-1", "estado": "borrador", "cliente_id": "cliente-demo"}]
+    upstream = _Upstream(response=avisos)
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.get("/movil/siniestros", headers=authorization())
+
+    assert response.status_code == 200
+    assert response.json() == avisos
+    assert upstream.calls[0][0] == "/siniestros/avisos"
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
 def test_movil_asocia_el_aviso_con_el_cliente_de_la_sesion(monkeypatch):
     upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
     monkeypatch.setattr("canales.movil.api.siniestros", upstream)

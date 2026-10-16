@@ -7,11 +7,12 @@ from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryO
 from siniestros.avisos.adapters.object_store import S3ObjectStore
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository
 from siniestros.avisos.domain.errors import ReglaEvidencia
-from siniestros.avisos.domain.models import Evidencia, NuevaCarga, NuevoAviso
+from siniestros.avisos.domain.models import Aviso, Evidencia, NuevaCarga, NuevoAviso
 from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
 from siniestros.avisos.domain.use_cases import (
     ConfirmarCargaUseCase,
     CrearAvisoUseCase,
+    ListarAvisosUseCase,
     ListarEvidenciasUseCase,
     SolicitarCargaUseCase,
 )
@@ -30,6 +31,7 @@ def wire(repository: AvisoRepository, almacen: ObjectStore, bucket: str | None =
     object_store = almacen
     name = bucket or settings.evidencias_bucket
     casos["crear"] = CrearAvisoUseCase(repository)
+    casos["listar_avisos"] = ListarAvisosUseCase(repository)
     casos["solicitar"] = SolicitarCargaUseCase(repository, almacen, name)
     casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen)
     casos["listar"] = ListarEvidenciasUseCase(repository, almacen)
@@ -89,6 +91,11 @@ def abrir_aviso(body: NuevoAviso) -> dict:
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return {"id": created.id, "estado": created.estado, "cliente_id": created.cliente_id}
+
+
+@router.get("/avisos")
+def listar_avisos(x_cliente_id: Annotated[str, Header()]) -> list[Aviso]:
+    return casos["listar_avisos"].execute(cliente_id=x_cliente_id)
 
 
 @router.post("/avisos/{aviso_id}/evidencias/cargas", status_code=201)

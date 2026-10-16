@@ -66,6 +66,31 @@ def test_abrir_aviso_queda_asociado_al_cliente():
     assert response.json()["cliente_id"] == "cliente-demo"
 
 
+def test_listar_avisos_devuelve_solo_los_del_cliente_el_mas_reciente_primero():
+    primero = _abrir()
+    segundo = client.post("/siniestros/avisos", json={**AVISO, "descripcion": "Segundo golpe"}).json()["id"]
+    client.post("/siniestros/avisos", json={**AVISO, "cliente_id": "otro", "descripcion": "Ajeno"})
+
+    response = client.get("/siniestros/avisos", headers=CLIENTE)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["id"] for item in body] == [segundo, primero]
+    assert body[0]["cliente_id"] == "cliente-1"
+    assert body[0]["poliza_id"] == "POL-1"
+    assert body[0]["tipo"] == "choque"
+    assert body[0]["descripcion"] == "Segundo golpe"
+    assert body[0]["estado"] == "borrador"
+    assert body[0]["ocurrido_en"].startswith("2026-10-01")
+
+
+def test_listar_avisos_vacio():
+    response = client.get("/siniestros/avisos", headers=CLIENTE)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_otro_cliente_no_encuentra_el_reporte():
     aviso_id = _abrir()
     ajeno = {"X-Cliente-Id": "otro"}

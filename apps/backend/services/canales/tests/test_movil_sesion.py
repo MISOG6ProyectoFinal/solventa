@@ -103,6 +103,7 @@ def _rutas_protegidas() -> list[tuple[str, str, dict | None]]:
                 "viajeros": 1,
             },
         ),
+        ("GET", "/movil/siniestros", None),
         ("POST", "/movil/siniestros", {"poliza_id": "POL-1"}),
         ("POST", "/movil/siniestros/aviso-1/evidencias/cargas", {"content_type": "image/jpeg"}),
         ("POST", "/movil/siniestros/aviso-1/evidencias/ev-1/confirmar", None),
