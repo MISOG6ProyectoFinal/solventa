@@ -25,6 +25,17 @@ export function toIsoOccurredAt(value: string): string {
   return `${displayOccurredAt(value).replace(' ', 'T')}:00`;
 }
 
+const isoOccurredAtPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/;
+
+export function fromIsoOccurredAt(value: string): string {
+  const match = isoOccurredAtPattern.exec(value);
+  if (!match) {
+    return value;
+  }
+
+  return `${match[3]}/${match[2]}/${match[1]} ${match[4]}`;
+}
+
 const occurredAtPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/;
 
 export function formatOccurredAt(value: string): string {

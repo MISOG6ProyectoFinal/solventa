@@ -6,6 +6,9 @@ export const texts = {
     reportShort: 'Reportar',
     statusDraft: 'Borrador',
     statusFiled: 'Radicado',
+    statusPendingSync: 'Pendiente de sincronización',
+    savedOnDevice:
+      'Tu reporte quedó guardado en este dispositivo. Ábrelo de nuevo y envíalo cuando tengas señal.',
     loadFailed: 'No se pudieron cargar los reportes.',
   },
   report: {
