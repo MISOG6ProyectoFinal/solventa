@@ -84,6 +84,37 @@ def test_listar_avisos_devuelve_solo_los_del_cliente_el_mas_reciente_primero():
     assert body[0]["ocurrido_en"].startswith("2026-10-01")
 
 
+def _con_evidencia(aviso_id: str) -> None:
+    ready = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
+        json={"content_type": "image/jpeg", "bytes": len(JPEG)},
+        headers=CLIENTE,
+    ).json()
+    api.object_store.guardar(f"avisos/{aviso_id}/evidencias/{ready['evidencia_id']}", "image/jpeg", JPEG)
+    confirmed = client.post(
+        f"/siniestros/avisos/{aviso_id}/evidencias/{ready['evidencia_id']}/confirmar",
+        headers=CLIENTE,
+    )
+    assert confirmed.status_code == 200
+
+
+def test_radicar_pasa_el_borrador_a_radicado():
+    aviso_id = _abrir()
+    pendiente = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE)
+    assert pendiente.status_code == 422
+    assert pendiente.json()["detail"] == "Agrega al menos una evidencia"
+
+    _con_evidencia(aviso_id)
+    filed = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE)
+    assert filed.status_code == 200
+    assert filed.json()["estado"] == "radicado"
+    assert client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers=CLIENTE).json()["estado"] == "radicado"
+    assert client.get("/siniestros/avisos", headers=CLIENTE).json()[0]["estado"] == "radicado"
+
+    ajeno = client.post(f"/siniestros/avisos/{aviso_id}/radicar", headers={"X-Cliente-Id": "otro"})
+    assert ajeno.status_code == 404
+
+
 def test_listar_avisos_vacio():
     response = client.get("/siniestros/avisos", headers=CLIENTE)
 

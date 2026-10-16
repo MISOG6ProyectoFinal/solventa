@@ -14,6 +14,7 @@ from siniestros.avisos.domain.use_cases import (
     CrearAvisoUseCase,
     ListarAvisosUseCase,
     ListarEvidenciasUseCase,
+    RadicarAvisoUseCase,
     SolicitarCargaUseCase,
 )
 from siniestros.config import settings
@@ -32,6 +33,7 @@ def wire(repository: AvisoRepository, almacen: ObjectStore, bucket: str | None =
     name = bucket or settings.evidencias_bucket
     casos["crear"] = CrearAvisoUseCase(repository)
     casos["listar_avisos"] = ListarAvisosUseCase(repository)
+    casos["radicar"] = RadicarAvisoUseCase(repository)
     casos["solicitar"] = SolicitarCargaUseCase(repository, almacen, name)
     casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen)
     casos["listar"] = ListarEvidenciasUseCase(repository, almacen)
@@ -91,6 +93,15 @@ def abrir_aviso(body: NuevoAviso) -> dict:
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return {"id": created.id, "estado": created.estado, "cliente_id": created.cliente_id}
+
+
+@router.post("/avisos/{aviso_id}/radicar")
+def radicar_aviso(aviso_id: str, x_cliente_id: Annotated[str, Header()]) -> dict:
+    try:
+        filed = casos["radicar"].execute(aviso_id, cliente_id=x_cliente_id)
+    except ReglaEvidencia as exc:
+        raise _http(exc) from exc
+    return {"id": filed.id, "estado": filed.estado, "cliente_id": filed.cliente_id}
 
 
 @router.get("/avisos")

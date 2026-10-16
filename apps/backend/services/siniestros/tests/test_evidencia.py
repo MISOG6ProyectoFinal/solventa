@@ -7,6 +7,7 @@ from siniestros.avisos.domain.use_cases import (
     ConfirmarCargaUseCase,
     CrearAvisoUseCase,
     ListarEvidenciasUseCase,
+    RadicarAvisoUseCase,
     SolicitarCargaUseCase,
 )
 
@@ -50,6 +51,33 @@ def test_crear_aviso_queda_en_borrador():
     created = aviso(crear)
     assert created.id
     assert created.estado == "borrador"
+
+
+def test_radicar_sin_evidencia_disponible_sigue_en_borrador():
+    repo, _, crear, _, _, _ = build()
+    created = aviso(crear)
+
+    with pytest.raises(ReglaEvidencia) as error:
+        RadicarAvisoUseCase(repo).execute(created.id, cliente_id="cliente-1")
+
+    assert error.value.status == 422
+    assert error.value.message == "Agrega al menos una evidencia"
+    assert repo.get_aviso(created.id).estado == "borrador"
+
+
+def test_radicar_deja_el_aviso_radicado_cuando_hay_evidencia():
+    repo, store, crear, solicitar, confirmar, _ = build()
+    created = aviso(crear)
+    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
+    store.guardar(repo.get_evidencia(created.id, carga.evidencia_id).object_key, "image/jpeg", JPEG)
+    confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
+
+    filed = RadicarAvisoUseCase(repo).execute(created.id, cliente_id="cliente-1")
+    again = RadicarAvisoUseCase(repo).execute(created.id, cliente_id="cliente-1")
+
+    assert filed.estado == "radicado"
+    assert again.estado == "radicado"
+    assert repo.get_aviso(created.id).estado == "radicado"
 
 
 def test_crear_aviso_queda_asociado_al_cliente():

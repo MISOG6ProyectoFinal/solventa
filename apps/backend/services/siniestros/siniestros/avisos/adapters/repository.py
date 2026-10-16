@@ -75,6 +75,12 @@ class PostgresAvisoRepository:
             row = conn.execute(select(avisos).where(avisos.c.id == aviso_id)).mappings().first()
         return _aviso(row) if row else None
 
+    def update_aviso(self, aviso: Aviso) -> None:
+        values = aviso.model_dump()
+        aviso_id = values.pop("id")
+        with self.engine.begin() as conn:
+            conn.execute(update(avisos).where(avisos.c.id == aviso_id).values(**values))
+
     def list_avisos(self, cliente_id: str) -> list[Aviso]:
         query = select(avisos).where(avisos.c.cliente_id == cliente_id).order_by(avisos.c.creado_en.desc())
         with self.engine.connect() as conn:

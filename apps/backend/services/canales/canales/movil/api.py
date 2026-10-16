@@ -154,6 +154,15 @@ def reportar_siniestro(aviso: dict, session: Session) -> dict:
     )
 
 
+@authenticated.post("/siniestros/{aviso_id}/radicar")
+def radicar_siniestro(aviso_id: str, session: Session) -> dict:
+    return call_upstream(
+        siniestros.post,
+        f"/siniestros/avisos/{aviso_id}/radicar",
+        headers=_cliente(session),
+    )
+
+
 @authenticated.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)
 def solicitar_carga(aviso_id: str, carga: dict, session: Session) -> dict:
     return call_upstream(

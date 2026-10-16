@@ -71,6 +71,18 @@ def test_movil_lista_los_avisos_del_cliente_de_la_sesion(monkeypatch):
     assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
 
+def test_movil_radica_el_aviso_del_cliente(monkeypatch):
+    upstream = _Upstream(response={"id": "aviso-1", "estado": "radicado"})
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.post("/movil/siniestros/aviso-1/radicar", headers=authorization())
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "radicado"
+    assert upstream.calls[0][0] == "/siniestros/avisos/aviso-1/radicar"
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
 def test_movil_asocia_el_aviso_con_el_cliente_de_la_sesion(monkeypatch):
     upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
     monkeypatch.setattr("canales.movil.api.siniestros", upstream)

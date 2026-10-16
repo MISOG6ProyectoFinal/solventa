@@ -83,6 +83,17 @@ def test_el_listado_trae_solo_los_avisos_del_cliente(repository):
     assert [item.id for item in listed] == [propio.id]
 
 
+def test_radicar_actualiza_el_estado(repository):
+    saved = _aviso()
+    repository.add_aviso(saved)
+    repository.update_aviso(saved.model_copy(update={"estado": "radicado"}))
+
+    loaded = repository.get_aviso(saved.id)
+
+    assert loaded is not None
+    assert loaded.estado == "radicado"
+
+
 def test_un_borrador_se_lee_por_id(repository):
     saved = _aviso()
     repository.add_aviso(saved)

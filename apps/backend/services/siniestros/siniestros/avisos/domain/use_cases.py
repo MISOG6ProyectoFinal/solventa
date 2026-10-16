@@ -11,6 +11,7 @@ ALLOWED_TYPES = frozenset({"image/jpeg", "image/png", "video/mp4"})
 URL_TTL = timedelta(minutes=15)
 
 MSG_REPORTE = "No se encontró el reporte."
+MSG_EVIDENCIA = "Agrega al menos una evidencia"
 MSG_TIPO = "Tipo de archivo no permitido. Use JPEG, PNG o MP4."
 MSG_TAMANO = "El archivo supera 50 MB."
 MSG_LIMITE = "Este reporte ya tiene 10 evidencias."
@@ -72,6 +73,22 @@ class ListarAvisosUseCase:
 
     def execute(self, *, cliente_id: str) -> list[Aviso]:
         return self.repository.list_avisos(cliente_id)
+
+
+class RadicarAvisoUseCase:
+    def __init__(self, repository: AvisoRepository) -> None:
+        self.repository = repository
+
+    def execute(self, aviso_id: str, *, cliente_id: str) -> Aviso:
+        aviso = aviso_del_cliente(self.repository, aviso_id, cliente_id)
+        if aviso.estado == "radicado":
+            return aviso
+        disponibles = [item for item in self.repository.list_evidencias(aviso_id) if item.estado == "disponible"]
+        if not disponibles:
+            raise ReglaEvidencia(422, MSG_EVIDENCIA)
+        filed = aviso.model_copy(update={"estado": "radicado"})
+        self.repository.update_aviso(filed)
+        return filed
 
 
 class SolicitarCargaUseCase:
