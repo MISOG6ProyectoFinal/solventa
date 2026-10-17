@@ -11,6 +11,20 @@ def info() -> dict:
     return {"component": "BFF Web"}
 
 
+RAMOS_COTIZABLES_WEB = {
+    "ramo-viaje",
+    "ramo-microseguro-vida",
+    "ramo-vida-hipotecario",
+    "ramo-parametrico",
+}
+
+
+@router.get("/ramos")
+def listar_ramos() -> list:
+    ramos = call_upstream(cotizacion.get, "/catalogo/ramos")
+    return [r for r in ramos if r.get("id") in RAMOS_COTIZABLES_WEB]
+
+
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
     return call_upstream(

@@ -17,6 +17,8 @@ cotizaciones = Table(
     Column("vigencia_desde", Date, nullable=False),
     Column("vigencia_hasta", Date, nullable=False),
     Column("version_reglas", String(64), nullable=False),
+    Column("datos_riesgo", JSON, nullable=True),
+    Column("canal", String(16), nullable=True, default="web"),
 )
 
 
@@ -38,6 +40,8 @@ class PostgresCotizacionRepository:
                     vigencia_desde=oferta.vigencia_propuesta.desde,
                     vigencia_hasta=oferta.vigencia_propuesta.hasta,
                     version_reglas=oferta.version_reglas,
+                    datos_riesgo=oferta.datos_riesgo,
+                    canal=oferta.canal,
                 )
             )
 

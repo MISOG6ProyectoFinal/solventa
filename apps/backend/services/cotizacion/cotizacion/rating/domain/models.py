@@ -26,7 +26,37 @@ class SolicitudCotizacionViaje(BaseModel):
         return self
 
 
-SolicitudRating = SolicitudCotizacionViaje | SolicitudCotizacion
+class SolicitudCotizacionMicroseguroVida(BaseModel):
+    producto_id: str
+    fecha_nacimiento: date
+    suma_asegurada: Decimal = Field(gt=0)
+    beneficiario: str
+    parentesco: Literal["Cónyuge", "Hijo(a)", "Padre / Madre", "Otro"]
+
+
+class SolicitudCotizacionVidaHipotecario(BaseModel):
+    producto_id: str
+    fecha_nacimiento: date
+    entidad: str
+    valor_credito: Decimal = Field(gt=0)
+    plazo_anios: int = Field(ge=1)
+
+
+class SolicitudCotizacionParametrico(BaseModel):
+    producto_id: str
+    evento: Literal["Retraso de vuelo", "Lluvia excesiva"]
+    referencia: str
+    fecha_evento: date
+    valor_indemnizar: Decimal = Field(gt=0)
+
+
+SolicitudRating = (
+    SolicitudCotizacionViaje
+    | SolicitudCotizacionMicroseguroVida
+    | SolicitudCotizacionVidaHipotecario
+    | SolicitudCotizacionParametrico
+    | SolicitudCotizacion
+)
 
 
 class Cotizacion(BaseModel):

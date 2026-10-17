@@ -3,7 +3,7 @@
 
   <slv-field label="Ramo" [required]="true">
     <select slvInput [ngModel]="ramo()" (ngModelChange)="changeRamo($event)">
-      @for (item of ramos; track item.id) {
+      @for (item of ramos(); track item.id) {
         <option [value]="item.id">{{ item.label }}{{ item.requiresConsent ? ' (requiere consentimiento)' : '' }}</option>
       }
     </select>
@@ -12,7 +12,12 @@
   <p class="text-[11px] uppercase tracking-wider font-semibold mt-5 mb-3 text-muted-foreground">Datos del cliente</p>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     @for (field of clientFields; track field.key) {
-      <slv-quote-field [definition]="field" [value]="valueOf(field.key)" (valueChange)="setValue(field.key, $event)" />
+      <slv-quote-field
+        [definition]="field"
+        [value]="valueOf(field.key)"
+        [error]="errorOf(field.key)"
+        (valueChange)="setValue(field.key, $event)"
+      />
     }
   </div>
 
@@ -21,7 +26,12 @@
   </p>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     @for (field of riskFields(); track field.key) {
-      <slv-quote-field [definition]="field" [value]="valueOf(field.key)" (valueChange)="setValue(field.key, $event)" />
+      <slv-quote-field
+        [definition]="field"
+        [value]="valueOf(field.key)"
+        [error]="errorOf(field.key)"
+        (valueChange)="setValue(field.key, $event)"
+      />
     }
   </div>
 </slv-card>

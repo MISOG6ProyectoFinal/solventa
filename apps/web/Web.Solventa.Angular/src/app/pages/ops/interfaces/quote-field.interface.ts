@@ -6,6 +6,7 @@ export interface QuoteFieldDef {
   readonly label: string;
   readonly type: QuoteFieldType;
   readonly required: boolean;
+  readonly numeric?: boolean;
   readonly placeholder?: string;
   readonly options?: readonly string[];
 }
