@@ -1,4 +1,5 @@
 import pytest
+
 from cotizacion.consenso.domain.consensus import SinConsenso, votar
 
 

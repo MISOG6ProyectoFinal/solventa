@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -20,7 +20,7 @@ class SolicitudCotizacionViaje(BaseModel):
     viajeros: int = Field(ge=1)
 
     @model_validator(mode="after")
-    def _regreso_posterior_a_salida(self) -> "SolicitudCotizacionViaje":
+    def _regreso_posterior_a_salida(self) -> Self:
         if self.fecha_regreso <= self.fecha_salida:
             raise ValueError("La fecha de regreso debe ser posterior a la fecha de salida")
         return self

@@ -19,7 +19,7 @@ export class QuoteFieldComponent {
   protected blockNonNumeric(event: KeyboardEvent): void {
     if (!this.definition().numeric) return;
     const allowed =
-      /^[0-9]$/.test(event.key) ||
+      /^\d$/.test(event.key) ||
       ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) ||
       event.ctrlKey ||
       event.metaKey;
