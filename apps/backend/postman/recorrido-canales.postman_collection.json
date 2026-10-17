@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa recorrido Canales",
-    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro y una evidencia. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro radicado y una evidencia. Las peticiones móviles autenticadas usan el token que guarda Iniciar sesión. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,6 +27,10 @@
     },
     {
       "key": "avisoId",
+      "value": ""
+    },
+    {
+      "key": "radicado",
       "value": ""
     },
     {
@@ -57,7 +61,7 @@
   "item": [
     {
       "name": "Móvil",
-      "description": "Recorrido del cliente en la app: catálogo, cotización, registro, sesión y reporte de siniestro con evidencia.",
+      "description": "Recorrido del cliente en la app: registro e inicio de sesión y, con el token, consulta de sesión, catálogo, cotización, reporte de siniestro con evidencia, radicación y listado de avisos.",
       "item": [
         {
           "name": "BFF móvil disponible",
@@ -74,82 +78,6 @@
                 "exec": [
                   "pm.test('Canales responde', function () {",
                   "  pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Catálogo de productos",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/movil/productos"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const productos = pm.response.json();",
-                  "pm.test('El catálogo trae productos', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(productos).to.be.an('array').that.is.not.empty;",
-                  "});",
-                  "const viaje = productos.find((p) => p.id === pm.collectionVariables.get('productoId'));",
-                  "pm.test('El producto de viaje está disponible', function () {",
-                  "  pm.expect(viaje, 'producto ' + pm.collectionVariables.get('productoId')).to.be.an('object');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Cotizar desde el móvil",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/movil/cotizaciones",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const dia = (desplazamiento) => {",
-                  "  const fecha = new Date();",
-                  "  fecha.setDate(fecha.getDate() + desplazamiento);",
-                  "  return fecha.toISOString().slice(0, 10);",
-                  "};",
-                  "pm.variables.set('fechaSalida', dia(30));",
-                  "pm.variables.set('fechaRegreso', dia(40));",
-                  "pm.variables.set('cedula', String(Math.floor(1e9 + Math.random() * 9e9)));"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const oferta = pm.response.json();",
-                  "pm.test('El consenso devuelve una oferta', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(Number(oferta.prima)).to.be.above(0);",
-                  "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
                   "});"
                 ]
               }
@@ -178,7 +106,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const sufijo = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
+                  "const sufijo = Date.now() + '-' + pm.variables.replaceIn('{{$guid}}');",
                   "pm.collectionVariables.set('correo', 'carga-' + sufijo + '@solventa.test');",
                   "pm.collectionVariables.set('contrasena', pm.variables.replaceIn('{{$randomPassword}}'));"
                 ]
@@ -260,10 +188,99 @@
           ]
         },
         {
+          "name": "Catálogo de productos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const productos = pm.response.json();",
+                  "pm.test('El catálogo trae productos', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(productos).to.be.an('array').that.is.not.empty;",
+                  "});",
+                  "const viaje = productos.find((p) => p.id === pm.collectionVariables.get('productoId'));",
+                  "pm.test('El producto de viaje está disponible', function () {",
+                  "  pm.expect(viaje, 'producto ' + pm.collectionVariables.get('productoId')).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar desde el móvil",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dia = (desplazamiento) => {",
+                  "  const fecha = new Date();",
+                  "  fecha.setDate(fecha.getDate() + desplazamiento);",
+                  "  return fecha.toISOString().slice(0, 10);",
+                  "};",
+                  "pm.variables.set('fechaSalida', dia(30));",
+                  "pm.variables.set('fechaRegreso', dia(40));",
+                  "pm.variables.set('cedula', '1' + String(Date.now()).slice(-9));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('El consenso devuelve una oferta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+                  "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Reportar siniestro",
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -307,6 +324,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -372,7 +393,12 @@
           "name": "Confirmar evidencia",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias/{{evidenciaId}}/confirmar"
           },
           "event": [
@@ -394,7 +420,12 @@
           "name": "Listar evidencias",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias"
           },
           "event": [
@@ -406,6 +437,68 @@
                   "pm.test('El aviso lista su evidencia', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json()).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Radicar siniestro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/radicar"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aviso = pm.response.json();",
+                  "pm.test('El aviso queda radicado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(aviso.id).to.eql(pm.collectionVariables.get('avisoId'));",
+                  "  pm.expect(aviso.estado).to.eql('radicado');",
+                  "  pm.expect(aviso.radicado).to.match(/^SIN-\\d+$/);",
+                  "});",
+                  "pm.collectionVariables.set('radicado', aviso.radicado);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar siniestros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/siniestros"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const avisos = pm.response.json();",
+                  "const aviso = avisos.find((a) => a.id === pm.collectionVariables.get('avisoId'));",
+                  "pm.test('El cliente ve su aviso radicado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(aviso, 'aviso ' + pm.collectionVariables.get('avisoId')).to.be.an('object');",
+                  "  pm.expect(aviso.estado).to.eql('radicado');",
+                  "  pm.expect(aviso.radicado).to.eql(pm.collectionVariables.get('radicado'));",
                   "});"
                 ]
               }

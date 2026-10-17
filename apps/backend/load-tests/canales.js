@@ -171,14 +171,6 @@ export function setup() {
 
 export function movil() {
   pedir('BFF móvil disponible', 'GET', `${BASE_URL}/movil/`, null);
-  pedir('Catálogo de productos', 'GET', `${BASE_URL}/movil/productos`, null, {
-    validar: (productos) => productos.some((p) => p.id === PRODUCTO),
-  });
-  cotizar('Cotizar desde el móvil', `${BASE_URL}/movil/cotizaciones`, {
-    ...solicitudViaje(),
-    nombre: 'Prueba Carga',
-    cedula: String(1e9 + (Number.parseInt(aleatorio(4), 16) % 9e9)),
-  });
 
   const correo = `carga-${Date.now()}-${__VU}-${__ITER}@solventa.test`;
   const contrasena = `Clave-${aleatorio(12)}`;
@@ -189,15 +181,27 @@ export function movil() {
     { correo, contrasena, nombre: 'Prueba', apellido: 'Carga' },
     { estado: 201, validar: (c) => Boolean(c.token) },
   );
-  const sesion = cuenta && pedir('Iniciar sesión', 'POST', `${BASE_URL}/movil/sesiones`, { correo, contrasena }, {
+  if (!cuenta) return;
+  const sesion = pedir('Iniciar sesión', 'POST', `${BASE_URL}/movil/sesiones`, { correo, contrasena }, {
     validar: (s) => Boolean(s.token),
   });
-  if (sesion) {
-    pedir('Consultar sesión', 'GET', `${BASE_URL}/movil/sesion`, null, {
-      headers: { Authorization: `Bearer ${sesion.token}` },
-      validar: (s) => s.correo === correo,
-    });
-  }
+  if (!sesion) return;
+  const autenticado = { Authorization: `Bearer ${sesion.token}` };
+
+  pedir('Consultar sesión', 'GET', `${BASE_URL}/movil/sesion`, null, {
+    headers: autenticado,
+    validar: (s) => s.correo === correo,
+  });
+  pedir('Catálogo de productos', 'GET', `${BASE_URL}/movil/productos`, null, {
+    headers: autenticado,
+    validar: (productos) => productos.some((p) => p.id === PRODUCTO),
+  });
+  cotizar(
+    'Cotizar desde el móvil',
+    `${BASE_URL}/movil/cotizaciones`,
+    { ...solicitudViaje(), nombre: 'Prueba Carga', cedula: String(1e9 + (Number.parseInt(aleatorio(4), 16) % 9e9)) },
+    autenticado,
+  );
 
   const aviso = pedir(
     'Reportar siniestro',
@@ -210,23 +214,35 @@ export function movil() {
       descripcion: 'Aviso generado por la prueba de carga',
       ubicacion: 'Calle 85 #12-34, Chapinero, Bogotá',
     },
-    { estado: 201, validar: (a) => a.estado === 'borrador' },
+    { estado: 201, headers: autenticado, validar: (a) => a.estado === 'borrador' },
   );
   if (!aviso) return;
+  const rutaAviso = `${BASE_URL}/movil/siniestros/${aviso.id}`;
   const carga = pedir(
     'Solicitar carga de evidencia',
     'POST',
-    `${BASE_URL}/movil/siniestros/${aviso.id}/evidencias/cargas`,
+    `${rutaAviso}/evidencias/cargas`,
     { content_type: 'image/png', bytes: EVIDENCIA.byteLength },
-    { estado: 201, validar: (c) => Boolean(c.upload_url) },
+    { estado: 201, headers: autenticado, validar: (c) => Boolean(c.upload_url) },
   );
   if (!carga) return;
   pedir('Subir evidencia', 'PUT', carga.upload_url, EVIDENCIA, { headers: { 'Content-Type': 'image/png' } });
-  pedir('Confirmar evidencia', 'POST', `${BASE_URL}/movil/siniestros/${aviso.id}/evidencias/${carga.evidencia_id}/confirmar`, null, {
+  pedir('Confirmar evidencia', 'POST', `${rutaAviso}/evidencias/${carga.evidencia_id}/confirmar`, null, {
+    headers: autenticado,
     validar: (e) => e.estado === 'disponible',
   });
-  pedir('Listar evidencias', 'GET', `${BASE_URL}/movil/siniestros/${aviso.id}/evidencias`, null, {
+  pedir('Listar evidencias', 'GET', `${rutaAviso}/evidencias`, null, {
+    headers: autenticado,
     validar: (lista) => lista.length > 0,
+  });
+  const radicado = pedir('Radicar siniestro', 'POST', `${rutaAviso}/radicar`, null, {
+    headers: autenticado,
+    validar: (a) => a.id === aviso.id && a.estado === 'radicado' && /^SIN-\d+$/.test(a.radicado),
+  });
+  if (!radicado) return;
+  pedir('Listar siniestros', 'GET', `${BASE_URL}/movil/siniestros`, null, {
+    headers: autenticado,
+    validar: (avisos) => avisos.some((a) => a.id === aviso.id && a.estado === 'radicado' && a.radicado === radicado.radicado),
   });
 }
 
