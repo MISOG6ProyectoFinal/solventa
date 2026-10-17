@@ -12,3 +12,9 @@ variable "kms_encryption" {
   type        = bool
   default     = true
 }
+
+variable "policy_json" {
+  description = "Declaraciones adicionales para la politica del bucket; se combinan con la regla de solo HTTPS."
+  type        = string
+  default     = null
+}

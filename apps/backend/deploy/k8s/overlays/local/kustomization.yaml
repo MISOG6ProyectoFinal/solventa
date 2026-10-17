@@ -1,7 +1,3 @@
-# Overlay para minikube/kind: dependencias dentro del clúster (PostgreSQL, Redis,
-# LocalStack) y una réplica por servicio.
-#   eval $(minikube docker-env) && TAG=local ./scripts/build-images.sh   (desde apps/backend)
-#   kubectl apply -k deploy/k8s/overlays/local
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: solventa
@@ -9,6 +5,9 @@ resources:
   - ../../base
   - namespace.yaml
   - dependencies.yaml
+
+components:
+  - ../../components/k3s
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -26,15 +25,14 @@ configMapGenerator:
       - QUEUE_URL_SINIESTROS_PARAMETRICO=http://localstack:4566/000000000000/solventa-siniestros-parametrico
       - QUEUE_URL_AUDITORIA=http://localstack:4566/000000000000/solventa-auditoria
       - EVIDENCIAS_BUCKET=solventa-evidencias
-      # SESION_SECRETO no va en este archivo. Está en apps/backend/.env y, en el clúster, fuera del repositorio.
-  - name: postgres-init
-    files:
-      - init-databases.sql
+      - CORS_ORIGINS=http://localhost:4200
   - name: localstack-init
     files:
       - init-aws.sh
 
 secretGenerator:
+  - name: postgres
+    literals: [POSTGRES_PASSWORD=solventa]
   - name: db-cotizacion
     literals: [DB_HOST=postgres, DB_NAME=cotizacion, DB_USER=solventa, DB_PASSWORD=solventa]
   - name: db-polizas
@@ -51,20 +49,8 @@ secretGenerator:
 patches:
   - target:
       kind: Deployment
-      labelSelector: app.kubernetes.io/part-of=solventa
+      name: siniestros
     patch: |-
       - op: replace
-        path: /spec/replicas
-        value: 1
-  - target:
-      kind: HorizontalPodAutoscaler
-    patch: |-
-      - op: replace
-        path: /spec/minReplicas
-        value: 1
-  - target:
-      kind: PodDisruptionBudget
-    patch: |-
-      - op: replace
-        path: /spec/minAvailable
-        value: 0
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "false"

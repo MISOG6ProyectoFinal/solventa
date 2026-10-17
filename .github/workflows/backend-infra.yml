@@ -2,6 +2,7 @@ name: Backend Infra
 
 # Infraestructura de AWS con Terraform. Se lanza a mano porque crear o destruir
 # recursos tiene costo: primero plan, se revisa la salida, y luego apply.
+# La variable del repositorio MODO_DESPLIEGUE elige la topología: ahorro (por defecto) o eks-costoso.
 
 on:
   workflow_dispatch:
@@ -18,7 +19,7 @@ on:
           - stop
           - start
       stack:
-        description: Stack (all recorre todos en orden)
+        description: Stack (all recorre los del modo; eks-costoso agrupa los que solo usa EKS)
         type: choice
         required: true
         default: all
@@ -31,7 +32,9 @@ on:
           - messaging
           - cluster_addons
           - platform
+          - ahorro
           - edge
+          - eks-costoso
 
 permissions:
   contents: read
@@ -52,6 +55,7 @@ jobs:
       id-token: write
     env:
       ENV: dev
+      MODO: ${{ vars.MODO_DESPLIEGUE || 'ahorro' }}
       AUTO_APPROVE: "1"
       TF_IN_AUTOMATION: "1"
       TF_INPUT: "0"
@@ -78,6 +82,13 @@ jobs:
         with:
           terraform_version: 1.14.4
           terraform_wrapper: false
+
+      - name: Session Manager plugin
+        if: env.MODO == 'ahorro' && inputs.action == 'start'
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/session-manager-plugin.deb" \
+            https://s3.amazonaws.com/session-manager-downloads/plugin/1.2.707.0/ubuntu_64bit/session-manager-plugin.deb
+          sudo dpkg -i "$RUNNER_TEMP/session-manager-plugin.deb"
 
       - name: terraform ${{ inputs.action }}
         working-directory: apps/backend

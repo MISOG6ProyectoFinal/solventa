@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Fija en el overlay aws la imagen de cada servicio: registro de ECR y versión.
+# Fija en un overlay (aws por defecto) la imagen de cada servicio: registro de ECR y versión.
 # Lo ejecuta Backend CD con el tag del release, justo antes de aplicar el overlay.
-#   set-image-tag.sh <registro> <versión>
-#   set-image-tag.sh 123456789012.dkr.ecr.us-east-1.amazonaws.com v1.2.0
+#   set-image-tag.sh <registro> <versión> [overlay]
+#   set-image-tag.sh 123456789012.dkr.ecr.us-east-1.amazonaws.com v1.2.0 deploy/k8s/overlays/ahorro
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # apps/backend
 
 HOST="${1:?Falta el registro de ECR}"
 TAG="${2:?Falta el tag}"
-FILE=deploy/k8s/overlays/aws/kustomization.yaml
+FILE="${3:-deploy/k8s/overlays/aws}/kustomization.yaml"
 MARKER="# --- Imágenes desplegadas. Bloque generado por set-image-tag.sh: no editar a mano."
 
 # Todo lo que sigue al marcador se regenera.
