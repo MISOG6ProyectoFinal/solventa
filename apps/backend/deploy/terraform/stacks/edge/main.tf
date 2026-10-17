@@ -91,6 +91,10 @@ resource "aws_wafv2_web_acl" "edge" {
     metric_name                = "${var.prefix}-edge"
     sampled_requests_enabled   = true
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 data "aws_cloudfront_cache_policy" "disabled" {
