@@ -14,6 +14,8 @@ type TextFieldProps = {
   error?: boolean;
   errorMessage?: string;
   keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  secureTextEntry?: boolean;
   testID?: string;
 };
 
@@ -27,8 +29,10 @@ export function TextField({
   error = false,
   errorMessage,
   keyboardType,
+  autoCapitalize,
+  secureTextEntry = false,
   testID,
-}: TextFieldProps) {
+}: Readonly<TextFieldProps>) {
   const [focused, setFocused] = useState(false);
   const failed = error || errorMessage != null;
 
@@ -46,7 +50,10 @@ export function TextField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         multiline={multiline}
+        accessibilityLabel={label}
         keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
         textAlignVertical={multiline ? 'top' : 'auto'}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

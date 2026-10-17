@@ -32,11 +32,12 @@ export function SelectField({
   error = false,
   errorMessage,
   testID,
-}: SelectFieldProps) {
+}: Readonly<SelectFieldProps>) {
   const sheet = useRef<SheetHandle>(null);
   const [focused, setFocused] = useState(false);
   const selected = options.find((option) => option.value === value);
-  const shown = selected?.label || value;
+  const shown = selected?.label ?? value;
+  const selectText = shown != null && shown.length > 0 ? shown : 'Selecciona';
   const failed = error || errorMessage != null;
 
   const choose = (next: string) => {
@@ -64,7 +65,7 @@ export function SelectField({
         trailing={<Icon name="desplegar" size={16} color="gray" />}
       >
         <AppText variant="bodySmall" style={shown ? styles.value : styles.placeholder}>
-          {shown || 'Selecciona'}
+          {selectText}
         </AppText>
       </FieldFrame>
       <Sheet ref={sheet} onClose={() => setFocused(false)} testID="select-sheet">

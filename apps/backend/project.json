@@ -47,6 +47,13 @@
         "cwd": "apps/backend",
         "args": "--env=dev --step=all"
       }
+    },
+    "load-test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./load-tests/run.sh",
+        "cwd": "apps/backend"
+      }
     }
   }
 }

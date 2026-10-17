@@ -3,6 +3,13 @@ export const texts = {
     screenTitle: 'Siniestros',
     emptyMessage: 'Aún no tienes reportes.',
     reportButton: 'Reportar siniestro',
+    reportShort: 'Reportar',
+    statusDraft: 'Borrador',
+    statusFiled: 'Radicado',
+    statusPendingSync: 'Pendiente de sincronización',
+    savedOnDevice:
+      'Tu reporte quedó guardado en este dispositivo. Ábrelo de nuevo y envíalo cuando tengas señal.',
+    loadFailed: 'No se pudieron cargar los reportes.',
   },
   report: {
     screenTitle: 'Reportar siniestro',
@@ -55,6 +62,8 @@ export const texts = {
     status: 'Radicado',
     assistButton: 'Solicitar asistencia en sitio',
     filedSuccess: (radicado: string) => `Siniestro #${radicado} radicado exitosamente.`,
+    filed: 'Siniestro radicado exitosamente.',
+    evidencesFailed: 'No se pudieron cargar las evidencias.',
     occurred: (datetime: string, location: string) =>
       location === '' ? `Ocurrió ${datetime}` : `Ocurrió ${datetime} · ${location}`,
     evidences: (count: number) => `Evidencias (${count})`,

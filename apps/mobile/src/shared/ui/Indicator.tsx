@@ -16,7 +16,7 @@ const toneColor = {
   accent: theme.colors.teal,
 };
 
-export function Indicator({ tone, children }: IndicatorProps) {
+export function Indicator({ tone, children }: Readonly<IndicatorProps>) {
   const color = toneColor[tone];
 
   return (

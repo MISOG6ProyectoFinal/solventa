@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="62 16 96 112" fill="none">
+  <path
+    d="M110 16L158 36.5V78.5C158 104.5 110 128 110 128C110 128 62 104.5 62 78.5V36.5L110 16Z"
+    fill="#163A5F"
+  />
+  <path
+    d="M110 28L146 43.5V76.5C146 96.5 110 114 110 114C110 114 74 96.5 74 76.5V43.5L110 28Z"
+    fill="#0F2A45"
+  />
+  <circle cx="110" cy="68" r="16" fill="#28A6A1" />
+  <path
+    d="M101 69L107.5 75.5L120 60"
+    stroke="#FFFFFF"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

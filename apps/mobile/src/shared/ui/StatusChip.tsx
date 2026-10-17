@@ -17,7 +17,7 @@ const medium = {
   fontWeight: theme.type.subtitle.fontWeight,
 };
 
-export function StatusChip({ variant, children, testID }: StatusChipProps) {
+export function StatusChip({ variant, children, testID }: Readonly<StatusChipProps>) {
   return (
     <View testID={testID} style={[styles.chip, containerStyles[variant]]}>
       <AppText variant="bodySmall" style={[labelStyles[variant], variant !== 'tag' && medium]}>

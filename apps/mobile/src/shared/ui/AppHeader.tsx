@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
+import { Button } from './Button';
 import { IconButton } from './IconButton';
 import { type IconName } from './icons';
 
@@ -19,9 +20,30 @@ export type AppHeaderProps = {
   subtitle?: string;
   leadingIcon?: LeadingIcon;
   hideBackButton?: boolean;
+  action?: {
+    title: string;
+    onPress: () => void;
+  };
 };
 
-export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppHeaderProps) {
+function leadingControl(displayBackBtn: boolean, leadingIcon: LeadingIcon | undefined, onBack: () => void) {
+  if (displayBackBtn) {
+    return <IconButton label="Volver" icon="volver" onPress={onBack} />;
+  }
+  if (!leadingIcon) {
+    return null;
+  }
+  return (
+    <IconButton
+      label={leadingIcon.label}
+      icon={leadingIcon.icon}
+      onPress={leadingIcon.onPress}
+      onLongPress={leadingIcon.onLongPress}
+    />
+  );
+}
+
+export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action }: Readonly<AppHeaderProps>) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
@@ -32,16 +54,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppH
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>
       <StatusBar barStyle="light-content" />
       <View testID="app-header-row" style={styles.row}>
-        {displayBackBtn ? (
-          <IconButton label="Volver" icon="volver" onPress={() => navigation.goBack()} />
-        ) : leadingIcon ? (
-          <IconButton
-            label={leadingIcon.label}
-            icon={leadingIcon.icon}
-            onPress={leadingIcon.onPress}
-            onLongPress={leadingIcon.onLongPress}
-          />
-        ) : null}
+        {leadingControl(displayBackBtn, leadingIcon, () => navigation.goBack())}
         <View style={[styles.copy, !hasLeadingIcon && styles.noLeadingSpace]}>
           <AppText variant="screenTitle" numberOfLines={1} style={styles.title}>
             {title}
@@ -52,6 +65,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton }: AppH
             </AppText>
           ) : null}
         </View>
+        {action ? <Button title={action.title} variant="accent" onPress={action.onPress} /> : null}
       </View>
     </View>
   );

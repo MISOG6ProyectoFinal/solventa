@@ -10,3 +10,4 @@ from canales.config import settings
 cotizacion = ServiceClient("cotizacion", settings.cotizacion_url)
 polizas = ServiceClient("polizas", settings.polizas_url)
 siniestros = ServiceClient("siniestros", settings.siniestros_url)
+identidad = ServiceClient("identidad", settings.identidad_url)

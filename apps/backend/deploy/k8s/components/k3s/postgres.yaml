@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: postgres
+        image: postgres:17.6-alpine
+        env:
+        - name: POSTGRES_USER
+          value: solventa
+        - name: POSTGRES_DB
+          value: solventa
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres
+              key: POSTGRES_PASSWORD
+        ports:
+        - name: postgres
+          containerPort: 5432
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "solventa", "-d", "solventa"]
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+            ephemeral-storage: 64Mi
+          limits:
+            memory: 512Mi
+            ephemeral-storage: 512Mi
+        volumeMounts:
+        - name: datos
+          mountPath: /var/lib/postgresql/data
+        - name: init
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: init
+        configMap:
+          name: postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: datos
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres

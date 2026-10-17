@@ -10,7 +10,7 @@ type Props = StaticScreenProps<{
   id: string;
 }>;
 
-export default function ComponentScreen({ route }: Props) {
+export default function ComponentScreen({ route }: Readonly<Props>) {
   const item = findComponent(route.params.id);
   const [values, setValues] = useState<PlaygroundValues>(item?.initial ?? {});
 

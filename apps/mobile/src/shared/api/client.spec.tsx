@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { setAccessToken } from './accessToken';
 import { ApiError, apiClient } from './client';
 
 function apiBaseUrl(): string {
@@ -24,6 +25,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 describe('apiClient', () => {
   beforeEach(() => {
+    setAccessToken(null);
     global.fetch = jest.fn();
   });
 
@@ -94,6 +96,19 @@ describe('apiClient', () => {
     await expect(apiClient[name]('/movil/siniestros/aviso-1')).rejects.toMatchObject({
       status: 409,
       detail: 'Este reporte ya tiene 10 evidencias.',
+    });
+  });
+
+  it('sends the bearer token when a session exists', async () => {
+    setAccessToken('token-firmado');
+    jest.mocked(fetch).mockResolvedValue(jsonResponse({ cliente_id: 'cliente-1' }) as Response);
+
+    await apiClient.get('/movil/sesion');
+
+    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/sesion`, {
+      method: 'GET',
+      headers: { Authorization: 'Bearer token-firmado' },
+      body: undefined,
     });
   });
 

@@ -1,6 +1,8 @@
-# Borde de red del modelo de despliegue: CDN y WAF delante del balanceador del
-# API Gateway (NLB de NGINX Ingress). Opcional en ambientes de prueba.
+# Borde de red del modelo de despliegue: CDN y WAF delante del API Gateway.
+# En eks-costoso el origen es el NLB de NGINX Ingress; en ahorro, la instancia de k3s.
 data "kubernetes_service" "ingress" {
+  count = local.eks ? 1 : 0
+
   metadata {
     name      = "ingress-nginx-controller"
     namespace = "ingress-nginx"
@@ -8,10 +10,18 @@ data "kubernetes_service" "ingress" {
 }
 
 locals {
-  origin_host = data.kubernetes_service.ingress.status[0].load_balancer[0].ingress[0].hostname
+  eks         = var.modo_despliegue == "eks-costoso"
+  origin_host = local.eks ? data.kubernetes_service.ingress[0].status[0].load_balancer[0].ingress[0].hostname : data.terraform_remote_state.ahorro[0].outputs.public_dns
+}
+
+moved {
+  from = aws_wafv2_web_acl.edge
+  to   = aws_wafv2_web_acl.edge[0]
 }
 
 resource "aws_wafv2_web_acl" "edge" {
+  count = local.eks ? 1 : 0
+
   name  = "${var.prefix}-edge"
   scope = "CLOUDFRONT" # Requiere region = us-east-1.
 
@@ -97,6 +107,7 @@ module "web" {
   bucket_name    = "${var.prefix}-${var.environment}-web-${data.aws_caller_identity.current.account_id}"
   force_destroy  = true
   kms_encryption = false
+  policy_json    = data.aws_iam_policy_document.web_bucket.json
 }
 
 data "aws_caller_identity" "current" {}
@@ -123,27 +134,13 @@ data "aws_iam_policy_document" "web_bucket" {
       values   = [aws_cloudfront_distribution.edge.arn]
     }
   }
-
-  statement {
-    sid       = "SoloHttps"
-    effect    = "Deny"
-    actions   = ["s3:*"]
-    resources = [module.web.arn, "${module.web.arn}/*"]
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    condition {
-      test     = "Bool"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
-    }
-  }
 }
 
-resource "aws_s3_bucket_policy" "web" {
-  bucket = module.web.bucket
-  policy = data.aws_iam_policy_document.web_bucket.json
+removed {
+  from = aws_s3_bucket_policy.web
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "aws_cloudfront_function" "spa_routes" {
@@ -175,7 +172,7 @@ resource "aws_cloudfront_distribution" "edge" {
   enabled             = true
   comment             = "Solventa: portal web y API (BFF web, BFF movil, API de socios)"
   price_class         = "PriceClass_100"
-  web_acl_id          = aws_wafv2_web_acl.edge.arn
+  web_acl_id          = local.eks ? aws_wafv2_web_acl.edge[0].arn : null
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
@@ -191,7 +188,7 @@ resource "aws_cloudfront_distribution" "edge" {
     custom_origin_config {
       http_port  = 80
       https_port = 443
-      # TODO: certificado ACM en el NLB y https-only cuando exista dominio propio.
+      # El NLB todavía no tiene certificado. El origen sigue en claro hasta que exista un dominio propio.
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }

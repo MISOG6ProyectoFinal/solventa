@@ -44,7 +44,15 @@ jest.mock('react-native', () => {
     Image: host('Image'),
     TextInput: host('TextInput'),
     Pressable: host('Pressable'),
-    ScrollView: host('ScrollView'),
+    ScrollView: ({
+      children,
+      refreshControl,
+      ...props
+    }: {
+      children?: unknown;
+      refreshControl?: unknown;
+    }) => React.createElement('ScrollView', props, refreshControl, children),
+    RefreshControl: host('RefreshControl'),
     ActivityIndicator: host('ActivityIndicator'),
     Modal: ({ children, visible, ...props }: { children?: unknown; visible?: boolean }) =>
       visible ? React.createElement('Modal', props, children) : null,
@@ -83,6 +91,10 @@ jest.mock('react-native', () => {
       OS: 'android',
       select: (options: { android?: unknown }) => options.android,
     },
+    Keyboard: {
+      addListener: () => ({ remove: () => undefined }),
+    },
+    KeyboardAvoidingView: host('KeyboardAvoidingView'),
     PermissionsAndroid: {
       PERMISSIONS: { ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION' },
       RESULTS: { GRANTED: 'granted', DENIED: 'denied' },
@@ -100,6 +112,12 @@ jest.mock('react-native', () => {
     },
   };
 });
+
+jest.mock('react-native-keychain', () => ({
+  getGenericPassword: jest.fn(async () => false),
+  setGenericPassword: jest.fn(async () => true),
+  resetGenericPassword: jest.fn(async () => true),
+}));
 
 jest.mock('react-native-video', () => {
   const React = require('react');

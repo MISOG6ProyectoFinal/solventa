@@ -7,6 +7,8 @@ module.exports = {
   setupFiles: ['<rootDir>/src/test-setup.ts'],
   moduleNameMapper: {
     '\\.(png|jpg|jpeg|gif|webp)$': '<rootDir>/src/test-file-stub.js',
+    '\\.svg$': '<rootDir>/src/test-svg-stub.js',
+    '^react-native-blob-util$': '<rootDir>/src/test-react-native-blob-util.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {

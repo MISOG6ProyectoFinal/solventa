@@ -21,7 +21,7 @@ def store(monkeypatch):
 
 
 def test_presign_ignora_el_endpoint_del_entorno(monkeypatch):
-    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://192.168.1.52:4566")
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "https://localstack:4566")
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
     monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
@@ -29,7 +29,7 @@ def test_presign_ignora_el_endpoint_del_entorno(monkeypatch):
 
     url, _, _ = store.presign_put("avisos/a/evidencias/e", "image/jpeg", len(JPEG))
 
-    assert "192.168.1.52" not in url
+    assert "localstack" not in url
     assert "amazonaws.com" in url
 
 
@@ -89,8 +89,8 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     crear = CrearAvisoUseCase(repo)
     solicitar = SolicitarCargaUseCase(repo, store, BUCKET)
     confirmar = ConfirmarCargaUseCase(repo, store)
-    created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe")
-    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG))
+    created = crear.execute("POL-1", "choque", datetime(2026, 10, 1, tzinfo=UTC), "Golpe", cliente_id="cliente-1")
+    carga = solicitar.execute(created.id, "image/jpeg", len(JPEG), cliente_id="cliente-1")
     evidencia = repo.get_evidencia(created.id, carga.evidencia_id)
     assert evidencia is not None
 
@@ -107,7 +107,7 @@ def test_confirmar_usa_el_adapter_de_s3(store):
     )
     stubber.activate()
 
-    result = confirmar.execute(created.id, carga.evidencia_id)
+    result = confirmar.execute(created.id, carga.evidencia_id, cliente_id="cliente-1")
     assert result.estado == "disponible"
     assert result.url == f"s3://{BUCKET}/{evidencia.object_key}"
 

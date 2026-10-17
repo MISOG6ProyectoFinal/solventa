@@ -21,7 +21,7 @@ type OptionRowProps = {
   onPress: () => void;
 };
 
-function OptionRow({ option, selected, onPress }: OptionRowProps) {
+function OptionRow({ option, selected, onPress }: Readonly<OptionRowProps>) {
   const progress = useAnimatedValue(selected ? 1 : 0);
   const scale = useAnimatedValue(1);
   const skipIntro = useRef(true);
@@ -93,7 +93,7 @@ function OptionRow({ option, selected, onPress }: OptionRowProps) {
   );
 }
 
-export function OptionList({ options, value, onChange }: OptionListProps) {
+export function OptionList({ options, value, onChange }: Readonly<OptionListProps>) {
   return (
     <View style={styles.list}>
       {options.map((option) => (

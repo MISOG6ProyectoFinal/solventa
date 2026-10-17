@@ -49,6 +49,22 @@ resource "kubernetes_secret" "db" {
   }
 }
 
+resource "random_password" "sesion" {
+  length  = 48
+  special = false
+}
+
+resource "kubernetes_secret" "sesion" {
+  metadata {
+    name      = "sesion"
+    namespace = kubernetes_namespace.solventa.metadata[0].name
+  }
+
+  data = {
+    SESION_SECRETO = random_password.sesion.result
+  }
+}
+
 # ---------- Permisos AWS de los pods
 
 data "aws_iam_policy_document" "pod_identity_assume" {

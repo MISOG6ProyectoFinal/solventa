@@ -5,7 +5,7 @@ type AmountProps = {
   align?: 'left' | 'center';
 };
 
-export function Amount({ value, align = 'left' }: AmountProps) {
+export function Amount({ value, align = 'left' }: Readonly<AmountProps>) {
   return (
     <AppText variant="amount" style={{ textAlign: align }}>
       {value}

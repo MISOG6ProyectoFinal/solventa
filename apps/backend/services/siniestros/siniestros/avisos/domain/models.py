@@ -5,15 +5,18 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Aviso(BaseModel):
     id: str
+    cliente_id: str
     poliza_id: str
     tipo: str
     ocurrido_en: datetime
     descripcion: str
     ubicacion: str | None = None
     estado: str = "borrador"
+    radicado: str | None = None
 
 
 class NuevoAviso(BaseModel):
+    cliente_id: str
     poliza_id: str
     tipo: str
     ocurrido_en: datetime

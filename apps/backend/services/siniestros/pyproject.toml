@@ -12,3 +12,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+# The backend pyproject has [tool.ruff], so Pyrefly treats that directory as the
+# project root and cannot see this package. This section makes this directory the root.
+[tool.pyrefly]
+preset = "basic"
+search-path = ["../../libs/solventa_common"]

@@ -18,21 +18,15 @@ import { photoLimit } from '../../constants';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import { formatFileSize, photoUri } from '../../photo';
 import { claimReport } from '../../claimReport';
-import { submitAviso } from '../../api/submitAviso';
-import { newRadicado } from '../../radicado';
-import { ApiError } from '../../../../shared/api/client';
+import { SubmitAvisoError, submitAviso } from '../../api/submitAviso';
+import { deleteReport } from '../../offline/deleteReport';
+import { listReports } from '../../offline/listReports';
+import { saveReport } from '../../offline/saveReport';
+import { errorMessage } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
-import { displayOccurredAt, formatDate } from '../../utils';
-
-function filingMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail ?? texts.report.sendFailed;
-  }
-
-  return error instanceof Error && error.message !== '' ? error.message : texts.report.sendFailed;
-}
+import { displayOccurredAt, formatDate, fromIsoOccurredAt } from '../../utils';
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
@@ -44,43 +38,56 @@ export default function ReportClaimScreen() {
   const [filing, setFiling] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [restoredAddress, setRestoredAddress] = useState<string | null>(null);
   const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimsStore((state) => state.photos);
   const videos = useClaimsStore((state) => state.videos);
-  const clearEvidence = useClaimsStore((state) => state.clear);
   const evidenceCount = photos.length + videos.length;
   const descriptionMissing = submitted && description.trim() === '';
   const evidenceMissing = submitted && evidenceCount === 0;
+  const address = restoredAddress ?? location?.address ?? '';
 
   const submit = async () => {
+    const files = [
+      ...photos.map((photo) => ({
+        kind: 'photo' as const,
+        filePath: photo.filePath,
+        bytes: photo.bytes,
+        capturedAt: photo.capturedAt,
+      })),
+      ...videos.map((video) => ({
+        kind: 'video' as const,
+        filePath: video.filePath,
+        bytes: video.bytes,
+        capturedAt: video.capturedAt,
+      })),
+    ];
     setSubmitted(true);
     setSendError(null);
-    if (description.trim() === '' || evidenceCount === 0) {
+    if (description.trim() === '' || files.length === 0) {
       return;
     }
 
     setFiling(true);
     try {
-      await submitAviso({
+      const filed = await submitAviso({
         policy,
         claimType,
         occurredAt,
-        location: location?.address ?? '',
+        location: address,
         description: description.trim(),
-        files: [
-          ...photos.map((photo) => ({ kind: 'photo' as const, filePath: photo.filePath, bytes: photo.bytes })),
-          ...videos.map((video) => ({ kind: 'video' as const, filePath: video.filePath, bytes: video.bytes })),
-        ],
+        files,
       });
+      await deleteReport();
       navigation.dispatch(
         StackActions.replace('ClaimReport', {
           screen: 'ClaimDetail',
           params: {
-            radicado: newRadicado(),
+            radicado: filed.radicado,
             claimType,
             policy,
             occurredAt: displayOccurredAt(occurredAt),
-            location: location?.address ?? '',
+            location: address,
             description: description.trim(),
             evidences: [...photos, ...videos].map((item) => ({
               label: item.label,
@@ -90,7 +97,25 @@ export default function ReportClaimScreen() {
         }),
       );
     } catch (error) {
-      setSendError(filingMessage(error));
+      if (error instanceof SubmitAvisoError && !error.avisoCreated) {
+        try {
+          await saveReport({
+            policy,
+            claimType,
+            occurredAt,
+            location: address,
+            description: description.trim(),
+            files,
+          });
+          navigation.navigate('Main', { screen: 'Claims' });
+          return;
+        } catch (saveError) {
+          setSendError(errorMessage(saveError, texts.report.sendFailed));
+          return;
+        }
+      }
+      const cause = error instanceof SubmitAvisoError ? error.cause : error;
+      setSendError(errorMessage(cause, texts.report.sendFailed));
     } finally {
       setFiling(false);
     }
@@ -106,10 +131,30 @@ export default function ReportClaimScreen() {
   };
 
   useEffect(() => {
+    let active = true;
+    listReports().then((reports) => {
+      if (!active) {
+        return;
+      }
+      const saved = reports[0];
+      if (!saved) {
+        return;
+      }
+      const policyMatch = claimReport.policies.find((option) => option.value.split(' · ').pop() === saved.poliza_id);
+      setPolicy(policyMatch?.value ?? saved.poliza_id);
+      setClaimType(saved.tipo);
+      setOccurredAt(fromIsoOccurredAt(saved.ocurrido_en));
+      setDescription(saved.descripcion);
+      if (saved.ubicacion) {
+        setRestoredAddress(saved.ubicacion);
+      }
+      useClaimsStore.getState().replaceEvidence(saved.files);
+    });
     return () => {
-      clearEvidence();
+      active = false;
+      useClaimsStore.getState().clear();
     };
-  }, [clearEvidence]);
+  }, []);
 
   return (
     <Screen testID="report-claim-screen" header={{ title: texts.report.screenTitle }}>
@@ -145,14 +190,20 @@ export default function ReportClaimScreen() {
                 label={texts.report.refreshLocation}
                 icon="sincronizar"
                 color="primary"
-                onPress={refresh}
+                onPress={() => {
+                  setRestoredAddress(null);
+                  refresh();
+                }}
               />
             </View>
             <AppText variant="bodySmall" style={styles.address}>
-              {location?.address ??
-                (locationFailed ? texts.report.locationUnavailable : texts.report.locationPending)}
+              {address !== ''
+                ? address
+                : locationFailed
+                  ? texts.report.locationUnavailable
+                  : texts.report.locationPending}
             </AppText>
-            {location ? (
+            {location && restoredAddress == null ? (
               <AppText variant="bodySmall" style={styles.detail}>
                 {location.gps}
               </AppText>
@@ -174,7 +225,7 @@ export default function ReportClaimScreen() {
               {texts.report.evidenceHeading}
             </AppText>
             <AppText variant="caption" style={styles.evidenceCount}>
-              {`${evidenceCount}/10`}
+              {`${evidenceCount}/${photoLimit}`}
             </AppText>
           </View>
           <AppText variant="bodySmall" style={styles.evidenceHint}>

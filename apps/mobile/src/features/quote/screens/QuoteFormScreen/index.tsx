@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { ApiError } from '../../../../shared/api/client';
+import { errorMessage } from '../../../../shared/api/client';
 import { theme } from '../../../../shared/theme';
 import {
   AppText,
@@ -20,14 +20,6 @@ import { texts } from '../../texts';
 import { destinos, QuoteFormValues } from '../../types';
 import { defaultQuoteForm, digitsOnly, validateQuoteForm } from '../../utils';
 import styles from './styles';
-
-function quoteErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail ?? texts.form.quoteFailed;
-  }
-
-  return error instanceof Error && error.message !== '' ? error.message : texts.form.quoteFailed;
-}
 
 export default function QuoteFormScreen() {
   const navigation = useNavigation();
@@ -62,7 +54,7 @@ export default function QuoteFormScreen() {
       setOferta(oferta);
       navigation.navigate('Quote', { screen: 'Result' });
     } catch (cause) {
-      setError(quoteErrorMessage(cause));
+      setError(errorMessage(cause, texts.form.quoteFailed));
     } finally {
       setCalculating(false);
     }

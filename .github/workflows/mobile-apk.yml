@@ -1,23 +1,34 @@
 name: Mobile APK
 
-# Construye el APK al publicar un release y lo adjunta a ese release.
-# Un borrador no dispara este workflow: hace falta pulsar Publish release.
+# Construye el APK del tag que CD acaba de desplegar y lo adjunta a ese release.
+# La URL pública sale del output url del stack edge. No usa .env.example.
+# También se puede lanzar a mano con el tag de un release ya publicado.
 # El script exige Node 26, Java y el NDK y CMake fijados en la app Android.
 
 on:
-  release:
-    types:
-      - published
+  workflow_call:
+    inputs:
+      version:
+        description: Tag del release (por ejemplo v1.2.3)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tag de un release existente (por ejemplo v1.2.3)
+        required: true
+        type: string
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
-  group: mobile-apk-${{ github.event.release.tag_name }}
+  group: mobile-apk-${{ inputs.version }}
   cancel-in-progress: false
 
 env:
-  VERSION: ${{ github.event.release.tag_name }}
+  ENV: dev
 
 jobs:
   apk:
@@ -28,7 +39,36 @@ jobs:
       - name: Checkout del release
         uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.VERSION }}
+          ref: refs/tags/${{ inputs.version }}
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.4
+          terraform_wrapper: false
+
+      - name: Crear el .env de Mobile
+        run: |
+          stack="apps/backend/deploy/terraform/stacks/edge"
+          terraform -chdir="$stack" init -input=false -reconfigure \
+            -backend-config="../../environments/${ENV}/edge/backend.tfvars"
+          API_BASE_URL="$(terraform -chdir="$stack" output -raw url)"
+          if [ -z "$API_BASE_URL" ]; then
+            echo "::error::No se pudo obtener API_BASE_URL desde Terraform."
+            exit 1
+          fi
+          if [[ "$API_BASE_URL" != https://* ]]; then
+            echo "::error::API_BASE_URL no es HTTPS: $API_BASE_URL"
+            exit 1
+          fi
+          printf 'API_BASE_URL=%s\n' "$API_BASE_URL" > apps/mobile/.env
+          echo "Mobile API_BASE_URL=$API_BASE_URL"
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -53,7 +93,7 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           set -o pipefail
           sdkmanager --install \
-            "platforms;android-37" \
+            "platforms;android-37.0" \
             "build-tools;37.0.0" \
             "ndk;27.1.12297006" \
             "cmake;3.31.6"
@@ -61,13 +101,11 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Prepare Mobile environment
-        run: cp apps/mobile/.env.example apps/mobile/.env
-
       - name: Build APK
         run: ./scripts/build-apk.sh
 
       - name: Adjuntar el APK al release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
         run: gh release upload "$VERSION" dist/mobile-release.apk --clobber

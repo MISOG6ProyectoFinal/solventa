@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
 # Despliegue en AWS. Lo ejecutan los workflows de GitHub Actions; también corre a mano.
+# MODO elige la topología: ahorro (k3s en una EC2) o eks-costoso (EKS con NLB y WAF).
 #   deploy-aws.sh plan    [stack]   # terraform plan de un stack o de todos, en orden
 #   deploy-aws.sh infra   [stack]   # terraform apply: red → ... → platform → edge
 #   deploy-aws.sh destroy [stack]   # terraform destroy, en orden inverso
-#   deploy-aws.sh stop              # pausa: nodos en 0 e instancias de RDS detenidas
+#   deploy-aws.sh stop              # pausa: instancia detenida (ahorro) o nodos en 0 y RDS detenida (eks-costoso)
 #   deploy-aws.sh start             # reanuda lo que detuvo stop
 #   deploy-aws.sh images            # build + push a ECR y fija el tag en el overlay aws
 #   deploy-aws.sh k8s               # aplica el overlay aws con las imágenes ya fijadas + rollout
 #   deploy-aws.sh web               # compila el portal con la URL del backend y lo publica en S3 + CloudFront
 #   deploy-aws.sh all               # infra + images + k8s + web
-# Variables: ENV (dev), TAG (commit, para images), AUTO_APPROVE=1 omite la confirmación de Terraform.
+# Variables: MODO (ahorro), ENV (dev), TAG (commit, para images), AUTO_APPROVE=1 omite la confirmación de Terraform.
+# El stack eks-costoso agrupa los stacks que solo usa ese modo, para destruirlos al pasar a ahorro.
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # apps/backend
 
 ENV="${ENV:-dev}"
+MODO="${MODO:-ahorro}"
 TF=deploy/terraform
 TAG="${TAG:-$(git rev-parse --short=12 HEAD)}"
 NAMESPACE=solventa
-STACKS=(network container_registry eks data messaging cluster_addons platform edge)
+SOLO_EKS=(eks data cluster_addons platform)
+case "$MODO" in
+  ahorro) STACKS=(network container_registry messaging ahorro edge) ;;
+  eks-costoso) STACKS=(network container_registry eks data messaging cluster_addons platform edge) ;;
+  *) echo "MODO debe ser ahorro o eks-costoso, no '$MODO'" >&2; exit 1 ;;
+esac
+OVERLAY="deploy/k8s/overlays/$([[ "$MODO" == ahorro ]] && echo ahorro || echo aws)"
 WEB=../web/Web.Solventa.Angular
 
 tfvar() {
@@ -37,25 +46,25 @@ tf_init() {
   tf "$1" init -input=false -reconfigure -backend-config="../../environments/$ENV/$1/backend.tfvars" >/dev/null
 }
 
-var_file() {
-  echo "-var-file=../../environments/$ENV/$1/terraform.tfvars"
+tf_vars() {
+  local vars="-var-file=../../environments/$ENV/$1/terraform.tfvars"
+  if [[ "$1" == "edge" ]]; then
+    vars+=" -var=modo_despliegue=$MODO"
+  fi
+  echo "$vars"
 }
 
-# Stacks a recorrer: el que llega por argumento, o todos.
+# Stacks a recorrer: el que llega por argumento, el grupo eks-costoso, o todos los del modo.
 selected() {
-  if [[ -n "${1:-}" && "$1" != "all" ]]; then
-    echo "$1"
-  else
-    printf '%s\n' "${STACKS[@]}"
-  fi
+  case "${1:-all}" in
+    all) printf '%s\n' "${STACKS[@]}" ;;
+    eks-costoso) printf '%s\n' "${SOLO_EKS[@]}" ;;
+    *) echo "$1" ;;
+  esac
 }
 
 reversed() {
-  if [[ -n "${1:-}" && "$1" != "all" ]]; then
-    echo "$1"
-    return
-  fi
-  printf '%s\n' "${STACKS[@]}" | awk '{ lines[NR] = $0 } END { for (i = NR; i > 0; i--) print lines[i] }'
+  selected "${1:-all}" | awk '{ lines[NR] = $0 } END { for (i = NR; i > 0; i--) print lines[i] }'
 }
 
 plan() {
@@ -63,7 +72,7 @@ plan() {
   for stack in $(selected "${1:-}"); do
     echo "==> terraform plan $stack ($ENV)"
     # Un stack cuyo antecesor aún no se aplica no puede leer su estado remoto: se reporta y se sigue.
-    if ! { tf_init "$stack" && tf "$stack" plan -input=false -lock=false "$(var_file "$stack")"; }; then
+    if ! { tf_init "$stack" && read -ra vars <<<"$(tf_vars "$stack")" && tf "$stack" plan -input=false -lock=false "${vars[@]}"; }; then
       echo "::warning::plan de $stack sin resultado (¿depende de un stack aún sin aplicar?)"
       failed=1
     fi
@@ -76,9 +85,12 @@ infra() {
   for stack in $(selected "${1:-}"); do
     echo "==> terraform apply $stack ($ENV)"
     tf_init "$stack"
-    tf "$stack" apply -input=false "$(var_file "$stack")" ${AUTO_APPROVE:+-auto-approve}
+    read -ra vars <<<"$(tf_vars "$stack")"; tf "$stack" apply -input=false "${vars[@]}" ${AUTO_APPROVE:+-auto-approve}
     if [[ "$stack" == "platform" ]]; then
       restart_workloads
+    fi
+    if [[ "$stack" == "ahorro" ]]; then
+      esperar_ahorro
     fi
   done
 }
@@ -97,8 +109,11 @@ destroy() {
       echo "==> $stack sin recursos; se omite"
       continue
     fi
+    if [[ "$stack" == "ahorro" ]]; then
+      cancelar_spot
+    fi
     echo "==> terraform destroy $stack ($ENV)"
-    tf "$stack" destroy -input=false "$(var_file "$stack")" ${AUTO_APPROVE:+-auto-approve}
+    read -ra vars <<<"$(tf_vars "$stack")"; tf "$stack" destroy -input=false "${vars[@]}" ${AUTO_APPROVE:+-auto-approve}
   done
 }
 
@@ -125,7 +140,80 @@ databases_in() {
     --output text
 }
 
+tf_output() {
+  tf_init "$1"
+  tf "$1" output -raw "$2"
+}
+
+instancia_ahorro() {
+  tf_output ahorro instance_id
+}
+
+esperar_ahorro() {
+  local instancia
+  instancia="$(instancia_ahorro)"
+  echo "==> $instancia: esperando a que k3s publique su kubeconfig"
+  aws ec2 wait instance-status-ok --instance-ids "$instancia"
+  local parametro deadline=$((SECONDS + 900))
+  parametro="$(tf_output ahorro kubeconfig_parameter)"
+  until [[ "$(aws ssm get-parameter --name "$parametro" --with-decryption --query Parameter.Value --output text)" == apiVersion* ]]; do
+    if ((SECONDS > deadline)); then
+      echo "::error::k3s no quedó listo en 15 minutos. Revisa /var/log/cloud-init-output.log con Session Manager." >&2
+      exit 1
+    fi
+    sleep 15
+  done
+}
+
+cancelar_spot() {
+  local solicitud
+  solicitud="$(aws ec2 describe-instances --instance-ids "$(instancia_ahorro)" \
+    --query 'Reservations[0].Instances[0].SpotInstanceRequestId' --output text 2>/dev/null || true)"
+  if [[ -n "$solicitud" && "$solicitud" != "None" ]]; then
+    echo "==> $solicitud: cancelar la solicitud spot persistente"
+    aws ec2 cancel-spot-instance-requests --spot-instance-request-ids "$solicitud" >/dev/null
+  fi
+}
+
+TUNEL=""
+
+conectar_ahorro() {
+  local instancia parametro
+  instancia="$(instancia_ahorro)"
+  parametro="$(tf_output ahorro kubeconfig_parameter)"
+  KUBECONFIG="$(mktemp)"
+  export KUBECONFIG
+  aws ssm get-parameter --name "$parametro" --with-decryption --query Parameter.Value --output text >"$KUBECONFIG"
+  aws ssm start-session --target "$instancia" --document-name AWS-StartPortForwardingSession \
+    --parameters '{"portNumber":["6443"],"localPortNumber":["6443"]}' >/dev/null &
+  TUNEL=$!
+  trap 'kill "$TUNEL" 2>/dev/null || true; rm -f "$KUBECONFIG"' EXIT
+  local deadline=$((SECONDS + 300))
+  until kubectl get --raw /readyz >/dev/null 2>&1; do
+    if ((SECONDS > deadline)); then
+      echo "::error::No se pudo abrir el túnel de Session Manager hacia $instancia" >&2
+      exit 1
+    fi
+    sleep 3
+  done
+}
+
+credencial_ecr() {
+  kubectl -n "$NAMESPACE" create secret docker-registry ecr --docker-server="$(registry_host)" \
+    --docker-username=AWS --docker-password="$(aws ecr get-login-password)" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+}
+
 stop() {
+  if [[ "$MODO" == ahorro ]]; then
+    local instancia
+    instancia="$(instancia_ahorro)"
+    echo "==> $instancia: detener"
+    aws ec2 stop-instances --instance-ids "$instancia" >/dev/null
+    aws ec2 wait instance-stopped --instance-ids "$instancia"
+    echo "Pausado. Se sigue pagando el disco y la IP elástica."
+    return
+  fi
   scale_nodegroups 0 0
   for database in $(databases_in available); do
     echo "==> $database: detener"
@@ -135,6 +223,16 @@ stop() {
 }
 
 start() {
+  if [[ "$MODO" == ahorro ]]; then
+    local instancia
+    instancia="$(instancia_ahorro)"
+    echo "==> $instancia: iniciar"
+    aws ec2 start-instances --instance-ids "$instancia" >/dev/null
+    esperar_ahorro
+    conectar_ahorro
+    kubectl -n "$NAMESPACE" rollout status deployment -l app.kubernetes.io/part-of=solventa --timeout=10m
+    return
+  fi
   for database in $(databases_in stopped); do
     echo "==> $database: iniciar"
     aws rds start-db-instance --db-instance-identifier "$database" >/dev/null
@@ -148,6 +246,14 @@ start() {
   desired="$(sed -E 's/.*desired *= *([0-9]+).*/\1/' <<<"$sizes")"
   scale_nodegroups "$min" "$desired"
   aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  local deadline=$((SECONDS + 600))
+  until [[ -n "$(kubectl get nodes -o name 2>/dev/null)" ]]; do
+    if ((SECONDS > deadline)); then
+      echo "::error::Ningún nodo se registró en el clúster en 10 minutos" >&2
+      exit 1
+    fi
+    sleep 15
+  done
   kubectl wait --for=condition=Ready nodes --all --timeout=10m
   kubectl -n "$NAMESPACE" rollout status deployment -l app.kubernetes.io/part-of=solventa --timeout=10m
 }
@@ -161,7 +267,7 @@ images() {
   host="$(registry_host)"
   aws ecr get-login-password | docker login --username AWS --password-stdin "$host"
   REGISTRY="$host/solventa" TAG="$TAG" PUSH=1 ./scripts/build-images.sh
-  ./deploy/scripts/set-image-tag.sh "$host" "$TAG"
+  ./deploy/scripts/set-image-tag.sh "$host" "$TAG" "$OVERLAY"
 }
 
 rollback() {
@@ -176,13 +282,18 @@ rollback() {
 }
 
 k8s() {
-  local overlay=deploy/k8s/overlays/aws
+  local overlay="$OVERLAY"
   # La versión la fija set-image-tag.sh: Backend CD con el tag del release, o 'images' a mano.
   if ! grep -q '^images:' "$overlay/kustomization.yaml"; then
     echo "::error::$overlay no tiene imágenes fijadas. Corre 'images' o Backend CD." >&2
     exit 1
   fi
-  aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  if [[ "$MODO" == ahorro ]]; then
+    conectar_ahorro
+    credencial_ecr
+  else
+    aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
+  fi
 
   # Un Job es inmutable: se recrea para que corra con la imagen de este despliegue.
   kubectl -n "$NAMESPACE" delete job cotizacion-bootstrap --ignore-not-found

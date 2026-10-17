@@ -3,7 +3,7 @@ import { StaticScreenProps } from '@react-navigation/native';
 
 import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { texts } from '../../texts';
-import styles from './styles';
+import styles from '../detailStyles';
 
 export type FiledReport = {
   radicado: string;
@@ -17,7 +17,7 @@ export type FiledReport = {
 
 type Props = StaticScreenProps<FiledReport>;
 
-export default function ClaimDetailScreen({ route }: Props) {
+export default function ClaimDetailScreen({ route }: Readonly<Props>) {
   const report = route.params;
 
   return (
@@ -47,7 +47,7 @@ export default function ClaimDetailScreen({ route }: Props) {
                 <AppText variant="caption" style={styles.thumbLabel}>
                   {evidence.label}
                 </AppText>
-                <AppText variant="caption" style={styles.thumbTime}>
+                <AppText variant="caption" style={styles.thumbMeta}>
                   {evidence.capturedAt}
                 </AppText>
               </View>

@@ -43,8 +43,13 @@ function formatAddress(place: NominatimPlace) {
   const area = address.suburb ?? address.neighbourhood;
   const city = address.city ?? address.town ?? address.municipality;
   const line = [street, area, city].filter((part) => part && part.length > 0).join(', ');
-
-  return line || place.display_name || null;
+  if (line.length > 0) {
+    return line;
+  }
+  if (place.display_name) {
+    return place.display_name;
+  }
+  return null;
 }
 
 async function allowLocation() {

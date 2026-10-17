@@ -9,7 +9,7 @@ type SwitchProps = {
   testID?: string;
 };
 
-export function Switch({ value, onValueChange, testID }: SwitchProps) {
+export function Switch({ value, onValueChange, testID }: Readonly<SwitchProps>) {
   const knob = useAnimatedValue(value ? 1 : 0);
 
   useEffect(() => {

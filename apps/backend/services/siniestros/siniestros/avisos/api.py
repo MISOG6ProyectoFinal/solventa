@@ -1,16 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Header, HTTPException
 from solventa_common.db import build_engine
 
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
 from siniestros.avisos.adapters.object_store import S3ObjectStore
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository
 from siniestros.avisos.domain.errors import ReglaEvidencia
-from siniestros.avisos.domain.models import Evidencia, NuevaCarga, NuevoAviso
+from siniestros.avisos.domain.models import Aviso, Evidencia, NuevaCarga, NuevoAviso
 from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
 from siniestros.avisos.domain.use_cases import (
     ConfirmarCargaUseCase,
     CrearAvisoUseCase,
+    ListarAvisosUseCase,
     ListarEvidenciasUseCase,
+    RadicarAvisoUseCase,
     SolicitarCargaUseCase,
 )
 from siniestros.config import settings
@@ -28,6 +32,8 @@ def wire(repository: AvisoRepository, almacen: ObjectStore, bucket: str | None =
     object_store = almacen
     name = bucket or settings.evidencias_bucket
     casos["crear"] = CrearAvisoUseCase(repository)
+    casos["listar_avisos"] = ListarAvisosUseCase(repository)
+    casos["radicar"] = RadicarAvisoUseCase(repository)
     casos["solicitar"] = SolicitarCargaUseCase(repository, almacen, name)
     casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen)
     casos["listar"] = ListarEvidenciasUseCase(repository, almacen)
@@ -82,16 +88,31 @@ def abrir_aviso(body: NuevoAviso) -> dict:
             ocurrido_en=body.ocurrido_en,
             descripcion=body.descripcion,
             ubicacion=body.ubicacion,
+            cliente_id=body.cliente_id,
         )
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
-    return {"id": created.id, "estado": created.estado}
+    return {"id": created.id, "estado": created.estado, "cliente_id": created.cliente_id}
+
+
+@router.post("/avisos/{aviso_id}/radicar")
+def radicar_aviso(aviso_id: str, x_cliente_id: Annotated[str, Header()]) -> dict:
+    try:
+        filed = casos["radicar"].execute(aviso_id, cliente_id=x_cliente_id)
+    except ReglaEvidencia as exc:
+        raise _http(exc) from exc
+    return {"id": filed.id, "estado": filed.estado, "cliente_id": filed.cliente_id, "radicado": filed.radicado}
+
+
+@router.get("/avisos")
+def listar_avisos(x_cliente_id: Annotated[str, Header()]) -> list[Aviso]:
+    return casos["listar_avisos"].execute(cliente_id=x_cliente_id)
 
 
 @router.post("/avisos/{aviso_id}/evidencias/cargas", status_code=201)
-def solicitar_carga(aviso_id: str, body: NuevaCarga) -> dict:
+def solicitar_carga(aviso_id: str, body: NuevaCarga, x_cliente_id: Annotated[str, Header()]) -> dict:
     try:
-        carga = casos["solicitar"].execute(aviso_id, body.content_type, body.tamano)
+        carga = casos["solicitar"].execute(aviso_id, body.content_type, body.tamano, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return {
@@ -103,18 +124,18 @@ def solicitar_carga(aviso_id: str, body: NuevaCarga) -> dict:
 
 
 @router.post("/avisos/{aviso_id}/evidencias/{evidencia_id}/confirmar")
-def confirmar_carga(aviso_id: str, evidencia_id: str) -> dict:
+def confirmar_carga(aviso_id: str, evidencia_id: str, x_cliente_id: Annotated[str, Header()]) -> dict:
     try:
-        evidencia = casos["confirmar"].execute(aviso_id, evidencia_id)
+        evidencia = casos["confirmar"].execute(aviso_id, evidencia_id, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return _evidencia_body(evidencia)
 
 
 @router.get("/avisos/{aviso_id}/evidencias")
-def listar_evidencias(aviso_id: str) -> list[dict]:
+def listar_evidencias(aviso_id: str, x_cliente_id: Annotated[str, Header()]) -> list[dict]:
     try:
-        rows = casos["listar"].execute(aviso_id)
+        rows = casos["listar"].execute(aviso_id, cliente_id=x_cliente_id)
     except ReglaEvidencia as exc:
         raise _http(exc) from exc
     return [_lista_body(row) for row in rows]

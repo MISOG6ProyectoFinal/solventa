@@ -8,7 +8,7 @@ type KeyValueProps = {
   value: string;
 };
 
-export function KeyValue({ label, value }: KeyValueProps) {
+export function KeyValue({ label, value }: Readonly<KeyValueProps>) {
   return (
     <View style={styles.row}>
       <AppText variant="caption">{label}</AppText>

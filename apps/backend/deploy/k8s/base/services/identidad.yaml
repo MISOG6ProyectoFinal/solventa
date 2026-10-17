@@ -34,6 +34,11 @@ spec:
         env:
         - name: SERVICE_NAME
           value: identidad
+        - name: SESION_SECRETO
+          valueFrom:
+            secretKeyRef:
+              name: sesion
+              key: SESION_SECRETO
         envFrom:
         - configMapRef:
             name: solventa-platform

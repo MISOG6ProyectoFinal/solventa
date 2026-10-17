@@ -34,7 +34,7 @@ export function DateField({
   yearSelection = true,
   timeSelection = false,
   testID,
-}: DateFieldProps) {
+}: Readonly<DateFieldProps>) {
   const failed = error || errorMessage != null;
   const parsed = useMemo(() => parseDate(value), [value]);
   const sheet = useRef<SheetHandle>(null);
@@ -98,6 +98,8 @@ export function DateField({
   }, []);
 
   const shown = parsed ? formatDate(parsed) : value;
+  const datePlaceholder = timeSelection ? 'dd/mm/aaaa hh:mm' : 'dd/mm/aaaa';
+  const dateText = shown != null && shown.length > 0 ? shown : datePlaceholder;
 
   return (
     <>
@@ -112,7 +114,7 @@ export function DateField({
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
       >
         <AppText variant="bodySmall" style={shown ? styles.value : styles.placeholder}>
-          {shown || (timeSelection ? 'dd/mm/aaaa hh:mm' : 'dd/mm/aaaa')}
+          {dateText}
         </AppText>
       </FieldFrame>
       <Sheet ref={sheet} onClose={() => { setFocused(false); setPendingDay(null); }} testID="date-sheet">

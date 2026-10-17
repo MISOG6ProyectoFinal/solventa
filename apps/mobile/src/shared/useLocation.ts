@@ -7,6 +7,8 @@ export function useLocation() {
   const [failed, setFailed] = useState(false);
   const request = useRef(0);
 
+  const mounted = useRef(true);
+
   const load = useCallback((fresh = false) => {
     const current = ++request.current;
 
@@ -17,14 +19,14 @@ export function useLocation() {
 
     readLocation(fresh ? { fresh: true } : undefined)
       .then((place) => {
-        if (request.current !== current) {
+        if (!mounted.current || request.current !== current) {
           return;
         }
         setLocation(place);
         setFailed(false);
       })
       .catch(() => {
-        if (request.current !== current) {
+        if (!mounted.current || request.current !== current) {
           return;
         }
         setLocation(null);
@@ -33,7 +35,11 @@ export function useLocation() {
   }, []);
 
   useEffect(() => {
+    mounted.current = true;
     load(false);
+    return () => {
+      mounted.current = false;
+    };
   }, [load]);
 
   return { location, failed, refresh: () => load(true) };

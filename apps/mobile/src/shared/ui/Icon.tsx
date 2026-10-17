@@ -40,7 +40,7 @@ export function Icon({
   color = 'dark',
   accessibilityLabel,
   testID,
-}: IconProps) {
+}: Readonly<IconProps>) {
   const Glyph = icons[name];
 
   return (

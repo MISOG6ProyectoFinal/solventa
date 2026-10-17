@@ -1,13 +1,24 @@
 import { texts } from './texts';
 import { QuoteFormValues } from './types';
 
+function thousands(digits: string): string {
+  const groups: string[] = [];
+  let rest = digits;
+
+  while (rest.length > 3) {
+    groups.unshift(rest.slice(-3));
+    rest = rest.slice(0, -3);
+  }
+  groups.unshift(rest);
+
+  return groups.join('.');
+}
+
 /** COP sin decimales en es-CO: $120.000, $149.940. */
 export function formatMoney(value: string | number): string {
   const amount = Math.round(Number(value));
-  const digits = Math.abs(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${amount < 0 ? '-' : ''}$${digits}`;
+  const sign = amount < 0 ? '-' : '';
+  return `${sign}$${thousands(String(Math.abs(amount)))}`;
 }
 
 /** dd/MM/yyyy → yyyy-MM-dd por texto, sin pasar por UTC. */

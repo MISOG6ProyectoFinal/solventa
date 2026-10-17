@@ -1,6 +1,7 @@
 export const texts = {
   home: {
-    greeting: 'Hola, María',
+    greeting: (firstName: string) => `Hola, ${firstName}`,
+    greetingWithoutName: 'Hola',
     screenSubtitle: 'Tu cobertura',
     menuLabel: 'Menú',
     coverageLabel: 'Cobertura activa',
@@ -20,5 +21,6 @@ export const texts = {
     renewalBadge: 'Próxima a renovar',
     expiresLabel: 'Vence',
     renewalButton: 'Ver oferta de renovación',
+    signOutButton: 'Cerrar sesión',
   },
 };

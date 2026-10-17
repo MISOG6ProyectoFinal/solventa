@@ -1,3 +1,5 @@
+import { getAccessToken } from './accessToken';
+
 const configuredApiBaseUrl = process.env.API_BASE_URL;
 if (configuredApiBaseUrl === undefined || configuredApiBaseUrl === '') {
   throw new Error('Falta API_BASE_URL.');
@@ -17,6 +19,28 @@ export class ApiError extends Error {
   }
 }
 
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.detail) {
+    return error.detail;
+  }
+  if (error instanceof Error && error.message !== '') {
+    return error.message;
+  }
+  return fallback;
+}
+
+function requestHeaders(payload: unknown): Record<string, string> | undefined {
+  const headers: Record<string, string> = {};
+  if (payload !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
 async function requestJson<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
@@ -24,7 +48,7 @@ async function requestJson<T>(
 ): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method,
-    headers: payload === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers: requestHeaders(payload),
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
   const body = (await response.json().catch(() => null)) as { detail?: unknown; } | null;

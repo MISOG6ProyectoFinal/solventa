@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useSessionStore } from '../../../session/store/useSessionStore';
 import HomeScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -18,12 +19,13 @@ describe('HomeScreen', () => {
   beforeEach(() => {
     global.__DEV__ = true;
     useNavigation().navigate.mockClear();
+    useSessionStore.setState({ firstName: 'Ana' });
   });
 
   it('shows the coverage summary without the offline state', async () => {
     const { getByText, queryByText } = await render(<HomeScreen />);
 
-    expect(getByText('Hola, María')).toBeTruthy();
+    expect(getByText('Hola, Ana')).toBeTruthy();
     expect(getByText('Tu cobertura')).toBeTruthy();
     expect(getByText('Cobertura activa')).toBeTruthy();
     expect(getByText('3 pólizas')).toBeTruthy();
@@ -37,6 +39,7 @@ describe('HomeScreen', () => {
     expect(getByText('Protección Celular')).toBeTruthy();
     expect(getByText('SLV-2025-01820 · Vence 2026-10-05')).toBeTruthy();
     expect(getByText('Ver oferta de renovación')).toBeTruthy();
+    expect(queryByText('Cerrar sesión')).toBeNull();
     expect(queryByText('Sin conexión')).toBeNull();
     expect(queryByText('Componentes')).toBeNull();
     expect(queryByText(/Contador/)).toBeNull();

@@ -63,7 +63,7 @@ jobs:
       - name: Renderizar overlays
         working-directory: apps/backend
         run: |
-          for overlay in aws local; do
+          for overlay in aws ahorro local; do
             kubectl kustomize "deploy/k8s/overlays/$overlay" > "/tmp/$overlay.yaml"
             echo "$overlay: $(grep -c '^kind:' "/tmp/$overlay.yaml") recursos"
           done

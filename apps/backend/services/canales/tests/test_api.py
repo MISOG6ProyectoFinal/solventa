@@ -4,6 +4,8 @@ import httpx
 from canales.main import app
 from fastapi.testclient import TestClient
 
+from tests.movil_auth import authorization
+
 client = TestClient(app)
 
 AVISO = {
@@ -51,49 +53,94 @@ class _Upstream:
 
 
 def _status_error(status: int, message: str) -> httpx.HTTPStatusError:
-    request = httpx.Request("POST", "http://siniestros/siniestros/avisos")
+    request = httpx.Request("POST", "https://siniestros/siniestros/avisos")
     response = httpx.Response(status, text=message, request=request)
     return httpx.HTTPStatusError(str(status), request=request, response=response)
+
+
+def test_movil_lista_los_avisos_del_cliente_de_la_sesion(monkeypatch):
+    avisos = [{"id": "aviso-1", "estado": "borrador", "cliente_id": "cliente-demo"}]
+    upstream = _Upstream(response=avisos)
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.get("/movil/siniestros", headers=authorization())
+
+    assert response.status_code == 200
+    assert response.json() == avisos
+    assert upstream.calls[0][0] == "/siniestros/avisos"
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
+def test_movil_radica_el_aviso_del_cliente(monkeypatch):
+    upstream = _Upstream(response={"id": "aviso-1", "estado": "radicado"})
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.post("/movil/siniestros/aviso-1/radicar", headers=authorization())
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "radicado"
+    assert upstream.calls[0][0] == "/siniestros/avisos/aviso-1/radicar"
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
+def test_movil_asocia_el_aviso_con_el_cliente_de_la_sesion(monkeypatch):
+    upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.post(
+        "/movil/siniestros",
+        json={**AVISO, "cliente_id": "otro-cliente"},
+        headers=authorization(),
+    )
+
+    assert response.status_code == 201
+    assert upstream.calls[0][1]["json"] == {**AVISO, "cliente_id": "cliente-demo"}
 
 
 def test_movil_reenvia_aviso_y_evidencias(monkeypatch):
     upstream = _Upstream(response={"id": "aviso-1", "estado": "borrador"})
     monkeypatch.setattr("canales.movil.api.siniestros", upstream)
 
-    created = client.post("/movil/siniestros", json=AVISO)
+    headers = authorization()
+    created = client.post("/movil/siniestros", json=AVISO, headers=headers)
     assert created.status_code == 201
     assert created.json() == {"id": "aviso-1", "estado": "borrador"}
     assert upstream.calls[0][0] == "/siniestros/avisos"
-    assert upstream.calls[0][1]["json"] == AVISO
+    assert upstream.calls[0][1]["json"] == {**AVISO, "cliente_id": "cliente-demo"}
 
     upstream.response = {"evidencia_id": "ev-1", "upload_url": "https://upload.local/x"}
     carga = {"content_type": "image/jpeg", "bytes": 10}
-    uploaded = client.post("/movil/siniestros/aviso-1/evidencias/cargas", json=carga)
+    uploaded = client.post("/movil/siniestros/aviso-1/evidencias/cargas", json=carga, headers=headers)
     assert uploaded.status_code == 201
     assert uploaded.json()["evidencia_id"] == "ev-1"
     assert upstream.calls[1][0] == "/siniestros/avisos/aviso-1/evidencias/cargas"
     assert upstream.calls[1][1]["json"] == carga
+    assert upstream.calls[1][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
     upstream.response = {"id": "ev-1", "estado": "disponible"}
-    confirmed = client.post("/movil/siniestros/aviso-1/evidencias/ev-1/confirmar")
+    confirmed = client.post("/movil/siniestros/aviso-1/evidencias/ev-1/confirmar", headers=headers)
     assert confirmed.status_code == 200
     assert confirmed.json()["estado"] == "disponible"
     assert upstream.calls[2][0] == "/siniestros/avisos/aviso-1/evidencias/ev-1/confirmar"
+    assert upstream.calls[2][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
     upstream.response = [{"id": "ev-1"}]
-    listed = client.get("/movil/siniestros/aviso-1/evidencias")
+    listed = client.get("/movil/siniestros/aviso-1/evidencias", headers=headers)
     assert listed.status_code == 200
     assert listed.json() == [{"id": "ev-1"}]
     assert upstream.calls[3][0] == "/siniestros/avisos/aviso-1/evidencias"
+    assert upstream.calls[3][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
 
 
 def test_movil_reenvia_422_y_409(monkeypatch):
     tipo = "Tipo de archivo no permitido. Use JPEG, PNG o MP4."
     upstream = _Upstream(error=_status_error(422, tipo))
     monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+    headers = authorization()
     rejected = client.post(
         "/movil/siniestros/aviso-1/evidencias/cargas",
         json={"content_type": "image/gif", "bytes": 10},
+        headers=headers,
     )
     assert rejected.status_code == 422
     assert rejected.json()["detail"] == tipo
@@ -103,13 +150,14 @@ def test_movil_reenvia_422_y_409(monkeypatch):
     limited = client.post(
         "/movil/siniestros/aviso-1/evidencias/cargas",
         json={"content_type": "image/jpeg", "bytes": 10},
+        headers=headers,
     )
     assert limited.status_code == 409
     assert limited.json()["detail"] == limite
 
 
 def test_siniestros_no_disponible_responde_503():
-    assert client.post("/movil/siniestros", json=AVISO).status_code == 503
+    assert client.post("/movil/siniestros", json=AVISO, headers=authorization()).status_code == 503
 
 
 @patch("canales.web.api.cotizacion")

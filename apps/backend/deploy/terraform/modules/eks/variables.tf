@@ -74,3 +74,14 @@ variable "developer_namespaces" {
   type    = list(string)
   default = ["solventa"]
 }
+
+variable "control_plane_log_types" {
+  description = "Logs del plano de control enviados a CloudWatch: api, audit, authenticator, controllerManager, scheduler."
+  type        = list(string)
+  default     = ["api", "audit", "authenticator"]
+}
+
+variable "control_plane_log_retention_days" {
+  type    = number
+  default = 30
+}
