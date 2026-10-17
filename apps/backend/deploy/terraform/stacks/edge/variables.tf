@@ -13,6 +13,12 @@ variable "prefix" {
   default = "solventa"
 }
 
+variable "conservar_waf" {
+  description = "Mantiene el WAF sin asociarlo a CloudFront."
+  type        = bool
+  default     = false
+}
+
 variable "rate_limit_per_5min" {
   description = "Solicitudes por IP cada 5 minutos antes de bloquear."
   type        = number
