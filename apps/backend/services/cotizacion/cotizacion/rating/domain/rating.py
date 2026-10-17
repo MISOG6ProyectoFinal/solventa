@@ -99,4 +99,3 @@ def calcular_prima_parametrico(reglas: ReglasRating, solicitud: SolicitudCotizac
     """Tarifa fija según el evento asegurado."""
     tarifa = reglas.tarifa_parametrico.get(solicitud.evento, Decimal("45000"))
     return tarifa.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-

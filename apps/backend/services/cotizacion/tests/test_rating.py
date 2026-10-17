@@ -105,4 +105,3 @@ def test_prima_parametrico():
     )
     prima = calcular_prima_parametrico(REGLAS_VIGENTES, solicitud)
     assert prima == Decimal("45000.00")
-

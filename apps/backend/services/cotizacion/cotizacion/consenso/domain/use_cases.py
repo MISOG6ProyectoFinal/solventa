@@ -73,4 +73,3 @@ class CotizarConConsensoUseCase:
             hasta = date(hoy.year + solicitud.plazo_anios, hoy.month, hoy.day)
             return VigenciaPropuesta(desde=hoy, hasta=hasta)
         return construir_vigencia_propuesta(dias=self.vigencia_dias)
-
