@@ -198,7 +198,7 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 `load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
 
-- **Móvil:** catálogo, cotización, registro, sesión y reporte de siniestro con carga, confirmación y listado de evidencia.
+- **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** cotización asistida, listado, detalle y configuración de socios.
 - **API de socios:** cotización embebida con las credenciales de un socio.
 
@@ -238,9 +238,9 @@ Los resultados quedan en `load-tests/resultados/<fecha>-<perfil>/`:
 
 k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test load-tests/`.
 
-Cada corrida crea un socio, y cada recorrido móvil un cliente, un aviso de siniestro y una evidencia en el ambiente.
+Cada corrida crea un socio, y cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia en el ambiente.
 
-`postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman.
+`postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`.
 
 ## Siguientes pasos
 
