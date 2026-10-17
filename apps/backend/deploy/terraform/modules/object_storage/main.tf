@@ -42,6 +42,8 @@ resource "aws_s3_bucket_public_access_block" "this" {
 }
 
 data "aws_iam_policy_document" "https_only" {
+  source_policy_documents = var.policy_json == null ? [] : [var.policy_json]
+
   statement {
     sid     = "DenyInsecureTransport"
     effect  = "Deny"

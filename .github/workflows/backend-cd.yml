@@ -9,6 +9,7 @@ name: CD
 # El tag del release (v1.2.0) es el registro de qué versión está desplegada.
 # Lanzarlo a mano con una versión ya publicada vuelve a esa versión (rollback).
 # La infraestructura va aparte, en backend-infra.yml.
+# La variable del repositorio MODO_DESPLIEGUE elige el destino: ahorro (k3s) o eks-costoso (EKS).
 
 on:
   release:
@@ -31,6 +32,7 @@ concurrency:
 
 env:
   ENV: dev
+  MODO: ${{ vars.MODO_DESPLIEGUE || 'ahorro' }}
   AWS_REGION: ${{ vars.AWS_REGION }}
   VERSION: ${{ github.event.release.tag_name || inputs.version }}
 
@@ -75,13 +77,20 @@ jobs:
       - name: Verificar que el clúster existe
         id: cluster
         run: |
-          cluster=$(grep -E '^cluster_name' "apps/backend/deploy/terraform/environments/$ENV/eks/terraform.tfvars" | cut -d'"' -f2)
-          status=$(aws eks describe-cluster --name "$cluster" --query cluster.status --output text 2>/dev/null || echo AUSENTE)
+          if [ "$MODO" = "ahorro" ]; then
+            cluster="solventa-$ENV-ahorro"
+            status=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$cluster" "Name=instance-state-name,Values=running" \
+              --query 'length(Reservations[].Instances[])' --output text 2>/dev/null || echo 0)
+            [ "$status" != "0" ] && status=ACTIVE || status=AUSENTE
+          else
+            cluster=$(grep -E '^cluster_name' "apps/backend/deploy/terraform/environments/$ENV/eks/terraform.tfvars" | cut -d'"' -f2)
+            status=$(aws eks describe-cluster --name "$cluster" --query cluster.status --output text 2>/dev/null || echo AUSENTE)
+          fi
           if [ "$status" = "ACTIVE" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::El clúster $cluster está $status. Primero corre Backend Infra con apply."
+            echo "::notice::El clúster $cluster ($MODO) está $status. Primero corre Backend Infra con apply."
           fi
 
   build:
@@ -146,7 +155,7 @@ jobs:
           cache-to: type=gha,scope=backend-${{ matrix.service }},mode=max
 
   deploy:
-    name: Desplegar en EKS
+    name: Desplegar en el clúster
     needs: [prepare, build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -167,13 +176,28 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Fijar la versión en el overlay aws
+      - name: Fijar la versión en el overlay del modo
         working-directory: apps/backend
         env:
           TAG: ${{ needs.prepare.outputs.version }}
         run: |
           account=$(aws sts get-caller-identity --query Account --output text)
-          ./deploy/scripts/set-image-tag.sh "$account.dkr.ecr.$AWS_REGION.amazonaws.com" "$TAG"
+          overlay=deploy/k8s/overlays/$([ "$MODO" = ahorro ] && echo ahorro || echo aws)
+          ./deploy/scripts/set-image-tag.sh "$account.dkr.ecr.$AWS_REGION.amazonaws.com" "$TAG" "$overlay"
+
+      - name: Setup Terraform
+        if: env.MODO == 'ahorro'
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.4
+          terraform_wrapper: false
+
+      - name: Session Manager plugin
+        if: env.MODO == 'ahorro'
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/session-manager-plugin.deb" \
+            https://s3.amazonaws.com/session-manager-downloads/plugin/1.2.707.0/ubuntu_64bit/session-manager-plugin.deb
+          sudo dpkg -i "$RUNNER_TEMP/session-manager-plugin.deb"
 
       - name: Aplicar manifiestos y esperar el rollout
         working-directory: apps/backend
@@ -183,10 +207,14 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Backend en EKS"
+            echo "### Backend ($MODO)"
             echo "Versión desplegada: \`${{ needs.prepare.outputs.version }}\`"
             echo '```'
-            kubectl -n solventa get deployments -o wide 2>&1 || true
+            if [ "$MODO" = "ahorro" ]; then
+              echo "El estado de los Deployments queda al final del paso anterior."
+            else
+              kubectl -n solventa get deployments -o wide 2>&1 || true
+            fi
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

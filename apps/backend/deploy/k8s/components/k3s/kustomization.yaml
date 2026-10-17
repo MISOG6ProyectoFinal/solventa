@@ -1,0 +1,72 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - postgres.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: postgres-init
+    files:
+      - init-databases.sql
+
+patches:
+  - target:
+      kind: Ingress
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/ingressClassName
+        value: traefik
+  - target:
+      kind: NetworkPolicy
+      name: solventa-ingress
+    patch: |-
+      - op: replace
+        path: /spec/ingress/0/from/1/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: kube-system
+  - target:
+      kind: Deployment
+      name: (polizas|identidad|siniestros|pagos|auditoria|health-monitor|siniestros-worker)
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: (canales|cotizacion)
+    patch: |-
+      - op: remove
+        path: /spec/replicas
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: canales
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: cotizacion
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicas
+        value: 4
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 0
+  - target:
+      kind: Deployment
+      name: (canales|cotizacion|polizas|identidad|siniestros|pagos|auditoria|health-monitor|siniestros-worker)
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m

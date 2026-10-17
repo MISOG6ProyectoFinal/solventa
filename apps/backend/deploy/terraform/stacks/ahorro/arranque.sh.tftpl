@@ -1,0 +1,69 @@
+#!/bin/bash
+set -euo pipefail
+export PATH="$PATH:/usr/local/bin"
+
+cat > /usr/local/bin/solventa-ecr <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+token="$(aws ecr get-login-password --region ${region})"
+/usr/local/bin/k3s kubectl -n solventa create secret docker-registry ecr \
+  --docker-server='${registry}' --docker-username=AWS --docker-password="$token" \
+  --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
+SCRIPT
+chmod 700 /usr/local/bin/solventa-ecr
+
+cat > /etc/systemd/system/solventa-ecr.service <<'UNIT'
+[Unit]
+Description=Solventa: renueva la credencial de ECR del cluster
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/solventa-ecr
+UNIT
+
+cat > /etc/systemd/system/solventa-ecr.timer <<'UNIT'
+[Unit]
+Description=Solventa: credencial de ECR cada 6 horas
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+if ! command -v k3s >/dev/null; then
+  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' sh -s - server \
+    --write-kubeconfig-mode 600 --node-name solventa
+fi
+until k3s kubectl get --raw /readyz >/dev/null 2>&1; do sleep 5; done
+
+k3s kubectl create namespace solventa --dry-run=client -o yaml | k3s kubectl apply -f -
+
+if ! k3s kubectl -n solventa get secret postgres >/dev/null 2>&1; then
+  clave="$(openssl rand -hex 24)"
+  k3s kubectl -n solventa create secret generic postgres --from-literal=POSTGRES_PASSWORD="$clave"
+  for almacen in ${almacenes}; do
+    k3s kubectl -n solventa create secret generic "db-$almacen" \
+      --from-literal=DB_HOST=postgres --from-literal=DB_PORT=5432 --from-literal=DB_NAME="$almacen" \
+      --from-literal=DB_USER=solventa --from-literal=DB_PASSWORD="$clave"
+  done
+fi
+
+if ! k3s kubectl -n solventa get secret sesion >/dev/null 2>&1; then
+  k3s kubectl -n solventa create secret generic sesion --from-literal=SESION_SECRETO="$(openssl rand -hex 32)"
+fi
+
+k3s kubectl -n solventa create configmap solventa-platform \
+%{ for clave, valor in plataforma ~}
+  --from-literal='${clave}=${valor}' \
+%{ endfor ~}
+  --dry-run=client -o yaml | k3s kubectl apply -f -
+
+/usr/local/bin/solventa-ecr
+systemctl daemon-reload
+systemctl enable --now solventa-ecr.timer
+
+aws ssm put-parameter --region ${region} --name '${kubeconfig_parameter}' --type SecureString \
+  --overwrite --value file:///etc/rancher/k3s/k3s.yaml >/dev/null

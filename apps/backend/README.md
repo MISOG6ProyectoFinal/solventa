@@ -119,13 +119,20 @@ Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros
 docker compose up -d canales
 ```
 
-Todo el backend en minikube. El overlay local no trae `SESION_SECRETO`: hay que ponerlo en el ConfigMap `solventa-platform` al aplicar el clúster.
+Todo el backend en un clúster local, sin cambios en el código, con el modo `local`:
 
 ```bash
-eval $(minikube docker-env)
-TAG=local ./scripts/build-images.sh
-kubectl apply -k deploy/k8s/overlays/local
+./deploy/scripts/local.sh up
 ```
+
+Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `deploy/k8s/overlays/local`: los mismos manifiestos de AWS, con Postgres en el clúster, Redis y LocalStack en lugar de SNS, SQS y S3. Construye las imágenes de los servicios en la máquina y genera `SESION_SECRETO` dentro del clúster. Solo necesita Docker.
+
+| Dirección | Qué es |
+|---|---|
+| `http://localhost:8000` | API (`/web`, `/movil`, `/socios`), la misma URL que usa el portal con `npm run start:local` |
+| `http://localhost:4566` | LocalStack |
+
+`local.sh status` muestra los pods, `local.sh logs <servicio>` sus logs y `local.sh down` borra el clúster con sus datos. Siniestros corre con `PERSISTENT_STORES=false`, como en `.env.example`, porque con almacenes persistentes el servicio usa siempre el S3 real.
 
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
@@ -153,7 +160,37 @@ El backend se despliega al publicar un release en GitHub. El tag del release (`v
 
 `CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 
-`deploy-aws.sh` es el mismo script que usan los workflows y también corre a mano (`plan`, `infra`, `destroy`, `images`, `k8s`). `infra` aplica los stacks en este orden:
+### Modos de despliegue
+
+La variable del repositorio `MODO_DESPLIEGUE` (**Settings, Secrets and variables, Actions, Variables**) elige dónde despliegan `Backend Infra` y `CD`. Si no existe, se usa `ahorro`.
+
+| Modo | Qué crea | Costo estimado encendido | En pausa (`stop`) |
+|---|---|---|---|
+| `ahorro` | k3s en una EC2 `t3.medium` spot, Postgres dentro del clúster, CloudFront directo a la instancia | ≈ 17 USD al mes | ≈ 7 USD al mes (disco e IP elástica) |
+| `eks-costoso` | El modelo VC-004: EKS, RDS, NLB, WAF y KEDA | ≈ 150 USD al mes | ≈ 110 USD al mes |
+| `local` | k3s en Docker en la máquina de cada desarrollador (`deploy/scripts/local.sh`) | 0 | |
+
+Los tres usan `deploy/k8s/base`. `ahorro` y `local` comparten además `deploy/k8s/components/k3s`: Postgres en el clúster, ingress de Traefik y una réplica por servicio, con `cotizacion` en 3 por el consenso.
+
+En `ahorro`:
+
+- **Kubernetes:** la instancia instala k3s al arrancar y crea el ConfigMap `solventa-platform`, los Secret `db-*`, `postgres` y `sesion`, y la credencial de ECR, que renueva cada 6 horas.
+- **Acceso al clúster:** la API de Kubernetes no se expone. El pipeline entra por un túnel de Session Manager con el kubeconfig que la instancia publica en SSM.
+- **Red:** el puerto 80 solo acepta tráfico de CloudFront y no hay WAF ni balanceador.
+- **Interrupciones spot:** la instancia se detiene y conserva el disco con los datos de Postgres.
+- **Permisos de AWS:** los pods usan el rol de la instancia.
+
+Pasar de `eks-costoso` a `ahorro`:
+
+1. Crear la variable `MODO_DESPLIEGUE` con `ahorro`.
+2. Volver a correr `bootstrap-ci.sh`: la política del pipeline suma permisos de EC2, SSM y perfiles de instancia.
+3. **Backend Infra**, `apply` con stack `ahorro` y luego con stack `edge`: CloudFront cambia de origen y conserva su dirección.
+4. **CD** con la versión vigente.
+5. **Backend Infra**, `destroy` con stack `eks-costoso`: borra `platform`, `cluster_addons`, `data` y `eks`, en ese orden.
+
+Las bases del modo anterior no se migran.
+
+`deploy-aws.sh` es el mismo script que usan los workflows y también corre a mano (`plan`, `infra`, `destroy`, `stop`, `start`, `images`, `k8s`, `web`) con `MODO=ahorro` o `MODO=eks-costoso`. En `ahorro`, `infra` aplica `network`, `container_registry`, `messaging`, `ahorro` y `edge`. En `eks-costoso` aplica los stacks en este orden:
 
 | # | Stack | Crea | Depende de |
 |---|---|---|---|
@@ -164,15 +201,15 @@ El backend se despliega al publicar un release en GitHub. El tag del release (`v
 | 5 | `messaging` | Tópico SNS, colas SQS, DLQ, alarmas | |
 | 6 | `cluster_addons` | NGINX Ingress (NLB), KEDA, metrics-server | 3 |
 | 7 | `platform` | Namespace, ConfigMap `solventa-platform`, Secret `db-*`, roles de Pod Identity | 3, 4, 5 |
-| 8 | `edge` | CloudFront + WAF, bucket del portal web | 3, 6 |
+| 8 | `edge` | CloudFront, WAF (solo en `eks-costoso`), bucket del portal web | 3, 6 o `ahorro` |
 
 CloudFront sirve el portal y la API bajo una misma dirección: el portal sale del bucket S3 y las rutas `/web`, `/movil` y `/socios` van al API Gateway. El paso `web` del `CD` compila el portal con esa dirección como URL del backend (`API_BASE_URL`), lo sube al bucket e invalida la caché.
 
 Para una cuenta de AWS Academy, `eks/terraform.tfvars` y `data/terraform.tfvars` reciben el ARN de `LabRole` en `cluster_iam_role_arn`, `node_iam_role_arn` y `proxy_role_arn`, y `platform/terraform.tfvars` usa `create_iam = false`.
 
-### Costos del ambiente `dev`
+### Costos del modo `eks-costoso`
 
-Los tfvars de `dev` usan el perfil más económico. Cada ahorro es un interruptor:
+Los tfvars de `dev` usan el perfil más económico de EKS. Cada ahorro es un interruptor:
 
 | Ajuste | Archivo | Valor en `dev` | Para volver al modelo VC-004 |
 |---|---|---|---|
@@ -187,7 +224,7 @@ La VPC conserva subredes en dos zonas porque EKS y RDS las exigen; las subredes 
 
 `Backend Infra` ofrece dos formas de apagar:
 
-- `stop` y `start`: pausan y reanudan en minutos. `stop` deja los nodos en 0 y detiene RDS; se siguen pagando el plano de control de EKS, el balanceador y el almacenamiento. RDS enciende sola una instancia detenida a los 7 días.
+- `stop` y `start`: pausan y reanudan en minutos. En `ahorro` detienen la instancia. En `eks-costoso`, `stop` deja los nodos en 0 y detiene RDS; se siguen pagando el plano de control de EKS, el balanceador y el almacenamiento, y RDS enciende sola una instancia detenida a los 7 días.
 - `destroy`: elimina todo y lleva el costo a cero. Volver a crear el ambiente toma cerca de una hora y las bases quedan vacías.
 
 Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigente para que el Job de bootstrap cree las tablas.

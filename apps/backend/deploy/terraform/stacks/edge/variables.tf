@@ -1,3 +1,13 @@
+variable "modo_despliegue" {
+  description = "ahorro (k3s en una EC2) o eks-costoso (EKS con NLB y WAF). Lo fija deploy-aws.sh."
+  type        = string
+  default     = "ahorro"
+  validation {
+    condition     = contains(["ahorro", "eks-costoso"], var.modo_despliegue)
+    error_message = "modo_despliegue debe ser ahorro o eks-costoso."
+  }
+}
+
 variable "prefix" {
   type    = string
   default = "solventa"

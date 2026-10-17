@@ -69,7 +69,15 @@
         "iam:ListOpenIDConnectProviderTags",
         "iam:UntagOpenIDConnectProvider",
         "iam:UpdateOpenIDConnectProviderThumbprint",
-        "iam:AddClientIDToOpenIDConnectProvider"
+        "iam:AddClientIDToOpenIDConnectProvider",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:TagInstanceProfile",
+        "iam:UntagInstanceProfile",
+        "iam:ListInstanceProfileTags"
       ],
       "Resource": "*"
     },
@@ -90,6 +98,23 @@
           ]
         }
       }
+    },
+    {
+      "Sid": "ModoAhorro",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:GetParameters",
+        "ssm:DescribeParameters",
+        "ssm:AddTagsToResource",
+        "ssm:RemoveTagsFromResource",
+        "ssm:ListTagsForResource",
+        "ssm:StartSession",
+        "ssm:TerminateSession",
+        "ssm:ResumeSession"
+      ],
+      "Resource": "*"
     }
   ]
 }
