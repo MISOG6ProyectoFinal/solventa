@@ -44,7 +44,9 @@ async def _fanout_produccion(body: dict) -> list[dict]:
         return await fanout_local(body)
     ips = ips[: settings.replicas_esperadas]
     respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
-    return respuestas if respuestas else await fanout_local(body)
+    if respuestas:
+        return respuestas
+    return await fanout_local(body)
 
 
 _solicitud_rating = TypeAdapter(SolicitudRating)

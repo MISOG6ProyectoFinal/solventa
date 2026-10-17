@@ -26,7 +26,8 @@ def solicitud_viaje(**overrides) -> SolicitudCotizacionViaje:
         "fecha_salida": date(2026, 10, 10),
         "fecha_regreso": date(2026, 10, 24),
         "viajeros": 1,
-    } | overrides
+        **overrides,
+    }
     return SolicitudCotizacionViaje(**datos)
 
 

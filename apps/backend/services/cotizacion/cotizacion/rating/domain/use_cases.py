@@ -32,7 +32,11 @@ class CotizarUseCase:
             prima = calcular_prima_parametrico(self.reglas, solicitud)
         else:
             prima = calcular_prima(
-                self.reglas, solicitud.producto_id, solicitud.suma_asegurada, solicitud.edad, solicitud.score_riesgo
+                self.reglas,
+                solicitud.producto_id,
+                solicitud.suma_asegurada,
+                solicitud.edad,
+                solicitud.score_riesgo,
             )
         return Cotizacion(
             producto_id=solicitud.producto_id,
