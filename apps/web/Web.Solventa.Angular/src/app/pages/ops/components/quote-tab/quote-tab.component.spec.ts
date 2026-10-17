@@ -109,4 +109,18 @@ describe('QuoteTabComponent', () => {
 
     expect(el.textContent).toContain('Producto sin tarifa');
   });
+
+  it('renders default error message when calculation error has no detail', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).onQuoteReady({
+      valorCredito: '200000000',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    req.flush(null, { status: 500, statusText: 'Server Error' });
+
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Error al calcular cotización');
+  });
 });

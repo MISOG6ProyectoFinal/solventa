@@ -1,16 +1,39 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
 import { QuoteFormComponent } from './quote-form.component';
 
 describe('QuoteFormComponent', () => {
   let fixture: ComponentFixture<QuoteFormComponent>;
   let el: HTMLElement;
+  let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [QuoteFormComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [QuoteFormComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(QuoteFormComponent);
     fixture.componentRef.setInput('ramo', 'VIDA_HIPOTECARIO');
     await fixture.whenStable();
+
+    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
+    for (const req of ramosReq) {
+      req.flush([
+        { id: 'ramo-viaje', nombre: 'Viaje Internacional' },
+        { id: 'ramo-vida-hipotecario', nombre: 'Vida hipotecario' },
+        { id: 'ramo-microseguro-vida', nombre: 'Microseguro de vida' },
+        { id: 'ramo-parametrico', nombre: 'Paramétrico (clima / vuelo)' },
+      ]);
+    }
+    await fixture.whenStable();
     el = fixture.nativeElement;
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
   });
 
   it('lists exactly the four ramos of HU001 and flags the ones that require consent', () => {
@@ -130,6 +153,38 @@ describe('QuoteFormComponent', () => {
       expect(emittedData.nombre).toBe('Juan Pérez');
       expect(emittedData.valorCredito).toBe('200000000');
     });
+
+    it('cambia de ramo conservando únicamente datos del cliente y reseteando validación', () => {
+      const comp = fixture.componentInstance;
+      (comp as any).setValue('numeroDocumento', '1020304050');
+      (comp as any).setValue('valorCredito', '200000000');
+
+      (comp as any).changeRamo('VIAJE');
+
+      expect((comp as any).ramo()).toBe('VIAJE');
+      expect((comp as any).valueOf('numeroDocumento')).toBe('1020304050');
+      expect((comp as any).valueOf('valorCredito')).toBe('');
+    });
+
+    it('retorna valores por defecto seguros en valueOf y errorOf', () => {
+      const comp = fixture.componentInstance;
+      expect((comp as any).valueOf('inexistente')).toBe('');
+      expect((comp as any).errorOf('inexistente')).toBe('');
+    });
+  });
+
+  it('conserva ramos base si la consulta de catálogo falla con error', async () => {
+    const errorFixture = TestBed.createComponent(QuoteFormComponent);
+    errorFixture.componentRef.setInput('ramo', 'VIAJE');
+    await errorFixture.whenStable();
+
+    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
+    for (const req of ramosReq) {
+      req.error(new ProgressEvent('error'));
+    }
+    await errorFixture.whenStable();
+
+    expect((errorFixture.componentInstance as any).ramos().length).toBe(4);
   });
 });
 

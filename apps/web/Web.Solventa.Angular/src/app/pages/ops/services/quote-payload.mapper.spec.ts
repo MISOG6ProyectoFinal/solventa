@@ -70,4 +70,34 @@ describe('mapFormValuesToQuotePayload', () => {
     expect(payload['fecha_evento']).toBe('2026-11-15');
     expect(payload['valor_indemnizar']).toBe(500000);
   });
+
+  it('aplica valores por defecto en Viaje cuando los campos no obligatorios faltan', () => {
+    const payload = mapFormValuesToQuotePayload('VIAJE', { fechaSalida: '2026-10-10', fechaRegreso: '2026-10-20' });
+    expect(payload['destino']).toBe('Estados Unidos');
+    expect(payload['viajeros']).toBe(1);
+    expect(payload['fecha_nacimiento']).toBeUndefined();
+  });
+
+  it('aplica valores por defecto en Microseguro, Hipotecario y Paramétrico con valores vacíos', () => {
+    const micro = mapFormValuesToQuotePayload('MICROSEGURO_VIDA', {});
+    expect(micro['suma_asegurada']).toBe(0);
+    expect(micro['beneficiario']).toBe('');
+    expect(micro['parentesco']).toBe('Cónyuge');
+
+    const hipo = mapFormValuesToQuotePayload('VIDA_HIPOTECARIO', {});
+    expect(hipo['entidad']).toBe('');
+    expect(hipo['valor_credito']).toBe(0);
+    expect(hipo['plazo_anios']).toBe(1);
+
+    const param = mapFormValuesToQuotePayload('PARAMETRICO', {});
+    expect(param['evento']).toBe('Retraso de vuelo');
+    expect(param['referencia']).toBe('');
+    expect(param['valor_indemnizar']).toBe(0);
+  });
+
+  it('usa la rama default para ramos no reconocidos', () => {
+    const payload = mapFormValuesToQuotePayload('OTRO_RAMO' as any, { extra: 'dato' });
+    expect(payload['producto_id']).toBe('otro-ramo');
+    expect(payload['extra']).toBe('dato');
+  });
 });

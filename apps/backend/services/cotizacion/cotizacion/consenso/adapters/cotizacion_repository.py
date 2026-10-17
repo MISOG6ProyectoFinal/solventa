@@ -1,6 +1,6 @@
 """Persistencia de la cotización de negocio (una por oferta post-consenso)."""
 
-from sqlalchemy import JSON, Column, Date, MetaData, Numeric, String, Table, func, insert, select
+from sqlalchemy import Column, Date, JSON, MetaData, Numeric, String, Table, func, insert, select
 from sqlalchemy.engine import Engine
 
 from cotizacion.consenso.domain.models import OfertaCotizacion

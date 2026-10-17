@@ -83,11 +83,45 @@ describe('QuoteFieldComponent', () => {
       });
       const input = el.querySelector('input')!;
 
-      for (const key of ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight']) {
+      for (const key of ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End']) {
         const event = new KeyboardEvent('keydown', { key, cancelable: true });
         input.dispatchEvent(event);
         expect(event.defaultPrevented).toBe(false);
       }
+    });
+
+    it('permite atajos con ctrlKey o metaKey en campos numéricos', async () => {
+      const el = await render({
+        key: 'valorCredito',
+        label: 'Valor del crédito',
+        type: 'text',
+        required: true,
+        numeric: true,
+      });
+      const input = el.querySelector('input')!;
+
+      const ctrlEvent = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, cancelable: true });
+      input.dispatchEvent(ctrlEvent);
+      expect(ctrlEvent.defaultPrevented).toBe(false);
+
+      const metaEvent = new KeyboardEvent('keydown', { key: 'v', metaKey: true, cancelable: true });
+      input.dispatchEvent(metaEvent);
+      expect(metaEvent.defaultPrevented).toBe(false);
+    });
+
+    it('permite cualquier tecla si el campo no es numérico', async () => {
+      const el = await render({
+        key: 'nombre',
+        label: 'Nombre completo',
+        type: 'text',
+        required: true,
+        numeric: false,
+      });
+      const input = el.querySelector('input')!;
+
+      const event = new KeyboardEvent('keydown', { key: 'x', cancelable: true });
+      input.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('muestra el mensaje de error cuando el input error tiene valor', async () => {
