@@ -1,6 +1,6 @@
-<slv-field [label]="definition().label" [required]="definition().required">
+<slv-field [label]="definition().label" [required]="definition().required" [error]="error()">
   @if (definition().type === 'select') {
-    <select slvInput [(ngModel)]="value">
+    <select slvInput [invalid]="!!error()" [(ngModel)]="value">
       <option value="">Seleccione...</option>
       @for (option of definition().options; track option) {
         <option [value]="option">{{ option }}</option>
@@ -9,9 +9,11 @@
   } @else {
     <input
       slvInput
+      [invalid]="!!error()"
       [type]="definition().type"
       [placeholder]="definition().placeholder ?? ''"
       [(ngModel)]="value"
+      (keydown)="blockNonNumeric($event)"
     />
   }
 </slv-field>
