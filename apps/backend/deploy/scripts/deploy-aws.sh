@@ -85,7 +85,12 @@ infra() {
   for stack in $(selected "${1:-}"); do
     echo "==> terraform apply $stack ($ENV)"
     tf_init "$stack"
-    read -ra vars <<<"$(tf_vars "$stack")"; tf "$stack" apply -input=false "${vars[@]}" ${AUTO_APPROVE:+-auto-approve}
+    read -ra vars <<<"$(tf_vars "$stack")"
+    if [[ "$stack" == "edge" && "$MODO" == ahorro ]] && tf edge state list 2>/dev/null | grep -q '^aws_wafv2_web_acl'; then
+      echo "==> edge: CloudFront suelta el WAF antes de borrarlo"
+      tf "$stack" apply -input=false "${vars[@]}" -var=conservar_waf=true ${AUTO_APPROVE:+-auto-approve}
+    fi
+    tf "$stack" apply -input=false "${vars[@]}" ${AUTO_APPROVE:+-auto-approve}
     if [[ "$stack" == "platform" ]]; then
       restart_workloads
     fi
