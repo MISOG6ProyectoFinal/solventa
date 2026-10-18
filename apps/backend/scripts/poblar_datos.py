@@ -66,19 +66,21 @@ SOCIOS = [
     },
 ]
 
+DESTINOS = ("Estados Unidos", "España", "México", "Otro país")
+
 CLIENTES = [
-    ("Laura", "Martínez", "Estados Unidos"),
-    ("Andrés", "Rodríguez", "España"),
-    ("Camila", "Gómez", "México"),
-    ("Santiago", "López", "Otro país"),
-    ("Valentina", "Hernández", "España"),
-    ("Mateo", "Díaz", "Estados Unidos"),
-    ("Isabella", "Torres", "México"),
-    ("Sebastián", "Ramírez", "España"),
-    ("Mariana", "Castro", "Otro país"),
-    ("Daniel", "Moreno", "Estados Unidos"),
-    ("Sofía", "Vargas", "México"),
-    ("Nicolás", "Rojas", "España"),
+    ("Laura", "Martínez"),
+    ("Andrés", "Rodríguez"),
+    ("Camila", "Gómez"),
+    ("Santiago", "López"),
+    ("Valentina", "Hernández"),
+    ("Mateo", "Díaz"),
+    ("Isabella", "Torres"),
+    ("Sebastián", "Ramírez"),
+    ("Mariana", "Castro"),
+    ("Daniel", "Moreno"),
+    ("Sofía", "Vargas"),
+    ("Nicolás", "Rojas"),
 ]
 
 SINIESTROS = [
@@ -133,10 +135,9 @@ def dia(desplazamiento: int) -> str:
 
 def solicitud_por_producto(producto_id: str, indice: int) -> dict:
     if producto_id == "viaje-internacional":
-        destino = ["Estados Unidos", "España", "México", "Otro país"][indice % 4]
         return {
             "producto_id": producto_id,
-            "destino": destino,
+            "destino": DESTINOS[indice % len(DESTINOS)],
             "fecha_salida": dia(20 + indice * 3),
             "fecha_regreso": dia(30 + indice * 3),
             "viajeros": 1 + indice % 3,
@@ -264,22 +265,21 @@ def subir_evidencia(api: Api, token: str, aviso_id: str) -> bool:
     for clave, valor in carga["headers"].items():
         subida.add_header(clave, valor)
     try:
-        with urllib.request.urlopen(subida, timeout=30):
-            pass
-    except (urllib.error.URLError, OSError):
+        urllib.request.urlopen(subida, timeout=30).close()
+    except OSError:
         return False
     api.pedir("POST", f"/movil/siniestros/{aviso_id}/evidencias/{carga['evidencia_id']}/confirmar", token=token)
     return True
 
 
 def poblar_clientes(api: Api, credenciales: dict, conteo: dict) -> None:
-    for indice, (nombre, apellido, destino) in enumerate(CLIENTES):
+    for indice, (nombre, apellido) in enumerate(CLIENTES):
         token = sesion_de_cliente(api, credenciales, nombre, apellido, conteo)
         if not token:
             continue
         for viaje in range(1 + indice % 2):
             solicitud = solicitud_por_producto("viaje-internacional", indice + viaje)
-            solicitud |= {"destino": destino, "nombre": f"{nombre} {apellido}", "cedula": str(1_010_000_000 + indice)}
+            solicitud |= {"nombre": f"{nombre} {apellido}", "cedula": str(1_010_000_000 + indice)}
             api.pedir("POST", "/movil/cotizaciones", solicitud, token=token)
             conteo["cotizaciones móviles"] += 1
 
