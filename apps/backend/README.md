@@ -134,6 +134,15 @@ Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `d
 
 `local.sh status` muestra los pods, `local.sh logs <servicio>` sus logs y `local.sh down` borra el clúster con sus datos. Siniestros corre con `PERSISTENT_STORES=false`, como en `.env.example`, porque con almacenes persistentes el servicio usa siempre el S3 real.
 
+Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales:
+
+```bash
+python scripts/poblar_datos.py                                     # modo local
+python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
+```
+
+Crea 5 socios con sus ramos habilitados, 12 clientes, cotizaciones por los canales móvil, web y de socios, y avisos de siniestro con evidencia. Al pasar por la API, los datos cumplen las mismas reglas del negocio. Se puede correr varias veces: el secreto de cada socio y la contraseña de cada cliente quedan en `scripts/.poblar/<host>.json`, fuera de git, y se reutilizan.
+
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
 ## Despliegue en AWS
