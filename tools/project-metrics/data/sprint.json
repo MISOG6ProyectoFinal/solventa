@@ -166,5 +166,28 @@
         "valueDelivered": 2
       }
     ]
+  },
+
+  "releaseBurndown": {
+    "sprints": [
+      {
+        "sprint": 1,
+        "plannedStoryPoints": 38,
+        "completedStoryPoints": 38,
+        "closed": true
+      },
+      {
+        "sprint": 2,
+        "plannedStoryPoints": 46,
+        "completedStoryPoints": 0,
+        "closed": false
+      },
+      {
+        "sprint": 3,
+        "plannedStoryPoints": 62,
+        "completedStoryPoints": 0,
+        "closed": false
+      }
+    ]
   }
 }
