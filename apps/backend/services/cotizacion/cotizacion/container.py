@@ -36,9 +36,17 @@ from cotizacion.rating.domain.use_cases import CotizarUseCase
 
 
 async def _fanout_produccion(body: dict) -> list[dict]:
-    ips = resolver_replicas(settings.cotizacion_replicas_host, settings.puerto_replicas)
+    try:
+        ips = resolver_replicas(settings.cotizacion_replicas_host, settings.puerto_replicas)
+    except Exception:
+        ips = []
+    if not ips:
+        return await fanout_local(body)
     ips = ips[: settings.replicas_esperadas]
-    return await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
+    respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
+    if respuestas:
+        return respuestas
+    return await fanout_local(body)
 
 
 _solicitud_rating = TypeAdapter(SolicitudRating)

@@ -10,7 +10,12 @@ from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
 from cotizacion.consenso.domain.consensus import votar
 from cotizacion.consenso.domain.models import CoberturaOferta, OfertaCotizacion, VigenciaPropuesta
 from cotizacion.consenso.domain.ports import CotizacionRepository
-from cotizacion.rating.domain.models import SolicitudCotizacionViaje, SolicitudRating
+from cotizacion.rating.domain.models import (
+    SolicitudCotizacionParametrico,
+    SolicitudCotizacionViaje,
+    SolicitudCotizacionVidaHipotecario,
+    SolicitudRating,
+)
 
 FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 
@@ -51,12 +56,20 @@ class CotizarConConsensoUseCase:
             coberturas=coberturas,
             vigencia_propuesta=self._vigencia_propuesta(solicitud),
             version_reglas=str(elegida["version_reglas"]),
+            datos_riesgo=body,
+            canal=str(canal),
         )
         self.cotizaciones.save(oferta)
         return oferta
 
     def _vigencia_propuesta(self, solicitud: SolicitudRating) -> VigenciaPropuesta:
-        """En viaje la cobertura dura exactamente el viaje; el resto conserva la vigencia anual."""
+        """Calcula la vigencia según la naturaleza del ramo."""
         if isinstance(solicitud, SolicitudCotizacionViaje):
             return VigenciaPropuesta(desde=solicitud.fecha_salida, hasta=solicitud.fecha_regreso)
+        if isinstance(solicitud, SolicitudCotizacionParametrico):
+            return VigenciaPropuesta(desde=solicitud.fecha_evento, hasta=solicitud.fecha_evento)
+        if isinstance(solicitud, SolicitudCotizacionVidaHipotecario):
+            hoy = date.today()
+            hasta = date(hoy.year + solicitud.plazo_anios, hoy.month, hoy.day)
+            return VigenciaPropuesta(desde=hoy, hasta=hasta)
         return construir_vigencia_propuesta(dias=self.vigencia_dias)

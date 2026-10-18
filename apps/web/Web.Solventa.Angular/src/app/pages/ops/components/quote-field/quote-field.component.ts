@@ -14,4 +14,17 @@ import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
 export class QuoteFieldComponent {
   readonly definition = input.required<QuoteFieldDef>();
   readonly value = model('');
+  readonly error = input('');
+
+  protected blockNonNumeric(event: KeyboardEvent): void {
+    if (!this.definition().numeric) return;
+    const allowed =
+      /^\d$/.test(event.key) ||
+      ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) ||
+      event.ctrlKey ||
+      event.metaKey;
+    if (!allowed) {
+      event.preventDefault();
+    }
+  }
 }

@@ -1,15 +1,41 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
 import { QuoteTabComponent } from './quote-tab.component';
 
 describe('QuoteTabComponent', () => {
   let fixture: ComponentFixture<QuoteTabComponent>;
   let el: HTMLElement;
+  let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [QuoteTabComponent] }).compileComponents();
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [QuoteTabComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+
+    httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(QuoteTabComponent);
     await fixture.whenStable();
+
+    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
+    for (const req of ramosReq) {
+      req.flush([
+        { id: 'ramo-viaje', nombre: 'Viaje' },
+        { id: 'ramo-vida-hipotecario', nombre: 'Vida hipotecario' },
+        { id: 'ramo-microseguro-vida', nombre: 'Microseguro de vida' },
+        { id: 'ramo-parametrico', nombre: 'Paramétrico (clima / vuelo)' },
+      ]);
+    }
+    await fixture.whenStable();
     el = fixture.nativeElement;
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+    TestBed.resetTestingModule();
   });
 
   it('composes the form, the consent panel, the simulation and the breakdown', () => {
@@ -32,5 +58,69 @@ describe('QuoteTabComponent', () => {
 
     expect(el.textContent).not.toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
     expect(el.textContent).toContain('no requiere consentimiento');
+  });
+
+  it('renders the calculated quote breakdown when calculation succeeds', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).onQuoteReady({
+      tipoDocumento: 'CC',
+      numeroDocumento: '1020304050',
+      nombre: 'Juan Pérez',
+      email: 'juan@email.com',
+      telefono: '3001234567',
+      fechaNacimiento: '1985-05-15',
+      entidad: 'Banco Aurora',
+      valorCredito: '200000000',
+      plazoAnios: '20',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    expect(req.request.method).toBe('POST');
+    req.flush({
+      id: 'quote-123',
+      producto_id: 'vida-hipotecario',
+      prima: 3200000,
+      coberturas: [
+        { id: 'hipotecario-fallecimiento', nombre: 'Fallecimiento (saldo del crédito)' },
+        { id: 'hipotecario-incapacidad', nombre: 'Incapacidad total' },
+      ],
+      vigencia_propuesta: { desde: '2026-10-12', hasta: '2046-10-12' },
+      version_reglas: '2026.10.0',
+    });
+
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Prima Calculada');
+    expect(el.textContent).toContain('2026.10.0');
+    expect(el.textContent).toContain('Fallecimiento (saldo del crédito)');
+    expect(el.textContent).toContain('Incapacidad total');
+  });
+
+  it('renders error message when calculation fails', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).onQuoteReady({
+      valorCredito: '200000000',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    req.flush({ detail: 'Producto sin tarifa' }, { status: 422, statusText: 'Unprocessable Entity' });
+
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Producto sin tarifa');
+  });
+
+  it('renders default error message when calculation error has no detail', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).onQuoteReady({
+      valorCredito: '200000000',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    req.flush(null, { status: 500, statusText: 'Server Error' });
+
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Error al calcular cotización');
   });
 });

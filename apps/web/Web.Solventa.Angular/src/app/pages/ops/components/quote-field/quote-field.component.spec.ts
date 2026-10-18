@@ -39,4 +39,107 @@ describe('QuoteFieldComponent', () => {
 
     expect(fixture.componentInstance.value()).toBe('ana@email.com');
   });
+
+  describe('HU001: Validación numérica y bloqueo alfabético (P5)', () => {
+    it('bloquea caracteres alfabéticos cuando numeric es true', async () => {
+      const el = await render({
+        key: 'valorCredito',
+        label: 'Valor del crédito',
+        type: 'text',
+        required: true,
+        numeric: true,
+      });
+      const input = el.querySelector('input')!;
+
+      const event = new KeyboardEvent('keydown', { key: 'a', cancelable: true });
+      input.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('permite dígitos cuando numeric es true', async () => {
+      const el = await render({
+        key: 'valorCredito',
+        label: 'Valor del crédito',
+        type: 'text',
+        required: true,
+        numeric: true,
+      });
+      const input = el.querySelector('input')!;
+
+      const event = new KeyboardEvent('keydown', { key: '5', cancelable: true });
+      input.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('permite teclas de navegación y edición en campos numéricos', async () => {
+      const el = await render({
+        key: 'valorCredito',
+        label: 'Valor del crédito',
+        type: 'text',
+        required: true,
+        numeric: true,
+      });
+      const input = el.querySelector('input')!;
+
+      for (const key of ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End']) {
+        const event = new KeyboardEvent('keydown', { key, cancelable: true });
+        input.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+      }
+    });
+
+    it('permite atajos con ctrlKey o metaKey en campos numéricos', async () => {
+      const el = await render({
+        key: 'valorCredito',
+        label: 'Valor del crédito',
+        type: 'text',
+        required: true,
+        numeric: true,
+      });
+      const input = el.querySelector('input')!;
+
+      const ctrlEvent = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, cancelable: true });
+      input.dispatchEvent(ctrlEvent);
+      expect(ctrlEvent.defaultPrevented).toBe(false);
+
+      const metaEvent = new KeyboardEvent('keydown', { key: 'v', metaKey: true, cancelable: true });
+      input.dispatchEvent(metaEvent);
+      expect(metaEvent.defaultPrevented).toBe(false);
+    });
+
+    it('permite cualquier tecla si el campo no es numérico', async () => {
+      const el = await render({
+        key: 'nombre',
+        label: 'Nombre completo',
+        type: 'text',
+        required: true,
+        numeric: false,
+      });
+      const input = el.querySelector('input')!;
+
+      const event = new KeyboardEvent('keydown', { key: 'x', cancelable: true });
+      input.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('muestra el mensaje de error cuando el input error tiene valor', async () => {
+      fixture.componentRef.setInput('definition', {
+        key: 'nombre',
+        label: 'Nombre completo',
+        type: 'text',
+        required: true,
+      });
+      fixture.componentRef.setInput('error', 'Campo obligatorio');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Campo obligatorio');
+      const hasError =
+        fixture.nativeElement.querySelector('input')?.classList.contains('border-error') ||
+        fixture.nativeElement.querySelector('.text-error') !== null;
+      expect(hasError).toBe(true);
+    });
+  });
 });
+

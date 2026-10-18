@@ -18,7 +18,7 @@ class VigenciaPropuesta(BaseModel):
 
 
 class OfertaCotizacion(BaseModel):
-    """Oferta final hacia el canal Mobile; no es el resultado interno de una réplica."""
+    """Oferta final hacia el canal; no es el resultado interno de una réplica."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     producto_id: str
@@ -26,3 +26,5 @@ class OfertaCotizacion(BaseModel):
     coberturas: list[CoberturaOferta] = Field(default_factory=list)
     vigencia_propuesta: VigenciaPropuesta
     version_reglas: str
+    datos_riesgo: dict = Field(default_factory=dict)
+    canal: str = "web"

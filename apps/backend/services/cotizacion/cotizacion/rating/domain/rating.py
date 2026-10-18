@@ -5,11 +5,17 @@ tocar el resto del sistema. Mientras no exista el repositorio de reglas, la
 versión vigente vive aquí.
 """
 
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from pydantic import BaseModel, Field
 
-from cotizacion.rating.domain.models import SolicitudCotizacionViaje
+from cotizacion.rating.domain.models import (
+    SolicitudCotizacionMicroseguroVida,
+    SolicitudCotizacionParametrico,
+    SolicitudCotizacionViaje,
+    SolicitudCotizacionVidaHipotecario,
+)
 
 
 class ReglasRating(BaseModel):
@@ -19,6 +25,9 @@ class ReglasRating(BaseModel):
     peso_score: Decimal
     tarifa_viaje_por_dia: dict[str, Decimal] = Field(default_factory=dict)  # COP por día y viajero
     factor_impuestos: Decimal = Decimal("1.19")  # IVA 19%
+    tarifa_parametrico: dict[str, Decimal] = Field(default_factory=dict)
+    tasa_vida_hipotecario_por_mil: Decimal = Decimal("0.8")
+    tasa_microseguro_por_mil: Decimal = Decimal("1.2")
 
 
 REGLAS_VIGENTES = ReglasRating(
@@ -27,6 +36,9 @@ REGLAS_VIGENTES = ReglasRating(
     factor_edad=[(30, Decimal("0.9")), (45, Decimal("1.0")), (60, Decimal("1.35")), (99, Decimal("2.1"))],
     peso_score=Decimal("0.6"),
     tarifa_viaje_por_dia={"viaje-internacional": Decimal("9000")},
+    tarifa_parametrico={"Retraso de vuelo": Decimal("45000"), "Lluvia excesiva": Decimal("60000")},
+    tasa_vida_hipotecario_por_mil=Decimal("0.8"),
+    tasa_microseguro_por_mil=Decimal("1.2"),
 )
 
 
@@ -54,3 +66,36 @@ def calcular_prima_viaje(reglas: ReglasRating, solicitud: SolicitudCotizacionVia
     dias = (solicitud.fecha_regreso - solicitud.fecha_salida).days
     prima = tarifa_dia * dias * solicitud.viajeros * reglas.factor_impuestos
     return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calcular_prima_microseguro_vida(
+    reglas: ReglasRating, solicitud: SolicitudCotizacionMicroseguroVida, fecha_referencia: date | None = None
+) -> Decimal:
+    """Suma asegurada / 1000 × tasa base × factor edad."""
+    ref = fecha_referencia or date.today()
+    edad = max(18, (ref - solicitud.fecha_nacimiento).days // 365)
+    factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
+    prima = (solicitud.suma_asegurada / Decimal(1000)) * reglas.tasa_microseguro_por_mil * factor_edad
+    return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calcular_prima_vida_hipotecario(
+    reglas: ReglasRating, solicitud: SolicitudCotizacionVidaHipotecario, fecha_referencia: date | None = None
+) -> Decimal:
+    """Valor crédito / 1000 × tasa anual × factor edad × plazo en años."""
+    ref = fecha_referencia or date.today()
+    edad = max(18, (ref - solicitud.fecha_nacimiento).days // 365)
+    factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
+    prima = (
+        (solicitud.valor_credito / Decimal(1000))
+        * reglas.tasa_vida_hipotecario_por_mil
+        * factor_edad
+        * Decimal(solicitud.plazo_anios)
+    )
+    return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calcular_prima_parametrico(reglas: ReglasRating, solicitud: SolicitudCotizacionParametrico) -> Decimal:
+    """Tarifa fija según el evento asegurado."""
+    tarifa = reglas.tarifa_parametrico.get(solicitud.evento, Decimal("45000"))
+    return tarifa.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

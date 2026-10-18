@@ -51,7 +51,7 @@ export class PolicyDetailComponent {
       { label: 'Identificación', value: `${policy.tipoDocumento} ${policy.identification}` },
       { label: 'Correo', value: policy.email },
       { label: 'Teléfono', value: policy.phone },
-      { label: 'Dirección', value: policy.address || '-' },
+      { label: 'Dirección', value: policy.address ?? '-' },
       { label: 'Prima anual', value: this.currency.transform(policy.premium) },
     ];
     if (policy.sumaAsegurada !== undefined) {
