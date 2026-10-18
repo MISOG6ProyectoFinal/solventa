@@ -97,6 +97,8 @@ PRODUCTO_POR_RAMO = {
     "ramo-proteccion-pagos": "proteccion-pagos",
 }
 
+CON_TARIFA = {"viaje-internacional", "vida-esencial", "vida-hipotecario", "parametrico-clima-vuelo"}
+
 
 class ErrorApi(Exception):
     def __init__(self, estado: int, cuerpo: str) -> None:
@@ -216,11 +218,12 @@ def poblar_socios(api: Api, credenciales: dict, conteo: dict) -> None:
         if not guardado.get("secreto"):
             print(f"  {socio['nombre']}: sin secreto guardado, no cotiza por la API de socios")
             continue
-        for indice, ramo in enumerate(socio["ramos"]):
+        cotizables = [PRODUCTO_POR_RAMO[ramo] for ramo in socio["ramos"] if PRODUCTO_POR_RAMO[ramo] in CON_TARIFA]
+        for indice, producto_id in enumerate(cotizables):
             api.pedir(
                 "POST",
                 "/socios/v1/cotizaciones",
-                solicitud_por_producto(PRODUCTO_POR_RAMO[ramo], indice),
+                solicitud_por_producto(producto_id, indice),
                 cabeceras={"X-Client-Id": guardado["client_id"], "X-Api-Key": guardado["secreto"]},
             )
             conteo["cotizaciones de socios"] += 1
@@ -308,9 +311,7 @@ def poblar_clientes(api: Api, credenciales: dict, conteo: dict) -> None:
 
 
 def poblar_portal(api: Api, conteo: dict) -> None:
-    for indice, producto_id in enumerate(
-        ["viaje-internacional", "vida-esencial", "vida-hipotecario", "parametrico-clima-vuelo"] * 2
-    ):
+    for indice, producto_id in enumerate(sorted(CON_TARIFA) * 2):
         api.pedir("POST", "/web/cotizaciones", solicitud_por_producto(producto_id, indice))
         conteo["cotizaciones del portal"] += 1
 
