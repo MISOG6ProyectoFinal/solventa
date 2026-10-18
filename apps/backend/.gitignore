@@ -18,3 +18,4 @@ htmlcov/
 *.tfstate.*
 crash.log
 load-tests/resultados/
+scripts/.poblar/
