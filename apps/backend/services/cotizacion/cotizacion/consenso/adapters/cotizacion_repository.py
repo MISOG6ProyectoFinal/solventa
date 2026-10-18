@@ -1,6 +1,6 @@
 """Persistencia de la cotización de negocio (una por oferta post-consenso)."""
 
-from sqlalchemy import JSON, Column, Date, MetaData, Numeric, String, Table, func, insert, select
+from sqlalchemy import JSON, Column, Date, MetaData, Numeric, String, Table, func, insert, inspect, select, text
 from sqlalchemy.engine import Engine
 
 from cotizacion.consenso.domain.models import OfertaCotizacion
@@ -21,6 +21,11 @@ cotizaciones = Table(
     Column("canal", String(16), nullable=True, default="web"),
 )
 
+COLUMNAS_POSTERIORES = {
+    "datos_riesgo": "ALTER TABLE cotizaciones ADD COLUMN datos_riesgo JSON",
+    "canal": "ALTER TABLE cotizaciones ADD COLUMN canal VARCHAR(16)",
+}
+
 
 class PostgresCotizacionRepository:
     def __init__(self, engine: Engine) -> None:
@@ -28,6 +33,11 @@ class PostgresCotizacionRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
+        presentes = {columna["name"] for columna in inspect(self.engine).get_columns("cotizaciones")}
+        with self.engine.begin() as conn:
+            for columna, ddl in COLUMNAS_POSTERIORES.items():
+                if columna not in presentes:
+                    conn.execute(text(ddl))
 
     def save(self, oferta: OfertaCotizacion) -> None:
         with self.engine.begin() as conn:
