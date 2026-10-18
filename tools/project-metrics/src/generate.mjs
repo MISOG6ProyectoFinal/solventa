@@ -366,6 +366,116 @@ function businessValueSpec(businessValue) {
   };
 }
 
+function buildReleaseBurndownData(releaseBurndown) {
+  const sprints = [...releaseBurndown.sprints].sort(
+    (a, b) => a.sprint - b.sprint
+  );
+
+  const totalStoryPoints = sprints.reduce(
+    (sum, sprint) => sum + sprint.plannedStoryPoints,
+    0
+  );
+
+  const result = [];
+
+  let plannedRemaining = totalStoryPoints;
+
+  result.push({
+    sprint: 'Inicio',
+    remaining: plannedRemaining,
+    type: 'Planeado'
+  });
+
+  for (const sprint of sprints) {
+    plannedRemaining -= sprint.plannedStoryPoints;
+
+    result.push({
+      sprint: `Sprint ${sprint.sprint}`,
+      remaining: Math.max(0, plannedRemaining),
+      type: 'Planeado'
+    });
+  }
+
+  let actualRemaining = totalStoryPoints;
+
+  result.push({
+    sprint: 'Inicio',
+    remaining: actualRemaining,
+    type: 'Real'
+  });
+
+  for (const sprint of sprints) {
+    if (!sprint.closed) {
+      break;
+    }
+
+    actualRemaining -= sprint.completedStoryPoints;
+
+    result.push({
+      sprint: `Sprint ${sprint.sprint}`,
+      remaining: Math.max(0, actualRemaining),
+      type: 'Real'
+    });
+  }
+
+  return result;
+}
+
+function releaseBurndownSpec(releaseBurndown) {
+  const values = buildReleaseBurndownData(releaseBurndown);
+
+  const sprintOrder = [
+    'Inicio',
+    ...[...releaseBurndown.sprints]
+      .sort((a, b) => a.sprint - b.sprint)
+      .map(({ sprint }) => `Sprint ${sprint}`)
+  ];
+
+  return {
+    width: 900,
+    height: 450,
+    title: 'Release Burndown Chart',
+
+    data: {
+      values
+    },
+
+    mark: {
+      type: 'line',
+      point: true,
+      strokeWidth: 3
+    },
+
+    encoding: {
+      x: {
+        field: 'sprint',
+        type: 'ordinal',
+        title: 'Sprint',
+        sort: sprintOrder
+      },
+
+      y: {
+        field: 'remaining',
+        type: 'quantitative',
+        title: 'Puntos de historia restantes',
+        scale: {
+          domainMin: 0
+        }
+      },
+
+      color: {
+        field: 'type',
+        type: 'nominal',
+        title: null,
+        scale: {
+          domain: ['Planeado', 'Real'],
+          range: [GRAY, BLUE]
+        }
+      }
+    }
+  };
+}
+
 async function main() {
   const data = await readData();
 
@@ -386,6 +496,11 @@ async function main() {
   await renderSvg(
     businessValueSpec(data.businessValue),
     'business-value.svg'
+  );
+
+  await renderSvg(
+    releaseBurndownSpec(data.releaseBurndown),
+    'release-burndown.svg'
   );
 
   console.log('\nGráficas generadas correctamente.');
