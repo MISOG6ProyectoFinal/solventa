@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import * as vega from 'vega';
 import { compile } from 'vega-lite';
 
+import { fetchCoverage } from './fetch-coverage.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -421,6 +423,132 @@ function buildReleaseBurndownData(releaseBurndown) {
   return result;
 }
 
+// Week 1 starts at local midnight on the project start date (UTC-5).
+const PROJECT_START_MS = Date.parse('2026-10-05T05:00:00.000Z');
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const PLANNED_WEEKS = 8;
+
+function projectWeek(isoDate) {
+  const elapsed = Date.parse(isoDate) - PROJECT_START_MS;
+  return Math.floor(elapsed / WEEK_MS) + 1;
+}
+
+function buildCoverageData(points) {
+  const latestByWeek = new Map();
+
+  for (const point of points) {
+    const week = projectWeek(point.date);
+
+    if (week < 1) {
+      continue;
+    }
+
+    const key = `${point.app}:${week}`;
+    const current = latestByWeek.get(key);
+
+    if (!current || point.date > current.date) {
+      latestByWeek.set(key, {
+        week: `Semana ${week}`,
+        weekNumber: week,
+        app: point.app,
+        coverage: point.coverage,
+        date: point.date
+      });
+    }
+  }
+
+  return [...latestByWeek.values()];
+}
+
+function coverageWeekOrder(points) {
+  const lastWeek = points.reduce(
+    (max, point) => Math.max(max, point.weekNumber),
+    PLANNED_WEEKS
+  );
+
+  return Array.from(
+    { length: lastWeek },
+    (_, index) => `Semana ${index + 1}`
+  );
+}
+
+function coverageSpec(points) {
+  const values = buildCoverageData(points);
+  const weekOrder = coverageWeekOrder(values);
+
+  return {
+    width: 900,
+    height: 450,
+    title: 'Cobertura de código',
+
+    data: {
+      values
+    },
+
+    mark: {
+      type: 'line',
+      point: true,
+      strokeWidth: 3
+    },
+
+    encoding: {
+      x: {
+        field: 'week',
+        type: 'ordinal',
+        title: 'Semana',
+        sort: weekOrder,
+        scale: {
+          domain: weekOrder
+        }
+      },
+
+      y: {
+        field: 'coverage',
+        type: 'quantitative',
+        title: 'Cobertura (%)',
+        scale: {
+          domain: [0, 100]
+        }
+      },
+
+      color: {
+        field: 'app',
+        type: 'nominal',
+        title: null,
+        scale: {
+          domain: ['Backend', 'Mobile', 'Web'],
+          range: [BLUE, PURPLE, DARK_GREEN]
+        }
+      },
+
+      tooltip: [
+        {
+          field: 'week',
+          type: 'ordinal',
+          title: 'Semana'
+        },
+        {
+          field: 'date',
+          type: 'temporal',
+          title: 'Medición',
+          format: '%d %b %Y'
+        },
+        {
+          field: 'app',
+          type: 'nominal',
+          title: 'Aplicación'
+        },
+        {
+          field: 'coverage',
+          type: 'quantitative',
+          title: 'Cobertura (%)',
+          format: '.1f'
+        }
+      ]
+    }
+  };
+}
+
 function releaseBurndownSpec(releaseBurndown) {
   const values = buildReleaseBurndownData(releaseBurndown);
 
@@ -501,6 +629,17 @@ async function main() {
   await renderSvg(
     releaseBurndownSpec(data.releaseBurndown),
     'release-burndown.svg'
+  );
+
+  const coveragePoints = await fetchCoverage(projectRoot);
+
+  if (coveragePoints.length === 0) {
+    throw new Error('No coverage reports were found on main.');
+  }
+
+  await renderSvg(
+    coverageSpec(coveragePoints),
+    'coverage.svg'
   );
 
   console.log('\nGráficas generadas correctamente.');

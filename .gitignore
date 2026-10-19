@@ -88,3 +88,5 @@ vite.config.*.timestamp*
 .cursorignore
 
 .env
+
+tools/project-metrics/.cache/
