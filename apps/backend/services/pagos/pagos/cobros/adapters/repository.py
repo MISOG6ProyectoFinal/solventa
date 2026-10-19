@@ -52,15 +52,11 @@ class PostgresCobroRepository:
 
     def update(self, cobro: Cobro) -> None:
         with self.engine.begin() as conn:
-            conn.execute(
-                update(cobros).where(cobros.c.id == cobro.id).values(estado=cobro.estado.value)
-            )
+            conn.execute(update(cobros).where(cobros.c.id == cobro.id).values(estado=cobro.estado.value))
 
     def get_by_idempotency_key(self, idempotency_key: str) -> Cobro | None:
         with self.engine.connect() as conn:
-            row = (
-                conn.execute(select(cobros).where(cobros.c.idempotency_key == idempotency_key)).mappings().first()
-            )
+            row = conn.execute(select(cobros).where(cobros.c.idempotency_key == idempotency_key)).mappings().first()
         return _cobro(row) if row else None
 
 
