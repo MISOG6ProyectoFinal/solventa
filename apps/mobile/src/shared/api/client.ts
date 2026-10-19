@@ -29,6 +29,19 @@ export function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function detailText(detail: unknown): string | null {
+  if (typeof detail === 'string') {
+    return detail;
+  }
+  if (typeof detail === 'object' && detail !== null && !Array.isArray(detail)) {
+    const mensaje = (detail as { mensaje?: unknown }).mensaje;
+    if (typeof mensaje === 'string' && mensaje !== '') {
+      return mensaje;
+    }
+  }
+  return null;
+}
+
 function requestHeaders(payload: unknown): Record<string, string> | undefined {
   const headers: Record<string, string> = {};
   if (payload !== undefined) {
@@ -53,7 +66,7 @@ async function requestJson<T>(
   });
   const body = (await response.json().catch(() => null)) as { detail?: unknown; } | null;
   if (!response.ok) {
-    const detail = body && typeof body.detail === 'string' ? body.detail : null;
+    const detail = body ? detailText(body.detail) : null;
     throw new ApiError(response.status, detail);
   }
 

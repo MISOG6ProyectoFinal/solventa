@@ -1,27 +1,24 @@
 import { useEffect } from 'react';
 import { ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, CoverageList, Screen, StatusChip } from '../../../../shared/ui';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { texts } from '../../texts';
-import { formatMoney, fromApiDate, quoteReference } from '../../utils';
+import { formatMoney, formatVigenteHasta, fromApiDate, quoteReference } from '../../utils';
 import styles from './styles';
-
-function remainOnQuoteResult() {
-  return undefined;
-}
 
 export default function QuoteResultScreen() {
   const navigation = useNavigation();
+  const focused = useIsFocused();
   const product = useQuoteStore((state) => state.product);
   const oferta = useQuoteStore((state) => state.oferta);
 
   useEffect(() => {
-    if (!product || !oferta) {
+    if (focused && (!product || !oferta)) {
       navigation.goBack();
     }
-  }, [navigation, oferta, product]);
+  }, [focused, navigation, oferta, product]);
 
   if (!product || !oferta) {
     return null;
@@ -35,7 +32,9 @@ export default function QuoteResultScreen() {
           <AppText variant="body" style={styles.title}>
             {product.nombre}
           </AppText>
-          <AppText variant="bodySmall">{texts.result.reference(quoteReference(oferta.id))}</AppText>
+          <AppText variant="bodySmall">
+            {texts.result.reference(quoteReference(oferta.id), formatVigenteHasta(oferta.vigente_hasta))}
+          </AppText>
           <AppText variant="sectionTitle" style={styles.premium}>
             {formatMoney(oferta.prima)}
           </AppText>
@@ -54,7 +53,7 @@ export default function QuoteResultScreen() {
           testID="quote-continue-pay"
           title={texts.result.continueButton}
           variant="accent"
-          onPress={remainOnQuoteResult}
+          onPress={() => navigation.navigate('Quote', { screen: 'Payment' })}
         />
       </ScrollView>
     </Screen>

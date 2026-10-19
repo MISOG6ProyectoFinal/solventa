@@ -138,6 +138,25 @@ describe('apiClient', () => {
     });
   });
 
+  it('reads the message from a structured business error', async () => {
+    jest.mocked(fetch).mockResolvedValue(
+      jsonResponse(
+        {
+          detail: {
+            codigo: 'cotizacion_vencida',
+            mensaje: 'Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar.',
+          },
+        },
+        409,
+      ) as Response,
+    );
+
+    await expect(apiClient.post('/movil/cotizaciones/oferta-1/pagos', {})).rejects.toMatchObject({
+      status: 409,
+      detail: 'Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar.',
+    });
+  });
+
   it('throws an error with no detail when the response has none', async () => {
     jest.mocked(fetch).mockResolvedValue(jsonResponse({ detail: ['campo'] }, 422) as Response);
 

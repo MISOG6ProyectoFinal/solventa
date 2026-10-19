@@ -21,7 +21,18 @@ export type OfertaCotizacion = {
     desde: string;
     hasta: string;
   };
+  vigente_hasta: string;
   version_reglas: string;
+};
+
+export type SimulacionPago = 'rechazado' | 'vencida';
+
+export type ResultadoPago = {
+  id: string;
+  cotizacion_id: string;
+  estado: 'aprobado' | 'rechazado' | 'procesando';
+  monto: string;
+  moneda: string;
 };
 
 export type QuoteFormValues = {

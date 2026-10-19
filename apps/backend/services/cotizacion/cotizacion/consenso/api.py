@@ -50,3 +50,12 @@ async def cotizar_con_consenso(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=503, detail="Réplicas de cotización no disponibles") from exc
+
+
+@router.get("/cotizaciones/{cotizacion_id}", response_model=OfertaCotizacion)
+def obtener_cotizacion(cotizacion_id: str) -> OfertaCotizacion:
+    """Lectura interna de la oferta persistida. El canal no reenvía el monto a cobrar."""
+    oferta = container.cotizaciones.get(cotizacion_id)
+    if oferta is None:
+        raise HTTPException(status_code=404, detail=f"Cotización no encontrada: {cotizacion_id}")
+    return oferta

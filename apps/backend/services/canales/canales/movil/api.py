@@ -2,16 +2,19 @@ from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
+from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, identidad, siniestros
+from canales.clients import cotizacion, identidad, pagos, siniestros
 from canales.config import settings
-
-router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
+from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
 INVALID_SESSION = "La sesión no es válida"
+MENSAJE_COTIZACION_VENCIDA = "Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar."
+
+router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
 
 class SolicitudCotizacionMovil(BaseModel):
@@ -94,6 +97,20 @@ authenticated = APIRouter(dependencies=[Depends(require_session)])
 Session = Annotated[SessionToken, Depends(require_session)]
 
 
+class SolicitudPagoMovil(BaseModel):
+    """El monto no forma parte del contrato: se lee de la cotización persistida."""
+
+    model_config = ConfigDict(extra="ignore")
+    simulacion: Literal["rechazado", "vencida"] | None = None
+
+
+def _cotizacion_vencida() -> HTTPException:
+    return HTTPException(
+        status.HTTP_409_CONFLICT,
+        {"codigo": "cotizacion_vencida", "mensaje": MENSAJE_COTIZACION_VENCIDA},
+    )
+
+
 def _cliente(session: SessionToken) -> dict[str, str]:
     return {"X-Cliente-Id": session.client_id}
 
@@ -127,6 +144,39 @@ def sesion_actual(payload: Session) -> dict:
 def listar_productos() -> list:
     """Catálogo de productos del canal Mobile (vía servicio de Cotización)."""
     return call_upstream(cotizacion.get, "/catalogo/productos")
+
+
+@authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
+def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil | None = None) -> dict:
+    """Cobra la prima vigente. El valor sale de Cotización; una clave estable evita un segundo cobro."""
+    pedido = solicitud or SolicitudPagoMovil()
+    oferta = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
+    if not isinstance(oferta, dict) or oferta.get("prima") is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La cotización no tiene un valor a cobrar")
+    # vigente_hasta persistido es la regla. El flag solo demuestra el mismo rechazo en el prototipo.
+    if not oferta_se_puede_cobrar(oferta.get("vigente_hasta")):
+        raise _cotizacion_vencida()
+    if forzar_cotizacion_vencida(pedido.simulacion):
+        raise _cotizacion_vencida()
+    resultado = call_upstream(
+        pagos.post,
+        "/pagos/cobros",
+        json={
+            "cotizacion_id": cotizacion_id,
+            "cliente_id": session.client_id,
+            "monto": str(oferta["prima"]),
+            "moneda": "COP",
+            "idempotency_key": f"movil:{session.client_id}:{cotizacion_id}",
+            "medio_token": token_prototipo(pedido.simulacion),
+        },
+    )
+    return {
+        "id": resultado["id"],
+        "cotizacion_id": resultado["cotizacion_id"],
+        "estado": resultado["estado"],
+        "monto": resultado["monto"],
+        "moneda": resultado["moneda"],
+    }
 
 
 @authenticated.post("/cotizaciones")

@@ -1,11 +1,12 @@
 """Pruebas de la oferta de cotización vía consenso (persistencia de negocio)."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from cotizacion.catalogo.domain.models import Producto
 from cotizacion.container import container
 from cotizacion.main import app
 from fastapi.testclient import TestClient
+from solventa_common.vigencia_cotizacion import FIN_DE_DIA, ZONA_COTIZACION, calcular_vigente_hasta
 
 client = TestClient(app)
 
@@ -215,6 +216,40 @@ def test_consenso_persiste_una_sola_cotizacion():
     response = post_cotizacion("hogar", "web")
     assert response.status_code == 200
     assert container.cotizaciones.count() == antes + 1
+
+
+def test_la_oferta_incluye_vigente_hasta_al_fin_del_dia():
+    antes = datetime.now(ZONA_COTIZACION)
+    response = post_viaje()
+    despues = datetime.now(ZONA_COTIZACION)
+
+    assert response.status_code == 200
+    limite = datetime.fromisoformat(response.json()["vigente_hasta"])
+    assert limite.timetz() == FIN_DE_DIA.replace(tzinfo=ZONA_COTIZACION)
+    assert limite.date() == calcular_vigente_hasta(antes).date()
+    assert antes.date() <= limite.date() <= despues.date()
+    assert limite.utcoffset() == ZONA_COTIZACION.utcoffset(None)
+
+
+def test_cotizacion_se_recupera_por_id():
+    creada = post_viaje()
+    assert creada.status_code == 200
+    cotizacion_id = creada.json()["id"]
+
+    response = client.get(f"/consenso/cotizaciones/{cotizacion_id}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == cotizacion_id
+    assert data["prima"] == creada.json()["prima"]
+    assert data["vigente_hasta"] == creada.json()["vigente_hasta"]
+    assert data["vigencia_propuesta"] == creada.json()["vigencia_propuesta"]
+
+
+def test_cotizacion_inexistente_responde_404():
+    response = client.get("/consenso/cotizaciones/no-existe")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Cotización no encontrada: no-existe"
 
 
 def test_calculo_de_rating_no_persiste_cotizacion():
