@@ -45,6 +45,7 @@ class PasarelaSimulada:
         self.llamadas = 0
 
     def charge(self, amount: float, currency: str, token: str, idempotency_key: str) -> dict:
+        del amount, currency
         self.llamadas += 1
         estado = "aprobado" if token == TOKEN_APROBADO else "rechazado"
         return {"estado": estado, "referencia": idempotency_key}

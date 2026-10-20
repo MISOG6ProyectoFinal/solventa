@@ -32,17 +32,17 @@ class _Upstream:
         self.error = error
         self.calls: list[tuple[str, dict]] = []
 
-    def get(self, path: str, **kwargs):
+    def _next_response(self, path: str, **kwargs):
         self.calls.append((path, kwargs))
         if self.error:
             raise self.error
         return self.response
 
+    def get(self, path: str, **kwargs):
+        return self._next_response(path, **kwargs)
+
     def post(self, path: str, **kwargs):
-        self.calls.append((path, kwargs))
-        if self.error:
-            raise self.error
-        return self.response
+        return self._next_response(path, **kwargs)
 
 
 def _error_json(status: int, detail) -> httpx.HTTPStatusError:
