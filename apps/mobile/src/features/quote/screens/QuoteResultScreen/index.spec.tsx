@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { OfertaCotizacion, ProductoMovil } from '../../types';
-import { quoteReference } from '../../utils';
+import { formatVigenteHasta, quoteReference } from '../../utils';
 import QuoteResultScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -15,8 +15,15 @@ jest.mock('@react-navigation/native', () => {
       goBack,
       canGoBack: () => true,
     }),
+    useIsFocused: () => true,
   };
 });
+
+function vigenteHastaHoy(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T23:59:59-05:00`;
+}
 
 const VIAJE: ProductoMovil = {
   id: 'viaje-internacional',
@@ -38,6 +45,7 @@ const OFERTA: OfertaCotizacion = {
     { id: 'viaje-asistencia', nombre: 'Asistencia en viaje' },
   ],
   vigencia_propuesta: { desde: '2026-10-10', hasta: '2026-10-24' },
+  vigente_hasta: vigenteHastaHoy(),
   version_reglas: '2026.10.0',
 };
 
@@ -56,7 +64,10 @@ describe('QuoteResultScreen', () => {
     expect(getByText('Tu cotización')).toBeTruthy();
     expect(getByText('Cotización vigente')).toBeTruthy();
     expect(getByText('Viaje Internacional')).toBeTruthy();
-    expect(getByText(`${quoteReference(OFERTA.id)} · Válida hasta hoy 23:59`)).toBeTruthy();
+    expect(
+      getByText(`${quoteReference(OFERTA.id)} · Válida hasta ${formatVigenteHasta(OFERTA.vigente_hasta)}`),
+    ).toBeTruthy();
+    expect(getByText(/Válida hasta hoy 23:59/)).toBeTruthy();
     expect(getByText('$149.940')).toBeTruthy();
     expect(getByText('Prima total, impuestos incluidos')).toBeTruthy();
     expect(getByText('Vigencia propuesta: 10/10/2026 a 24/10/2026')).toBeTruthy();
@@ -70,14 +81,15 @@ describe('QuoteResultScreen', () => {
     expect(queryByText('Medio de pago')).toBeNull();
   });
 
-  it('does not start the payment flow', async () => {
+  it('continues to payment without dropping the quote', async () => {
     const { getByText, getByTestId } = await render(<QuoteResultScreen />);
 
     expect(getByTestId('quote-continue-pay').props.disabled).not.toBe(true);
 
     await fireEvent.press(getByText('Continuar al pago'));
 
-    expect(useNavigation().navigate).not.toHaveBeenCalled();
+    expect(useNavigation().navigate).toHaveBeenCalledWith('Quote', { screen: 'Payment' });
     expect(useQuoteStore.getState().oferta?.id).toBe(OFERTA.id);
+    expect(useQuoteStore.getState().oferta?.prima).toBe('149940.00');
   });
 });

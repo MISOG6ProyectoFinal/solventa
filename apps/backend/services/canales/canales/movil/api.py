@@ -2,16 +2,19 @@ from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
+from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, identidad, siniestros
+from canales.clients import cotizacion, identidad, pagos, siniestros
 from canales.config import settings
-
-router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
+from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
 INVALID_SESSION = "La sesión no es válida"
+MENSAJE_COTIZACION_VENCIDA = "Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar."
+
+router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
 
 class SolicitudCotizacionMovil(BaseModel):
@@ -94,6 +97,29 @@ authenticated = APIRouter(dependencies=[Depends(require_session)])
 Session = Annotated[SessionToken, Depends(require_session)]
 
 
+class SolicitudPagoMovil(BaseModel):
+    """El monto no forma parte del contrato: se lee de la cotización persistida."""
+
+    model_config = ConfigDict(extra="ignore")
+    intento_id: str
+    simulacion: Literal["rechazado", "vencida"] | None = None
+
+    @field_validator("intento_id")
+    @classmethod
+    def _intento(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El intento de pago no es válido")
+        return token
+
+
+def _cotizacion_vencida() -> HTTPException:
+    return HTTPException(
+        status.HTTP_409_CONFLICT,
+        {"codigo": "cotizacion_vencida", "mensaje": MENSAJE_COTIZACION_VENCIDA},
+    )
+
+
 def _cliente(session: SessionToken) -> dict[str, str]:
     return {"X-Cliente-Id": session.client_id}
 
@@ -129,15 +155,52 @@ def listar_productos() -> list:
     return call_upstream(cotizacion.get, "/catalogo/productos")
 
 
+@authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
+def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil) -> dict:
+    """Cobra la prima vigente. El valor sale de Cotización; la clave identifica el intento."""
+    oferta = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
+    if not isinstance(oferta, dict) or oferta.get("prima") is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La cotización no tiene un valor a cobrar")
+    if oferta.get("cliente_id") != session.client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cotización no encontrada")
+    # vigente_hasta persistido es la regla. El flag solo demuestra el mismo rechazo en el prototipo.
+    if not oferta_se_puede_cobrar(oferta.get("vigente_hasta")):
+        raise _cotizacion_vencida()
+    if forzar_cotizacion_vencida(solicitud.simulacion):
+        raise _cotizacion_vencida()
+    resultado = call_upstream(
+        pagos.post,
+        "/pagos/cobros",
+        json={
+            "cotizacion_id": cotizacion_id,
+            "cliente_id": session.client_id,
+            "monto": str(oferta["prima"]),
+            "moneda": "COP",
+            "idempotency_key": f"movil:{cotizacion_id}:{solicitud.intento_id}",
+            "medio_token": token_prototipo(solicitud.simulacion),
+        },
+    )
+    return {
+        "id": resultado["id"],
+        "cotizacion_id": resultado["cotizacion_id"],
+        "estado": resultado["estado"],
+        "monto": resultado["monto"],
+        "moneda": resultado["moneda"],
+    }
+
+
 @authenticated.post("/cotizaciones")
-def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
+def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
     """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
-    return call_upstream(
+    oferta = call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
         json=solicitud.model_dump(mode="json", exclude={"nombre", "cedula"}),
-        headers={"X-Canal": "mobile"},
+        headers={"X-Canal": "mobile", "X-Cliente-Id": session.client_id},
     )
+    if isinstance(oferta, dict):
+        oferta.pop("cliente_id", None)
+    return oferta
 
 
 @authenticated.get("/siniestros")

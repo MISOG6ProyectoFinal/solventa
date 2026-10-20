@@ -5,6 +5,7 @@ import {
   digitsOnly,
   formatMoney,
   fromApiDate,
+  formatVigenteHasta,
   quoteReference,
   toApiDate,
   toDisplayDate,
@@ -21,6 +22,13 @@ describe('quote utils', () => {
     expect(formatMoney('250000')).toBe('$250.000');
     expect(formatMoney('96000')).toBe('$96.000');
     expect(formatMoney('149940.00')).toBe('$149.940');
+  });
+
+  it('formats the backend payment deadline without inventing the cutoff', () => {
+    const today = new Date(2026, 9, 19, 15, 0, 0);
+    expect(formatVigenteHasta('2026-10-19T23:59:59-05:00', today)).toBe('hoy 23:59');
+    expect(formatVigenteHasta('2026-10-18T23:59:59-05:00', today)).toBe('18/10/2026 23:59');
+    expect(formatVigenteHasta('sin-fecha', today)).toBe('sin-fecha');
   });
 
   it('converts dates without shifting a day through UTC', () => {

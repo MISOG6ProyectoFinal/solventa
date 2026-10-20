@@ -59,6 +59,25 @@ export function digitsOnly(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+/** Muestra el límite que ya calculó el backend, sin volver a decidir la hora de corte. */
+export function formatVigenteHasta(iso: string, now = new Date()): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
+  if (!match) {
+    return iso;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const clock = `${match[4]}:${match[5]}`;
+  const sameDay = now.getFullYear() === year && now.getMonth() + 1 === month && now.getDate() === day;
+  if (sameDay) {
+    return `hoy ${clock}`;
+  }
+
+  return `${match[3]}/${match[2]}/${match[1]} ${clock}`;
+}
+
 /** Referencia visual estable derivada del id de la oferta, estilo COT-M-XXXXX. */
 export function quoteReference(ofertaId: string): string {
   let hash = 0;

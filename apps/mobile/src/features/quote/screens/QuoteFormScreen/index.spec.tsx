@@ -38,6 +38,7 @@ const OFERTA = {
     { id: 'viaje-asistencia', nombre: 'Asistencia en viaje' },
   ],
   vigencia_propuesta: { desde: '2026-10-10', hasta: '2026-10-24' },
+  vigente_hasta: '2026-10-19T23:59:59-05:00',
   version_reglas: '2026.10.0',
 };
 

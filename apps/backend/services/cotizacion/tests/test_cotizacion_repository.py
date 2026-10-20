@@ -1,10 +1,13 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
 from cotizacion.consenso.domain.models import OfertaCotizacion, VigenciaPropuesta
+from solventa_common.vigencia_cotizacion import ZONA_COTIZACION
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import StaticPool
+
+LIMITE = datetime(2026, 10, 19, 23, 59, 59, tzinfo=ZONA_COTIZACION)
 
 
 def _engine():
@@ -19,6 +22,7 @@ def _oferta() -> OfertaCotizacion:
         version_reglas="2026.10.0",
         datos_riesgo={"destino": "España"},
         canal="mobile",
+        vigente_hasta=LIMITE,
     )
 
 
@@ -38,7 +42,7 @@ def test_create_schema_agrega_las_columnas_que_faltan_en_una_tabla_existente():
     repositorio.save(_oferta())
 
     columnas = {columna["name"] for columna in inspect(engine).get_columns("cotizaciones")}
-    assert {"datos_riesgo", "canal"} <= columnas
+    assert {"datos_riesgo", "canal", "vigente_hasta", "cliente_id"} <= columnas
     assert repositorio.count() == 1
 
 
@@ -50,3 +54,29 @@ def test_create_schema_se_puede_repetir_sobre_el_esquema_vigente():
     repositorio.save(_oferta())
 
     assert repositorio.count() == 1
+
+
+def test_persiste_y_recupera_vigente_hasta():
+    repositorio = PostgresCotizacionRepository(_engine())
+    repositorio.create_schema()
+    oferta = _oferta()
+
+    repositorio.save(oferta)
+    guardada = repositorio.get(oferta.id)
+
+    assert guardada is not None
+    assert guardada.vigente_hasta == LIMITE
+    assert guardada.cliente_id is None
+    assert repositorio.get("no-existe") is None
+
+
+def test_persiste_el_cliente_de_la_cotizacion_movil():
+    repositorio = PostgresCotizacionRepository(_engine())
+    repositorio.create_schema()
+    oferta = _oferta().model_copy(update={"cliente_id": "cliente-1"})
+
+    repositorio.save(oferta)
+    guardada = repositorio.get(oferta.id)
+
+    assert guardada is not None
+    assert guardada.cliente_id == "cliente-1"
