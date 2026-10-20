@@ -49,7 +49,7 @@ def test_half_open_failure_reopens():
     assert breaker.state is CircuitState.OPEN
 
 
-def _respuesta(status: int):
+def _http_error(status: int):
     def fn():
         request = httpx.Request("POST", "https://cotizacion.test/x")
         raise httpx.HTTPStatusError(str(status), request=request, response=httpx.Response(status, request=request))
@@ -58,48 +58,48 @@ def _respuesta(status: int):
 
 
 @pytest.mark.parametrize("status", [400, 401, 403, 404, 409, 422])
-def test_errores_de_quien_llama_no_abren_el_circuito(status):
+def test_caller_errors_do_not_open_the_circuit(status):
     breaker = CircuitBreaker("x", failure_threshold=2)
     for _ in range(5):
         with pytest.raises(httpx.HTTPStatusError):
-            breaker.call(_respuesta(status))
+            breaker.call(_http_error(status))
     assert breaker.state is CircuitState.CLOSED
 
 
 @pytest.mark.parametrize("status", [408, 429, 500, 503])
-def test_destino_lento_saturado_o_caido_abre_el_circuito(status):
+def test_slow_saturated_or_down_target_opens_the_circuit(status):
     breaker = CircuitBreaker("x", failure_threshold=2)
     for _ in range(2):
         with pytest.raises(httpx.HTTPStatusError):
-            breaker.call(_respuesta(status))
+            breaker.call(_http_error(status))
     assert breaker.state is CircuitState.OPEN
 
 
-def test_un_4xx_en_half_open_cierra_el_circuito_porque_el_destino_respondio():
+def test_4xx_in_half_open_closes_the_circuit_because_the_target_answered():
     clock = FakeClock()
     breaker = CircuitBreaker("x", failure_threshold=1, reset_timeout_s=5, clock=clock)
     with pytest.raises(TimeoutError):
         breaker.call(boom)
     clock.now = 5
     with pytest.raises(httpx.HTTPStatusError):
-        breaker.call(_respuesta(422))
+        breaker.call(_http_error(422))
     assert breaker.state is CircuitState.CLOSED
 
 
-def test_validaciones_del_socio_no_cortan_la_cotizacion_de_los_demas_canales():
-    estados = iter([422] * 6 + [200])
+def test_partner_validation_errors_do_not_cut_quotes_for_other_channels():
+    statuses = iter([422] * 6 + [200])
 
     def handler(request):
-        status = next(estados)
+        status = next(statuses)
         return httpx.Response(status, json={"prima": "1"} if status == 200 else {"detail": "datos_invalidos"})
 
-    cliente = ServiceClient("cotizacion", "https://cotizacion.test")
-    cliente.client = httpx.Client(base_url="https://cotizacion.test", transport=httpx.MockTransport(handler))
+    client = ServiceClient("cotizacion", "https://cotizacion.test")
+    client.client = httpx.Client(base_url="https://cotizacion.test", transport=httpx.MockTransport(handler))
     for _ in range(6):
         with pytest.raises(httpx.HTTPStatusError):
-            cliente.post("/consenso/cotizaciones", json={})
+            client.post("/consenso/cotizaciones", json={})
 
-    assert cliente.post("/consenso/cotizaciones", json={}) == {"prima": "1"}
+    assert client.post("/consenso/cotizaciones", json={}) == {"prima": "1"}
 
 
 def test_fallback_serves_last_known_good():
