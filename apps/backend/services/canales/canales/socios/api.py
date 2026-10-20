@@ -14,7 +14,7 @@ def info() -> dict:
 
 
 @router.get("/v1/productos")
-def productos(
+def products(
     x_client_id: Annotated[str, Header()],
     x_api_key: Annotated[str, Header()],
 ) -> list:

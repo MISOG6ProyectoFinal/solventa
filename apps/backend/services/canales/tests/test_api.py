@@ -184,7 +184,7 @@ def test_bff_socios_envia_las_credenciales_a_gobierno_de_api(mock_client: MagicM
 
 
 @patch("canales.socios.api.cotizacion")
-def test_bff_socios_lista_sus_productos_con_las_credenciales(mock_client: MagicMock):
+def test_partner_bff_lists_products_with_credentials(mock_client: MagicMock):
     mock_client.get.return_value = [{"producto_id": "viaje-internacional"}]
 
     response = client.get("/socios/v1/productos", headers=CREDENCIALES)
@@ -195,7 +195,7 @@ def test_bff_socios_lista_sus_productos_con_las_credenciales(mock_client: MagicM
     assert mock_client.get.call_args.kwargs["headers"] == CREDENCIALES
 
 
-def test_bff_socios_exige_credenciales_para_listar_productos():
+def test_partner_bff_requires_credentials_to_list_products():
     assert client.get("/socios/v1/productos").status_code == 422
 
 

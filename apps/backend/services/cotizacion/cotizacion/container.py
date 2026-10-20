@@ -30,14 +30,14 @@ from cotizacion.gobierno_socios.domain.use_cases import (
 from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
     ActualizarConfiguracionUseCase,
     AutorizarRamoUseCase,
-    ConsultarCatalogoSocioUseCase,
     ConsultarConfiguracionUseCase,
+    PartnerCatalogUseCase,
 )
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
-from cotizacion.senales.adapters.open_finance import construir_proveedor
-from cotizacion.senales.domain.use_cases import ResolverPerfilRiesgoUseCase
+from cotizacion.signals.adapters.open_finance import build_provider
+from cotizacion.signals.domain.use_cases import ResolveRiskProfileUseCase
 
 
 async def _fanout_produccion(body: dict) -> list[dict]:
@@ -72,8 +72,8 @@ class Container:
         self.socios = InMemorySocioRepository()
         self.configuraciones = InMemoryConfiguracionRepository()
         seed_catalogo(self.catalogo)
-        self.cache_senales: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
-        self.proveedor_perfil = construir_proveedor(
+        self.signal_cache: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
+        self.risk_profile_provider = build_provider(
             settings.open_finance_url, settings.open_finance_api_key, settings.open_finance_timeout_s
         )
         self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
@@ -105,9 +105,9 @@ class Container:
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
-        self.consultar_catalogo_socio = ConsultarCatalogoSocioUseCase(self.configuraciones, self.catalogo)
-        self.resolver_perfil_riesgo = ResolverPerfilRiesgoUseCase(
-            self.proveedor_perfil, self.cache_senales, settings.vigencia_cache_senales_s
+        self.partner_catalog = PartnerCatalogUseCase(self.configuraciones, self.catalogo)
+        self.resolve_risk_profile = ResolveRiskProfileUseCase(
+            self.risk_profile_provider, self.signal_cache, settings.signal_cache_ttl_s
         )
 
 

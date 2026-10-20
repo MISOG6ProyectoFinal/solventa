@@ -15,7 +15,7 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.cotizacion_embebida import ProductoCotizable, contrato_publicado
+from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct, published_contract
 from cotizacion.gobierno_socios.domain.models import RamoResumen, Socio, SocioNoEncontrado
 from cotizacion.gobierno_socios.domain.ports import ConfiguracionRepository, SocioRepository
 
@@ -125,44 +125,46 @@ class AutorizarRamoUseCase:
     def execute(self, socio: Socio, producto: Producto) -> RamoHabilitado:
         """Devuelve el ramo con las coberturas que el socio puede vender."""
         configuracion = self.configuraciones.get(socio.id)
-        ramo = next((r for r in configuracion.ramos if r.ramo_id == producto.ramo_id), None) if configuracion else None
-        if ramo is None:
+        enabled = (
+            next((r for r in configuracion.ramos if r.ramo_id == producto.ramo_id), None) if configuracion else None
+        )
+        if enabled is None:
             raise RamoNoHabilitado(producto.ramo_id)
-        return ramo
+        return enabled
 
 
-class ConsultarCatalogoSocioUseCase:
+class PartnerCatalogUseCase:
     """Productos que el socio puede cotizar con sus coberturas habilitadas y su contrato."""
 
-    def __init__(self, configuraciones: ConfiguracionRepository, catalogo: CatalogoRepository) -> None:
-        self.configuraciones = configuraciones
-        self.catalogo = catalogo
+    def __init__(self, configurations: ConfiguracionRepository, catalog: CatalogoRepository) -> None:
+        self.configurations = configurations
+        self.catalog = catalog
 
-    def execute(self, socio: Socio) -> list[ProductoCotizable]:
-        configuracion = self.configuraciones.get(socio.id)
-        if configuracion is None:
+    def execute(self, socio: Socio) -> list[QuotableProduct]:
+        configuration = self.configurations.get(socio.id)
+        if configuration is None:
             return []
-        nombres = {ramo.id: ramo.nombre for ramo in self.catalogo.list_ramos()}
-        habilitados = sorted(configuracion.ramos, key=lambda r: RAMOS_CANAL_SOCIOS.index(r.ramo_id))
-        productos = self.catalogo.list_productos()
-        resultado = []
-        for ramo in habilitados:
-            for producto in (p for p in productos if p.ramo_id == ramo.ramo_id and p.activo):
-                contrato = contrato_publicado(producto.id)
-                if contrato is None:
+        names = {ramo.id: ramo.nombre for ramo in self.catalog.list_ramos()}
+        enabled_lines = sorted(configuration.ramos, key=lambda line: RAMOS_CANAL_SOCIOS.index(line.ramo_id))
+        products = self.catalog.list_productos()
+        result = []
+        for line in enabled_lines:
+            for product in (p for p in products if p.ramo_id == line.ramo_id and p.activo):
+                contract = published_contract(product.id)
+                if contract is None:
                     continue
-                coberturas = [
+                coverages = [
                     CoberturaOferta(id=c.id, nombre=c.nombre)
-                    for c in self.catalogo.list_coberturas(producto.id)
-                    if c.id in ramo.coberturas
+                    for c in self.catalog.list_coberturas(product.id)
+                    if c.id in line.coberturas
                 ]
-                resultado.append(
-                    ProductoCotizable(
-                        producto_id=producto.id,
-                        nombre=producto.nombre,
-                        ramo=RamoResumen(id=ramo.ramo_id, nombre=nombres.get(ramo.ramo_id, ramo.ramo_id)),
-                        coberturas=coberturas,
-                        contrato=contrato,
+                result.append(
+                    QuotableProduct(
+                        producto_id=product.id,
+                        nombre=product.nombre,
+                        ramo=RamoResumen(id=line.ramo_id, nombre=names.get(line.ramo_id, line.ramo_id)),
+                        coberturas=coverages,
+                        contrato=contract,
                     )
                 )
-        return resultado
+        return result

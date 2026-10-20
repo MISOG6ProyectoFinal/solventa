@@ -17,7 +17,7 @@ from cotizacion.consenso.domain.models import OfertaCotizacion
 from cotizacion.container import container
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import ProductoNoTarifado
-from cotizacion.senales.domain.models import SenalAplicada
+from cotizacion.signals.domain.models import AppliedSignal
 
 router = APIRouter(prefix="/consenso", tags=["Validador de Consenso"])
 
@@ -36,20 +36,18 @@ async def cotizar_con_consenso(
     x_cliente_id: Annotated[str | None, Header()] = None,
 ) -> OfertaCotizacion:
     """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
-    return await cotizar(solicitud, x_canal, x_cliente_id)
+    return await quote(solicitud, x_canal, x_cliente_id)
 
 
-async def cotizar(
+async def quote(
     solicitud: SolicitudRating,
     canal: Canal,
-    cliente_id: str | None = None,
-    senales: list[SenalAplicada] | None = None,
-    coberturas_permitidas: set[str] | None = None,
+    client_id: str | None = None,
+    signals: list[AppliedSignal] | None = None,
+    allowed_coverages: set[str] | None = None,
 ) -> OfertaCotizacion:
     try:
-        return await container.cotizar_con_consenso.execute(
-            solicitud, canal, cliente_id, senales, coberturas_permitidas
-        )
+        return await container.cotizar_con_consenso.execute(solicitud, canal, client_id, signals, allowed_coverages)
     except ProductoNoEncontrado as exc:
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:

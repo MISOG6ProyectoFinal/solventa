@@ -78,7 +78,7 @@ class PostgresCotizacionRepository:
                     vigente_hasta=oferta.vigente_hasta.isoformat(),
                     cliente_id=oferta.cliente_id,
                     degradada=oferta.degradada,
-                    senales=[s.model_dump(mode="json") for s in oferta.senales],
+                    senales=[signal.model_dump(mode="json") for signal in oferta.senales],
                 )
             )
 

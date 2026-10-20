@@ -19,7 +19,7 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
     SolicitudRating,
 )
-from cotizacion.senales.domain.models import SenalAplicada
+from cotizacion.signals.domain.models import AppliedSignal
 
 FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 
@@ -59,15 +59,15 @@ class CotizarConConsensoUseCase:
         solicitud: SolicitudRating,
         canal: Canal,
         cliente_id: str | None = None,
-        senales: list[SenalAplicada] | None = None,
-        coberturas_permitidas: set[str] | None = None,
+        signals: list[AppliedSignal] | None = None,
+        allowed_coverages: set[str] | None = None,
     ) -> OfertaCotizacion:
-        """coberturas_permitidas limita la oferta a lo que el socio puede vender; None ofrece todas.
+        """allowed_coverages limita la oferta a lo que el socio puede vender; None ofrece todas.
 
         El catálogo y la persistencia son síncronos: corren en un hilo para no detener el event loop.
         """
         producto = await asyncio.to_thread(self.validar_producto.execute, solicitud.producto_id, canal)
-        senales = senales or []
+        signals = signals or []
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
         prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
@@ -75,7 +75,7 @@ class CotizarConConsensoUseCase:
         coberturas = [
             CoberturaOferta(id=c.id, nombre=c.nombre)
             for c in await asyncio.to_thread(self.catalogo.list_coberturas, producto.id)
-            if coberturas_permitidas is None or c.id in coberturas_permitidas
+            if allowed_coverages is None or c.id in allowed_coverages
         ]
         oferta = OfertaCotizacion(
             producto_id=producto.id,
@@ -87,8 +87,8 @@ class CotizarConConsensoUseCase:
             datos_riesgo=body,
             canal=str(canal),
             cliente_id=_cliente_movil(canal, cliente_id),
-            degradada=any(senal.degradada for senal in senales),
-            senales=senales,
+            degradada=any(signal.degraded for signal in signals),
+            senales=signals,
         )
         await asyncio.to_thread(self.cotizaciones.save, oferta)
         return oferta

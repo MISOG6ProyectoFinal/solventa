@@ -5,7 +5,7 @@ from starlette.concurrency import run_in_threadpool
 
 from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
 from cotizacion.catalogo.domain.models import Canal, Producto
-from cotizacion.consenso.api import cotizar
+from cotizacion.consenso.api import quote
 from cotizacion.consenso.domain.models import OfertaCotizacion
 from cotizacion.container import container
 from cotizacion.gobierno_socios.domain.configuracion import (
@@ -16,13 +16,13 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.cotizacion_embebida import (
-    DatosInvalidos,
-    ProductoCotizable,
-    SolicitudSocioVidaHipotecario,
-    producto_solicitado,
-    solicitud_de_rating,
-    validar_contrato,
+from cotizacion.gobierno_socios.domain.embedded_quote import (
+    InvalidRequest,
+    PartnerMortgageLifeRequest,
+    QuotableProduct,
+    requested_product,
+    to_rating_request,
+    validate_contract,
 )
 from cotizacion.gobierno_socios.domain.models import (
     Alcance,
@@ -38,7 +38,7 @@ from cotizacion.gobierno_socios.domain.models import (
     SocioNoEncontrado,
     SocioResponse,
 )
-from cotizacion.senales.domain.models import SenalAplicada
+from cotizacion.signals.domain.models import AppliedSignal
 
 router = APIRouter(prefix="/gobierno-socios", tags=["Socios y Gobierno de API"])
 
@@ -148,19 +148,19 @@ def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRe
     return container.consultar_configuracion.presentar(configuracion)
 
 
-@router.get("/catalogo", response_model=list[ProductoCotizable])
-def catalogo_del_socio(
+@router.get("/catalogo", response_model=list[QuotableProduct])
+def partner_catalog(
     client_id: Annotated[str, Header(alias="X-Client-Id")],
     secreto: Annotated[str, Header(alias="X-Api-Key")],
-) -> list[ProductoCotizable]:
+) -> list[QuotableProduct]:
     """Lo que el socio puede cotizar: producto_id, coberturas habilitadas y el contrato de cada uno."""
     socio = autorizar_socio(client_id, secreto, Alcance.COTIZACION)
-    return container.consultar_catalogo_socio.execute(socio)
+    return container.partner_catalog.execute(socio)
 
 
-def _datos_invalidos(exc: DatosInvalidos) -> HTTPException:
+def _invalid_request(exc: InvalidRequest) -> HTTPException:
     detail = _error("datos_invalidos", "La solicitud tiene datos faltantes o inválidos. No se calculó la prima.")
-    return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {**detail, "campos": exc.campos})
+    return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {**detail, "campos": exc.fields})
 
 
 @router.post("/cotizaciones", response_model=OfertaCotizacion)
@@ -172,14 +172,14 @@ async def cotizar_como_socio(
     """Cotización embebida (HU014): credencial, ramo y contrato se validan antes de calcular."""
     socio = await run_in_threadpool(autorizar_socio, client_id, secreto, Alcance.COTIZACION)
     try:
-        ramo = await run_in_threadpool(autorizar_ramo, socio, producto_solicitado(solicitud))
-        contrato = validar_contrato(solicitud)
-    except DatosInvalidos as exc:
-        raise _datos_invalidos(exc) from exc
-    senales: list[SenalAplicada] = []
-    if isinstance(contrato, SolicitudSocioVidaHipotecario) and contrato.consentimiento_open_finance:
-        senales.append(
-            await run_in_threadpool(container.resolver_perfil_riesgo.execute, contrato.consentimiento_open_finance)
+        line = await run_in_threadpool(autorizar_ramo, socio, requested_product(solicitud))
+        contract = validate_contract(solicitud)
+    except InvalidRequest as exc:
+        raise _invalid_request(exc) from exc
+    signals: list[AppliedSignal] = []
+    if isinstance(contract, PartnerMortgageLifeRequest) and contract.consentimiento_open_finance:
+        signals.append(
+            await run_in_threadpool(container.resolve_risk_profile.execute, contract.consentimiento_open_finance)
         )
-    rating = solicitud_de_rating(contrato, senales[0].score_riesgo if senales else None)
-    return await cotizar(rating, Canal.SOCIOS, senales=senales, coberturas_permitidas=set(ramo.coberturas))
+    rating = to_rating_request(contract, signals[0].score_riesgo if signals else None)
+    return await quote(rating, Canal.SOCIOS, signals=signals, allowed_coverages=set(line.coberturas))

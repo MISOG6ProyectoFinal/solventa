@@ -95,7 +95,7 @@ def test_prima_vida_hipotecario():
     assert prima == Decimal("3000000.00")
 
 
-def test_prima_vida_hipotecario_aplica_el_score_de_open_finance():
+def test_mortgage_life_premium_applies_open_finance_score():
     solicitud = SolicitudCotizacionVidaHipotecario(
         producto_id="vida-hipotecario",
         fecha_nacimiento=date(1986, 1, 1),

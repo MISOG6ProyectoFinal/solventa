@@ -2,9 +2,9 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
-from cotizacion.consenso.adapters.cotizacion_repository import cotizaciones as tabla
+from cotizacion.consenso.adapters.cotizacion_repository import cotizaciones as quotes_table
 from cotizacion.consenso.domain.models import OfertaCotizacion, VigenciaPropuesta
-from cotizacion.senales.domain.models import OrigenSenal, SenalAplicada
+from cotizacion.signals.domain.models import AppliedSignal, SignalOrigin
 from solventa_common.vigencia_cotizacion import ZONA_COTIZACION
 from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.pool import StaticPool
@@ -84,15 +84,17 @@ def test_persiste_el_cliente_de_la_cotizacion_movil():
     assert guardada.cliente_id == "cliente-1"
 
 
-def test_persiste_la_marca_degradada_y_la_senal_usada():
+def test_stores_degraded_flag_and_applied_signal():
     engine = _engine()
-    repositorio = PostgresCotizacionRepository(engine)
-    repositorio.create_schema()
-    senal = SenalAplicada(fuente="open-finance", origen=OrigenSenal.CACHE, score_riesgo=Decimal("0.7"), latencia_ms=301)
+    repository = PostgresCotizacionRepository(engine)
+    repository.create_schema()
+    signal = AppliedSignal(
+        fuente="open-finance", origen=SignalOrigin.CACHE, score_riesgo=Decimal("0.7"), latencia_ms=301
+    )
 
-    repositorio.save(_oferta().model_copy(update={"degradada": True, "senales": [senal]}))
+    repository.save(_oferta().model_copy(update={"degradada": True, "senales": [signal]}))
 
     with engine.connect() as conn:
-        fila = conn.execute(select(tabla)).mappings().one()
-    assert fila["degradada"] is True
-    assert fila["senales"] == [{"fuente": "open-finance", "origen": "cache", "score_riesgo": "0.7", "latencia_ms": 301}]
+        row = conn.execute(select(quotes_table)).mappings().one()
+    assert row["degradada"] is True
+    assert row["senales"] == [{"fuente": "open-finance", "origen": "cache", "score_riesgo": "0.7", "latencia_ms": 301}]
