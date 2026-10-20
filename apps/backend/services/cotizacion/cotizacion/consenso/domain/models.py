@@ -30,3 +30,4 @@ class OfertaCotizacion(BaseModel):
     version_reglas: str
     datos_riesgo: dict = Field(default_factory=dict)
     canal: str = "web"
+    cliente_id: str | None = None

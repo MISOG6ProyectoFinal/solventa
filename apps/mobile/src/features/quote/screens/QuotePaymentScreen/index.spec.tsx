@@ -53,6 +53,11 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
+function cuerpo(callIndex = 0): { intento_id?: string; simulacion?: string } {
+  const [, request] = jest.mocked(fetch).mock.calls[callIndex];
+  return JSON.parse(String(request?.body)) as { intento_id?: string; simulacion?: string };
+}
+
 function seedQuote() {
   useQuoteStore.getState().selectProduct(VIAJE);
   useQuoteStore.getState().setOferta(OFERTA);
@@ -101,8 +106,8 @@ describe('QuotePaymentScreen', () => {
     await waitFor(() => expect(getByText('Pago procesándose...')).toBeTruthy());
     expect(getByTestId('quote-pay').props.disabled).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(1);
-    const [, request] = jest.mocked(fetch).mock.calls[0];
-    expect(JSON.parse(String(request?.body))).toEqual({});
+    expect(cuerpo().intento_id).toEqual(expect.any(String));
+    expect(cuerpo().simulacion).toBeUndefined();
     expect(String(jest.mocked(fetch).mock.calls[0][0])).toContain('/movil/cotizaciones/oferta-1/pagos');
 
     release(
@@ -128,6 +133,9 @@ describe('QuotePaymentScreen', () => {
 
     await waitFor(() => expect(getByText(texts.payment.approved)).toBeTruthy());
     expect(getByText('$149.940')).toBeTruthy();
+    expect(queryByText('Pagar $149.940')).toBeNull();
+    expect(queryByText(texts.payment.retry)).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
     expect(queryByText('Ver mi póliza')).toBeNull();
     expect(queryByText(/SLV-/)).toBeNull();
     expect(queryByText('ACTIVA')).toBeNull();
@@ -144,10 +152,57 @@ describe('QuotePaymentScreen', () => {
     await fireEvent.press(getByText('Pagar $149.940'));
 
     await waitFor(() => expect(getByText(texts.payment.rejected)).toBeTruthy());
+    expect(getByText(texts.payment.retry)).toBeTruthy();
+    expect(getByText(texts.payment.requote)).toBeTruthy();
+    expect(queryByText('Pagar $149.940')).toBeNull();
     expect(queryByText(/[Pp]óliza SLV/)).toBeNull();
     expect(queryByText('Ver mi póliza')).toBeNull();
-    const [, request] = jest.mocked(fetch).mock.calls[0];
-    expect(JSON.parse(String(request?.body))).toEqual({ simulacion: 'rechazado' });
+    expect(cuerpo()).toEqual({ intento_id: expect.any(String), simulacion: 'rechazado' });
+  });
+
+  it('starts a new attempt after rejection and clears the rejection simulation', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'cobro-1', cotizacion_id: 'oferta-1', estado: 'rechazado', monto: '149940.00', moneda: 'COP' }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'cobro-1', cotizacion_id: 'oferta-1', estado: 'aprobado', monto: '149940.00', moneda: 'COP' }),
+      ) as typeof fetch;
+    const { getByText, queryByText } = await render(<QuotePaymentScreen />);
+
+    await fireEvent.press(getByText('Simular pago rechazado'));
+    await fireEvent.press(getByText('Pagar $149.940'));
+    await waitFor(() => expect(getByText(texts.payment.rejected)).toBeTruthy());
+    const primerIntento = cuerpo(0).intento_id;
+
+    await fireEvent.press(getByText(texts.payment.retry));
+    expect(queryByText(texts.payment.rejected)).toBeNull();
+    await fireEvent.press(getByText('Pagar $149.940'));
+
+    await waitFor(() => expect(getByText(texts.payment.approved)).toBeTruthy());
+    expect(cuerpo(1).intento_id).toEqual(expect.any(String));
+    expect(cuerpo(1).intento_id).not.toBe(primerIntento);
+    expect(cuerpo(1).simulacion).toBeUndefined();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses the attempt id when the same payment fails ambiguously', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Pasarela de pagos no disponible' }, 503))
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'cobro-1', cotizacion_id: 'oferta-1', estado: 'aprobado', monto: '149940.00', moneda: 'COP' }),
+      ) as typeof fetch;
+    const { getByText } = await render(<QuotePaymentScreen />);
+
+    await fireEvent.press(getByText('Pagar $149.940'));
+    await waitFor(() => expect(getByText('Pasarela de pagos no disponible')).toBeTruthy());
+    await fireEvent.press(getByText('Pagar $149.940'));
+
+    await waitFor(() => expect(getByText(texts.payment.approved)).toBeTruthy());
+    expect(cuerpo(0).intento_id).toBe(cuerpo(1).intento_id);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('shows the expired quote message and starts a new quote', async () => {

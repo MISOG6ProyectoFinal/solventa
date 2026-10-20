@@ -4,7 +4,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import { ApiError } from '../../../../shared/api/client';
 import { AppText, Banner, Button, Card, CheckboxField, Screen } from '../../../../shared/ui';
-import { payQuote } from '../../api/payQuote';
+import { crearIntentoId, payQuote } from '../../api/payQuote';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { texts } from '../../texts';
 import { SimulacionPago } from '../../types';
@@ -24,6 +24,7 @@ export default function QuotePaymentScreen() {
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const leaving = useRef(false);
+  const intentoId = useRef<string | null>(null);
 
   useEffect(() => {
     if (leaving.current || !focused) {
@@ -54,11 +55,15 @@ export default function QuotePaymentScreen() {
       return;
     }
 
+    if (!intentoId.current) {
+      intentoId.current = crearIntentoId();
+    }
+    const intento = intentoId.current;
     inFlight.current = true;
     setError(null);
     setStatus('processing');
     try {
-      const resultado = await payQuote(oferta.id, simulacion());
+      const resultado = await payQuote(oferta.id, intento, simulacion());
       if (resultado.estado === 'aprobado') {
         setStatus('approved');
         return;
@@ -79,6 +84,14 @@ export default function QuotePaymentScreen() {
       setError(cause instanceof ApiError && cause.detail ? cause.detail : texts.payment.failed);
       inFlight.current = false;
     }
+  };
+
+  const retry = () => {
+    intentoId.current = crearIntentoId();
+    setSimulateRejected(false);
+    setError(null);
+    setStatus('ready');
+    inFlight.current = false;
   };
 
   const requote = () => {
@@ -161,7 +174,10 @@ export default function QuotePaymentScreen() {
             </View>
           ) : null}
         </Card>
-        {status === 'expired' ? (
+        {status === 'rejected' ? (
+          <Button testID="quote-retry" title={texts.payment.retry} onPress={retry} />
+        ) : null}
+        {status === 'expired' || status === 'rejected' ? (
           <Button testID="quote-requote" title={texts.payment.requote} variant="outlined" onPress={requote} />
         ) : null}
         {status === 'ready' || status === 'processing' ? (

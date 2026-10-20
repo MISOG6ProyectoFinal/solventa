@@ -41,6 +41,7 @@ export const texts = {
     processing: 'Pago procesándose...',
     approved: 'Pago aprobado. El seguro está listo para continuar con la emisión.',
     rejected: 'El pago fue rechazado. No se generó ninguna póliza. Intenta con otro medio.',
+    retry: 'Intentar de nuevo',
     expired: 'Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar.',
     requote: 'Volver a cotizar',
     failed: 'No se pudo procesar el pago.',

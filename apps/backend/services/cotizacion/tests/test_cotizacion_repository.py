@@ -42,7 +42,7 @@ def test_create_schema_agrega_las_columnas_que_faltan_en_una_tabla_existente():
     repositorio.save(_oferta())
 
     columnas = {columna["name"] for columna in inspect(engine).get_columns("cotizaciones")}
-    assert {"datos_riesgo", "canal", "vigente_hasta"} <= columnas
+    assert {"datos_riesgo", "canal", "vigente_hasta", "cliente_id"} <= columnas
     assert repositorio.count() == 1
 
 
@@ -66,4 +66,17 @@ def test_persiste_y_recupera_vigente_hasta():
 
     assert guardada is not None
     assert guardada.vigente_hasta == LIMITE
+    assert guardada.cliente_id is None
     assert repositorio.get("no-existe") is None
+
+
+def test_persiste_el_cliente_de_la_cotizacion_movil():
+    repositorio = PostgresCotizacionRepository(_engine())
+    repositorio.create_schema()
+    oferta = _oferta().model_copy(update={"cliente_id": "cliente-1"})
+
+    repositorio.save(oferta)
+    guardada = repositorio.get(oferta.id)
+
+    assert guardada is not None
+    assert guardada.cliente_id == "cliente-1"

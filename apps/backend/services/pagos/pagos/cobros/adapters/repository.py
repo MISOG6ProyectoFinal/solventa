@@ -1,6 +1,8 @@
-"""Persistencia del cobro. La clave de idempotencia es única."""
+"""Persistencia del cobro. Una fila por cotización y una clave de idempotencia única."""
 
-from sqlalchemy import Column, DateTime, MetaData, Numeric, String, Table, func, insert, select, update
+import threading
+
+from sqlalchemy import Column, DateTime, MetaData, Numeric, String, Table, func, insert, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -42,6 +44,8 @@ class PostgresCobroRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
+        with self.engine.begin() as conn:
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_cobros_cotizacion_id ON cobros (cotizacion_id)"))
 
     def add(self, cobro: Cobro) -> None:
         try:
@@ -59,21 +63,79 @@ class PostgresCobroRepository:
             row = conn.execute(select(cobros).where(cobros.c.idempotency_key == idempotency_key)).mappings().first()
         return _cobro(row) if row else None
 
+    def get_by_cotizacion_id(self, cotizacion_id: str) -> Cobro | None:
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(cobros).where(cobros.c.cotizacion_id == cotizacion_id)).mappings().all()
+        return _preferido([_cobro(row) for row in rows])
+
+    def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None:
+        valores = {
+            "estado": reemplazo.estado.value,
+            "idempotency_key": reemplazo.idempotency_key,
+            "monto": reemplazo.monto,
+            "moneda": reemplazo.moneda,
+            "cliente_id": reemplazo.cliente_id,
+        }
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(
+                    update(cobros)
+                    .where(
+                        cobros.c.id == cobro_id,
+                        cobros.c.idempotency_key == clave_actual,
+                        cobros.c.estado == EstadoCobro.RECHAZADO.value,
+                    )
+                    .values(**valores)
+                )
+                if result.rowcount != 1:
+                    return None
+        except IntegrityError:
+            return None
+        return self.get_by_idempotency_key(reemplazo.idempotency_key)
+
 
 class InMemoryCobroRepository:
     def __init__(self) -> None:
         self.items: dict[str, Cobro] = {}
+        self._lock = threading.Lock()
 
     def add(self, cobro: Cobro) -> None:
-        if cobro.idempotency_key in self.items:
-            raise CobroDuplicado(cobro.idempotency_key)
-        self.items[cobro.idempotency_key] = cobro
+        with self._lock:
+            if cobro.idempotency_key in self.items or _preferido(list(self.items.values()), cobro.cotizacion_id):
+                raise CobroDuplicado(cobro.idempotency_key)
+            self.items[cobro.idempotency_key] = cobro
 
     def update(self, cobro: Cobro) -> None:
-        self.items[cobro.idempotency_key] = cobro
+        with self._lock:
+            self.items[cobro.idempotency_key] = cobro
 
     def get_by_idempotency_key(self, idempotency_key: str) -> Cobro | None:
-        return self.items.get(idempotency_key)
+        with self._lock:
+            return self.items.get(idempotency_key)
+
+    def get_by_cotizacion_id(self, cotizacion_id: str) -> Cobro | None:
+        with self._lock:
+            return _preferido(list(self.items.values()), cotizacion_id)
+
+    def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None:
+        with self._lock:
+            actual = self.items.get(clave_actual)
+            if actual is None or actual.id != cobro_id or actual.estado != EstadoCobro.RECHAZADO:
+                return None
+            if reemplazo.idempotency_key != clave_actual and reemplazo.idempotency_key in self.items:
+                return None
+            del self.items[clave_actual]
+            self.items[reemplazo.idempotency_key] = reemplazo
+            return reemplazo
+
+
+def _preferido(encontrados: list[Cobro], cotizacion_id: str | None = None) -> Cobro | None:
+    candidatos = [cobro for cobro in encontrados if cotizacion_id is None or cobro.cotizacion_id == cotizacion_id]
+    for estado in (EstadoCobro.APROBADO, EstadoCobro.PROCESANDO, EstadoCobro.RECHAZADO):
+        for cobro in candidatos:
+            if cobro.estado == estado:
+                return cobro
+    return None
 
 
 def _values(cobro: Cobro) -> dict:

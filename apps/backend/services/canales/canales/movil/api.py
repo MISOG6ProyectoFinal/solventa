@@ -101,7 +101,16 @@ class SolicitudPagoMovil(BaseModel):
     """El monto no forma parte del contrato: se lee de la cotización persistida."""
 
     model_config = ConfigDict(extra="ignore")
+    intento_id: str
     simulacion: Literal["rechazado", "vencida"] | None = None
+
+    @field_validator("intento_id")
+    @classmethod
+    def _intento(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El intento de pago no es válido")
+        return token
 
 
 def _cotizacion_vencida() -> HTTPException:
@@ -147,16 +156,17 @@ def listar_productos() -> list:
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
-def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil | None = None) -> dict:
-    """Cobra la prima vigente. El valor sale de Cotización; una clave estable evita un segundo cobro."""
-    pedido = solicitud or SolicitudPagoMovil()
+def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil) -> dict:
+    """Cobra la prima vigente. El valor sale de Cotización; la clave identifica el intento."""
     oferta = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
     if not isinstance(oferta, dict) or oferta.get("prima") is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La cotización no tiene un valor a cobrar")
+    if oferta.get("cliente_id") != session.client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cotización no encontrada")
     # vigente_hasta persistido es la regla. El flag solo demuestra el mismo rechazo en el prototipo.
     if not oferta_se_puede_cobrar(oferta.get("vigente_hasta")):
         raise _cotizacion_vencida()
-    if forzar_cotizacion_vencida(pedido.simulacion):
+    if forzar_cotizacion_vencida(solicitud.simulacion):
         raise _cotizacion_vencida()
     resultado = call_upstream(
         pagos.post,
@@ -166,8 +176,8 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
             "cliente_id": session.client_id,
             "monto": str(oferta["prima"]),
             "moneda": "COP",
-            "idempotency_key": f"movil:{session.client_id}:{cotizacion_id}",
-            "medio_token": token_prototipo(pedido.simulacion),
+            "idempotency_key": f"movil:{cotizacion_id}:{solicitud.intento_id}",
+            "medio_token": token_prototipo(solicitud.simulacion),
         },
     )
     return {
@@ -180,14 +190,17 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
 
 
 @authenticated.post("/cotizaciones")
-def cotizar(solicitud: SolicitudCotizacionMovil) -> dict:
+def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
     """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
-    return call_upstream(
+    oferta = call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
         json=solicitud.model_dump(mode="json", exclude={"nombre", "cedula"}),
-        headers={"X-Canal": "mobile"},
+        headers={"X-Canal": "mobile", "X-Cliente-Id": session.client_id},
     )
+    if isinstance(oferta, dict):
+        oferta.pop("cliente_id", None)
+    return oferta
 
 
 @authenticated.get("/siniestros")

@@ -21,12 +21,14 @@ cotizaciones = Table(
     Column("datos_riesgo", JSON, nullable=True),
     Column("canal", String(16), nullable=True, default="web"),
     Column("vigente_hasta", String(40), nullable=True),
+    Column("cliente_id", String(64), nullable=True),
 )
 
 COLUMNAS_POSTERIORES = {
     "datos_riesgo": "ALTER TABLE cotizaciones ADD COLUMN datos_riesgo JSON",
     "canal": "ALTER TABLE cotizaciones ADD COLUMN canal VARCHAR(16)",
     "vigente_hasta": "ALTER TABLE cotizaciones ADD COLUMN vigente_hasta VARCHAR(40)",
+    "cliente_id": "ALTER TABLE cotizaciones ADD COLUMN cliente_id VARCHAR(64)",
 }
 
 
@@ -56,6 +58,7 @@ class PostgresCotizacionRepository:
                     datos_riesgo=oferta.datos_riesgo,
                     canal=oferta.canal,
                     vigente_hasta=oferta.vigente_hasta.isoformat(),
+                    cliente_id=oferta.cliente_id,
                 )
             )
 
@@ -95,4 +98,5 @@ def _oferta(row) -> OfertaCotizacion:
         version_reglas=row["version_reglas"],
         datos_riesgo=row["datos_riesgo"] or {},
         canal=row["canal"] or "web",
+        cliente_id=row["cliente_id"],
     )

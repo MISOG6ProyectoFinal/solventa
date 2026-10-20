@@ -13,6 +13,7 @@ VIGENTE = {
     "producto_id": "viaje-internacional",
     "prima": "149940.00",
     "vigente_hasta": "2099-01-01T23:59:59-05:00",
+    "cliente_id": "cliente-demo",
 }
 
 VENCIDA = {**VIGENTE, "vigente_hasta": "2000-01-01T23:59:59-05:00"}
@@ -52,7 +53,10 @@ def _error_json(status: int, detail) -> httpx.HTTPStatusError:
 
 
 def _pagar(body: dict | None = None, headers: dict | None = None):
-    return client.post("/movil/cotizaciones/oferta-1/pagos", json=body if body is not None else {}, headers=headers)
+    payload = {"intento_id": "intento-1"}
+    if body:
+        payload.update(body)
+    return client.post("/movil/cotizaciones/oferta-1/pagos", json=payload, headers=headers)
 
 
 def test_pagar_exige_sesion():
@@ -77,9 +81,46 @@ def test_consulta_la_cotizacion_y_no_usa_el_monto_del_cliente(monkeypatch):
     assert enviado["monto"] == "149940.00"
     assert enviado["monto"] != "1.00"
     assert "USD" not in enviado.values()
-    assert enviado["idempotency_key"] == "movil:cliente-demo:oferta-1"
+    assert enviado["idempotency_key"] == "movil:oferta-1:intento-1"
     assert enviado["cliente_id"] == "cliente-demo"
     assert enviado["medio_token"] == "demo-4242"
+
+
+def test_otro_cliente_no_paga_la_cotizacion(monkeypatch):
+    cobros = _Upstream(response=COBRO)
+    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response={**VIGENTE, "cliente_id": "cliente-b"}))
+    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+
+    response = _pagar(headers=authorization())
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Cotización no encontrada"
+    assert cobros.calls == []
+
+
+def test_el_mismo_cliente_paga_su_cotizacion(monkeypatch):
+    cobros = _Upstream(response=COBRO)
+    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+
+    response = _pagar({"intento_id": "intento-propio"}, authorization())
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "aprobado"
+    assert cobros.calls[0][1]["json"]["cliente_id"] == "cliente-demo"
+    assert cobros.calls[0][1]["json"]["idempotency_key"] == "movil:oferta-1:intento-propio"
+
+
+def test_un_intento_nuevo_usa_otra_clave_de_idempotencia(monkeypatch):
+    cobros = _Upstream(response=COBRO)
+    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+
+    _pagar({"intento_id": "intento-1"}, authorization())
+    _pagar({"intento_id": "intento-2"}, authorization())
+
+    claves = [llamada[1]["json"]["idempotency_key"] for llamada in cobros.calls]
+    assert claves == ["movil:oferta-1:intento-1", "movil:oferta-1:intento-2"]
 
 
 def test_cotizacion_vencida_no_invoca_pagos(monkeypatch):

@@ -28,14 +28,15 @@ def info() -> dict:
     return {"component": "Validador de Consenso", "quorum": settings.quorum}
 
 
-@router.post("/cotizaciones", response_model=OfertaCotizacion)
+@router.post("/cotizaciones", response_model=OfertaCotizacion, response_model_exclude_none=True)
 async def cotizar_con_consenso(
     solicitud: SolicitudRating,
     x_canal: Annotated[Canal, Header()],
+    x_cliente_id: Annotated[str | None, Header()] = None,
 ) -> OfertaCotizacion:
     """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
     try:
-        return await container.cotizar_con_consenso.execute(solicitud, x_canal)
+        return await container.cotizar_con_consenso.execute(solicitud, x_canal, x_cliente_id)
     except ProductoNoEncontrado as exc:
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:
@@ -52,7 +53,7 @@ async def cotizar_con_consenso(
         raise HTTPException(status_code=503, detail="Réplicas de cotización no disponibles") from exc
 
 
-@router.get("/cotizaciones/{cotizacion_id}", response_model=OfertaCotizacion)
+@router.get("/cotizaciones/{cotizacion_id}", response_model=OfertaCotizacion, response_model_exclude_none=True)
 def obtener_cotizacion(cotizacion_id: str) -> OfertaCotizacion:
     """Lectura interna de la oferta persistida. El canal no reenvía el monto a cobrar."""
     oferta = container.cotizaciones.get(cotizacion_id)

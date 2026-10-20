@@ -11,6 +11,7 @@ class CanalesSettings(ServiceSettings):
     # HMAC key. Must match the SESION_SECRETO that identidad used to sign the token.
     sesion_secreto: str
     cotizacion_timeout_s: float = 5.0
+    pagos_timeout_s: float = 4.0
 
 
 settings = CanalesSettings()

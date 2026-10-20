@@ -24,6 +24,13 @@ FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 VIGENCIA_DIAS_DEFAULT = 365
 
 
+def _cliente_movil(canal: Canal, cliente_id: str | None) -> str | None:
+    if canal != Canal.MOBILE or cliente_id is None:
+        return None
+    propietario = cliente_id.strip()
+    return propietario or None
+
+
 def construir_vigencia_propuesta(hoy: date | None = None, dias: int = VIGENCIA_DIAS_DEFAULT) -> VigenciaPropuesta:
     desde = hoy or date.today()
     return VigenciaPropuesta(desde=desde, hasta=desde + timedelta(days=dias))
@@ -45,7 +52,9 @@ class CotizarConConsensoUseCase:
         self.quorum = quorum
         self.vigencia_dias = vigencia_dias
 
-    async def execute(self, solicitud: SolicitudRating, canal: Canal) -> OfertaCotizacion:
+    async def execute(
+        self, solicitud: SolicitudRating, canal: Canal, cliente_id: str | None = None
+    ) -> OfertaCotizacion:
         producto = self.validar_producto.execute(solicitud.producto_id, canal)
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
@@ -61,6 +70,7 @@ class CotizarConConsensoUseCase:
             version_reglas=str(elegida["version_reglas"]),
             datos_riesgo=body,
             canal=str(canal),
+            cliente_id=_cliente_movil(canal, cliente_id),
         )
         self.cotizaciones.save(oferta)
         return oferta

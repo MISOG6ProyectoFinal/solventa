@@ -246,6 +246,54 @@ def test_cotizacion_se_recupera_por_id():
     assert data["vigencia_propuesta"] == creada.json()["vigencia_propuesta"]
 
 
+def test_movil_persiste_el_cliente_sin_enviarlo_al_rating():
+    captured: dict = {}
+
+    async def fanout(body: dict) -> list[dict]:
+        captured["body"] = body
+        payload = {"prima": "149940.00", "version_reglas": "2026.10.0"}
+        return [payload, payload, payload]
+
+    original = container.cotizar_con_consenso.fanout
+    container.cotizar_con_consenso.fanout = fanout
+    try:
+        response = client.post(
+            "/consenso/cotizaciones",
+            json={
+                "producto_id": "viaje-internacional",
+                "destino": "España",
+                "fecha_salida": SALIDA.isoformat(),
+                "fecha_regreso": REGRESO.isoformat(),
+                "viajeros": 1,
+            },
+            headers={"X-Canal": "mobile", "X-Cliente-Id": "cliente-1"},
+        )
+    finally:
+        container.cotizar_con_consenso.fanout = original
+
+    assert response.status_code == 200
+    assert "cliente_id" not in captured["body"]
+    assert "nombre" not in captured["body"]
+    guardada = container.cotizaciones.get(response.json()["id"])
+    assert guardada is not None
+    assert guardada.cliente_id == "cliente-1"
+    leida = client.get(f"/consenso/cotizaciones/{response.json()['id']}")
+    assert leida.json()["cliente_id"] == "cliente-1"
+
+
+def test_otro_canal_no_guarda_cliente_id():
+    response = client.post(
+        "/consenso/cotizaciones",
+        json={"producto_id": "hogar", "suma_asegurada": "1000000", "edad": 40},
+        headers={"X-Canal": "web", "X-Cliente-Id": "cliente-1"},
+    )
+    assert response.status_code == 200
+    assert "cliente_id" not in response.json()
+    guardada = container.cotizaciones.get(response.json()["id"])
+    assert guardada is not None
+    assert guardada.cliente_id is None
+
+
 def test_cotizacion_inexistente_responde_404():
     response = client.get("/consenso/cotizaciones/no-existe")
     assert response.status_code == 404

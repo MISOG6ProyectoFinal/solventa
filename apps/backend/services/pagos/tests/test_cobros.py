@@ -1,5 +1,6 @@
-"""Cobro de prima: resultado, persistencia, idempotencia y un solo intento a la pasarela."""
+"""Cobro de prima: resultado, persistencia, idempotencia y reconciliación del intento."""
 
+import threading
 from decimal import Decimal
 
 import httpx
@@ -15,8 +16,9 @@ from pagos.cobros.adapters.pasarela import (
 from pagos.cobros.adapters.repository import InMemoryCobroRepository, PostgresCobroRepository
 from pagos.cobros.adapters.repository import cobros as cobros_table
 from pagos.cobros.api import casos, router, wire
-from pagos.cobros.domain.models import EstadoCobro
+from pagos.cobros.domain.models import EstadoCobro, SolicitudCobro
 from pagos.cobros.domain.ports import PasarelaNoDisponible
+from pagos.cobros.domain.use_cases import CobrarPrimaUseCase
 from pagos.config import settings
 from pagos.main import app
 from solventa_common.integration import PasarelaPagosAdapter
@@ -129,19 +131,147 @@ def test_la_clave_repetida_en_persistencia_no_duplica_la_fila():
     assert total == 1
 
 
-def test_un_fallo_de_pasarela_no_se_reintenta():
+def test_un_fallo_deja_procesando_y_la_misma_clave_vuelve_a_consultar_la_pasarela():
     pasarela = _Pasarela(error=TimeoutError("timeout"))
-    wire(InMemoryCobroRepository(), pasarela)
+    repositorio = InMemoryCobroRepository()
+    wire(repositorio, pasarela)
+    body = _solicitud()
 
-    primero = client.post("/pagos/cobros", json=_solicitud())
-    segundo = client.post("/pagos/cobros", json=_solicitud())
+    primero = client.post("/pagos/cobros", json=body)
 
     assert primero.status_code == 503
     assert primero.json()["detail"] == "Pasarela de pagos no disponible"
     assert len(pasarela.calls) == 1
+    assert len(repositorio.items) == 1
+    cobro = next(iter(repositorio.items.values()))
+    assert cobro.estado == EstadoCobro.PROCESANDO
+
+    pasarela.error = None
+    pasarela.estado = "aprobado"
+    segundo = client.post("/pagos/cobros", json=body)
+
     assert segundo.status_code == 200
-    assert segundo.json()["estado"] == "procesando"
+    assert segundo.json()["estado"] == "aprobado"
+    assert segundo.json()["id"] == cobro.id
+    assert len(repositorio.items) == 1
+    assert pasarela.calls[0][3] == pasarela.calls[1][3] == body["idempotency_key"]
+    assert cobro.estado == EstadoCobro.APROBADO
+
+
+def test_si_la_reconciliacion_vuelve_a_fallar_sigue_procesando():
+    pasarela = _Pasarela(error=TimeoutError("timeout"))
+    repositorio = InMemoryCobroRepository()
+    wire(repositorio, pasarela)
+    body = _solicitud()
+
+    client.post("/pagos/cobros", json=body)
+    segundo = client.post("/pagos/cobros", json=body)
+
+    assert segundo.status_code == 503
+    assert len(pasarela.calls) == 2
+    assert len(repositorio.items) == 1
+    assert next(iter(repositorio.items.values())).estado == EstadoCobro.PROCESANDO
+    assert pasarela.calls[0][3] == pasarela.calls[1][3]
+
+
+def test_un_aprobado_existente_no_vuelve_a_llamar_la_pasarela():
+    pasarela = _Pasarela("aprobado")
+    wire(InMemoryCobroRepository(), pasarela)
+    body = _solicitud()
+
+    primero = client.post("/pagos/cobros", json=body)
+    segundo = client.post("/pagos/cobros", json=_solicitud(idempotency_key="movil:oferta-1:otro-intento"))
+
+    assert segundo.status_code == 200
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert segundo.json()["estado"] == "aprobado"
     assert len(pasarela.calls) == 1
+
+
+def test_un_rechazado_con_la_misma_clave_no_vuelve_a_llamar_la_pasarela():
+    pasarela = _Pasarela("rechazado")
+    wire(InMemoryCobroRepository(), pasarela)
+    body = _solicitud()
+
+    client.post("/pagos/cobros", json=body)
+    segundo = client.post("/pagos/cobros", json=body)
+
+    assert segundo.json()["estado"] == "rechazado"
+    assert len(pasarela.calls) == 1
+
+
+def test_un_rechazo_permite_un_intento_nuevo_con_otra_clave():
+    pasarela = _Pasarela("rechazado")
+    repositorio = InMemoryCobroRepository()
+    wire(repositorio, pasarela)
+
+    primero = client.post("/pagos/cobros", json=_solicitud(idempotency_key="movil:oferta-1:intento-1"))
+    pasarela.estado = "aprobado"
+    segundo = client.post("/pagos/cobros", json=_solicitud(idempotency_key="movil:oferta-1:intento-2"))
+
+    assert primero.json()["estado"] == "rechazado"
+    assert segundo.status_code == 200
+    assert segundo.json()["estado"] == "aprobado"
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert len(repositorio.items) == 1
+    assert [llamada[3] for llamada in pasarela.calls] == ["movil:oferta-1:intento-1", "movil:oferta-1:intento-2"]
+
+
+def test_dos_intentos_distintos_no_dejan_dos_cobros_aprobados():
+    entered = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    class _PasarelaEnVuelo:
+        def charge(self, amount: float, currency: str, token: str, idempotency_key: str) -> dict:
+            calls.append(idempotency_key)
+            if len(calls) == 1:
+                entered.set()
+                assert release.wait(2)
+            return {"estado": "aprobado"}
+
+    repositorio = InMemoryCobroRepository()
+    caso = CobrarPrimaUseCase(repositorio, _PasarelaEnVuelo())
+    resultado: dict = {}
+
+    def primero() -> None:
+        resultado["a"] = caso.execute(SolicitudCobro.model_validate(_solicitud(idempotency_key="movil:oferta-1:a")))
+
+    hilo = threading.Thread(target=primero)
+    hilo.start()
+    assert entered.wait(2)
+    segundo = caso.execute(SolicitudCobro.model_validate(_solicitud(idempotency_key="movil:oferta-1:b")))
+    release.set()
+    hilo.join(2)
+
+    assert resultado["a"].id == segundo.id
+    assert resultado["a"].estado == EstadoCobro.APROBADO
+    assert segundo.estado == EstadoCobro.APROBADO
+    assert len(repositorio.items) == 1
+    assert calls == ["movil:oferta-1:a", "movil:oferta-1:a"]
+
+
+def test_la_misma_clave_en_postgres_no_duplica_la_fila_al_reconciliar():
+    engine = _engine()
+    repositorio = PostgresCobroRepository(engine)
+    pasarela = _Pasarela(error=TimeoutError("timeout"))
+    wire(repositorio, pasarela)
+    body = _solicitud(idempotency_key="movil:oferta-1:intento-1")
+
+    assert client.post("/pagos/cobros", json=body).status_code == 503
+    pasarela.error = None
+    pasarela.estado = "aprobado"
+    segundo = client.post("/pagos/cobros", json=body)
+
+    assert segundo.status_code == 200
+    assert segundo.json()["estado"] == "aprobado"
+    with engine.connect() as conn:
+        total = conn.execute(select(func.count()).select_from(cobros_table)).scalar_one()
+        filas = conn.execute(select(cobros_table.c.estado, cobros_table.c.idempotency_key)).mappings().all()
+    assert total == 1
+    assert filas[0]["estado"] == EstadoCobro.APROBADO
+    assert filas[0]["idempotency_key"] == "movil:oferta-1:intento-1"
+    assert [llamada[3] for llamada in pasarela.calls] == [body["idempotency_key"], body["idempotency_key"]]
 
 
 def test_el_adapter_real_no_reintenta_y_el_gateway_lo_llama_una_vez():
