@@ -29,23 +29,27 @@ def info() -> dict:
     return {"component": "Validador de Consenso", "quorum": settings.quorum}
 
 
-@router.post("/cotizaciones", response_model=OfertaCotizacion)
+@router.post("/cotizaciones", response_model=OfertaCotizacion, response_model_exclude_none=True)
 async def cotizar_con_consenso(
     solicitud: SolicitudRating,
     x_canal: Annotated[Canal, Header()],
+    x_cliente_id: Annotated[str | None, Header()] = None,
 ) -> OfertaCotizacion:
     """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
-    return await cotizar(solicitud, x_canal)
+    return await cotizar(solicitud, x_canal, x_cliente_id)
 
 
 async def cotizar(
     solicitud: SolicitudRating,
     canal: Canal,
+    cliente_id: str | None = None,
     senales: list[SenalAplicada] | None = None,
     coberturas_permitidas: set[str] | None = None,
 ) -> OfertaCotizacion:
     try:
-        return await container.cotizar_con_consenso.execute(solicitud, canal, senales, coberturas_permitidas)
+        return await container.cotizar_con_consenso.execute(
+            solicitud, canal, cliente_id, senales, coberturas_permitidas
+        )
     except ProductoNoEncontrado as exc:
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:
@@ -60,3 +64,12 @@ async def cotizar(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=503, detail="Réplicas de cotización no disponibles") from exc
+
+
+@router.get("/cotizaciones/{cotizacion_id}", response_model=OfertaCotizacion, response_model_exclude_none=True)
+def obtener_cotizacion(cotizacion_id: str) -> OfertaCotizacion:
+    """Lectura interna de la oferta persistida. El canal no reenvía el monto a cobrar."""
+    oferta = container.cotizaciones.get(cotizacion_id)
+    if oferta is None:
+        raise HTTPException(status_code=404, detail=f"Cotización no encontrada: {cotizacion_id}")
+    return oferta

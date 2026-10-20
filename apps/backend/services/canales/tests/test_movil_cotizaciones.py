@@ -72,7 +72,7 @@ def test_bff_movil_lista_productos_via_servicio_cotizacion(mock_client: MagicMoc
 
 @patch("canales.movil.api.cotizacion")
 def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
-    mock_client.post.return_value = OFERTA
+    mock_client.post.return_value = {**OFERTA, "cliente_id": "cliente-demo"}
     response = client.post("/movil/cotizaciones", json=solicitud_viaje(), headers=authorization())
     assert response.status_code == 200
     data = response.json()
@@ -80,9 +80,10 @@ def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
     assert len(data["coberturas"]) == 4
     assert data["vigencia_propuesta"]
     assert data["version_reglas"] == "2026.10.0"
+    assert "cliente_id" not in data
     mock_client.post.assert_called_once()
     assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
-    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "mobile"}
+    assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "mobile", "X-Cliente-Id": "cliente-demo"}
 
 
 @patch("canales.movil.api.cotizacion")
@@ -100,6 +101,7 @@ def test_bff_movil_no_propaga_pii_a_cotizacion(mock_client: MagicMock):
     }
     assert "nombre" not in enviado
     assert "cedula" not in enviado
+    assert "cliente_id" not in enviado
 
 
 @patch("canales.movil.api.cotizacion")

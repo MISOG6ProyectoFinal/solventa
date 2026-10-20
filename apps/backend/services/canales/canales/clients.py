@@ -7,7 +7,8 @@ from solventa_common.integration import ServiceClient
 
 from canales.config import settings
 
-cotizacion = ServiceClient("cotizacion", settings.cotizacion_url)
+cotizacion = ServiceClient("cotizacion", settings.cotizacion_url, timeout_s=settings.cotizacion_timeout_s)
 polizas = ServiceClient("polizas", settings.polizas_url)
 siniestros = ServiceClient("siniestros", settings.siniestros_url)
 identidad = ServiceClient("identidad", settings.identidad_url)
+pagos = ServiceClient("pagos", settings.pagos_url, timeout_s=settings.pagos_timeout_s)
