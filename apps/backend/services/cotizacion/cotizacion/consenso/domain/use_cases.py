@@ -61,6 +61,7 @@ class CotizarConConsensoUseCase:
         cliente_id: str | None = None,
         signals: list[AppliedSignal] | None = None,
         allowed_coverages: set[str] | None = None,
+        partner_id: str | None = None,
     ) -> OfertaCotizacion:
         """allowed_coverages limita la oferta a lo que el socio puede vender; None ofrece todas.
 
@@ -87,6 +88,7 @@ class CotizarConConsensoUseCase:
             datos_riesgo=body,
             canal=str(canal),
             cliente_id=_cliente_movil(canal, cliente_id),
+            socio_id=partner_id if canal == Canal.SOCIOS else None,
             degradada=any(signal.degraded for signal in signals),
             senales=signals,
         )

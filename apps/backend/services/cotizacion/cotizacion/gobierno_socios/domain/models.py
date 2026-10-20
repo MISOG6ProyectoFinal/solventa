@@ -83,6 +83,14 @@ class Socio(BaseModel):
     alta_usuario: str
 
 
+class AuthorizedPartner(BaseModel):
+    """Lo que otros servicios necesitan del socio que ya pasó credencial, contrato y alcance."""
+
+    socio_id: str
+    identificador: str
+    nombre: str
+
+
 class RamoResumen(BaseModel):
     id: str
     nombre: str

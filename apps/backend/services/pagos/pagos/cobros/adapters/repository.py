@@ -58,6 +58,11 @@ class PostgresCobroRepository:
         with self.engine.begin() as conn:
             conn.execute(update(cobros).where(cobros.c.id == cobro.id).values(estado=cobro.estado.value))
 
+    def get(self, payment_id: str) -> Cobro | None:
+        with self.engine.connect() as conn:
+            row = conn.execute(select(cobros).where(cobros.c.id == payment_id)).mappings().first()
+        return _cobro(row) if row else None
+
     def get_by_idempotency_key(self, idempotency_key: str) -> Cobro | None:
         with self.engine.connect() as conn:
             row = conn.execute(select(cobros).where(cobros.c.idempotency_key == idempotency_key)).mappings().first()
@@ -108,6 +113,10 @@ class InMemoryCobroRepository:
     def update(self, cobro: Cobro) -> None:
         with self._lock:
             self.items[cobro.idempotency_key] = cobro
+
+    def get(self, payment_id: str) -> Cobro | None:
+        with self._lock:
+            return next((cobro for cobro in self.items.values() if cobro.id == payment_id), None)
 
     def get_by_idempotency_key(self, idempotency_key: str) -> Cobro | None:
         with self._lock:
