@@ -19,7 +19,7 @@ from cotizacion.senales.adapters.open_finance import (
     construir_proveedor,
 )
 from cotizacion.senales.domain.models import ConsentimientoOpenFinance, OrigenSenal
-from cotizacion.senales.domain.use_cases import ResolverScoreRiesgoUseCase
+from cotizacion.senales.domain.use_cases import ResolverPerfilRiesgoUseCase
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from solventa_common.resilience import InMemoryCache
@@ -40,7 +40,7 @@ HIPOTECARIO = {
     "valor_credito": "250000000",
     "plazo_anios": 15,
 }
-CONSENTIMIENTO = {"cliente_ref": "cliente-77", "consentimiento_id": "consent-1"}
+CONSENTIMIENTO = {"referencia_cliente": "cliente-77", "consentimiento_id": "consent-1"}
 PRIMA_HIPOTECARIO_NEUTRAL = Decimal("3000000.00")
 
 
@@ -52,7 +52,7 @@ class _Proveedor:
         self.error = error
         self.llamadas = 0
 
-    def score_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
+    def consultar_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
         self.llamadas += 1
         if self.error:
             raise self.error
@@ -71,13 +71,13 @@ class _CacheCaida:
 def almacenes_vacios():
     container.socios.socios.clear()
     container.configuraciones.configuraciones.clear()
-    original = container.resolver_score
+    original = container.resolver_perfil_riesgo
     yield
-    container.resolver_score = original
+    container.resolver_perfil_riesgo = original
 
 
 def usar_proveedor(proveedor, cache=None) -> None:
-    container.resolver_score = ResolverScoreRiesgoUseCase(proveedor, cache or InMemoryCache(), ttl_s=60)
+    container.resolver_perfil_riesgo = ResolverPerfilRiesgoUseCase(proveedor, cache or InMemoryCache(), vigencia_s=60)
 
 
 def socio_con(*ramos: dict) -> dict:
@@ -270,7 +270,7 @@ def test_el_socio_no_puede_fijar_su_propio_score():
 def test_consentimiento_incompleto_se_rechaza():
     socio = socio_con(hipotecario())
 
-    respuesta = cotizar(socio, {**HIPOTECARIO, "consentimiento_open_finance": {"cliente_ref": "cliente-77"}})
+    respuesta = cotizar(socio, {**HIPOTECARIO, "consentimiento_open_finance": {"referencia_cliente": "cliente-77"}})
 
     assert respuesta.status_code == 422
     assert respuesta.json()["detail"]["campos"] == [
@@ -380,8 +380,10 @@ def _url(servidor) -> str:
     return f"http://127.0.0.1:{servidor.server_port}"
 
 
-def test_adapter_real_responde_a_tiempo(open_finance):
-    caso = ResolverScoreRiesgoUseCase(construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), ttl_s=60)
+def test_adaptador_real_responde_a_tiempo(open_finance):
+    caso = ResolverPerfilRiesgoUseCase(
+        construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), vigencia_s=60
+    )
 
     senal = caso.execute(ConsentimientoOpenFinance(**CONSENTIMIENTO))
 
@@ -389,9 +391,11 @@ def test_adapter_real_responde_a_tiempo(open_finance):
     assert senal.score_riesgo == Decimal("0.62")
 
 
-def test_adapter_real_corta_al_superar_el_timeout_sin_reintentar(open_finance):
+def test_adaptador_real_corta_al_superar_el_timeout_sin_reintentar(open_finance):
     open_finance.retraso_s = 1.0
-    caso = ResolverScoreRiesgoUseCase(construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), ttl_s=60)
+    caso = ResolverPerfilRiesgoUseCase(
+        construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), vigencia_s=60
+    )
 
     inicio = time.perf_counter()
     senal = caso.execute(ConsentimientoOpenFinance(**CONSENTIMIENTO))
@@ -405,19 +409,21 @@ def test_adapter_real_corta_al_superar_el_timeout_sin_reintentar(open_finance):
 @pytest.mark.parametrize("cuerpo", [{"score_riesgo": "1.5"}, {"score_riesgo": "alto"}, {"otro": 1}])
 def test_respuesta_invalida_de_open_finance_se_trata_como_falla(open_finance, cuerpo):
     open_finance.cuerpo = cuerpo
-    caso = ResolverScoreRiesgoUseCase(construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), ttl_s=60)
+    caso = ResolverPerfilRiesgoUseCase(
+        construir_proveedor(_url(open_finance), None, 0.3), InMemoryCache(), vigencia_s=60
+    )
 
     assert caso.execute(ConsentimientoOpenFinance(**CONSENTIMIENTO)).origen is OrigenSenal.VALOR_POR_DEFECTO
 
 
-def test_el_adapter_hereda_el_timeout_configurado_y_no_reintenta():
+def test_el_adaptador_hereda_el_timeout_configurado_y_no_reintenta():
     proveedor = construir_proveedor("https://open-finance.test", None, 0.3)
 
     assert isinstance(proveedor, PerfilOpenFinance)
-    assert isinstance(proveedor.adapter, OpenFinanceCotizacionAdapter)
-    assert proveedor.adapter.retries == 0
-    assert proveedor.adapter.client.timeout == httpx.Timeout(0.3)
-    proveedor.adapter.client.close()
+    assert isinstance(proveedor.adaptador, OpenFinanceCotizacionAdapter)
+    assert proveedor.adaptador.retries == 0
+    assert proveedor.adaptador.client.timeout == httpx.Timeout(0.3)
+    proveedor.adaptador.client.close()
 
 
 def test_sin_url_responde_el_sandbox_determinista():
@@ -425,8 +431,8 @@ def test_sin_url_responde_el_sandbox_determinista():
     consentimiento = ConsentimientoOpenFinance(**CONSENTIMIENTO)
 
     assert isinstance(proveedor, PerfilOpenFinanceSimulado)
-    assert proveedor.score_riesgo(consentimiento) == proveedor.score_riesgo(consentimiento)
-    assert Decimal("0.30") <= proveedor.score_riesgo(consentimiento) <= Decimal("0.70")
+    assert proveedor.consultar_riesgo(consentimiento) == proveedor.consultar_riesgo(consentimiento)
+    assert Decimal("0.30") <= proveedor.consultar_riesgo(consentimiento) <= Decimal("0.70")
 
 
 def test_el_timeout_no_puede_superar_el_techo_de_3000_ms():

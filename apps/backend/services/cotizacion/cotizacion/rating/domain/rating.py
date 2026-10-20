@@ -46,7 +46,7 @@ class ProductoNoTarifado(LookupError):
     pass
 
 
-def factor_score(reglas: ReglasRating, score: Decimal) -> Decimal:
+def factor_riesgo(reglas: ReglasRating, score: Decimal) -> Decimal:
     """Score neutral 0.5 deja el factor en 1."""
     return Decimal(1) + (score - Decimal("0.5")) * reglas.peso_score
 
@@ -57,7 +57,7 @@ def calcular_prima(reglas: ReglasRating, producto_id: str, suma: Decimal, edad: 
     except KeyError as exc:
         raise ProductoNoTarifado(producto_id) from exc
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
-    prima = suma / Decimal(1000) * tasa * factor_edad * factor_score(reglas, score)
+    prima = suma / Decimal(1000) * tasa * factor_edad * factor_riesgo(reglas, score)
     return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
@@ -95,7 +95,7 @@ def calcular_prima_vida_hipotecario(
         * reglas.tasa_vida_hipotecario_por_mil
         * factor_edad
         * Decimal(solicitud.plazo_anios)
-        * factor_score(reglas, solicitud.score_riesgo)
+        * factor_riesgo(reglas, solicitud.score_riesgo)
     )
     return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 

@@ -37,7 +37,7 @@ from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
 from cotizacion.senales.adapters.open_finance import construir_proveedor
-from cotizacion.senales.domain.use_cases import ResolverScoreRiesgoUseCase
+from cotizacion.senales.domain.use_cases import ResolverPerfilRiesgoUseCase
 
 
 async def _fanout_produccion(body: dict) -> list[dict]:
@@ -106,8 +106,8 @@ class Container:
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
         self.consultar_catalogo_socio = ConsultarCatalogoSocioUseCase(self.configuraciones, self.catalogo)
-        self.resolver_score = ResolverScoreRiesgoUseCase(
-            self.proveedor_perfil, self.cache_senales, settings.senales_cache_ttl_s
+        self.resolver_perfil_riesgo = ResolverPerfilRiesgoUseCase(
+            self.proveedor_perfil, self.cache_senales, settings.vigencia_cache_senales_s
         )
 
 

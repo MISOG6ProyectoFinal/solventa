@@ -13,7 +13,7 @@ from cotizacion.senales.domain.models import ConsentimientoOpenFinance
 FUENTE = "open-finance"
 
 
-def _score(valor: object) -> Decimal:
+def _riesgo_valido(valor: object) -> Decimal:
     try:
         score = Decimal(str(valor))
     except InvalidOperation as exc:
@@ -36,14 +36,16 @@ class OpenFinanceCotizacionAdapter(OpenFinanceAdapter):
 class PerfilOpenFinance:
     fuente = FUENTE
 
-    def __init__(self, adapter: OpenFinanceAdapter) -> None:
-        self.adapter = adapter
+    def __init__(self, adaptador: OpenFinanceAdapter) -> None:
+        self.adaptador = adaptador
 
-    def score_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
-        perfil = self.adapter.get_financial_profile(consentimiento.cliente_ref, consentimiento.consentimiento_id)
+    def consultar_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
+        perfil = self.adaptador.get_financial_profile(
+            consentimiento.referencia_cliente, consentimiento.consentimiento_id
+        )
         if not isinstance(perfil, dict) or "score_riesgo" not in perfil:
             raise ValueError("Open Finance no devolvió score_riesgo")
-        return _score(perfil["score_riesgo"])
+        return _riesgo_valido(perfil["score_riesgo"])
 
 
 class PerfilOpenFinanceSimulado:
@@ -51,8 +53,8 @@ class PerfilOpenFinanceSimulado:
 
     fuente = FUENTE
 
-    def score_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
-        digest = hashlib.sha256(consentimiento.cliente_ref.encode()).digest()
+    def consultar_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal:
+        digest = hashlib.sha256(consentimiento.referencia_cliente.encode()).digest()
         return Decimal(30 + digest[0] % 41) / Decimal(100)
 
 

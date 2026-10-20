@@ -5,32 +5,32 @@ import time
 from collections.abc import Callable
 from decimal import Decimal
 
-from cotizacion.senales.domain.models import SCORE_NEUTRAL, ConsentimientoOpenFinance, OrigenSenal, SenalAplicada
+from cotizacion.senales.domain.models import RIESGO_NEUTRAL, ConsentimientoOpenFinance, OrigenSenal, SenalAplicada
 from cotizacion.senales.domain.ports import CacheSenales, ProveedorPerfil
 
 logger = logging.getLogger(__name__)
 
 
-class ResolverScoreRiesgoUseCase:
+class ResolverPerfilRiesgoUseCase:
     """Proveedor si responde a tiempo; si no, el último valor bueno; si no hay, el valor neutral."""
 
     def __init__(
         self,
         proveedor: ProveedorPerfil,
         cache: CacheSenales,
-        ttl_s: int,
+        vigencia_s: int,
         reloj: Callable[[], float] = time.perf_counter,
     ) -> None:
         self.proveedor = proveedor
         self.cache = cache
-        self.ttl_s = ttl_s
+        self.vigencia_s = vigencia_s
         self.reloj = reloj
 
     def execute(self, consentimiento: ConsentimientoOpenFinance) -> SenalAplicada:
-        clave = f"perfil:{self.proveedor.fuente}:{consentimiento.cliente_ref}:{consentimiento.consentimiento_id}"
+        clave = f"perfil:{self.proveedor.fuente}:{consentimiento.referencia_cliente}:{consentimiento.consentimiento_id}"
         inicio = self.reloj()
         try:
-            score = self.proveedor.score_riesgo(consentimiento)
+            score = self.proveedor.consultar_riesgo(consentimiento)
         except Exception as exc:
             logger.warning("Señal %s degradada: %s", self.proveedor.fuente, type(exc).__name__)
             score, origen = self._respaldo(clave)
@@ -50,11 +50,11 @@ class ResolverScoreRiesgoUseCase:
         except Exception:
             guardado = None
         if guardado is None:
-            return SCORE_NEUTRAL, OrigenSenal.VALOR_POR_DEFECTO
+            return RIESGO_NEUTRAL, OrigenSenal.VALOR_POR_DEFECTO
         return Decimal(str(guardado)), OrigenSenal.CACHE
 
     def _guardar(self, clave: str, score: Decimal) -> None:
         try:
-            self.cache.set(clave, str(score), self.ttl_s)
+            self.cache.set(clave, str(score), self.vigencia_s)
         except Exception:
             logger.warning("No se pudo guardar el último valor bueno de %s", self.proveedor.fuente)

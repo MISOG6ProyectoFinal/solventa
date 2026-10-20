@@ -14,7 +14,7 @@ class CotizacionSettings(ServiceSettings):
     open_finance_url: str | None = None
     open_finance_api_key: str | None = None
     open_finance_timeout_s: float = Field(default=0.3, gt=0, le=3.0)
-    senales_cache_ttl_s: int = 86_400
+    vigencia_cache_senales_s: int = 86_400
 
 
 settings = CotizacionSettings()

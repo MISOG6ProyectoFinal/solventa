@@ -7,7 +7,7 @@ from cotizacion.senales.domain.models import ConsentimientoOpenFinance
 class ProveedorPerfil(Protocol):
     fuente: str
 
-    def score_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal: ...
+    def consultar_riesgo(self, consentimiento: ConsentimientoOpenFinance) -> Decimal: ...
 
 
 class CacheSenales(Protocol):

@@ -24,8 +24,8 @@ class SenalAplicada(BaseModel):
 
 
 class ConsentimientoOpenFinance(BaseModel):
-    cliente_ref: str = Field(min_length=1, max_length=120)
+    referencia_cliente: str = Field(min_length=1, max_length=120)
     consentimiento_id: str = Field(min_length=1, max_length=120)
 
 
-SCORE_NEUTRAL = Decimal("0.5")
+RIESGO_NEUTRAL = Decimal("0.5")

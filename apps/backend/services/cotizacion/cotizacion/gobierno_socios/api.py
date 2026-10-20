@@ -178,6 +178,8 @@ async def cotizar_como_socio(
         raise _datos_invalidos(exc) from exc
     senales: list[SenalAplicada] = []
     if isinstance(contrato, SolicitudSocioVidaHipotecario) and contrato.consentimiento_open_finance:
-        senales.append(await run_in_threadpool(container.resolver_score.execute, contrato.consentimiento_open_finance))
+        senales.append(
+            await run_in_threadpool(container.resolver_perfil_riesgo.execute, contrato.consentimiento_open_finance)
+        )
     rating = solicitud_de_rating(contrato, senales[0].score_riesgo if senales else None)
     return await cotizar(rating, Canal.SOCIOS, senales=senales, coberturas_permitidas=set(ramo.coberturas))
