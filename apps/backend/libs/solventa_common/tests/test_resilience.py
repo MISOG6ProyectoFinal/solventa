@@ -1,4 +1,6 @@
+import httpx
 import pytest
+from solventa_common.integration import ServiceClient
 from solventa_common.resilience import (
     CircuitBreaker,
     CircuitOpenError,
@@ -45,6 +47,59 @@ def test_half_open_failure_reopens():
     with pytest.raises(TimeoutError):
         breaker.call(boom)
     assert breaker.state is CircuitState.OPEN
+
+
+def _respuesta(status: int):
+    def fn():
+        request = httpx.Request("POST", "https://cotizacion.test/x")
+        raise httpx.HTTPStatusError(str(status), request=request, response=httpx.Response(status, request=request))
+
+    return fn
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 409, 422])
+def test_errores_de_quien_llama_no_abren_el_circuito(status):
+    breaker = CircuitBreaker("x", failure_threshold=2)
+    for _ in range(5):
+        with pytest.raises(httpx.HTTPStatusError):
+            breaker.call(_respuesta(status))
+    assert breaker.state is CircuitState.CLOSED
+
+
+@pytest.mark.parametrize("status", [408, 429, 500, 503])
+def test_destino_lento_saturado_o_caido_abre_el_circuito(status):
+    breaker = CircuitBreaker("x", failure_threshold=2)
+    for _ in range(2):
+        with pytest.raises(httpx.HTTPStatusError):
+            breaker.call(_respuesta(status))
+    assert breaker.state is CircuitState.OPEN
+
+
+def test_un_4xx_en_half_open_cierra_el_circuito_porque_el_destino_respondio():
+    clock = FakeClock()
+    breaker = CircuitBreaker("x", failure_threshold=1, reset_timeout_s=5, clock=clock)
+    with pytest.raises(TimeoutError):
+        breaker.call(boom)
+    clock.now = 5
+    with pytest.raises(httpx.HTTPStatusError):
+        breaker.call(_respuesta(422))
+    assert breaker.state is CircuitState.CLOSED
+
+
+def test_validaciones_del_socio_no_cortan_la_cotizacion_de_los_demas_canales():
+    estados = iter([422] * 6 + [200])
+
+    def handler(request):
+        status = next(estados)
+        return httpx.Response(status, json={"prima": "1"} if status == 200 else {"detail": "datos_invalidos"})
+
+    cliente = ServiceClient("cotizacion", "https://cotizacion.test")
+    cliente.client = httpx.Client(base_url="https://cotizacion.test", transport=httpx.MockTransport(handler))
+    for _ in range(6):
+        with pytest.raises(httpx.HTTPStatusError):
+            cliente.post("/consenso/cotizaciones", json={})
+
+    assert cliente.post("/consenso/cotizaciones", json={}) == {"prima": "1"}
 
 
 def test_fallback_serves_last_known_good():

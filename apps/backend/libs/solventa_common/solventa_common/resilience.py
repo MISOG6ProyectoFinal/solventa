@@ -24,6 +24,15 @@ class CircuitState(StrEnum):
     HALF_OPEN = "half_open"
 
 
+def _es_falla_del_destino(exc: Exception) -> bool:
+    """Un 4xx es un error de quien llama: el destino respondió y no debe abrir el circuito.
+
+    408 y 429 sí cuentan, porque indican que el destino está lento o saturado.
+    """
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    return not (isinstance(status, int) and 400 <= status < 500 and status not in (408, 429))
+
+
 class CircuitBreaker:
     def __init__(
         self,
@@ -53,8 +62,11 @@ class CircuitBreaker:
             raise CircuitOpenError(self.name)
         try:
             result = fn()
-        except Exception:
-            self._record_failure()
+        except Exception as exc:
+            if _es_falla_del_destino(exc):
+                self._record_failure()
+            else:
+                self._record_success()
             raise
         self._record_success()
         return result
