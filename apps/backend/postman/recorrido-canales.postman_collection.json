@@ -633,6 +633,41 @@
       "description": "Cotización embebida desde el canal de un socio (ASR-01 y ASR-04).",
       "item": [
         {
+          "name": "Productos del socio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const productos = pm.response.json();",
+                  "const producto = productos.find((p) => p.producto_id === pm.collectionVariables.get('productoId'));",
+                  "pm.test('El socio ve el producto habilitado y su contrato', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(producto).to.be.an('object');",
+                  "  pm.expect(producto.coberturas).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(producto.contrato.required).to.include('fecha_salida');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Cotizar como socio",
           "request": {
             "method": "POST",

@@ -1,5 +1,6 @@
 """Orquestación: validar producto → consenso → enriquecer oferta → persistir una cotización."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
 from decimal import Decimal
@@ -51,8 +52,11 @@ class CotizarConConsensoUseCase:
         senales: list[SenalAplicada] | None = None,
         coberturas_permitidas: set[str] | None = None,
     ) -> OfertaCotizacion:
-        """coberturas_permitidas limita la oferta a lo que el socio puede vender; None ofrece todas."""
-        producto = self.validar_producto.execute(solicitud.producto_id, canal)
+        """coberturas_permitidas limita la oferta a lo que el socio puede vender; None ofrece todas.
+
+        El catálogo y la persistencia son síncronos: corren en un hilo para no detener el event loop.
+        """
+        producto = await asyncio.to_thread(self.validar_producto.execute, solicitud.producto_id, canal)
         senales = senales or []
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
@@ -60,7 +64,7 @@ class CotizarConConsensoUseCase:
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
         coberturas = [
             CoberturaOferta(id=c.id, nombre=c.nombre)
-            for c in self.catalogo.list_coberturas(producto.id)
+            for c in await asyncio.to_thread(self.catalogo.list_coberturas, producto.id)
             if coberturas_permitidas is None or c.id in coberturas_permitidas
         ]
         oferta = OfertaCotizacion(
@@ -74,7 +78,7 @@ class CotizarConConsensoUseCase:
             degradada=any(senal.degradada for senal in senales),
             senales=senales,
         )
-        self.cotizaciones.save(oferta)
+        await asyncio.to_thread(self.cotizaciones.save, oferta)
         return oferta
 
     def _vigencia_propuesta(self, solicitud: SolicitudRating) -> VigenciaPropuesta:

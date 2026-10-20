@@ -13,6 +13,19 @@ def info() -> dict:
     return {"component": "API Pública de Socios", "versiones": ["v1"]}
 
 
+@router.get("/v1/productos")
+def productos(
+    x_client_id: Annotated[str, Header()],
+    x_api_key: Annotated[str, Header()],
+) -> list:
+    """Productos cotizables del socio, con sus coberturas habilitadas y el contrato de cada uno."""
+    return call_upstream(
+        cotizacion.get,
+        "/gobierno-socios/catalogo",
+        headers={"X-Client-Id": x_client_id, "X-Api-Key": x_api_key},
+    )
+
+
 @router.post("/v1/cotizaciones")
 def cotizar(
     solicitud: dict,

@@ -18,6 +18,7 @@ from cotizacion.gobierno_socios.domain.configuracion import (
 )
 from cotizacion.gobierno_socios.domain.cotizacion_embebida import (
     DatosInvalidos,
+    ProductoCotizable,
     SolicitudSocioVidaHipotecario,
     producto_solicitado,
     solicitud_de_rating,
@@ -147,6 +148,16 @@ def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRe
     return container.consultar_configuracion.presentar(configuracion)
 
 
+@router.get("/catalogo", response_model=list[ProductoCotizable])
+def catalogo_del_socio(
+    client_id: Annotated[str, Header(alias="X-Client-Id")],
+    secreto: Annotated[str, Header(alias="X-Api-Key")],
+) -> list[ProductoCotizable]:
+    """Lo que el socio puede cotizar: producto_id, coberturas habilitadas y el contrato de cada uno."""
+    socio = autorizar_socio(client_id, secreto, Alcance.COTIZACION)
+    return container.consultar_catalogo_socio.execute(socio)
+
+
 def _datos_invalidos(exc: DatosInvalidos) -> HTTPException:
     detail = _error("datos_invalidos", "La solicitud tiene datos faltantes o inválidos. No se calculó la prima.")
     return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {**detail, "campos": exc.campos})
@@ -159,9 +170,9 @@ async def cotizar_como_socio(
     secreto: Annotated[str, Header(alias="X-Api-Key")],
 ) -> OfertaCotizacion:
     """Cotización embebida (HU014): credencial, ramo y contrato se validan antes de calcular."""
-    socio = autorizar_socio(client_id, secreto, Alcance.COTIZACION)
+    socio = await run_in_threadpool(autorizar_socio, client_id, secreto, Alcance.COTIZACION)
     try:
-        ramo = autorizar_ramo(socio, producto_solicitado(solicitud))
+        ramo = await run_in_threadpool(autorizar_ramo, socio, producto_solicitado(solicitud))
         contrato = validar_contrato(solicitud)
     except DatosInvalidos as exc:
         raise _datos_invalidos(exc) from exc

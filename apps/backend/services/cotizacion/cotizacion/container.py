@@ -1,5 +1,6 @@
 """Composición de dependencias del servicio de cotización."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 
 from pydantic import TypeAdapter
@@ -29,6 +30,7 @@ from cotizacion.gobierno_socios.domain.use_cases import (
 from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
     ActualizarConfiguracionUseCase,
     AutorizarRamoUseCase,
+    ConsultarCatalogoSocioUseCase,
     ConsultarConfiguracionUseCase,
 )
 from cotizacion.rating.domain.models import SolicitudRating
@@ -40,7 +42,7 @@ from cotizacion.senales.domain.use_cases import ResolverScoreRiesgoUseCase
 
 async def _fanout_produccion(body: dict) -> list[dict]:
     try:
-        ips = resolver_replicas(settings.cotizacion_replicas_host, settings.puerto_replicas)
+        ips = await asyncio.to_thread(resolver_replicas, settings.cotizacion_replicas_host, settings.puerto_replicas)
     except Exception:
         ips = []
     if not ips:
@@ -103,6 +105,7 @@ class Container:
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
+        self.consultar_catalogo_socio = ConsultarCatalogoSocioUseCase(self.configuraciones, self.catalogo)
         self.resolver_score = ResolverScoreRiesgoUseCase(
             self.proveedor_perfil, self.cache_senales, settings.senales_cache_ttl_s
         )

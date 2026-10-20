@@ -5,6 +5,8 @@ from typing import cast
 
 from pydantic import BaseModel, ValidationError
 
+from cotizacion.consenso.domain.models import CoberturaOferta
+from cotizacion.gobierno_socios.domain.models import RamoResumen
 from cotizacion.rating.domain.models import (
     SolicitudCotizacion,
     SolicitudCotizacionMicroseguroVida,
@@ -13,6 +15,7 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
     SolicitudRating,
 )
+from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.senales.domain.models import ConsentimientoOpenFinance
 
 # Solventa resuelve el score; el socio no lo puede fijar.
@@ -29,6 +32,33 @@ CONTRATOS: dict[str, type[BaseModel]] = {
     "parametrico-clima-vuelo": SolicitudCotizacionParametrico,
     "vida-hipotecario": SolicitudSocioVidaHipotecario,
 }
+
+
+class ProductoCotizable(BaseModel):
+    """Lo que el socio puede cotizar hoy y el cuerpo que debe enviar."""
+
+    producto_id: str
+    nombre: str
+    ramo: RamoResumen
+    coberturas: list[CoberturaOferta]
+    contrato: dict
+
+
+def contrato_publicado(producto_id: str) -> dict | None:
+    """JSON Schema del cuerpo de la cotización. None si Rating aún no tarifa el producto."""
+    contrato = CONTRATOS.get(producto_id)
+    if contrato is None:
+        if producto_id not in REGLAS_VIGENTES.tasa_base_por_mil:
+            return None
+        contrato = SolicitudCotizacion
+    esquema = contrato.model_json_schema()
+    for campo in CAMPOS_DEL_SERVIDOR:
+        esquema["properties"].pop(campo, None)
+        if campo in esquema.get("required", []):
+            esquema["required"].remove(campo)
+    esquema["properties"]["producto_id"] = {"const": producto_id, "type": "string"}
+    return esquema
+
 
 _MENSAJES = {
     "missing": "Campo obligatorio",

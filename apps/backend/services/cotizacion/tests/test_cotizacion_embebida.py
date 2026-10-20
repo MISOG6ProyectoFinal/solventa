@@ -145,6 +145,51 @@ def test_p95_en_proceso_queda_dentro_de_400_ms():
     assert quantiles(duraciones, n=20)[18] < 400
 
 
+def catalogo(socio: dict, secreto: str | None = None):
+    headers = {"X-Client-Id": socio["client_id"], "X-Api-Key": secreto or socio["secreto"]}
+    return client.get("/gobierno-socios/catalogo", headers=headers)
+
+
+def test_el_socio_consulta_lo_que_puede_cotizar_y_el_contrato_de_cada_producto():
+    socio = socio_con(hipotecario("hipotecario-fallecimiento"), viaje("viaje-asistencia"))
+
+    respuesta = catalogo(socio)
+
+    assert respuesta.status_code == 200
+    productos = {p["producto_id"]: p for p in respuesta.json()}
+    assert list(productos) == ["viaje-internacional", "vida-hipotecario"]
+    assert productos["viaje-internacional"]["ramo"] == {"id": "ramo-viaje", "nombre": "Viaje"}
+    assert productos["viaje-internacional"]["coberturas"] == [
+        {"id": "viaje-asistencia", "nombre": "Asistencia en viaje"}
+    ]
+    contrato = productos["viaje-internacional"]["contrato"]
+    assert set(contrato["required"]) == {"producto_id", "destino", "fecha_salida", "fecha_regreso", "viajeros"}
+    assert contrato["properties"]["producto_id"]["const"] == "viaje-internacional"
+    hipotecario_contrato = productos["vida-hipotecario"]["contrato"]
+    assert "consentimiento_open_finance" in hipotecario_contrato["properties"]
+    assert "score_riesgo" not in hipotecario_contrato["properties"]
+
+
+def test_el_catalogo_omite_ramos_no_habilitados_y_productos_sin_tarifa():
+    socio = socio_con({"ramo_id": "ramo-dispositivos", "coberturas": ["celular-robo"]})
+
+    assert catalogo(socio).json() == []
+
+
+def test_el_contrato_publicado_es_el_mismo_que_valida_la_cotizacion():
+    socio = socio_con(viaje())
+    contrato = catalogo(socio).json()[0]["contrato"]
+    ejemplo = {campo: VIAJE[campo] for campo in contrato["required"]}
+
+    assert cotizar(socio, ejemplo).status_code == 200
+
+
+def test_el_catalogo_exige_credenciales_validas():
+    socio = socio_con(viaje())
+
+    assert catalogo(socio, secreto="otro").status_code == 401
+
+
 # Criterio 2: error claro y sin cálculo.
 
 

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
 from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
+from cotizacion.consenso.domain.models import CoberturaOferta
 from cotizacion.gobierno_socios.domain.configuracion import (
     CoberturaConfiguracionResponse,
     CoberturaFueraDelRamo,
@@ -14,7 +15,8 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.models import Socio, SocioNoEncontrado
+from cotizacion.gobierno_socios.domain.cotizacion_embebida import ProductoCotizable, contrato_publicado
+from cotizacion.gobierno_socios.domain.models import RamoResumen, Socio, SocioNoEncontrado
 from cotizacion.gobierno_socios.domain.ports import ConfiguracionRepository, SocioRepository
 
 
@@ -127,3 +129,40 @@ class AutorizarRamoUseCase:
         if ramo is None:
             raise RamoNoHabilitado(producto.ramo_id)
         return ramo
+
+
+class ConsultarCatalogoSocioUseCase:
+    """Productos que el socio puede cotizar con sus coberturas habilitadas y su contrato."""
+
+    def __init__(self, configuraciones: ConfiguracionRepository, catalogo: CatalogoRepository) -> None:
+        self.configuraciones = configuraciones
+        self.catalogo = catalogo
+
+    def execute(self, socio: Socio) -> list[ProductoCotizable]:
+        configuracion = self.configuraciones.get(socio.id)
+        if configuracion is None:
+            return []
+        nombres = {ramo.id: ramo.nombre for ramo in self.catalogo.list_ramos()}
+        habilitados = sorted(configuracion.ramos, key=lambda r: RAMOS_CANAL_SOCIOS.index(r.ramo_id))
+        productos = self.catalogo.list_productos()
+        resultado = []
+        for ramo in habilitados:
+            for producto in (p for p in productos if p.ramo_id == ramo.ramo_id and p.activo):
+                contrato = contrato_publicado(producto.id)
+                if contrato is None:
+                    continue
+                coberturas = [
+                    CoberturaOferta(id=c.id, nombre=c.nombre)
+                    for c in self.catalogo.list_coberturas(producto.id)
+                    if c.id in ramo.coberturas
+                ]
+                resultado.append(
+                    ProductoCotizable(
+                        producto_id=producto.id,
+                        nombre=producto.nombre,
+                        ramo=RamoResumen(id=ramo.ramo_id, nombre=nombres.get(ramo.ramo_id, ramo.ramo_id)),
+                        coberturas=coberturas,
+                        contrato=contrato,
+                    )
+                )
+        return resultado
