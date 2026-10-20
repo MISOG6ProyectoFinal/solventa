@@ -40,8 +40,10 @@ class ServiceClient(ExternalAdapter):
     timeout_s = 1.0
     retries = 0
 
-    def __init__(self, name: str, base_url: str) -> None:
+    def __init__(self, name: str, base_url: str, timeout_s: float | None = None) -> None:
         self.name = name
+        if timeout_s is not None:
+            self.timeout_s = timeout_s
         super().__init__(base_url, breaker=CircuitBreaker(name, failure_threshold=5, reset_timeout_s=10))
 
     def get(self, path: str, **kwargs: Any) -> Any:

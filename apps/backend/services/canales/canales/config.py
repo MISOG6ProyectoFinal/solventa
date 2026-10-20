@@ -10,7 +10,7 @@ class CanalesSettings(ServiceSettings):
     pagos_url: str = "http://pagos"
     # HMAC key. Must match the SESION_SECRETO that identidad used to sign the token.
     sesion_secreto: str
-    cotizacion_timeout_s: float = 1.0
+    cotizacion_timeout_s: float = 5.0
 
 
 settings = CanalesSettings()
