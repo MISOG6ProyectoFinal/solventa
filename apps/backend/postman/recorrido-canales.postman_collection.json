@@ -682,6 +682,48 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
                   "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(oferta.degradada).to.be.a('boolean');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar como socio sin un dato obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const error = pm.response.json().detail;",
+                  "pm.test('El contrato explica cada campo y no calcula', function () {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(error.codigo).to.equal('datos_invalidos');",
+                  "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
                   "});"
                 ]
               }

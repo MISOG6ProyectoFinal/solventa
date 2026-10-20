@@ -120,7 +120,10 @@ class AutorizarRamoUseCase:
     def __init__(self, configuraciones: ConfiguracionRepository) -> None:
         self.configuraciones = configuraciones
 
-    def execute(self, socio: Socio, producto: Producto) -> None:
+    def execute(self, socio: Socio, producto: Producto) -> RamoHabilitado:
+        """Devuelve el ramo con las coberturas que el socio puede vender."""
         configuracion = self.configuraciones.get(socio.id)
-        if configuracion is None or producto.ramo_id not in configuracion.ramos_habilitados():
+        ramo = next((r for r in configuracion.ramos if r.ramo_id == producto.ramo_id), None) if configuracion else None
+        if ramo is None:
             raise RamoNoHabilitado(producto.ramo_id)
+        return ramo

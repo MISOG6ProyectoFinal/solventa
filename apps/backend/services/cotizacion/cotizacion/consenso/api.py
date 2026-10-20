@@ -17,6 +17,7 @@ from cotizacion.consenso.domain.models import OfertaCotizacion
 from cotizacion.container import container
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import ProductoNoTarifado
+from cotizacion.senales.domain.models import SenalAplicada
 
 router = APIRouter(prefix="/consenso", tags=["Validador de Consenso"])
 
@@ -34,8 +35,17 @@ async def cotizar_con_consenso(
     x_canal: Annotated[Canal, Header()],
 ) -> OfertaCotizacion:
     """El header X-Canal decide la disponibilidad comercial. No se reenvía a Rating."""
+    return await cotizar(solicitud, x_canal)
+
+
+async def cotizar(
+    solicitud: SolicitudRating,
+    canal: Canal,
+    senales: list[SenalAplicada] | None = None,
+    coberturas_permitidas: set[str] | None = None,
+) -> OfertaCotizacion:
     try:
-        return await container.cotizar_con_consenso.execute(solicitud, x_canal)
+        return await container.cotizar_con_consenso.execute(solicitud, canal, senales, coberturas_permitidas)
     except ProductoNoEncontrado as exc:
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:

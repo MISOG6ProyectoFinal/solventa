@@ -3,6 +3,7 @@
 from collections.abc import Awaitable, Callable
 
 from pydantic import TypeAdapter
+from solventa_common.resilience import InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
@@ -33,6 +34,8 @@ from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
+from cotizacion.senales.adapters.open_finance import construir_proveedor
+from cotizacion.senales.domain.use_cases import ResolverScoreRiesgoUseCase
 
 
 async def _fanout_produccion(body: dict) -> list[dict]:
@@ -67,6 +70,10 @@ class Container:
         self.socios = InMemorySocioRepository()
         self.configuraciones = InMemoryConfiguracionRepository()
         seed_catalogo(self.catalogo)
+        self.cache_senales: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
+        self.proveedor_perfil = construir_proveedor(
+            settings.open_finance_url, settings.open_finance_api_key, settings.open_finance_timeout_s
+        )
         self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
         self._wire()
 
@@ -96,6 +103,9 @@ class Container:
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
+        self.resolver_score = ResolverScoreRiesgoUseCase(
+            self.proveedor_perfil, self.cache_senales, settings.senales_cache_ttl_s
+        )
 
 
 container = Container()

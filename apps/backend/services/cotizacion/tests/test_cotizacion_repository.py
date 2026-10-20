@@ -2,8 +2,10 @@ from datetime import date
 from decimal import Decimal
 
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
+from cotizacion.consenso.adapters.cotizacion_repository import cotizaciones as tabla
 from cotizacion.consenso.domain.models import OfertaCotizacion, VigenciaPropuesta
-from sqlalchemy import create_engine, inspect, text
+from cotizacion.senales.domain.models import OrigenSenal, SenalAplicada
+from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.pool import StaticPool
 
 
@@ -38,7 +40,7 @@ def test_create_schema_agrega_las_columnas_que_faltan_en_una_tabla_existente():
     repositorio.save(_oferta())
 
     columnas = {columna["name"] for columna in inspect(engine).get_columns("cotizaciones")}
-    assert {"datos_riesgo", "canal"} <= columnas
+    assert {"datos_riesgo", "canal", "degradada", "senales"} <= columnas
     assert repositorio.count() == 1
 
 
@@ -50,3 +52,17 @@ def test_create_schema_se_puede_repetir_sobre_el_esquema_vigente():
     repositorio.save(_oferta())
 
     assert repositorio.count() == 1
+
+
+def test_persiste_la_marca_degradada_y_la_senal_usada():
+    engine = _engine()
+    repositorio = PostgresCotizacionRepository(engine)
+    repositorio.create_schema()
+    senal = SenalAplicada(fuente="open-finance", origen=OrigenSenal.CACHE, score_riesgo=Decimal("0.7"), latencia_ms=301)
+
+    repositorio.save(_oferta().model_copy(update={"degradada": True, "senales": [senal]}))
+
+    with engine.connect() as conn:
+        fila = conn.execute(select(tabla)).mappings().one()
+    assert fila["degradada"] is True
+    assert fila["senales"] == [{"fuente": "open-finance", "origen": "cache", "score_riesgo": "0.7", "latencia_ms": 301}]

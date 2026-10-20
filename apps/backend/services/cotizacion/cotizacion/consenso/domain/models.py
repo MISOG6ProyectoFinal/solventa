@@ -6,6 +6,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from cotizacion.senales.domain.models import SenalAplicada
+
 
 class CoberturaOferta(BaseModel):
     id: str
@@ -28,3 +30,5 @@ class OfertaCotizacion(BaseModel):
     version_reglas: str
     datos_riesgo: dict = Field(default_factory=dict)
     canal: str = "web"
+    degradada: bool = False
+    senales: list[SenalAplicada] = Field(default_factory=list)

@@ -1,6 +1,20 @@
 """Persistencia de la cotización de negocio (una por oferta post-consenso)."""
 
-from sqlalchemy import JSON, Column, Date, MetaData, Numeric, String, Table, func, insert, inspect, select, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    func,
+    insert,
+    inspect,
+    select,
+    text,
+)
 from sqlalchemy.engine import Engine
 
 from cotizacion.consenso.domain.models import OfertaCotizacion
@@ -19,11 +33,15 @@ cotizaciones = Table(
     Column("version_reglas", String(64), nullable=False),
     Column("datos_riesgo", JSON, nullable=True),
     Column("canal", String(16), nullable=True, default="web"),
+    Column("degradada", Boolean, nullable=True, default=False),
+    Column("senales", JSON, nullable=True),
 )
 
 COLUMNAS_POSTERIORES = {
     "datos_riesgo": "ALTER TABLE cotizaciones ADD COLUMN datos_riesgo JSON",
     "canal": "ALTER TABLE cotizaciones ADD COLUMN canal VARCHAR(16)",
+    "degradada": "ALTER TABLE cotizaciones ADD COLUMN degradada BOOLEAN",
+    "senales": "ALTER TABLE cotizaciones ADD COLUMN senales JSON",
 }
 
 
@@ -52,6 +70,8 @@ class PostgresCotizacionRepository:
                     version_reglas=oferta.version_reglas,
                     datos_riesgo=oferta.datos_riesgo,
                     canal=oferta.canal,
+                    degradada=oferta.degradada,
+                    senales=[s.model_dump(mode="json") for s in oferta.senales],
                 )
             )
 

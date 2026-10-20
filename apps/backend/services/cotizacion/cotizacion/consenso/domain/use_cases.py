@@ -16,6 +16,7 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
     SolicitudRating,
 )
+from cotizacion.senales.domain.models import SenalAplicada
 
 FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 
@@ -43,13 +44,25 @@ class CotizarConConsensoUseCase:
         self.quorum = quorum
         self.vigencia_dias = vigencia_dias
 
-    async def execute(self, solicitud: SolicitudRating, canal: Canal) -> OfertaCotizacion:
+    async def execute(
+        self,
+        solicitud: SolicitudRating,
+        canal: Canal,
+        senales: list[SenalAplicada] | None = None,
+        coberturas_permitidas: set[str] | None = None,
+    ) -> OfertaCotizacion:
+        """coberturas_permitidas limita la oferta a lo que el socio puede vender; None ofrece todas."""
         producto = self.validar_producto.execute(solicitud.producto_id, canal)
+        senales = senales or []
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
         prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
-        coberturas = [CoberturaOferta(id=c.id, nombre=c.nombre) for c in self.catalogo.list_coberturas(producto.id)]
+        coberturas = [
+            CoberturaOferta(id=c.id, nombre=c.nombre)
+            for c in self.catalogo.list_coberturas(producto.id)
+            if coberturas_permitidas is None or c.id in coberturas_permitidas
+        ]
         oferta = OfertaCotizacion(
             producto_id=producto.id,
             prima=prima_ganadora,
@@ -58,6 +71,8 @@ class CotizarConConsensoUseCase:
             version_reglas=str(elegida["version_reglas"]),
             datos_riesgo=body,
             canal=str(canal),
+            degradada=any(senal.degradada for senal in senales),
+            senales=senales,
         )
         self.cotizaciones.save(oferta)
         return oferta

@@ -40,6 +40,7 @@ class SolicitudCotizacionVidaHipotecario(BaseModel):
     entidad: str
     valor_credito: Decimal = Field(gt=0)
     plazo_anios: int = Field(ge=1)
+    score_riesgo: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
 
 
 class SolicitudCotizacionParametrico(BaseModel):

@@ -95,6 +95,20 @@ def test_prima_vida_hipotecario():
     assert prima == Decimal("3000000.00")
 
 
+def test_prima_vida_hipotecario_aplica_el_score_de_open_finance():
+    solicitud = SolicitudCotizacionVidaHipotecario(
+        producto_id="vida-hipotecario",
+        fecha_nacimiento=date(1986, 1, 1),
+        entidad="Banco Aurora",
+        valor_credito=Decimal("250000000"),
+        plazo_anios=15,
+        score_riesgo=Decimal("0.7"),
+    )
+    # 3000000 * factor score (1 + 0.2 * 0.6) = 3360000.00
+    prima = calcular_prima_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    assert prima == Decimal("3360000.00")
+
+
 def test_prima_parametrico():
     solicitud = SolicitudCotizacionParametrico(
         producto_id="parametrico-clima-vuelo",
