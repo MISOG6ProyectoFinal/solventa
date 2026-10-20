@@ -7,6 +7,8 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from solventa_common.vigencia_cotizacion import calcular_vigente_hasta
 
+from cotizacion.signals.domain.models import AppliedSignal
+
 
 class CoberturaOferta(BaseModel):
     id: str
@@ -31,3 +33,5 @@ class OfertaCotizacion(BaseModel):
     datos_riesgo: dict = Field(default_factory=dict)
     canal: str = "web"
     cliente_id: str | None = None
+    degradada: bool = False
+    senales: list[AppliedSignal] = Field(default_factory=list)

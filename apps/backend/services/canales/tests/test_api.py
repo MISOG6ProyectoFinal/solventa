@@ -183,6 +183,22 @@ def test_bff_socios_envia_las_credenciales_a_gobierno_de_api(mock_client: MagicM
     assert mock_client.post.call_args.kwargs["json"] == SOLICITUD
 
 
+@patch("canales.socios.api.cotizacion")
+def test_partner_bff_lists_products_with_credentials(mock_client: MagicMock):
+    mock_client.get.return_value = [{"producto_id": "viaje-internacional"}]
+
+    response = client.get("/socios/v1/productos", headers=CREDENCIALES)
+
+    assert response.status_code == 200
+    assert response.json() == [{"producto_id": "viaje-internacional"}]
+    assert mock_client.get.call_args.args[0] == "/gobierno-socios/catalogo"
+    assert mock_client.get.call_args.kwargs["headers"] == CREDENCIALES
+
+
+def test_partner_bff_requires_credentials_to_list_products():
+    assert client.get("/socios/v1/productos").status_code == 422
+
+
 def test_bff_socios_exige_client_id_y_secreto():
     solo_secreto = {"X-Api-Key": CREDENCIALES["X-Api-Key"]}
     assert client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=solo_secreto).status_code == 422

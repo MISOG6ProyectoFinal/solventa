@@ -28,7 +28,7 @@ export K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_PORT=-1 K6_WEB_DASHBOARD_PERIOD="$
 if command -v k6 >/dev/null; then
   k6 run "${argumentos[@]}" canales.js
 else
-  docker run --rm -i -u "$(id -u):$(id -g)" -v "$PWD:/pruebas" -w /pruebas \
+  docker run --rm -i -u "$(id -u):$(id -g)" -v "$PWD:/pruebas" -w /pruebas --add-host=host.docker.internal:host-gateway \
     -e K6_WEB_DASHBOARD -e K6_WEB_DASHBOARD_PORT -e K6_WEB_DASHBOARD_PERIOD -e K6_WEB_DASHBOARD_EXPORT \
     "$K6_IMAGEN" run "${argumentos[@]}" canales.js
 fi

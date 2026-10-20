@@ -1,5 +1,6 @@
 """Orquestación: validar producto → consenso → enriquecer oferta → persistir una cotización."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
 from decimal import Decimal
@@ -18,6 +19,7 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
     SolicitudRating,
 )
+from cotizacion.signals.domain.models import AppliedSignal
 
 FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 
@@ -53,14 +55,28 @@ class CotizarConConsensoUseCase:
         self.vigencia_dias = vigencia_dias
 
     async def execute(
-        self, solicitud: SolicitudRating, canal: Canal, cliente_id: str | None = None
+        self,
+        solicitud: SolicitudRating,
+        canal: Canal,
+        cliente_id: str | None = None,
+        signals: list[AppliedSignal] | None = None,
+        allowed_coverages: set[str] | None = None,
     ) -> OfertaCotizacion:
-        producto = self.validar_producto.execute(solicitud.producto_id, canal)
+        """allowed_coverages limita la oferta a lo que el socio puede vender; None ofrece todas.
+
+        El catálogo y la persistencia son síncronos: corren en un hilo para no detener el event loop.
+        """
+        producto = await asyncio.to_thread(self.validar_producto.execute, solicitud.producto_id, canal)
+        signals = signals or []
         body = solicitud.model_dump(mode="json")
         respuestas = await self.fanout(body)
         prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
-        coberturas = [CoberturaOferta(id=c.id, nombre=c.nombre) for c in self.catalogo.list_coberturas(producto.id)]
+        coberturas = [
+            CoberturaOferta(id=c.id, nombre=c.nombre)
+            for c in await asyncio.to_thread(self.catalogo.list_coberturas, producto.id)
+            if allowed_coverages is None or c.id in allowed_coverages
+        ]
         oferta = OfertaCotizacion(
             producto_id=producto.id,
             prima=prima_ganadora,
@@ -71,8 +87,10 @@ class CotizarConConsensoUseCase:
             datos_riesgo=body,
             canal=str(canal),
             cliente_id=_cliente_movil(canal, cliente_id),
+            degradada=any(signal.degraded for signal in signals),
+            senales=signals,
         )
-        self.cotizaciones.save(oferta)
+        await asyncio.to_thread(self.cotizaciones.save, oferta)
         return oferta
 
     def _vigencia_propuesta(self, solicitud: SolicitudRating) -> VigenciaPropuesta:

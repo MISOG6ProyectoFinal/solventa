@@ -1,8 +1,10 @@
 """Composición de dependencias del servicio de cotización."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 
 from pydantic import TypeAdapter
+from solventa_common.resilience import InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
@@ -29,15 +31,18 @@ from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
     ActualizarConfiguracionUseCase,
     AutorizarRamoUseCase,
     ConsultarConfiguracionUseCase,
+    PartnerCatalogUseCase,
 )
 from cotizacion.rating.domain.models import SolicitudRating
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
+from cotizacion.signals.adapters.open_finance import build_provider
+from cotizacion.signals.domain.use_cases import ResolveRiskProfileUseCase
 
 
 async def _fanout_produccion(body: dict) -> list[dict]:
     try:
-        ips = resolver_replicas(settings.cotizacion_replicas_host, settings.puerto_replicas)
+        ips = await asyncio.to_thread(resolver_replicas, settings.cotizacion_replicas_host, settings.puerto_replicas)
     except Exception:
         ips = []
     if not ips:
@@ -67,6 +72,10 @@ class Container:
         self.socios = InMemorySocioRepository()
         self.configuraciones = InMemoryConfiguracionRepository()
         seed_catalogo(self.catalogo)
+        self.signal_cache: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
+        self.risk_profile_provider = build_provider(
+            settings.open_finance_url, settings.open_finance_api_key, settings.open_finance_timeout_s
+        )
         self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
         self._wire()
 
@@ -96,6 +105,10 @@ class Container:
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
+        self.partner_catalog = PartnerCatalogUseCase(self.configuraciones, self.catalogo)
+        self.resolve_risk_profile = ResolveRiskProfileUseCase(
+            self.risk_profile_provider, self.signal_cache, settings.signal_cache_ttl_s
+        )
 
 
 container = Container()

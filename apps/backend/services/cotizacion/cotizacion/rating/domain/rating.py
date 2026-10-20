@@ -46,14 +46,18 @@ class ProductoNoTarifado(LookupError):
     pass
 
 
+def risk_factor(reglas: ReglasRating, score: Decimal) -> Decimal:
+    """Score neutral 0.5 deja el factor en 1."""
+    return Decimal(1) + (score - Decimal("0.5")) * reglas.peso_score
+
+
 def calcular_prima(reglas: ReglasRating, producto_id: str, suma: Decimal, edad: int, score: Decimal) -> Decimal:
     try:
         tasa = reglas.tasa_base_por_mil[producto_id]
     except KeyError as exc:
         raise ProductoNoTarifado(producto_id) from exc
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
-    factor_score = Decimal(1) + (score - Decimal("0.5")) * reglas.peso_score
-    prima = suma / Decimal(1000) * tasa * factor_edad * factor_score
+    prima = suma / Decimal(1000) * tasa * factor_edad * risk_factor(reglas, score)
     return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
@@ -82,7 +86,7 @@ def calcular_prima_microseguro_vida(
 def calcular_prima_vida_hipotecario(
     reglas: ReglasRating, solicitud: SolicitudCotizacionVidaHipotecario, fecha_referencia: date | None = None
 ) -> Decimal:
-    """Valor crédito / 1000 × tasa anual × factor edad × plazo en años."""
+    """Valor crédito / 1000 × tasa anual × factor edad × plazo en años × factor del score de Open Finance."""
     ref = fecha_referencia or date.today()
     edad = max(18, (ref - solicitud.fecha_nacimiento).days // 365)
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
@@ -91,6 +95,7 @@ def calcular_prima_vida_hipotecario(
         * reglas.tasa_vida_hipotecario_por_mil
         * factor_edad
         * Decimal(solicitud.plazo_anios)
+        * risk_factor(reglas, solicitud.score_riesgo)
     )
     return prima.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 

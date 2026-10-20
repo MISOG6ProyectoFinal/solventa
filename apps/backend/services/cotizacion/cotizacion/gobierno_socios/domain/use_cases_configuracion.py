@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
 from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
+from cotizacion.consenso.domain.models import CoberturaOferta
 from cotizacion.gobierno_socios.domain.configuracion import (
     CoberturaConfiguracionResponse,
     CoberturaFueraDelRamo,
@@ -14,7 +15,8 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.models import Socio, SocioNoEncontrado
+from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct, published_contract
+from cotizacion.gobierno_socios.domain.models import RamoResumen, Socio, SocioNoEncontrado
 from cotizacion.gobierno_socios.domain.ports import ConfiguracionRepository, SocioRepository
 
 
@@ -120,7 +122,49 @@ class AutorizarRamoUseCase:
     def __init__(self, configuraciones: ConfiguracionRepository) -> None:
         self.configuraciones = configuraciones
 
-    def execute(self, socio: Socio, producto: Producto) -> None:
+    def execute(self, socio: Socio, producto: Producto) -> RamoHabilitado:
+        """Devuelve el ramo con las coberturas que el socio puede vender."""
         configuracion = self.configuraciones.get(socio.id)
-        if configuracion is None or producto.ramo_id not in configuracion.ramos_habilitados():
+        enabled = (
+            next((r for r in configuracion.ramos if r.ramo_id == producto.ramo_id), None) if configuracion else None
+        )
+        if enabled is None:
             raise RamoNoHabilitado(producto.ramo_id)
+        return enabled
+
+
+class PartnerCatalogUseCase:
+    """Productos que el socio puede cotizar con sus coberturas habilitadas y su contrato."""
+
+    def __init__(self, configurations: ConfiguracionRepository, catalog: CatalogoRepository) -> None:
+        self.configurations = configurations
+        self.catalog = catalog
+
+    def execute(self, socio: Socio) -> list[QuotableProduct]:
+        configuration = self.configurations.get(socio.id)
+        if configuration is None:
+            return []
+        names = {ramo.id: ramo.nombre for ramo in self.catalog.list_ramos()}
+        enabled_lines = sorted(configuration.ramos, key=lambda line: RAMOS_CANAL_SOCIOS.index(line.ramo_id))
+        products = self.catalog.list_productos()
+        result = []
+        for line in enabled_lines:
+            for product in (p for p in products if p.ramo_id == line.ramo_id and p.activo):
+                contract = published_contract(product.id)
+                if contract is None:
+                    continue
+                coverages = [
+                    CoberturaOferta(id=c.id, nombre=c.nombre)
+                    for c in self.catalog.list_coberturas(product.id)
+                    if c.id in line.coberturas
+                ]
+                result.append(
+                    QuotableProduct(
+                        producto_id=product.id,
+                        nombre=product.nombre,
+                        ramo=RamoResumen(id=line.ramo_id, nombre=names.get(line.ramo_id, line.ramo_id)),
+                        coberturas=coverages,
+                        contrato=contract,
+                    )
+                )
+        return result
