@@ -60,7 +60,7 @@ La lógica completa está en los módulos que los experimentos validaron:
 - **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
-- **Canales**: llaman a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; un circuito abierto responde 503.
+- **Canales**: llaman a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; un circuito abierto responde 503. Cada llamada abre su propia conexión, sin keep-alive, para que `kube-proxy` la reparta entre todas las réplicas del destino.
 - **Monitor de Salud**: latido cada 500 ms a `/health/ready` de cada servicio y retiro tras 2 fallas consecutivas.
 
 Los demás módulos arrancan con su router y el dominio documentado en su `__init__.py`. El siguiente paso es implementar sus casos de uso sobre esa base.
