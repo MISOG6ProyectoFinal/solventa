@@ -5,8 +5,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ComponentScreen from '../features/components/screens/ComponentScreen';
 import ComponentsScreen from '../features/components/screens/ComponentsScreen';
 import { ClaimReportStack } from '../features/claims/ClaimReportStack';
+import AssistanceConfirmScreen from '../features/claims/screens/AssistanceConfirmScreen';
+import AssistanceServiceScreen from '../features/claims/screens/AssistanceServiceScreen';
 import AvisoDetailScreen from '../features/claims/screens/AvisoDetailScreen';
 import ClaimsScreen from '../features/claims/screens/ClaimsScreen';
+import DevToolsScreen from '../features/devtools/screens/DevToolsScreen';
 import { QuoteStack } from '../features/quote/QuoteStack';
 import ProductsScreen from '../features/quote/screens/ProductsScreen';
 import CheckingScreen from '../features/session/screens/CheckingScreen';
@@ -72,9 +75,9 @@ export const RootStack = createNativeStackNavigator({
         Main: Tabs,
         ClaimReport: ClaimReportStack,
         AvisoDetail: AvisoDetailScreen,
+        AssistanceService: AssistanceServiceScreen,
+        AssistanceConfirm: AssistanceConfirmScreen,
         Quote: QuoteStack,
-        Components: ComponentsScreen,
-        Component: ComponentScreen,
       },
     },
     SignedOut: {
@@ -82,6 +85,14 @@ export const RootStack = createNativeStackNavigator({
       screens: {
         Login: LoginScreen,
         Register: RegisterScreen,
+      },
+    },
+    // Last, so the first active group still decides the initial route.
+    Dev: {
+      screens: {
+        DevTools: DevToolsScreen,
+        Components: ComponentsScreen,
+        Component: ComponentScreen,
       },
     },
   },

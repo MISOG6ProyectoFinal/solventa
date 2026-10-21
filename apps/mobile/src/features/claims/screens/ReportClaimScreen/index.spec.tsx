@@ -82,7 +82,7 @@ function mockFiling() {
     }
 
     if (String(url).endsWith('/radicar')) {
-      return jsonResponse({ id: 'aviso-1', estado: 'radicado', radicado: 'SIN-18247' });
+      return jsonResponse({ id: 'aviso-1', estado: 'radicado', cliente_id: 'cliente-1', radicado: 'SIN-18247' });
     }
 
     return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
@@ -218,20 +218,17 @@ describe('ReportClaimScreen', () => {
 
     await waitFor(() => {
       expect(useNavigation().dispatch).toHaveBeenCalledWith(
-        StackActions.replace(
-          'ClaimReport',
-          expect.objectContaining({
-            screen: 'ClaimDetail',
-            params: expect.objectContaining({
-              radicado: 'SIN-18247',
-              claimType: 'Accidente con vehículo de alquiler',
-              policy: 'Viaje Internacional · SLV-2026-03105',
-              location: currentPlace.address,
-              description: 'Golpe en la puerta',
-              evidences: [expect.objectContaining({ label: 'Foto 1' })],
-            }),
+        StackActions.replace('AvisoDetail', {
+          aviso: expect.objectContaining({
+            id: 'aviso-1',
+            radicado: 'SIN-18247',
+            estado: 'radicado',
+            poliza_id: 'SLV-2026-03105',
+            tipo: 'Accidente con vehículo de alquiler',
+            ubicacion: currentPlace.address,
+            descripcion: 'Golpe en la puerta',
           }),
-        ),
+        }),
       );
     });
 
@@ -439,7 +436,7 @@ describe('ReportClaimScreen', () => {
 
     await waitFor(() => {
       expect(useNavigation().dispatch).toHaveBeenCalledWith(
-        StackActions.replace('ClaimReport', expect.objectContaining({ screen: 'ClaimDetail' })),
+        StackActions.replace('AvisoDetail', { aviso: expect.objectContaining({ radicado: 'SIN-18247' }) }),
       );
     });
     expect(await listReports()).toEqual([]);

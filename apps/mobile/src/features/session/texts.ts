@@ -6,6 +6,7 @@ export const texts = {
     submit: 'Iniciar sesión',
     createAccount: 'Crear cuenta',
     failed: 'No se pudo iniciar sesión.',
+    devToolsLabel: 'Herramientas de desarrollo',
   },
   register: {
     title: 'Crear cuenta',

@@ -61,13 +61,13 @@ describe('HomeScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Buy' });
   });
 
-  it('opens the component list from a long press on the menu in dev', async () => {
+  it('opens the dev tools from a long press on the menu in dev', async () => {
     global.__DEV__ = true;
     const { getByLabelText } = await render(<HomeScreen />);
 
     await fireEvent(getByLabelText('Menú'), 'longPress');
 
-    expect(useNavigation().navigate).toHaveBeenCalledWith('Components');
+    expect(useNavigation().navigate).toHaveBeenCalledWith('DevTools');
   });
 
   it('ignores a long press on the menu outside dev', async () => {

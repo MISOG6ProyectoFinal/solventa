@@ -26,7 +26,7 @@ import { errorMessage } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
 import { texts } from '../../texts';
 import styles from './styles';
-import { displayOccurredAt, formatDate, fromIsoOccurredAt } from '../../utils';
+import { formatDate, fromIsoOccurredAt } from '../../utils';
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
@@ -79,23 +79,7 @@ export default function ReportClaimScreen() {
         files,
       });
       await deleteReport();
-      navigation.dispatch(
-        StackActions.replace('ClaimReport', {
-          screen: 'ClaimDetail',
-          params: {
-            radicado: filed.radicado,
-            claimType,
-            policy,
-            occurredAt: displayOccurredAt(occurredAt),
-            location: address,
-            description: description.trim(),
-            evidences: [...photos, ...videos].map((item) => ({
-              label: item.label,
-              capturedAt: item.capturedAt,
-            })),
-          },
-        }),
-      );
+      navigation.dispatch(StackActions.replace('AvisoDetail', { aviso: filed }));
     } catch (error) {
       if (error instanceof SubmitAvisoError && !error.avisoCreated) {
         try {

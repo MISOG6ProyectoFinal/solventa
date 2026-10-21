@@ -1,19 +1,8 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
 import { setAccessToken } from './accessToken';
+import { cloudApiUrl, selectCloudApi, selectCustomApi } from './apiBaseUrl';
 import { ApiError, apiClient } from './client';
 
-function apiBaseUrl(): string {
-  const envFile = readFileSync(join(__dirname, '../../../.env'), 'utf8');
-  const line = envFile.split(/\r?\n/).find((entry) => entry.startsWith('API_BASE_URL='));
-  const value = line?.slice('API_BASE_URL='.length).trim();
-  if (!value) {
-    throw new Error('API_BASE_URL is missing from .env');
-  }
-
-  return value;
-}
+const baseUrl = cloudApiUrl;
 
 function jsonResponse(body: unknown, status = 200) {
   return {
@@ -26,6 +15,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe('apiClient', () => {
   beforeEach(() => {
     setAccessToken(null);
+    selectCloudApi();
     global.fetch = jest.fn();
   });
 
@@ -36,7 +26,7 @@ describe('apiClient', () => {
       id: 'aviso-1',
     });
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ poliza_id: 'SLV-2026-03105' }),
@@ -49,7 +39,7 @@ describe('apiClient', () => {
     await apiClient.post('/movil/siniestros/aviso-1/evidencias/ev-1/confirmar');
 
     expect(fetch).toHaveBeenCalledWith(
-      `${apiBaseUrl()}/movil/siniestros/aviso-1/evidencias/ev-1/confirmar`,
+      `${baseUrl}/movil/siniestros/aviso-1/evidencias/ev-1/confirmar`,
       {
         method: 'POST',
         headers: undefined,
@@ -69,7 +59,7 @@ describe('apiClient', () => {
       id: 'aviso-1',
     });
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado: 'borrador' }),
@@ -81,7 +71,7 @@ describe('apiClient', () => {
 
     await apiClient.delete('/movil/siniestros/aviso-1');
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method: 'DELETE',
       headers: undefined,
       body: undefined,
@@ -105,11 +95,20 @@ describe('apiClient', () => {
 
     await apiClient.get('/movil/sesion');
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/sesion`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/sesion`, {
       method: 'GET',
       headers: { Authorization: 'Bearer token-firmado' },
       body: undefined,
     });
+  });
+
+  it('sends requests to the selected API base URL', async () => {
+    jest.mocked(fetch).mockResolvedValue(jsonResponse({}) as Response);
+    selectCustomApi('http://192.168.1.20:8000');
+
+    await apiClient.get('/movil/sesion');
+
+    expect(fetch).toHaveBeenCalledWith('http://192.168.1.20:8000/movil/sesion', expect.anything());
   });
 
   it('reads JSON with get', async () => {
@@ -117,7 +116,7 @@ describe('apiClient', () => {
 
     await expect(apiClient.get('/movil/siniestros/aviso-1/evidencias')).resolves.toEqual([{ id: 'ev-1' }]);
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1/evidencias`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1/evidencias`, {
       method: 'GET',
       headers: undefined,
       body: undefined,
