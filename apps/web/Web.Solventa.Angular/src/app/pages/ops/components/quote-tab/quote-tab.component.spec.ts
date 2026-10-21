@@ -123,4 +123,30 @@ describe('QuoteTabComponent', () => {
 
     expect(el.textContent).toContain('Error al calcular cotización');
   });
+
+  it('blocks quote calculation and shows alert when consent is required but not validated', async () => {
+    // Starts on VIDA_HIPOTECARIO
+    await fixture.whenStable();
+
+    const calcBtn = el.querySelector<HTMLButtonElement>('button[type="button"]:not([variant])') ||
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Calcular cotización'))!;
+
+    expect(calcBtn.disabled).toBe(true);
+    expect(el.textContent).toContain(
+      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.'
+    );
+  });
+
+  it('unblocks quote calculation when consent is validated', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).consentValidated.set(true);
+    await fixture.whenStable();
+
+    const calcBtn = Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Calcular cotización'))!;
+
+    expect(calcBtn.disabled).toBe(false);
+    expect(el.textContent).not.toContain(
+      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.'
+    );
+  });
 });

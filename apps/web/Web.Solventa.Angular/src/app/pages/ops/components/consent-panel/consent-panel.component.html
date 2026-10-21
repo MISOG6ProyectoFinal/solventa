@@ -6,36 +6,140 @@
       Este ramo requiere autorización del cliente para consultar sus datos financieros en el perfilamiento de riesgo.
     </p>
 
-    <div class="space-y-4">
-      <slv-alert tone="warning">Debe solicitar y validar el consentimiento antes de cotizar.</slv-alert>
+    <!-- Estado 1: Solicitud inicial -->
+    @if (estado() === 'idle') {
+      <div class="space-y-4">
+        <slv-alert tone="warning">Debe solicitar y validar el consentimiento antes de cotizar.</slv-alert>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <slv-field label="Enviar código por">
-          <select slvInput [(ngModel)]="channel">
-            @for (option of channels; track option.id) {
-              <option [value]="option.id">{{ option.label }}</option>
-            }
-          </select>
-        </slv-field>
+        @if (errorMsg(); as err) {
+          <slv-alert tone="error">{{ err }}</slv-alert>
+        }
 
-        <slv-field label="Alcance autorizado">
-          <div class="space-y-2 pt-1">
-            <label class="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" class="accent-primary" [(ngModel)]="openFinance" />
-              Open Finance · datos financieros
-            </label>
-            <label class="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" class="accent-primary" [(ngModel)]="openData" />
-              Open Data · fuentes públicas
-            </label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <slv-field label="Enviar código por">
+              <select slvInput [(ngModel)]="channel">
+                @for (option of channels; track option.id) {
+                  <option [value]="option.id">{{ option.label }}</option>
+                }
+              </select>
+            </slv-field>
+            <p class="text-xs text-muted-foreground mt-1.5">
+              Destino: <strong class="text-foreground">{{ contactoDestino() ? contactoMask() : '(ingrese ' + (channel() === 'sms' ? 'celular' : 'correo') + ' en el formulario)' }}</strong>
+            </p>
           </div>
-        </slv-field>
-      </div>
 
-      <button slv-button type="button" variant="secondary" (click)="requested.emit()">
-        Solicitar consentimiento (enviar código)
-      </button>
-    </div>
+          <slv-field label="Alcance autorizado">
+            <div class="space-y-2 pt-1">
+              <label class="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" class="accent-primary" [(ngModel)]="openFinance" />
+                Open Finance · datos financieros
+              </label>
+              <label class="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" class="accent-primary" [(ngModel)]="openData" />
+                Open Data · fuentes públicas
+              </label>
+            </div>
+          </slv-field>
+        </div>
+
+        <button slv-button type="button" variant="secondary" (click)="solicitarConsentimiento()">
+          Solicitar consentimiento (enviar código)
+        </button>
+      </div>
+    }
+
+    <!-- Estado 2: Enviando -->
+    @if (estado() === 'enviando') {
+      <div class="py-6 text-center space-y-2">
+        <p class="text-sm text-muted-foreground">Generando y enviando código OTP...</p>
+      </div>
+    }
+
+    <!-- Estado 3: Ingreso OTP -->
+    @if (estado() === 'pending' || estado() === 'validando') {
+      <div class="space-y-4">
+        <slv-alert tone="info">{{ demoHint() }}</slv-alert>
+
+        @if (errorMsg(); as err) {
+          <slv-alert tone="error">{{ err }}</slv-alert>
+        }
+
+        <slv-field label="CÓDIGO DICTADO POR EL CLIENTE *">
+          <input
+            slvInput
+            type="text"
+            maxlength="6"
+            placeholder="123456"
+            [(ngModel)]="codigoInput"
+            (keydown)="blockNonNumeric($event)"
+          />
+        </slv-field>
+
+        <div class="flex items-center gap-3">
+          <button
+            slv-button
+            type="button"
+            variant="primary"
+            [disabled]="estado() === 'validando'"
+            (click)="validarCodigo()"
+          >
+            {{ estado() === 'validando' ? 'Validando...' : 'Validar código' }}
+          </button>
+          <button
+            slv-button
+            type="button"
+            variant="secondary"
+            [disabled]="estado() === 'validando'"
+            (click)="reenviar()"
+          >
+            Reenviar
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Estado 4 y 5: Consentimiento validado y registro -->
+    @if (estado() === 'validated') {
+      <div class="space-y-4">
+        <slv-alert tone="success">Consentimiento validado. Puede continuar con la cotización.</slv-alert>
+
+        @if (registro(); as reg) {
+          <div class="p-4 bg-muted/30 rounded-xl border border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Cliente (Titular)</p>
+              <p class="text-sm font-bold text-foreground mt-0.5">
+                {{ reg.cliente_nombre ? reg.cliente_nombre + ' (' + (reg.cliente_documento || reg.cliente_id) + ')' : (reg.cliente_id || 'CLI-' + documento()) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Consentimiento ID</p>
+              <p class="text-sm font-bold text-foreground mt-0.5">{{ reg.consentimiento_id }}</p>
+            </div>
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Estado</p>
+              <p class="text-sm font-bold text-success mt-0.5">{{ reg.estado }}</p>
+            </div>
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Fecha y hora (Otorgamiento)</p>
+              <p class="text-sm text-foreground mt-0.5">{{ reg.fecha_otorgamiento || reg.fecha_hora }}</p>
+            </div>
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Fuente (Canal y Destino)</p>
+              <p class="text-sm font-bold text-foreground mt-0.5">{{ reg.fuente || reg.canal }}</p>
+            </div>
+            <div>
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Autorizado ante</p>
+              <p class="text-sm text-foreground mt-0.5">{{ reg.asesor }}</p>
+            </div>
+            <div class="sm:col-span-2">
+              <p class="text-muted-foreground font-semibold uppercase tracking-wider">Alcance autorizado</p>
+              <p class="text-sm text-foreground mt-0.5">{{ reg.alcance }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
   } @else {
     <p class="text-xs mb-4 text-muted-foreground">Este ramo no requiere autorización del cliente para cotizar.</p>
     <slv-alert tone="info">El ramo {{ ramoLabel() }} no requiere consentimiento Open Finance / Open Data.</slv-alert>

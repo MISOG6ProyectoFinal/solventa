@@ -26,6 +26,7 @@ export class QuoteFormComponent {
 
   readonly ramo = model.required<RamoId>();
   readonly quoteReady = output<FormValues>();
+  readonly formChange = output<FormValues>();
 
   /** Ramos del formulario: acotados estrictamente a los 4 de la HU y sincronizados con la BD */
   protected readonly ramos = signal<readonly Ramo[]>(
@@ -81,7 +82,7 @@ export class QuoteFormComponent {
 
   protected readonly isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  protected valueOf(key: string): string {
+  public valueOf(key: string): string {
     return this.values()[key] ?? '';
   }
 
@@ -90,15 +91,19 @@ export class QuoteFormComponent {
   }
 
   protected setValue(key: string, value: string): void {
-    this.values.update((current) => ({ ...current, [key]: value }));
+    const updated = { ...this.values(), [key]: value };
+    this.values.set(updated);
+    this.formChange.emit(updated);
   }
 
   /** Al cambiar de ramo se conservan solo los datos del cliente y se resetea la validación. */
   protected changeRamo(ramo: RamoId): void {
     const clientKeys = new Set(QUOTE_CLIENT_FIELDS.map((field) => field.key));
-    this.values.update((current) => Object.fromEntries(Object.entries(current).filter(([key]) => clientKeys.has(key))));
+    const filtered = Object.fromEntries(Object.entries(this.values()).filter(([key]) => clientKeys.has(key)));
+    this.values.set(filtered);
     this.submitted.set(false);
     this.ramo.set(ramo);
+    this.formChange.emit(filtered);
   }
 
   public submit(): boolean {

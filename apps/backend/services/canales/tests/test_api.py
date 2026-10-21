@@ -284,3 +284,56 @@ def test_bff_socios_conserva_el_error_de_alcance_por_ramo(monkeypatch):
 
     assert response.status_code == 403
     assert response.json()["detail"] == detalle
+
+
+def test_bff_web_proxy_consentimientos(monkeypatch):
+    solicitud = {
+        "cliente_id": "CLI-1",
+        "ramo": "VIDA_HIPOTECARIO",
+        "canal": "sms",
+        "contacto_mask": "***4567",
+        "open_finance": True,
+        "open_data": True,
+        "asesor": "Ana Gómez (asesor)",
+    }
+    resp_solicitud = {
+        "consentimiento_id": "CNS-12345",
+        "estado": "PENDIENTE",
+        "contacto_mask": "***4567",
+        "codigo_demo": "123456",
+        "expira_en": "2026-09-12T13:05:00Z",
+    }
+    upstream = _Upstream(response=resp_solicitud)
+    monkeypatch.setattr("canales.web.api.identidad", upstream)
+
+    res_post = client.post("/web/consentimientos/solicitar", json=solicitud)
+    assert res_post.status_code == 201
+    assert res_post.json() == resp_solicitud
+    assert upstream.calls[0] == ("/identidad/solicitar", {"json": solicitud})
+
+    resp_validar = {
+        "consentimiento_id": "CNS-12345",
+        "estado": "OTORGADO",
+        "validado_en": "2026-09-12T13:02:00Z",
+        "asesor": "Ana Gómez (asesor)",
+        "canal": "sms",
+        "open_finance": True,
+        "open_data": True,
+    }
+    upstream.response = resp_validar
+    res_val = client.post("/web/consentimientos/validar", json={"consentimiento_id": "CNS-12345", "codigo": "123456"})
+    assert res_val.status_code == 200
+    assert res_val.json() == resp_validar
+
+    resp_consulta = {
+        "consentimiento_id": "CNS-12345",
+        "estado": "Otorgado",
+        "fecha_hora": "2026-09-12 13:02",
+        "asesor": "Ana Gómez (asesor)",
+        "canal": "Código por SMS",
+        "alcance": "Open Finance, Open Data",
+    }
+    upstream.response = resp_consulta
+    res_get = client.get("/web/consentimientos/CNS-12345")
+    assert res_get.status_code == 200
+    assert res_get.json() == resp_consulta
