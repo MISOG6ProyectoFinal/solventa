@@ -26,7 +26,11 @@ function escenarios() {
       movil: { executor: 'shared-iterations', exec: 'movil', vus: 1, iterations: 1 },
       web: { executor: 'shared-iterations', exec: 'web', vus: 1, iterations: 1 },
       socios: { executor: 'shared-iterations', exec: 'socios', vus: 1, iterations: 1 },
+      ventas: { executor: 'shared-iterations', exec: 'ventaSocio', vus: 1, iterations: 1 },
     };
+  }
+  if (PERFIL === 'emision') {
+    return { ventas: ventasATasaFija(duracion) };
   }
   if (PERFIL === 'asr04') {
     return {
@@ -56,6 +60,19 @@ function escenarios() {
       preAllocatedVUs: Number(__ENV.VUS_SOCIOS || 20),
       maxVUs: Number(__ENV.VUS_MAXIMOS || 200),
     },
+    ventas: ventasATasaFija(duracion),
+  };
+}
+
+function ventasATasaFija(duracion) {
+  return {
+    executor: 'constant-arrival-rate',
+    exec: 'ventaSocio',
+    rate: Number(__ENV.TASA_VENTAS || 120),
+    timeUnit: '1m',
+    duration: duracion,
+    preAllocatedVUs: Number(__ENV.VUS_VENTAS || 20),
+    maxVUs: Number(__ENV.VUS_MAXIMOS || 200),
   };
 }
 
@@ -147,7 +164,7 @@ export function setup() {
       identificador,
       tipo: 'Retailer',
       correo_contacto: 'carga@solventa.test',
-      alcances: ['cotizacion'],
+      alcances: ['cotizacion', 'emision'],
       autorizado_por: 'Prueba de carga',
     }),
     { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
@@ -262,6 +279,39 @@ export function socios(datos) {
     'X-Client-Id': datos.clientId,
     'X-Api-Key': datos.secreto,
   });
+}
+
+export function ventaSocio(datos) {
+  const credenciales = { 'X-Client-Id': datos.clientId, 'X-Api-Key': datos.secreto };
+  const oferta = pedir('Cotizar para vender', 'POST', `${BASE_URL}/socios/v1/cotizaciones`, solicitudViaje(), {
+    headers: credenciales,
+    validar: (o) => Number(o.prima) > 0 && o.socio_id === datos.socioId,
+  });
+  if (!oferta) return;
+  cotizaciones.add(1, { name: 'Cotizar para vender' });
+  const pedido = `carga-${__VU}-${__ITER}-${aleatorio(4)}`;
+  const cobro = pedir(
+    'Pagar como socio',
+    'POST',
+    `${BASE_URL}/socios/v1/cotizaciones/${oferta.id}/pagos`,
+    { medio_token: 'demo-4242' },
+    {
+      headers: { ...credenciales, 'Idempotency-Key': `pago-${pedido}` },
+      validar: (c) => c.estado === 'aprobado' && c.monto === oferta.prima,
+    },
+  );
+  if (!cobro) return;
+  const emitir = (nombre, validar) =>
+    pedir(nombre, 'POST', `${BASE_URL}/socios/v1/polizas`, { cotizacion_id: oferta.id, cobro_id: cobro.id }, {
+      estado: 201,
+      headers: { ...credenciales, 'Idempotency-Key': `emision-${pedido}` },
+      validar,
+    });
+  const poliza = emitir(
+    'Emitir póliza como socio',
+    (p) => p.estado === 'activa' && /^POL-/.test(p.numero) && p.cotizacion_id === oferta.id,
+  );
+  if (poliza) emitir('Reintentar la emisión', (p) => p.id === poliza.id);
 }
 
 export function handleSummary(data) {

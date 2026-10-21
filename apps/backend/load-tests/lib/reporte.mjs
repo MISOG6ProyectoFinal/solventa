@@ -17,6 +17,10 @@ export const PETICIONES = [
   { canal: 'Portal web', nombre: 'Detalle del socio' },
   { canal: 'Portal web', nombre: 'Configuración del socio' },
   { canal: 'API de socios', nombre: 'Cotizar como socio', cotizacion: true },
+  { canal: 'API de socios', nombre: 'Cotizar para vender', cotizacion: true },
+  { canal: 'API de socios', nombre: 'Pagar como socio' },
+  { canal: 'API de socios', nombre: 'Emitir póliza como socio' },
+  { canal: 'API de socios', nombre: 'Reintentar la emisión' },
 ];
 
 const CHART_JS = {
