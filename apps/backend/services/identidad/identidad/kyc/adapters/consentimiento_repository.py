@@ -91,8 +91,10 @@ class PostgresConsentimientoRepository:
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS contacto VARCHAR(120);"))
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fuente VARCHAR(120);"))
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS alcance VARCHAR(254);"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_otorgamiento TIMESTAMP WITH TIME ZONE;"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_revocacion TIMESTAMP WITH TIME ZONE;"))
+                conn.execute(
+                    text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_otorgamiento TIMESTAMPTZ;")
+                )
+                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_revocacion TIMESTAMPTZ;"))
         except Exception:
             pass
 
@@ -102,15 +104,17 @@ class PostgresConsentimientoRepository:
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS contacto VARCHAR(120);"))
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fuente VARCHAR(120);"))
                 conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS alcance VARCHAR(254);"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_otorgamiento TIMESTAMP WITH TIME ZONE;"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_revocacion TIMESTAMP WITH TIME ZONE;"))
+                conn.execute(
+                    text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_otorgamiento TIMESTAMPTZ;")
+                )
+                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_revocacion TIMESTAMPTZ;"))
             except Exception:
                 pass
 
             alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
-            fuente_val = consentimiento.fuente or (
-                f"{'SMS' if consentimiento.canal == 'sms' else 'Correo'}: {consentimiento.contacto or consentimiento.contacto_mask}"
-            )
+            canal_tipo = "SMS" if consentimiento.canal == "sms" else "Correo"
+            contacto_destino = consentimiento.contacto or consentimiento.contacto_mask
+            fuente_val = consentimiento.fuente or f"{canal_tipo}: {contacto_destino}"
 
             conn.execute(
                 insert(consentimientos_table).values(
@@ -139,9 +143,7 @@ class PostgresConsentimientoRepository:
     def get(self, consentimiento_id: str) -> Consentimiento | None:
         with self.engine.connect() as conn:
             row = (
-                conn.execute(
-                    select(consentimientos_table).where(consentimientos_table.c.id == consentimiento_id)
-                )
+                conn.execute(select(consentimientos_table).where(consentimientos_table.c.id == consentimiento_id))
                 .mappings()
                 .first()
             )
@@ -149,9 +151,9 @@ class PostgresConsentimientoRepository:
 
     def update(self, consentimiento: Consentimiento) -> None:
         alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
-        fuente_val = consentimiento.fuente or (
-            f"{'SMS' if consentimiento.canal == 'sms' else 'Correo'}: {consentimiento.contacto or consentimiento.contacto_mask}"
-        )
+        canal_tipo = "SMS" if consentimiento.canal == "sms" else "Correo"
+        contacto_destino = consentimiento.contacto or consentimiento.contacto_mask
+        fuente_val = consentimiento.fuente or f"{canal_tipo}: {contacto_destino}"
         with self.engine.begin() as conn:
             conn.execute(
                 update(consentimientos_table)

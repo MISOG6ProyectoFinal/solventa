@@ -10,7 +10,7 @@ describe('ConsentPanelComponent', () => {
   let el: HTMLElement;
   let httpTesting: HttpTestingController;
 
-  const render = async (required: boolean, celular: string = '3001234567'): Promise<void> => {
+  const render = async (required: boolean, celular = '3001234567'): Promise<void> => {
     fixture.componentRef.setInput('required', required);
     fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
     fixture.componentRef.setInput('ramoId', 'VIDA_HIPOTECARIO');

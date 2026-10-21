@@ -48,7 +48,9 @@ class PostgresClientRepository:
         metadata.create_all(self.engine)
         try:
             with self.engine.begin() as conn:
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(10) DEFAULT 'CC';"))
+                conn.execute(
+                    text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(10) DEFAULT 'CC';")
+                )
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS numero_documento VARCHAR(30);"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email VARCHAR(254);"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);"))
@@ -128,22 +130,26 @@ class PostgresClientRepository:
 
     def get_by_documento(self, tipo: str, numero: str) -> Client | None:
         with self.engine.connect() as conn:
-            row = conn.execute(
-                select(clients).where(
-                    (clients.c.numero_documento == numero) & 
-                    ((clients.c.tipo_documento == tipo) | (clients.c.tipo_documento.is_(None)))
+            row = (
+                conn.execute(
+                    select(clients).where(
+                        (clients.c.numero_documento == numero)
+                        & ((clients.c.tipo_documento == tipo) | (clients.c.tipo_documento.is_(None)))
+                    )
                 )
-            ).mappings().first()
+                .mappings()
+                .first()
+            )
         return _client(row) if row else None
 
     def get_by_email(self, email: str) -> Client | None:
         normalized = email.lower()
         with self.engine.connect() as conn:
-            row = conn.execute(
-                select(clients).where(
-                    (clients.c.email == normalized) | (clients.c.correo == normalized)
-                )
-            ).mappings().first()
+            row = (
+                conn.execute(select(clients).where((clients.c.email == normalized) | (clients.c.correo == normalized)))
+                .mappings()
+                .first()
+            )
         return _client(row) if row else None
 
 

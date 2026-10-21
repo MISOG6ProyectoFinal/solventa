@@ -1,4 +1,5 @@
 from datetime import date, datetime
+
 from pydantic import BaseModel, model_validator
 
 
@@ -47,7 +48,7 @@ class Consentimiento(BaseModel):
     id: str
     cliente_id: str
     alcance: list[str] = ["Open Finance", "Open Data"]
-    fuente: str
+    fuente: str = ""
     estado: str  # PENDIENTE, OTORGADO, REVOCADO, EXPIRADO
     fecha_otorgamiento: datetime | None = None
     fecha_revocacion: datetime | None = None

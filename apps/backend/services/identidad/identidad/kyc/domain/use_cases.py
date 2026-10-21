@@ -275,6 +275,11 @@ class ConsultarConsentimiento:
         canal_label = "Código por SMS" if consentimiento.canal.lower() == "sms" else "Código por correo electrónico"
         alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
 
+        fecha_otorgamiento_iso = (
+            consentimiento.fecha_otorgamiento.isoformat() if consentimiento.fecha_otorgamiento else None
+        )
+        fecha_revocacion_iso = consentimiento.fecha_revocacion.isoformat() if consentimiento.fecha_revocacion else None
+
         return RespuestaConsulta(
             consentimiento_id=consentimiento.id,
             cliente_id=consentimiento.cliente_id,
@@ -282,8 +287,8 @@ class ConsultarConsentimiento:
             cliente_documento=cliente_doc,
             estado="Otorgado" if consentimiento.estado == "OTORGADO" else consentimiento.estado.capitalize(),
             fuente=consentimiento.fuente,
-            fecha_otorgamiento=consentimiento.fecha_otorgamiento.isoformat() if consentimiento.fecha_otorgamiento else None,
-            fecha_revocacion=consentimiento.fecha_revocacion.isoformat() if consentimiento.fecha_revocacion else None,
+            fecha_otorgamiento=fecha_otorgamiento_iso,
+            fecha_revocacion=fecha_revocacion_iso,
             fecha_hora=fecha_hora_str,
             asesor=consentimiento.asesor,
             canal=canal_label,

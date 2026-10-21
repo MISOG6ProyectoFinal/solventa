@@ -1,12 +1,12 @@
 from datetime import UTC, datetime, timedelta
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 
+from fastapi.testclient import TestClient
 from identidad.container import container
 from identidad.kyc.adapters.consentimiento_repository import PostgresConsentimientoRepository
 from identidad.kyc.domain.models import Consentimiento
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
 from identidad.main import app
+from sqlalchemy import create_engine
 
 client = TestClient(app)
 
@@ -206,6 +206,7 @@ def test_validar_consentimiento_expirado():
     expirado = Consentimiento(
         id=cns_id,
         cliente_id="CLI-EXP",
+        fuente="SMS: ***1111",
         ramo="VIDA_HIPOTECARIO",
         canal="sms",
         contacto_mask="***1111",
@@ -237,6 +238,7 @@ def test_postgres_consentimiento_repository_roundtrip():
     cns = Consentimiento(
         id="CNS-SQLITE-1",
         cliente_id="CLI-SQLITE",
+        fuente="Correo: user@test.com",
         ramo="VIDA_HIPOTECARIO",
         canal="email",
         contacto="user@test.com",
@@ -257,6 +259,7 @@ def test_postgres_consentimiento_repository_roundtrip():
     assert fetched.id == "CNS-SQLITE-1"
     assert fetched.cliente_id == "CLI-SQLITE"
     assert fetched.contacto == "user@test.com"
+    assert fetched.fuente == "Correo: user@test.com"
     assert fetched.estado == "PENDIENTE"
     assert fetched.open_finance is True
     assert fetched.open_data is False
