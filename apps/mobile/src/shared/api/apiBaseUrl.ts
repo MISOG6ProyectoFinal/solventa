@@ -6,16 +6,26 @@ export const cloudApiUrl = 'https://dzwq94g5om86y.cloudfront.net';
 
 export type ApiTarget = 'cloud' | 'custom';
 
+const schemes = ['http:', 'https:'];
+
 // The Android emulator reaches the host machine at 10.0.2.2. A physical device needs the PC's IP instead.
-const defaultCustomUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+const devHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+export const defaultCustomUrl = `${schemes[0]}//${devHost}:8000`;
 
 // Starts on the cloud API until a saved choice is loaded.
 let target: ApiTarget = 'cloud';
 let customUrl = defaultCustomUrl;
 
 export function normalizeApiUrl(url: string): string | null {
-  const trimmed = url.trim().replace(/\/+$/, '');
-  return /^https?:\/\/[^\s/]+(\/\S*)?$/.test(trimmed) ? trimmed : null;
+  let trimmed = url.trim();
+  while (trimmed.endsWith('/')) {
+    trimmed = trimmed.slice(0, -1);
+  }
+  const separator = trimmed.indexOf('://');
+  const host = trimmed.slice(separator + 3);
+  const valid =
+    separator > 0 && schemes.includes(trimmed.slice(0, separator + 1)) && host !== '' && !host.startsWith('/');
+  return valid && !/\s/.test(trimmed) ? trimmed : null;
 }
 
 export function getApiTarget(): ApiTarget {
