@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import {
   type ApiTarget,
+  defaultCustomUrl,
   getApiBaseUrl,
   getApiTarget,
   getCustomApiUrl,
@@ -57,7 +58,7 @@ export default function DevToolsScreen() {
               label="URL"
               value={customUrl}
               onChangeText={changeCustomUrl}
-              placeholder="http://10.0.2.2:8000"
+              placeholder={defaultCustomUrl}
               keyboardType="url"
               autoCapitalize="none"
               error={invalid}
