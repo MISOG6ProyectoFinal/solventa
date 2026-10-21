@@ -13,10 +13,11 @@ class ExternalAdapter:
     name = "external"
     timeout_s = 3.0  # Máximo absoluto de la sección 9.5.2; cada adaptador lo ajusta.
     retries = 1
+    limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
 
     def __init__(self, base_url: str, api_key: str | None = None, breaker: CircuitBreaker | None = None) -> None:
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        self.client = httpx.Client(base_url=base_url, timeout=self.timeout_s, headers=headers)
+        self.client = httpx.Client(base_url=base_url, timeout=self.timeout_s, headers=headers, limits=self.limits)
         self.breaker = breaker or CircuitBreaker(self.name)
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
@@ -39,6 +40,7 @@ class ServiceClient(ExternalAdapter):
 
     timeout_s = 1.0
     retries = 0
+    limits = httpx.Limits(max_connections=100, max_keepalive_connections=0)
 
     def __init__(self, name: str, base_url: str, timeout_s: float | None = None) -> None:
         self.name = name
