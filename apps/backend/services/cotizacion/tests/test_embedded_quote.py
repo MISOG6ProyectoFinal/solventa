@@ -365,6 +365,7 @@ def open_finance():
                 pass
 
         def log_message(self, *args):
+            # Silenciar logs del servidor HTTP simulado en pruebas
             pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

@@ -41,26 +41,35 @@ consentimientos_table = Table(
 )
 
 
-def _to_model(row) -> Consentimiento:
+def _parse_alcance(row) -> list[str]:
     alcance_val = row.get("alcance")
     if alcance_val:
-        alcance_list = [a.strip() for a in alcance_val.split(",") if a.strip()]
-    else:
-        alcance_list = []
-        if row.get("open_finance"):
-            alcance_list.append("Open Finance")
-        if row.get("open_data"):
-            alcance_list.append("Open Data")
+        return [a.strip() for a in alcance_val.split(",") if a.strip()]
+    alcance_list = []
+    if row.get("open_finance"):
+        alcance_list.append("Open Finance")
+    if row.get("open_data"):
+        alcance_list.append("Open Data")
+    return alcance_list or ["Open Finance", "Open Data"]
 
-    fuente_val = row.get("fuente") or (
-        f"{'SMS' if row.get('canal') == 'sms' else 'Correo'}: {row.get('contacto') or row.get('contacto_mask') or ''}"
-    )
+
+def _resolve_fuente_from_row(row) -> str:
+    if row.get("fuente"):
+        return str(row["fuente"])
+    canal_label = "SMS" if row.get("canal") == "sms" else "Correo"
+    dest = row.get("contacto") or row.get("contacto_mask") or ""
+    return f"{canal_label}: {dest}"
+
+
+def _to_model(row) -> Consentimiento:
+    alcance_list = _parse_alcance(row)
+    fuente_val = _resolve_fuente_from_row(row)
     fecha_otorgamiento = row.get("fecha_otorgamiento") or row.get("validado_en")
 
     return Consentimiento(
         id=row["id"],
         cliente_id=row["cliente_id"],
-        alcance=alcance_list or ["Open Finance", "Open Data"],
+        alcance=alcance_list,
         fuente=fuente_val,
         estado=row["estado"],
         fecha_otorgamiento=fecha_otorgamiento,
@@ -100,17 +109,6 @@ class PostgresConsentimientoRepository:
 
     def add(self, consentimiento: Consentimiento) -> None:
         with self.engine.begin() as conn:
-            try:
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS contacto VARCHAR(120);"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fuente VARCHAR(120);"))
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS alcance VARCHAR(254);"))
-                conn.execute(
-                    text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_otorgamiento TIMESTAMPTZ;")
-                )
-                conn.execute(text("ALTER TABLE consentimientos ADD COLUMN IF NOT EXISTS fecha_revocacion TIMESTAMPTZ;"))
-            except Exception:
-                pass
-
             alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
             canal_tipo = "SMS" if consentimiento.canal == "sms" else "Correo"
             contacto_destino = consentimiento.contacto or consentimiento.contacto_mask
@@ -178,6 +176,7 @@ class InMemoryConsentimientoRepository:
         self._items: dict[str, Consentimiento] = {}
 
     def create_schema(self) -> None:
+        # Repositorio en memoria no requiere crear esquemas relacionales DDL
         pass
 
     def add(self, consentimiento: Consentimiento) -> None:

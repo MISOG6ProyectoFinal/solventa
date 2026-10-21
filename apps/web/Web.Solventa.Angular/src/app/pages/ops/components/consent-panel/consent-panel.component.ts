@@ -59,9 +59,9 @@ export class ConsentPanelComponent {
 
   protected readonly contactoDestino = computed(() => {
     if (this.channel() === 'sms') {
-      return this.celular()?.trim() || '';
+      return this.celular()?.trim() ?? '';
     } else {
-      return this.correo()?.trim() || '';
+      return this.correo()?.trim() ?? '';
     }
   });
 
@@ -72,26 +72,46 @@ export class ConsentPanelComponent {
       if (digits.length >= 4) {
         return `***${digits.slice(-4)}`;
       }
-      return destino || '***4567';
+      return destino.length > 0 ? destino : '***4567';
     } else {
-      if (destino && destino.includes('@')) {
+      if (destino?.includes('@')) {
         const [user, domain] = destino.split('@');
         const visible = user.length > 2 ? user.slice(0, 2) : user.slice(0, 1);
         return `${visible}***@${domain}`;
       }
-      return destino || 'cliente@ejemplo.com';
+      return destino.length > 0 ? destino : 'cliente@ejemplo.com';
     }
   });
 
   protected readonly contactoMaskDisplay = computed(() => {
-    return this.contactoMaskBackend() || this.contactoMask();
+    return this.contactoMaskBackend() ?? this.contactoMask();
   });
 
   protected readonly demoHint = computed(() => {
     const mask = this.contactoMaskDisplay();
     const canalTxt = this.channel() === 'sms' ? 'al celular' : 'al correo';
-    return `Código enviado ${canalTxt} ${mask}. Para la demo use ${this.codigoDemo() || '123456'}.`;
+    const demoCode = this.codigoDemo().trim();
+    const demoValue = demoCode.length > 0 ? demoCode : '123456';
+    return `Código enviado ${canalTxt} ${mask}. Para la demo use ${demoValue}.`;
   });
+
+  private extractErrorMessage(err: unknown, fallback: string): string {
+    if (err && typeof err === 'object') {
+      const errorObj = err as Record<string, unknown>;
+      const errorField = errorObj['error'];
+      if (errorField && typeof errorField === 'object') {
+        const detail = (errorField as Record<string, unknown>)['detail'];
+        if (typeof detail === 'string' && detail.trim().length > 0) {
+          return detail;
+        }
+      }
+      const message = errorObj['message'];
+      if (typeof message === 'string' && !message.startsWith('Http failure') && message.trim().length > 0) {
+        return message;
+      }
+    }
+    return fallback;
+  }
 
   solicitarConsentimiento(): void {
     const destino = this.contactoDestino();
@@ -106,20 +126,26 @@ export class ConsentPanelComponent {
     this.requested.emit();
 
     const doc = this.documento()?.trim();
-    const clienteId = doc ? `CLI-${doc}` : 'CLI-51502';
+    const clienteId = doc && doc.length > 0 ? `CLI-${doc}` : 'CLI-51502';
 
     const alcances: string[] = [];
     if (this.openFinance()) alcances.push('Open Finance');
     if (this.openData()) alcances.push('Open Data');
 
+    const rawTipoDoc = this.tipoDocumento()?.trim();
+    const rawNombre = this.nombre()?.trim();
+    const rawCorreo = this.correo()?.trim();
+    const rawCelular = this.celular()?.trim();
+    const rawNacimiento = this.fechaNacimiento()?.trim();
+
     const payload: SolicitudConsentimiento = {
       cliente_id: clienteId,
-      tipo_documento: this.tipoDocumento() || 'CC',
-      numero_documento: doc || '',
-      nombre: this.nombre() || 'Cliente',
-      email: this.correo() || (this.channel() === 'email' ? destino : ''),
-      telefono: this.celular() || (this.channel() === 'sms' ? destino : ''),
-      fecha_nacimiento: this.fechaNacimiento() || undefined,
+      tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
+      numero_documento: doc ?? '',
+      nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
+      email: rawCorreo && rawCorreo.length > 0 ? rawCorreo : (this.channel() === 'email' ? destino : ''),
+      telefono: rawCelular && rawCelular.length > 0 ? rawCelular : (this.channel() === 'sms' ? destino : ''),
+      fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
       pais: 'Colombia',
       ramo: this.ramoId(),
       canal: this.channel(),
@@ -142,11 +168,7 @@ export class ConsentPanelComponent {
         this.estado.set('pending');
       },
       error: (err) => {
-        const msg =
-          err?.error?.detail ||
-          (typeof err?.message === 'string' && !err.message.startsWith('Http failure') ? err.message : null) ||
-          'Error al solicitar código OTP';
-        this.errorMsg.set(msg);
+        this.errorMsg.set(this.extractErrorMessage(err, 'Error al solicitar código OTP'));
         this.estado.set('idle');
       },
     });
@@ -170,10 +192,18 @@ export class ConsentPanelComponent {
             this.consentValidated.emit(true);
           },
           error: () => {
+            const rawDoc = this.documento()?.trim();
+            const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${rawDoc}` : 'CLI-51502';
+            const rawNom = this.nombre()?.trim();
+            const fallbackNom = rawNom && rawNom.length > 0 ? rawNom : 'Cliente';
+            const alcancesArr = [this.openFinance() ? 'Open Finance' : '', this.openData() ? 'Open Data' : ''].filter(
+              Boolean
+            );
+
             this.registro.set({
               consentimiento_id: this.consentimientoId(),
-              cliente_id: `CLI-${this.documento() || '51502'}`,
-              cliente_nombre: this.nombre() || 'Cliente',
+              cliente_id: fallbackCliId,
+              cliente_nombre: fallbackNom,
               cliente_documento: `${this.tipoDocumento()} ${this.documento()}`.trim(),
               estado: 'Otorgado',
               fuente: `${this.channel() === 'sms' ? 'SMS' : 'Correo'}: ${this.contactoDestino()}`,
@@ -182,10 +212,7 @@ export class ConsentPanelComponent {
               asesor: 'Ana Gómez (asesor)',
               canal: this.channel() === 'sms' ? 'Código por SMS' : 'Código por correo electrónico',
               contacto: this.contactoDestino(),
-              alcance:
-                [this.openFinance() ? 'Open Finance' : '', this.openData() ? 'Open Data' : '']
-                  .filter(Boolean)
-                  .join(', ') || 'Ninguno',
+              alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : 'Ninguno',
             });
             this.estado.set('validated');
             this.consentValidated.emit(true);
@@ -193,11 +220,7 @@ export class ConsentPanelComponent {
         });
       },
       error: (err) => {
-        const msg =
-          err?.error?.detail ||
-          (typeof err?.message === 'string' && !err.message.startsWith('Http failure') ? err.message : null) ||
-          'Código OTP incorrecto. Vuelva a intentarlo.';
-        this.errorMsg.set(msg);
+        this.errorMsg.set(this.extractErrorMessage(err, 'Código OTP incorrecto. Vuelva a intentarlo.'));
         this.estado.set('pending');
       },
     });
@@ -210,7 +233,7 @@ export class ConsentPanelComponent {
   blockNonNumeric(event: KeyboardEvent): void {
     const allowed = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'];
     if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
-    if (!/^[0-9]$/.test(event.key)) {
+    if (!/^\d$/.test(event.key)) {
       event.preventDefault();
     }
   }

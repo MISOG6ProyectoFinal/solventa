@@ -43,11 +43,15 @@ class EmailAlreadyRegistered(Exception):
 
 # --- HU002: Consentimiento Digital Open Finance / Open Data ---
 
+OPEN_FINANCE = "Open Finance"
+OPEN_DATA = "Open Data"
+DEFAULT_ALCANCE = [OPEN_FINANCE, OPEN_DATA]
+
 
 class Consentimiento(BaseModel):
     id: str
     cliente_id: str
-    alcance: list[str] = ["Open Finance", "Open Data"]
+    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
     fuente: str = ""
     estado: str  # PENDIENTE, OTORGADO, REVOCADO, EXPIRADO
     fecha_otorgamiento: datetime | None = None
@@ -83,7 +87,7 @@ class SolicitudConsentimiento(BaseModel):
     canal: str = "sms"
     contacto: str = ""
     contacto_mask: str = ""
-    alcance: list[str] = ["Open Finance", "Open Data"]
+    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
     open_finance: bool = True
     open_data: bool = True
     asesor: str = "Ana Gómez (asesor)"
@@ -93,7 +97,7 @@ class RespuestaSolicitud(BaseModel):
     consentimiento_id: str
     cliente_id: str
     estado: str
-    alcance: list[str] = ["Open Finance", "Open Data"]
+    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
     fuente: str = ""
     contacto: str = ""
     contacto_mask: str = ""
@@ -110,7 +114,7 @@ class RespuestaValidacion(BaseModel):
     validado_en: str
     asesor: str
     canal: str
-    alcance: list[str] = ["Open Finance", "Open Data"]
+    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
     open_finance: bool
     open_data: bool
 
@@ -129,7 +133,7 @@ class RespuestaConsulta(BaseModel):
     canal: str
     contacto: str = ""
     alcance: str
-    alcance_lista: list[str] = ["Open Finance", "Open Data"]
+    alcance_lista: list[str] = [OPEN_FINANCE, OPEN_DATA]
 
 
 class ConsentimientoNoEncontrado(Exception):

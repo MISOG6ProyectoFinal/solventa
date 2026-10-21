@@ -159,6 +159,7 @@ class InMemoryClientRepository:
         self.clients_by_email: dict[str, Client] = {}
 
     def create_schema(self) -> None:
+        # Repositorio en memoria no requiere crear esquemas relacionales DDL
         pass
 
     def add(self, client: Client) -> None:
@@ -199,7 +200,7 @@ class InMemoryClientRepository:
 
     def get_by_documento(self, tipo: str, numero: str) -> Client | None:
         for c in self.clients_by_id.values():
-            if c.numero_documento == numero:
+            if c.numero_documento == numero and (not tipo or c.tipo_documento == tipo):
                 return c
         return None
 

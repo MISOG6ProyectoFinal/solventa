@@ -1,11 +1,13 @@
 import logging
-import random
+import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from solventa_common.sesion import sign_token
 
 from identidad.kyc.domain.models import (
+    OPEN_DATA,
+    OPEN_FINANCE,
     Client,
     CodigoOtpInvalido,
     Consentimiento,
@@ -84,6 +86,72 @@ class RegisterClient:
 # --- HU002: Casos de uso de Consentimiento Digital ---
 
 
+def _generate_random_id(prefix: str) -> str:
+    n = secrets.randbelow(90000) + 10000
+    return f"{prefix}-{n}"
+
+
+def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
+    cid = (solicitud.cliente_id or "").strip()
+    if cid:
+        return cid
+    if solicitud.numero_documento:
+        return f"CLI-{solicitud.numero_documento.strip()}"
+    return _generate_random_id("CLI")
+
+
+def _resolve_cliente_email(solicitud: SolicitudConsentimiento, cliente_id: str) -> str:
+    if solicitud.email and solicitud.email.strip():
+        return solicitud.email.strip()
+    if solicitud.canal == "email" and solicitud.contacto:
+        return solicitud.contacto.strip()
+    return f"{cliente_id.lower()}@solventa.com"
+
+
+def _resolve_cliente_telefono(solicitud: SolicitudConsentimiento) -> str:
+    if solicitud.telefono and solicitud.telefono.strip():
+        return solicitud.telefono.strip()
+    if solicitud.canal == "sms" and solicitud.contacto:
+        return solicitud.contacto.strip()
+    return ""
+
+
+def _mask_contacto(canal: str, contacto: str) -> str:
+    if canal == "sms":
+        digits = "".join(filter(str.isdigit, contacto))
+        return f"***{digits[-4:]}" if len(digits) >= 4 else contacto
+    if "@" in contacto:
+        u, d = contacto.split("@", 1)
+        v = u[:2] if len(u) > 2 else u[:1]
+        return f"{v}***@{d}"
+    return contacto
+
+
+def _resolve_contacto_y_mascara(solicitud: SolicitudConsentimiento) -> tuple[str, str]:
+    contacto = (solicitud.contacto or "").strip()
+    contacto_mask = (solicitud.contacto_mask or "").strip()
+
+    if contacto and (not contacto_mask or contacto_mask == "***4567"):
+        contacto_mask = _mask_contacto(solicitud.canal.lower(), contacto)
+    elif not contacto and contacto_mask:
+        contacto = contacto_mask
+    elif not contacto and not contacto_mask:
+        contacto_mask = "***4567"
+
+    return contacto, contacto_mask
+
+
+def _resolve_solicitud_alcance(solicitud: SolicitudConsentimiento) -> list[str]:
+    if solicitud.alcance:
+        return list(solicitud.alcance)
+    alcance = []
+    if solicitud.open_finance:
+        alcance.append(OPEN_FINANCE)
+    if solicitud.open_data:
+        alcance.append(OPEN_DATA)
+    return alcance or [OPEN_FINANCE, OPEN_DATA]
+
+
 class SolicitarConsentimiento:
     def __init__(
         self,
@@ -98,30 +166,16 @@ class SolicitarConsentimiento:
         expira_en = ahora + timedelta(minutes=5)
 
         # 1. Identificar o Registrar el Cliente según el Modelo de Dominio
-        cliente_id = (solicitud.cliente_id or "").strip()
-        if not cliente_id and solicitud.numero_documento:
-            cliente_id = f"CLI-{solicitud.numero_documento.strip()}"
-        elif not cliente_id:
-            cliente_id = f"CLI-{random.randint(10000, 99999)}"
+        cliente_id = _resolve_cliente_id(solicitud)
 
         if self.clients is not None:
-            email_val = (
-                solicitud.email.strip()
-                if solicitud.email
-                else (solicitud.contacto if solicitud.canal == "email" else f"{cliente_id.lower()}@solventa.com")
-            )
-            tel_val = (
-                solicitud.telefono.strip()
-                if solicitud.telefono
-                else (solicitud.contacto if solicitud.canal == "sms" else "")
-            )
             cliente_obj = Client(
                 id=cliente_id,
                 tipo_documento=solicitud.tipo_documento or "CC",
                 numero_documento=solicitud.numero_documento or "",
                 nombre=solicitud.nombre or "Cliente",
-                email=email_val,
-                telefono=tel_val,
+                email=_resolve_cliente_email(solicitud, cliente_id),
+                telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
                 pais=solicitud.pais or "Colombia",
             )
@@ -129,35 +183,14 @@ class SolicitarConsentimiento:
             cliente_id = cliente_guardado.id
 
         # 2. Contacto, Máscara y Fuente
-        contacto = (solicitud.contacto or "").strip()
-        contacto_mask = (solicitud.contacto_mask or "").strip()
-
-        if contacto and (not contacto_mask or contacto_mask == "***4567"):
-            if solicitud.canal.lower() == "sms":
-                digits = "".join(filter(str.isdigit, contacto))
-                contacto_mask = f"***{digits[-4:]}" if len(digits) >= 4 else contacto
-            else:
-                if "@" in contacto:
-                    u, d = contacto.split("@", 1)
-                    v = u[:2] if len(u) > 2 else u[:1]
-                    contacto_mask = f"{v}***@{d}"
-                else:
-                    contacto_mask = contacto
-        elif not contacto and contacto_mask:
-            contacto = contacto_mask
-
+        contacto, contacto_mask = _resolve_contacto_y_mascara(solicitud)
         canal_txt = "SMS" if solicitud.canal.lower() == "sms" else "Correo"
         fuente = f"{canal_txt}: {contacto or contacto_mask}"
 
         # 3. Alcance (List[String])
-        alcance = list(solicitud.alcance) if solicitud.alcance else []
-        if not alcance:
-            if solicitud.open_finance:
-                alcance.append("Open Finance")
-            if solicitud.open_data:
-                alcance.append("Open Data")
+        alcance = _resolve_solicitud_alcance(solicitud)
 
-        consentimiento_id = f"CNS-{random.randint(10000, 99999)}"
+        consentimiento_id = _generate_random_id("CNS")
         codigo = generar_codigo()
         codigo_sha = hash_codigo(codigo)
 
@@ -172,7 +205,7 @@ class SolicitarConsentimiento:
             ramo=solicitud.ramo,
             canal=solicitud.canal,
             contacto=contacto,
-            contacto_mask=contacto_mask or contacto or "***4567",
+            contacto_mask=contacto_mask,
             open_finance=solicitud.open_finance,
             open_data=solicitud.open_data,
             codigo_hash=codigo_sha,
