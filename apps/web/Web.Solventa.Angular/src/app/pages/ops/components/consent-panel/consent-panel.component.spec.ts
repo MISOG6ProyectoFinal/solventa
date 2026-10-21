@@ -372,4 +372,85 @@ describe('ConsentPanelComponent', () => {
 
     expect(el.textContent).toContain('999888');
   });
+
+  it('masks correctly when email username has 2 or fewer characters', async () => {
+    fixture.componentRef.setInput('required', true);
+    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
+    fixture.componentRef.setInput('correo', 'al@test.com');
+    await fixture.whenStable();
+    fixture.componentInstance['channel'].set('email');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['contactoMask']()).toBe('a***@test.com');
+  });
+
+  it('handles invalid email and empty email fallbacks in mask', async () => {
+    fixture.componentRef.setInput('required', true);
+    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
+    fixture.componentRef.setInput('correo', 'sinarroba');
+    await fixture.whenStable();
+    fixture.componentInstance['channel'].set('email');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['contactoMask']()).toBe('sinarroba');
+
+    fixture.componentRef.setInput('correo', '');
+    await fixture.whenStable();
+    expect(fixture.componentInstance['contactoMask']()).toBe('cliente@ejemplo.com');
+  });
+
+  it('handles short phone numbers in sms mask', async () => {
+    fixture.componentRef.setInput('required', true);
+    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
+    fixture.componentRef.setInput('celular', '123');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['contactoMask']()).toBe('123');
+  });
+
+  it('builds payload with complete customer info and custom alcances', async () => {
+    fixture.componentRef.setInput('required', true);
+    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
+    fixture.componentRef.setInput('celular', '3176663766');
+    fixture.componentRef.setInput('documento', '1098700941');
+    fixture.componentRef.setInput('tipoDocumento', 'CC');
+    fixture.componentRef.setInput('nombre', 'Pedro Perez');
+    fixture.componentRef.setInput('fechaNacimiento', '1990-05-15');
+    await fixture.whenStable();
+
+    fixture.componentInstance['openFinance'].set(false);
+    fixture.componentInstance['openData'].set(false);
+    await fixture.whenStable();
+
+    el = fixture.nativeElement;
+    el.querySelector('button')!.click();
+    await fixture.whenStable();
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
+    expect(req.request.body.cliente_id).toBe('CLI-1098700941');
+    expect(req.request.body.nombre).toBe('Pedro Perez');
+    expect(req.request.body.fecha_nacimiento).toBe('1990-05-15');
+    expect(req.request.body.alcance).toEqual([]);
+    req.flush({
+      consentimiento_id: 'CNS-FULL',
+      estado: 'PENDIENTE',
+      codigo_demo: '112233',
+      expira_en: '2026-09-12T13:05:00Z',
+    });
+  });
+
+  it('extracts error messages from error.message property as fallback', async () => {
+    await render(true);
+
+    el.querySelector('button')!.click();
+    await fixture.whenStable();
+
+    httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar).error(
+      new ProgressEvent('error'),
+      { status: 0, statusText: 'Network Error' }
+    );
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Error al solicitar código OTP');
+  });
 });

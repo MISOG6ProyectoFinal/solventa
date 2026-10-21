@@ -55,26 +55,26 @@ class SolicitudSesion(BaseModel):
     correo: str
     contrasena: str
 
-    @field_validator("correo", "contrasena")
-    @classmethod
-    def _obligatorio(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
+    @model_validator(mode="after")
+    def _validar_credenciales(self) -> "SolicitudSesion":
+        self.correo = self.correo.strip()
+        self.contrasena = self.contrasena.strip()
+        if not self.correo or not self.contrasena:
             raise ValueError("El campo es obligatorio")
-        return stripped
+        return self
 
 
 class SolicitudRegistro(SolicitudSesion):
     nombre: str
     apellido: str
 
-    @field_validator("nombre", "apellido")
-    @classmethod
-    def _nombre_obligatorio(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
+    @model_validator(mode="after")
+    def _validar_registro(self) -> "SolicitudRegistro":
+        self.nombre = self.nombre.strip()
+        self.apellido = self.apellido.strip()
+        if not self.nombre or not self.apellido:
             raise ValueError("El campo es obligatorio")
-        return stripped
+        return self
 
 
 def _bearer(authorization: str | None) -> str:

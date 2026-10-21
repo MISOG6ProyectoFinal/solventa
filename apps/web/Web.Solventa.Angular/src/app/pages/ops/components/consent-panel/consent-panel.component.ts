@@ -113,6 +113,83 @@ export class ConsentPanelComponent {
     return fallback;
   }
 
+  private resolveEmail(destino: string): string {
+    const rawCorreo = this.correo()?.trim();
+    if (rawCorreo && rawCorreo.length > 0) {
+      return rawCorreo;
+    }
+    return this.channel() === 'email' ? destino : '';
+  }
+
+  private resolveTelefono(destino: string): string {
+    const rawCelular = this.celular()?.trim();
+    if (rawCelular && rawCelular.length > 0) {
+      return rawCelular;
+    }
+    return this.channel() === 'sms' ? destino : '';
+  }
+
+  private buildSolicitudPayload(destino: string): SolicitudConsentimiento {
+    const doc = this.documento()?.trim();
+    const clienteId = doc && doc.length > 0 ? `CLI-${doc}` : 'CLI-51502';
+
+    const alcances: string[] = [];
+    if (this.openFinance()) {
+      alcances.push('Open Finance');
+    }
+    if (this.openData()) {
+      alcances.push('Open Data');
+    }
+
+    const rawTipoDoc = this.tipoDocumento()?.trim();
+    const rawNombre = this.nombre()?.trim();
+    const rawNacimiento = this.fechaNacimiento()?.trim();
+
+    return {
+      cliente_id: clienteId,
+      tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
+      numero_documento: doc ?? '',
+      nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
+      email: this.resolveEmail(destino),
+      telefono: this.resolveTelefono(destino),
+      fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
+      pais: 'Colombia',
+      ramo: this.ramoId(),
+      canal: this.channel(),
+      contacto: destino,
+      contacto_mask: this.contactoMask(),
+      alcance: alcances,
+      open_finance: this.openFinance(),
+      open_data: this.openData(),
+      asesor: 'Ana Gómez (asesor)',
+    };
+  }
+
+  private buildFallbackRegistro(): RespuestaConsultaConsentimiento {
+    const rawDoc = this.documento()?.trim();
+    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${rawDoc}` : 'CLI-51502';
+    const rawNom = this.nombre()?.trim();
+    const fallbackNom = rawNom && rawNom.length > 0 ? rawNom : 'Cliente';
+    const alcancesArr = [this.openFinance() ? 'Open Finance' : '', this.openData() ? 'Open Data' : ''].filter(
+      Boolean
+    );
+
+    return {
+      consentimiento_id: this.consentimientoId(),
+      cliente_id: fallbackCliId,
+      cliente_nombre: fallbackNom,
+      cliente_documento: `${this.tipoDocumento()} ${this.documento()}`.trim(),
+      estado: 'Otorgado',
+      fuente: `${this.channel() === 'sms' ? 'SMS' : 'Correo'}: ${this.contactoDestino()}`,
+      fecha_otorgamiento: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      fecha_hora: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      asesor: 'Ana Gómez (asesor)',
+      canal: this.channel() === 'sms' ? 'Código por SMS' : 'Código por correo electrónico',
+      contacto: this.contactoDestino(),
+      alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : 'Ninguno',
+    };
+  }
+
   solicitarConsentimiento(): void {
     const destino = this.contactoDestino();
     if (!destino) {
@@ -125,37 +202,7 @@ export class ConsentPanelComponent {
     this.errorMsg.set(null);
     this.requested.emit();
 
-    const doc = this.documento()?.trim();
-    const clienteId = doc && doc.length > 0 ? `CLI-${doc}` : 'CLI-51502';
-
-    const alcances: string[] = [];
-    if (this.openFinance()) alcances.push('Open Finance');
-    if (this.openData()) alcances.push('Open Data');
-
-    const rawTipoDoc = this.tipoDocumento()?.trim();
-    const rawNombre = this.nombre()?.trim();
-    const rawCorreo = this.correo()?.trim();
-    const rawCelular = this.celular()?.trim();
-    const rawNacimiento = this.fechaNacimiento()?.trim();
-
-    const payload: SolicitudConsentimiento = {
-      cliente_id: clienteId,
-      tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
-      numero_documento: doc ?? '',
-      nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
-      email: rawCorreo && rawCorreo.length > 0 ? rawCorreo : (this.channel() === 'email' ? destino : ''),
-      telefono: rawCelular && rawCelular.length > 0 ? rawCelular : (this.channel() === 'sms' ? destino : ''),
-      fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
-      pais: 'Colombia',
-      ramo: this.ramoId(),
-      canal: this.channel(),
-      contacto: destino,
-      contacto_mask: this.contactoMask(),
-      alcance: alcances,
-      open_finance: this.openFinance(),
-      open_data: this.openData(),
-      asesor: 'Ana Gómez (asesor)',
-    };
+    const payload = this.buildSolicitudPayload(destino);
 
     this.consentService.solicitar(payload).subscribe({
       next: (resp) => {
@@ -192,28 +239,7 @@ export class ConsentPanelComponent {
             this.consentValidated.emit(true);
           },
           error: () => {
-            const rawDoc = this.documento()?.trim();
-            const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${rawDoc}` : 'CLI-51502';
-            const rawNom = this.nombre()?.trim();
-            const fallbackNom = rawNom && rawNom.length > 0 ? rawNom : 'Cliente';
-            const alcancesArr = [this.openFinance() ? 'Open Finance' : '', this.openData() ? 'Open Data' : ''].filter(
-              Boolean
-            );
-
-            this.registro.set({
-              consentimiento_id: this.consentimientoId(),
-              cliente_id: fallbackCliId,
-              cliente_nombre: fallbackNom,
-              cliente_documento: `${this.tipoDocumento()} ${this.documento()}`.trim(),
-              estado: 'Otorgado',
-              fuente: `${this.channel() === 'sms' ? 'SMS' : 'Correo'}: ${this.contactoDestino()}`,
-              fecha_otorgamiento: new Date().toISOString().replace('T', ' ').substring(0, 16),
-              fecha_hora: new Date().toISOString().replace('T', ' ').substring(0, 16),
-              asesor: 'Ana Gómez (asesor)',
-              canal: this.channel() === 'sms' ? 'Código por SMS' : 'Código por correo electrónico',
-              contacto: this.contactoDestino(),
-              alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : 'Ninguno',
-            });
+            this.registro.set(this.buildFallbackRegistro());
             this.estado.set('validated');
             this.consentValidated.emit(true);
           },

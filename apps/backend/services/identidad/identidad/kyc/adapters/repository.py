@@ -40,6 +40,29 @@ def _client(row) -> Client:
     )
 
 
+def _merge_and_save_client(repo, client: Client) -> Client:
+    existing = None
+    if client.numero_documento:
+        existing = repo.get_by_documento(client.tipo_documento, client.numero_documento)
+    if not existing and client.email:
+        existing = repo.get_by_email(client.email)
+    if not existing and client.id:
+        existing = repo.get(client.id)
+
+    if existing:
+        existing.nombre = client.nombre or existing.nombre
+        existing.telefono = client.telefono or existing.telefono
+        existing.email = client.email or existing.email
+        existing.tipo_documento = client.tipo_documento or existing.tipo_documento
+        existing.numero_documento = client.numero_documento or existing.numero_documento
+        if client.fecha_nacimiento:
+            existing.fecha_nacimiento = client.fecha_nacimiento
+        repo.update(existing)
+        return existing
+    repo.add(client)
+    return client
+
+
 class PostgresClientRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
@@ -100,28 +123,7 @@ class PostgresClientRepository:
             )
 
     def upsert(self, client: Client) -> Client:
-        existing = None
-        if client.numero_documento:
-            existing = self.get_by_documento(client.tipo_documento, client.numero_documento)
-        if not existing and client.email:
-            existing = self.get_by_email(client.email)
-        if not existing and client.id:
-            existing = self.get(client.id)
-
-        if existing:
-            # Actualizar datos si vienen diligenciados
-            existing.nombre = client.nombre or existing.nombre
-            existing.telefono = client.telefono or existing.telefono
-            existing.email = client.email or existing.email
-            existing.tipo_documento = client.tipo_documento or existing.tipo_documento
-            existing.numero_documento = client.numero_documento or existing.numero_documento
-            if client.fecha_nacimiento:
-                existing.fecha_nacimiento = client.fecha_nacimiento
-            self.update(existing)
-            return existing
-        else:
-            self.add(client)
-            return client
+        return _merge_and_save_client(self, client)
 
     def get(self, client_id: str) -> Client | None:
         with self.engine.connect() as conn:
@@ -173,27 +175,7 @@ class InMemoryClientRepository:
         self.clients_by_email[client.email.lower()] = client
 
     def upsert(self, client: Client) -> Client:
-        existing = None
-        if client.numero_documento:
-            existing = self.get_by_documento(client.tipo_documento, client.numero_documento)
-        if not existing and client.email:
-            existing = self.get_by_email(client.email)
-        if not existing and client.id:
-            existing = self.get(client.id)
-
-        if existing:
-            existing.nombre = client.nombre or existing.nombre
-            existing.telefono = client.telefono or existing.telefono
-            existing.email = client.email or existing.email
-            existing.tipo_documento = client.tipo_documento or existing.tipo_documento
-            existing.numero_documento = client.numero_documento or existing.numero_documento
-            if client.fecha_nacimiento:
-                existing.fecha_nacimiento = client.fecha_nacimiento
-            self.update(existing)
-            return existing
-        else:
-            self.add(client)
-            return client
+        return _merge_and_save_client(self, client)
 
     def get(self, client_id: str) -> Client | None:
         return self.clients_by_id.get(client_id)
