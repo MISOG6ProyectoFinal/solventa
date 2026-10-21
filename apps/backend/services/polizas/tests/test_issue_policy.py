@@ -208,8 +208,8 @@ def test_upstream_down_returns_503_and_issues_nothing():
     def handler(request):
         raise httpx.ConnectError("down")
 
-    service = ServiceClient("cotizacion", "http://cotizacion.test")
-    service.client = httpx.Client(base_url="http://cotizacion.test", transport=httpx.MockTransport(handler))
+    service = ServiceClient("cotizacion", "https://cotizacion.test")
+    service.client = httpx.Client(base_url="https://cotizacion.test", transport=httpx.MockTransport(handler))
     policies = InMemoryPolicyRepository()
     wire(policies, QuoteReader(service), _Source(PAYMENT))
 
@@ -223,7 +223,7 @@ def test_quote_reader_maps_404_to_missing():
     def handler(request):
         return httpx.Response(404, json={"detail": "no"})
 
-    service = ServiceClient("cotizacion", "http://cotizacion.test")
-    service.client = httpx.Client(base_url="http://cotizacion.test", transport=httpx.MockTransport(handler))
+    service = ServiceClient("cotizacion", "https://cotizacion.test")
+    service.client = httpx.Client(base_url="https://cotizacion.test", transport=httpx.MockTransport(handler))
 
     assert QuoteReader(service).get("cot-1") is None
