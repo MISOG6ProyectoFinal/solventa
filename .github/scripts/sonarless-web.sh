@@ -169,17 +169,19 @@ show_issues() {
   SONAR_URL="http://localhost:9234"
   SONAR_AUTH='admin:Son@rless123'
 
-  fetch_sonar_issues "Solventa-Web" sonar-issues-web.json
-  echo ""
-  echo "Web Sonar Issues"
-  echo "----------------"
-  print_sonar_issues sonar-issues-web.json
+  PROJECT_KEY=$(jq -r '.component.key // empty' sonar-metrics-web.json)
+  if [ -z "$PROJECT_KEY" ]; then
+    echo "❌ PROJECT_KEY vacío: no se pudo leer .component.key desde sonar-metrics-web.json"
+    exit 1
+  fi
 
-  fetch_sonar_hotspots "Solventa-Web" sonar-hotspots-web.json
+  fetch_sonar_issues "$PROJECT_KEY" sonar-issues-web.json
   echo ""
-  echo "Web Sonar Hotspots"
-  echo "------------------"
-  print_sonar_hotspots sonar-hotspots-web.json
+  print_sonar_group "Web Sonar Issues" issues sonar-issues-web.json
+
+  fetch_sonar_hotspots "$PROJECT_KEY" sonar-hotspots-web.json
+  echo ""
+  print_sonar_group "Web Sonar Hotspots" hotspots sonar-hotspots-web.json
 }
 
 enforce_gate() {
@@ -200,9 +202,7 @@ enforce_gate() {
   echo "----------------"
   print_sonar_issues sonar-issues-web.json
   echo ""
-  echo "Web Sonar Hotspots"
-  echo "------------------"
-  print_sonar_hotspots sonar-hotspots-web.json
+  print_sonar_group "Web Sonar Hotspots" hotspots sonar-hotspots-web.json
   echo ""
 
   metric() {
