@@ -27,7 +27,7 @@ export default function HomeScreen() {
           icon: 'menu',
           label: texts.home.menuLabel,
           onPress: () => navigation.dispatch(DrawerActions.openDrawer()),
-          onLongPress: __DEV__ ? () => navigation.navigate('Components') : undefined,
+          onLongPress: __DEV__ ? () => navigation.navigate('DevTools') : undefined,
         },
       }}
     >

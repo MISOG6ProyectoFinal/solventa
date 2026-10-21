@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { Aviso } from '../../api/listAvisos';
@@ -58,6 +58,18 @@ const EVIDENCIAS = [
   },
 ];
 
+const ASISTENCIA = {
+  id: 'as-1',
+  aviso_id: 'aviso-2',
+  servicio: 'grua',
+  ubicacion: 'Calle 85 #12-34, Chapinero, Bogotá',
+  gps: 'GPS 4.6683, -74.0531 (±8 m)',
+  numero: 'AST-3170',
+  eta_min: 25,
+  eta_max: 40,
+  estado: 'solicitada',
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return {
     ok: status >= 200 && status < 300,
@@ -66,18 +78,31 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
+type Routes = { evidencias?: ReturnType<typeof jsonResponse>; asistencias?: ReturnType<typeof jsonResponse> };
+
+function mockFetch({
+  evidencias = jsonResponse(EVIDENCIAS),
+  asistencias = jsonResponse([]),
+}: Routes = {}) {
+  return jest.fn(async (url: string) => (String(url).endsWith('/asistencias') ? asistencias : evidencias)) as typeof fetch;
+}
+
 describe('AvisoDetailScreen', () => {
   beforeEach(() => {
     useNavigation().goBack.mockClear();
-    global.fetch = jest.fn(async () => jsonResponse(EVIDENCIAS)) as typeof fetch;
+    useNavigation().navigate.mockClear();
+    global.fetch = mockFetch();
   });
 
   it('shows a loading indicator until the evidences arrive', async () => {
     let release: (value: ReturnType<typeof jsonResponse>) => void = () => undefined;
     global.fetch = jest.fn(
-      () => new Promise((resolve) => {
-        release = resolve;
-      }),
+      (url: string) =>
+        String(url).endsWith('/asistencias')
+          ? Promise.resolve(jsonResponse([]))
+          : new Promise((resolve) => {
+              release = resolve;
+            }),
     ) as typeof fetch;
     const { findByText, getByTestId, queryByTestId, queryByText } = await render(
       <AvisoDetailScreen route={{ params: { aviso: FILED } }} />,
@@ -116,7 +141,7 @@ describe('AvisoDetailScreen', () => {
   });
 
   it('shows a draft without the filed banner or assistance', async () => {
-    global.fetch = jest.fn(async () => jsonResponse([])) as typeof fetch;
+    global.fetch = mockFetch({ evidencias: jsonResponse([]) });
     const { findByText, getByText, queryByText } = await render(
       <AvisoDetailScreen route={{ params: { aviso: DRAFT } }} />,
     );
@@ -127,13 +152,55 @@ describe('AvisoDetailScreen', () => {
     expect(queryByText('Siniestro #SIN-18247 radicado exitosamente.')).toBeNull();
     expect(queryByText('Solicitar asistencia en sitio')).toBeNull();
     expect(await findByText('Evidencias (0)')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringMatching(/\/asistencias$/), expect.anything());
   });
 
   it('keeps the report when the evidences cannot be loaded', async () => {
-    global.fetch = jest.fn(async () => jsonResponse({ detail: 'No se encontró el reporte.' }, 404)) as typeof fetch;
+    global.fetch = mockFetch({ evidencias: jsonResponse({ detail: 'No se encontró el reporte.' }, 404) });
     const { findByText, getByText } = await render(<AvisoDetailScreen route={{ params: { aviso: FILED } }} />);
 
     expect(await findByText('No se encontró el reporte.')).toBeTruthy();
     expect(getByText('La maleta no llegó')).toBeTruthy();
+  });
+
+  it('opens the service screen from the assistance button', async () => {
+    const { findByText, getByText } = await render(<AvisoDetailScreen route={{ params: { aviso: FILED } }} />);
+    await findByText('Evidencias (2)');
+
+    await fireEvent.press(getByText('Solicitar asistencia en sitio'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('AssistanceService', { aviso: FILED });
+  });
+
+  it('shows the assistance card instead of the button when a request exists', async () => {
+    global.fetch = mockFetch({ asistencias: jsonResponse([ASISTENCIA]) });
+    const { findByText, getByText, queryByText } = await render(
+      <AvisoDetailScreen route={{ params: { aviso: FILED } }} />,
+    );
+
+    expect(await findByText('Asistencia solicitada')).toBeTruthy();
+    expect(getByText('Grúa')).toBeTruthy();
+    expect(getByText('Solicitud AST-3170')).toBeTruthy();
+    expect(getByText('Llegada estimada: 25-40 min')).toBeTruthy();
+    expect(queryByText('Solicitar asistencia en sitio')).toBeNull();
+  });
+
+  it('shows the assistance card from the route params without asking the server', async () => {
+    const { findByText, queryByText } = await render(
+      <AvisoDetailScreen route={{ params: { aviso: FILED, asistencia: ASISTENCIA } }} />,
+    );
+
+    expect(await findByText('Asistencia solicitada')).toBeTruthy();
+    expect(queryByText('Solicitar asistencia en sitio')).toBeNull();
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringMatching(/\/asistencias$/), expect.anything());
+  });
+
+  it('keeps the detail and hides the assistance button when the assistance cannot be loaded', async () => {
+    global.fetch = mockFetch({ asistencias: jsonResponse({ detail: 'Servicio no disponible.' }, 503) });
+    const { findByText, getByText, queryByText } = await render(<AvisoDetailScreen route={{ params: { aviso: FILED } }} />);
+
+    expect(await findByText('No se pudo cargar la asistencia.')).toBeTruthy();
+    expect(getByText('La maleta no llegó')).toBeTruthy();
+    expect(queryByText('Solicitar asistencia en sitio')).toBeNull();
   });
 });

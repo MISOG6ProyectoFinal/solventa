@@ -1,22 +1,27 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { StaticScreenProps } from '@react-navigation/native';
+import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
 import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { getAssistance, type Asistencia } from '../../api/getAssistance';
 import { listEvidencias, type Evidencia } from '../../api/listEvidencias';
 import { type Aviso } from '../../api/listAvisos';
 import { texts } from '../../texts';
 import { formatOccurredAt } from '../../utils';
-import detailStyles from '../detailStyles';
+import detailStyles from '../../components/detailStyles';
+import { AssistanceCard } from './AssistanceCard';
 import styles from './styles';
 
-type Props = StaticScreenProps<{ aviso: Aviso }>;
+type Props = StaticScreenProps<{ aviso: Aviso; asistencia?: Asistencia; }>;
 
 type DetailBodyProps = {
   aviso: Aviso;
   evidencias: Evidencia[];
   error: string | null;
+  asistencia: Asistencia | null;
+  assistanceFailed: boolean;
+  onRequestAssistance: () => void;
 };
 
 function formatSize(bytes: number): string {
@@ -26,7 +31,7 @@ function formatSize(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-function evidenceTiles(items: Evidencia[]): { id: string; label: string; size: string }[] {
+function evidenceTiles(items: Evidencia[]): { id: string; label: string; size: string; }[] {
   let photos = 0;
   let videos = 0;
 
@@ -51,7 +56,14 @@ function bannerText(aviso: Aviso): string | null {
   return null;
 }
 
-function AvisoDetailBody({ aviso, evidencias, error }: Readonly<DetailBodyProps>) {
+function AvisoDetailBody({
+  aviso,
+  evidencias,
+  error,
+  asistencia,
+  assistanceFailed,
+  onRequestAssistance,
+}: Readonly<DetailBodyProps>) {
   const filed = aviso.estado === 'radicado';
   const banner = bannerText(aviso);
   const tiles = evidenceTiles(evidencias);
@@ -61,6 +73,7 @@ function AvisoDetailBody({ aviso, evidencias, error }: Readonly<DetailBodyProps>
     <ScrollView style={detailStyles.scroll} contentContainerStyle={detailStyles.content}>
       {banner ? <Banner variant="success">{banner}</Banner> : null}
       {error ? <Banner variant="error">{error}</Banner> : null}
+      {assistanceFailed ? <Banner variant="error">{texts.assistance.loadFailed}</Banner> : null}
       <Card>
         <View style={detailStyles.titleRow}>
           <AppText variant="button" style={detailStyles.title}>
@@ -93,16 +106,24 @@ function AvisoDetailBody({ aviso, evidencias, error }: Readonly<DetailBodyProps>
           ))}
         </View>
       </Card>
-      {filed ? <Button title={texts.detail.assistButton} variant="secondary" /> : null}
+      {asistencia ? <AssistanceCard asistencia={asistencia} /> : null}
+      {filed && !asistencia && !assistanceFailed ? (
+        <Button title={texts.detail.assistButton} variant="secondary" onPress={onRequestAssistance} />
+      ) : null}
     </ScrollView>
   );
 }
 
 export default function AvisoDetailScreen({ route }: Readonly<Props>) {
+  const navigation = useNavigation();
   const aviso = route.params.aviso;
+  const requested = route.params.asistencia ?? null;
   const [evidencias, setEvidencias] = useState<Evidencia[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [asistencia, setAsistencia] = useState<Asistencia | null>(requested);
+  const [assistanceLoading, setAssistanceLoading] = useState(requested === null && aviso.estado === 'radicado');
+  const [assistanceFailed, setAssistanceFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,12 +153,55 @@ export default function AvisoDetailScreen({ route }: Readonly<Props>) {
     };
   }, [aviso.id]);
 
+  useEffect(() => {
+    if (requested) {
+      setAsistencia(requested);
+      setAssistanceLoading(false);
+      return;
+    }
+    if (aviso.estado !== 'radicado') {
+      return;
+    }
+
+    let cancelled = false;
+    setAssistanceLoading(true);
+
+    getAssistance(aviso.id)
+      .then((item) => {
+        if (!cancelled) {
+          setAsistencia(item);
+          setAssistanceFailed(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssistanceFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAssistanceLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aviso.id, aviso.estado, requested]);
+
   return (
     <Screen testID="aviso-detail-screen" header={{ title: texts.detail.screenTitle }}>
-      {loading || evidencias === null ? (
+      {loading || assistanceLoading || evidencias === null ? (
         <ActivityIndicator testID="aviso-detail-loading" style={styles.loading} />
       ) : (
-        <AvisoDetailBody aviso={aviso} evidencias={evidencias} error={error} />
+        <AvisoDetailBody
+          aviso={aviso}
+          evidencias={evidencias}
+          error={error}
+          asistencia={asistencia}
+          assistanceFailed={assistanceFailed}
+          onRequestAssistance={() => navigation.navigate('AssistanceService', { aviso })}
+        />
       )}
     </Screen>
   );

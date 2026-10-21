@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { setAccessToken } from '../../../shared/api/accessToken';
+import { loadApiBaseUrl } from '../../../shared/api/apiBaseUrl';
 import { ApiError } from '../../../shared/api/client';
 import { getSession, type ClientProfile } from '../api/getSession';
 import { registerClient } from '../api/registerClient';
@@ -100,6 +101,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   lastName: null,
   restore: async () => {
     const generation = ++restoreGeneration;
+    await loadApiBaseUrl();
     const token = await readToken();
     if (generation !== restoreGeneration) {
       return;

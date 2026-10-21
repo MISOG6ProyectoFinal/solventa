@@ -18,6 +18,10 @@ export default StyleSheet.create({
   contentWithKeyboard: {
     justifyContent: 'flex-start',
   },
+  devTools: {
+    position: 'absolute',
+    right: theme.space.lg,
+  },
   logo: {
     alignItems: 'center',
     alignSelf: 'center',

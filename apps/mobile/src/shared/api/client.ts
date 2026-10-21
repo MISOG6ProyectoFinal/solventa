@@ -1,11 +1,5 @@
 import { getAccessToken } from './accessToken';
-
-const configuredApiBaseUrl = process.env.API_BASE_URL;
-if (configuredApiBaseUrl === undefined || configuredApiBaseUrl === '') {
-  throw new Error('Falta API_BASE_URL.');
-}
-
-const apiBaseUrl = configuredApiBaseUrl;
+import { getApiBaseUrl } from './apiBaseUrl';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -59,7 +53,7 @@ async function requestJson<T>(
   path: string,
   payload?: unknown,
 ): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method,
     headers: requestHeaders(payload),
     body: payload === undefined ? undefined : JSON.stringify(payload),

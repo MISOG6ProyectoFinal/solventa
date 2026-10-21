@@ -8,16 +8,19 @@ import {
   type ScrollViewInstance,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '../../../../shared/api/client';
 import Logo from '../../../../shared/brand/solventa-logo.svg';
-import { AppText, Banner, Button, Screen, TextField } from '../../../../shared/ui';
+import { theme } from '../../../../shared/theme';
+import { AppText, Banner, Button, IconButton, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
 import { texts } from '../../texts';
 import styles from './styles';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const signIn = useSessionStore((state) => state.signIn);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -103,6 +106,16 @@ export default function LoginScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+      {__DEV__ ? (
+        <View style={[styles.devTools, { top: insets.top + theme.space.sm }]}>
+          <IconButton
+            label={texts.login.devToolsLabel}
+            icon="api"
+            color="primary"
+            onPress={() => navigation.navigate('DevTools')}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }
