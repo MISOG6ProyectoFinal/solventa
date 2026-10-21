@@ -337,3 +337,47 @@ def test_bff_web_proxy_consentimientos(monkeypatch):
     res_get = client.get("/web/consentimientos/CNS-12345")
     assert res_get.status_code == 200
     assert res_get.json() == resp_consulta
+
+
+ASISTENCIA = {"servicio": "grua", "ubicacion": "Calle 85 #12-34, Bogotá", "gps": "GPS 4.6683, -74.0531 (±8 m)"}
+
+
+def test_movil_solicita_asistencia_con_el_cliente_de_la_sesion(monkeypatch):
+    creada = {"id": "as-1", "numero": "AST-1111", "servicio": "grua"}
+    upstream = _Upstream(response=creada)
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.post("/movil/siniestros/aviso-1/asistencias", json=ASISTENCIA, headers=authorization())
+
+    assert response.status_code == 201
+    assert response.json() == creada
+    assert upstream.calls[0][0] == "/siniestros/avisos/aviso-1/asistencias"
+    assert upstream.calls[0][1]["json"] == ASISTENCIA
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
+def test_movil_lista_la_asistencia_del_aviso(monkeypatch):
+    upstream = _Upstream(response=[{"id": "as-1"}])
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.get("/movil/siniestros/aviso-1/asistencias", headers=authorization())
+
+    assert response.status_code == 200
+    assert response.json() == [{"id": "as-1"}]
+    assert upstream.calls[0][0] == "/siniestros/avisos/aviso-1/asistencias"
+    assert upstream.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+
+
+def test_movil_reenvia_409_de_asistencia(monkeypatch):
+    duplicada = "Ya solicitaste asistencia para este siniestro."
+    monkeypatch.setattr("canales.movil.api.siniestros", _Upstream(error=_status_error(409, duplicada)))
+
+    response = client.post("/movil/siniestros/aviso-1/asistencias", json=ASISTENCIA, headers=authorization())
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == duplicada
+
+
+def test_movil_asistencia_exige_sesion():
+    assert client.post("/movil/siniestros/aviso-1/asistencias", json=ASISTENCIA).status_code == 401
+    assert client.get("/movil/siniestros/aviso-1/asistencias").status_code == 401

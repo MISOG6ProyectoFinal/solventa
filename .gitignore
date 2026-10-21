@@ -86,6 +86,8 @@ vite.config.*.timestamp*
 
 .cursor/
 .cursorignore
+CLAUDE.md
+.claude/
 
 .env
 

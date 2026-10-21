@@ -22,21 +22,23 @@ from siniestros.config import settings
 router = APIRouter(prefix="/siniestros", tags=["Siniestros"])
 
 casos: dict = {}
+repository: AvisoRepository
 object_store: ObjectStore
 
 
-def wire(repository: AvisoRepository, almacen: ObjectStore, bucket: str | None = None) -> None:
-    global object_store
-    if hasattr(repository, "create_schema"):
-        repository.create_schema()
+def wire(avisos: AvisoRepository, almacen: ObjectStore, bucket: str | None = None) -> None:
+    global repository, object_store
+    if hasattr(avisos, "create_schema"):
+        avisos.create_schema()
+    repository = avisos
     object_store = almacen
     name = bucket or settings.evidencias_bucket
-    casos["crear"] = CrearAvisoUseCase(repository)
-    casos["listar_avisos"] = ListarAvisosUseCase(repository)
-    casos["radicar"] = RadicarAvisoUseCase(repository)
-    casos["solicitar"] = SolicitarCargaUseCase(repository, almacen, name)
-    casos["confirmar"] = ConfirmarCargaUseCase(repository, almacen)
-    casos["listar"] = ListarEvidenciasUseCase(repository, almacen)
+    casos["crear"] = CrearAvisoUseCase(avisos)
+    casos["listar_avisos"] = ListarAvisosUseCase(avisos)
+    casos["radicar"] = RadicarAvisoUseCase(avisos)
+    casos["solicitar"] = SolicitarCargaUseCase(avisos, almacen, name)
+    casos["confirmar"] = ConfirmarCargaUseCase(avisos, almacen)
+    casos["listar"] = ListarEvidenciasUseCase(avisos, almacen)
 
 
 def _default_wire() -> None:

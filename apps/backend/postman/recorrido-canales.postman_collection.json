@@ -630,7 +630,7 @@
     },
     {
       "name": "API de socios",
-      "description": "Cotización embebida desde el canal de un socio (ASR-01 y ASR-04).",
+      "description": "Cotización, pago y emisión desde el canal de un socio (ASR-01, ASR-04 y HU015). Pagar y emitir requieren que el socio tenga el alcance emision.",
       "item": [
         {
           "name": "Productos del socio",
@@ -713,11 +713,121 @@
                 "type": "text/javascript",
                 "exec": [
                   "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('cotizacionSocioId', oferta.id);",
                   "pm.test('El consenso devuelve una oferta', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
                   "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
                   "  pm.expect(oferta.degradada).to.be.a('boolean');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar como socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{clavePago}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones/{{cotizacionSocioId}}/pagos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medio_token\": \"demo-4242\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('clavePago', `postman-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cobro = pm.response.json();",
+                  "pm.collectionVariables.set('cobroSocioId', cobro.id);",
+                  "pm.test('La pasarela aprueba el cobro de la prima', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(cobro.estado).to.equal('aprobado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Emitir póliza como socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{claveEmision}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/polizas",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('claveEmision', `postman-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.test('La póliza queda activa con su vigencia', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(poliza.numero).to.match(/^POL-/);",
+                  "  pm.expect(poliza.estado).to.equal('activa');",
+                  "  pm.expect(poliza.vigencia).to.have.keys('desde', 'hasta');",
                   "});"
                 ]
               }

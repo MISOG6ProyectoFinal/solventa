@@ -9,4 +9,5 @@ data:
   POLIZAS_URL: http://polizas
   SINIESTROS_URL: http://siniestros
   IDENTIDAD_URL: http://identidad
+  PAGOS_URL: http://pagos
   COTIZACION_REPLICAS_HOST: cotizacion-replicas

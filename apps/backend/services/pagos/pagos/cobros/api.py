@@ -17,6 +17,7 @@ def wire(repository: CobroRepository, pasarela: PasarelaPort) -> None:
     if hasattr(repository, "create_schema"):
         repository.create_schema()
     casos["cobrar"] = CobrarPrimaUseCase(repository, pasarela)
+    casos["repositorio"] = repository
 
 
 def _default_wire() -> None:
@@ -41,3 +42,12 @@ def crear_cobro(solicitud: SolicitudCobro) -> Cobro:
         return casos["cobrar"].execute(solicitud)
     except PasarelaNoDisponible as exc:
         raise HTTPException(status_code=503, detail="Pasarela de pagos no disponible") from exc
+
+
+@router.get("/cobros/{payment_id}", response_model=Cobro)
+def get_payment(payment_id: str) -> Cobro:
+    """Lectura interna: Pólizas confirma aquí que el cobro está aprobado antes de emitir."""
+    payment = casos["repositorio"].get(payment_id)
+    if payment is None:
+        raise HTTPException(status_code=404, detail={"codigo": "cobro_no_encontrado", "mensaje": "El cobro no existe."})
+    return payment

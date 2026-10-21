@@ -20,7 +20,7 @@ services:
       POSTGRES_DB: solventa
     ports: ["5433:5432"]
     volumes:
-      - ./deploy/k8s/overlays/local/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./deploy/k8s/components/k3s/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U solventa -d solventa"]
       interval: 5s
@@ -140,6 +140,28 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+  polizas:
+    build:
+      context: .
+      args:
+        SERVICE: polizas
+    environment:
+      SERVICE_NAME: polizas
+      DB_HOST: postgres
+      DB_NAME: polizas
+      DB_USER: solventa
+      DB_PASSWORD: solventa
+      COTIZACION_URL: http://cotizacion:8000
+      PAGOS_URL: http://pagos:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
   canales:
     build:
       context: .
@@ -152,6 +174,7 @@ services:
       COTIZACION_URL: http://cotizacion:8000
       IDENTIDAD_URL: http://identidad:8000
       PAGOS_URL: http://pagos:8000
+      POLIZAS_URL: http://polizas:8000
       SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
       CORS_ORIGINS: http://localhost:4200
     depends_on:
@@ -162,6 +185,8 @@ services:
       identidad:
         condition: service_healthy
       pagos:
+        condition: service_started
+      polizas:
         condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]

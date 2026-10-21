@@ -33,5 +33,6 @@ class OfertaCotizacion(BaseModel):
     datos_riesgo: dict = Field(default_factory=dict)
     canal: str = "web"
     cliente_id: str | None = None
+    socio_id: str | None = None
     degradada: bool = False
     senales: list[AppliedSignal] = Field(default_factory=list)

@@ -19,10 +19,16 @@ def test_el_cliente_de_pagos_usa_el_timeout_configurado():
     assert ServiceClient.timeout_s == pytest.approx(1.0)
 
 
+def test_policy_client_waits_longer_than_the_policy_service_budget():
+    assert settings.polizas_timeout_s == pytest.approx(3.0)
+    assert polizas.timeout_s == pytest.approx(settings.polizas_timeout_s)
+    assert polizas.client.timeout == httpx.Timeout(settings.polizas_timeout_s)
+
+
 @pytest.mark.parametrize(
     "cliente",
-    [polizas, siniestros, identidad],
-    ids=["polizas", "siniestros", "identidad"],
+    [siniestros, identidad],
+    ids=["siniestros", "identidad"],
 )
 def test_los_demas_clientes_conservan_timeout_de_un_segundo(cliente):
     assert cliente.timeout_s == pytest.approx(1.0)

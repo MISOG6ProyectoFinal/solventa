@@ -254,4 +254,23 @@ def listar_evidencias(aviso_id: str, session: Session):
     )
 
 
+@authenticated.post("/siniestros/{aviso_id}/asistencias", status_code=201)
+def solicitar_asistencia(aviso_id: str, solicitud: dict, session: Session) -> dict:
+    return call_upstream(
+        siniestros.post,
+        f"/siniestros/avisos/{aviso_id}/asistencias",
+        json=solicitud,
+        headers=_cliente(session),
+    )
+
+
+@authenticated.get("/siniestros/{aviso_id}/asistencias")
+def listar_asistencias(aviso_id: str, session: Session):
+    return call_upstream(
+        siniestros.get,
+        f"/siniestros/avisos/{aviso_id}/asistencias",
+        headers=_cliente(session),
+    )
+
+
 router.include_router(authenticated)

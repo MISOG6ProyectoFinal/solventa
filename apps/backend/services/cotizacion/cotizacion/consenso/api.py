@@ -45,9 +45,12 @@ async def quote(
     client_id: str | None = None,
     signals: list[AppliedSignal] | None = None,
     allowed_coverages: set[str] | None = None,
+    partner_id: str | None = None,
 ) -> OfertaCotizacion:
     try:
-        return await container.cotizar_con_consenso.execute(solicitud, canal, client_id, signals, allowed_coverages)
+        return await container.cotizar_con_consenso.execute(
+            solicitud, canal, client_id, signals, allowed_coverages, partner_id
+        )
     except ProductoNoEncontrado as exc:
         raise HTTPException(status_code=404, detail=f"Producto no encontrado: {exc}") from exc
     except ProductoInactivo as exc:

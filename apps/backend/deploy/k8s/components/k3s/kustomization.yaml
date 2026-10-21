@@ -29,20 +29,20 @@ patches:
         value: kube-system
   - target:
       kind: Deployment
-      name: (polizas|identidad|siniestros|pagos|auditoria|health-monitor|siniestros-worker)
+      name: (identidad|siniestros|pagos|auditoria|health-monitor|siniestros-worker)
     patch: |-
       - op: replace
         path: /spec/replicas
         value: 1
   - target:
       kind: Deployment
-      name: (canales|cotizacion)
+      name: (canales|cotizacion|polizas)
     patch: |-
       - op: remove
         path: /spec/replicas
   - target:
       kind: HorizontalPodAutoscaler
-      name: canales
+      name: (canales|polizas)
     patch: |-
       - op: replace
         path: /spec/minReplicas
