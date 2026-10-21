@@ -88,17 +88,19 @@ show_issues() {
   SONAR_URL="http://localhost:9234"
   SONAR_AUTH='admin:Son@rless123'
 
-  fetch_sonar_issues "Solventa-Mobile" sonar-issues-mobile.json
-  echo ""
-  echo "Mobile Sonar Issues"
-  echo "-------------------"
-  print_sonar_issues sonar-issues-mobile.json
+  PROJECT_KEY=$(jq -r '.component.key // empty' sonar-metrics-mobile.json)
+  if [ -z "$PROJECT_KEY" ]; then
+    echo "❌ PROJECT_KEY vacío: no se pudo leer .component.key desde sonar-metrics-mobile.json"
+    exit 1
+  fi
 
-  fetch_sonar_hotspots "Solventa-Mobile" sonar-hotspots-mobile.json
+  fetch_sonar_issues "$PROJECT_KEY" sonar-issues-mobile.json
   echo ""
-  echo "Mobile Sonar Hotspots"
-  echo "---------------------"
-  print_sonar_hotspots sonar-hotspots-mobile.json
+  print_sonar_group "Mobile Sonar Issues" issues sonar-issues-mobile.json
+
+  fetch_sonar_hotspots "$PROJECT_KEY" sonar-hotspots-mobile.json
+  echo ""
+  print_sonar_group "Mobile Sonar Hotspots" hotspots sonar-hotspots-mobile.json
 }
 
 enforce_gate() {
@@ -116,9 +118,7 @@ enforce_gate() {
   echo "-------------------"
   print_sonar_issues sonar-issues-mobile.json
   echo ""
-  echo "Mobile Sonar Hotspots"
-  echo "---------------------"
-  print_sonar_hotspots sonar-hotspots-mobile.json
+  print_sonar_group "Mobile Sonar Hotspots" hotspots sonar-hotspots-mobile.json
   echo ""
 
   metric() {
