@@ -29,6 +29,7 @@ from cotizacion.gobierno_socios.domain.models import (
     AlcanceNoAutorizado,
     AltaSocio,
     AltaSocioRequest,
+    AuthorizedPartner,
     ContratoSuspendido,
     CredencialInvalida,
     IdentificadorDuplicado,
@@ -148,6 +149,17 @@ def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRe
     return container.consultar_configuracion.presentar(configuracion)
 
 
+@router.get("/autorizacion", response_model=AuthorizedPartner)
+def authorize_partner(
+    alcance: Alcance,
+    client_id: Annotated[str, Header(alias="X-Client-Id")],
+    secreto: Annotated[str, Header(alias="X-Api-Key")],
+) -> AuthorizedPartner:
+    """Canales autoriza aquí al socio antes de cobrar o emitir en su nombre."""
+    socio = autorizar_socio(client_id, secreto, alcance)
+    return AuthorizedPartner(socio_id=socio.id, identificador=socio.identificador, nombre=socio.nombre)
+
+
 @router.get("/catalogo", response_model=list[QuotableProduct])
 def partner_catalog(
     client_id: Annotated[str, Header(alias="X-Client-Id")],
@@ -182,4 +194,6 @@ async def cotizar_como_socio(
             await run_in_threadpool(container.resolve_risk_profile.execute, contract.consentimiento_open_finance)
         )
     rating = to_rating_request(contract, signals[0].score_riesgo if signals else None)
-    return await quote(rating, Canal.SOCIOS, signals=signals, allowed_coverages=set(line.coberturas))
+    return await quote(
+        rating, Canal.SOCIOS, signals=signals, allowed_coverages=set(line.coberturas), partner_id=socio.id
+    )

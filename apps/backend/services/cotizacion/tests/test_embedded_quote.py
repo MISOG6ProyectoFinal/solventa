@@ -430,3 +430,45 @@ def test_without_url_the_deterministic_sandbox_answers():
 def test_timeout_cannot_exceed_the_3000_ms_ceiling():
     with pytest.raises(ValidationError):
         CotizacionSettings(open_finance_timeout_s=3.5)
+
+
+# HU015: la cotización recuerda al socio y otros servicios lo autorizan por alcance.
+
+
+def test_partner_quote_records_the_partner():
+    partner = partner_with(travel())
+
+    offer = quote(partner, TRAVEL).json()
+
+    stored = next(item for item in container.cotizaciones.items if item.id == offer["id"])
+    assert stored.socio_id == partner["id"]
+    assert client.get(f"/consenso/cotizaciones/{offer['id']}").json()["socio_id"] == partner["id"]
+
+
+def _authorize(partner: dict, scope: str, secret: str | None = None):
+    headers = {"X-Client-Id": partner["client_id"], "X-Api-Key": secret or partner["secreto"]}
+    return client.get("/gobierno-socios/autorizacion", params={"alcance": scope}, headers=headers)
+
+
+def test_authorization_returns_the_partner_for_a_granted_scope():
+    partner = partner_with(travel())
+
+    response = _authorize(partner, "cotizacion")
+
+    assert response.status_code == 200
+    assert response.json() == {"socio_id": partner["id"], "identificador": "BANCO-AURORA", "nombre": "Banco Aurora"}
+
+
+def test_authorization_rejects_a_scope_not_granted():
+    partner = partner_with(travel())
+
+    response = _authorize(partner, "emision")
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["codigo"] == "alcance_no_autorizado"
+
+
+def test_authorization_rejects_invalid_credentials():
+    partner = partner_with(travel())
+
+    assert _authorize(partner, "cotizacion", secret="otro").status_code == 401

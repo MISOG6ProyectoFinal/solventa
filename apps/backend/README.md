@@ -246,21 +246,23 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 - **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** cotización asistida, listado, detalle y configuración de socios.
-- **API de socios:** cotización embebida con las credenciales de un socio.
+- **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza y reintentar la emisión con la misma `Idempotency-Key` (HU015).
 
-Antes de empezar, k6 crea un socio de prueba con el ramo de viaje habilitado. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 crea un socio de prueba con el ramo de viaje habilitado y los alcances de cotización y emisión. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
 PERFIL=humo ./load-tests/run.sh
 PERFIL=carga DURACION=5m ./load-tests/run.sh
 PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
+PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 ```
 
 | Perfil | Qué ejecuta |
 |---|---|
 | `humo` | Una iteración por canal, para validar el ambiente |
-| `carga` | Usuarios constantes en móvil y portal web, más cotizaciones de socios a tasa fija |
+| `carga` | Usuarios constantes en móvil y portal web, más cotizaciones y ventas de socios a tasa fija |
 | `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
+| `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir y reintentar la emisión |
 
 | Variable | Por defecto | Uso |
 |---|---|---|
@@ -268,6 +270,7 @@ PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
 | `DURACION` | `2m` | Duración del perfil `carga` |
 | `USUARIOS_MOVIL`, `USUARIOS_WEB` | 5 y 2 | Usuarios virtuales por recorrido en `carga` |
 | `TASA_SOCIOS` | 600 | Cotizaciones de socios por minuto en `carga` |
+| `TASA_VENTAS`, `VUS_VENTAS` | 120 y 20 | Ventas de socios por minuto y usuarios virtuales reservados en `carga` y `emision` |
 | `TASA_INICIAL`, `TASA_OBJETIVO` | 500 y 50.000 | Cotizaciones por minuto al inicio y al final de la rampa en `asr04` |
 | `RAMPA`, `SOSTENIDO` | `60s` y `5m` | Duración de la subida y del tramo sostenido en `asr04` |
 | `VUS_INICIALES`, `VUS_MAXIMOS` | 50 y 1000 | Usuarios virtuales que k6 reserva para sostener la tasa |
@@ -284,7 +287,7 @@ Los resultados quedan en `load-tests/resultados/<fecha>-<perfil>/`:
 
 k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test load-tests/`.
 
-Cada corrida crea un socio, y cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia en el ambiente.
+Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
 
 `postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`.
 

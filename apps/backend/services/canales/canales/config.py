@@ -12,6 +12,8 @@ class CanalesSettings(ServiceSettings):
     sesion_secreto: str
     cotizacion_timeout_s: float = 5.0
     pagos_timeout_s: float = 4.0
+    # Mayor que el presupuesto de Pólizas, que lee Cotización y Pagos con 1 s cada uno.
+    polizas_timeout_s: float = 3.0
 
 
 settings = CanalesSettings()

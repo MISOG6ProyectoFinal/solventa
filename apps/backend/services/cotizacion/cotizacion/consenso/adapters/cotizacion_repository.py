@@ -36,6 +36,7 @@ cotizaciones = Table(
     Column("canal", String(16), nullable=True, default="web"),
     Column("vigente_hasta", String(40), nullable=True),
     Column("cliente_id", String(64), nullable=True),
+    Column("socio_id", String(36), nullable=True),
     Column("degradada", Boolean, nullable=True, default=False),
     Column("senales", JSON, nullable=True),
 )
@@ -45,6 +46,7 @@ COLUMNAS_POSTERIORES = {
     "canal": "ALTER TABLE cotizaciones ADD COLUMN canal VARCHAR(16)",
     "vigente_hasta": "ALTER TABLE cotizaciones ADD COLUMN vigente_hasta VARCHAR(40)",
     "cliente_id": "ALTER TABLE cotizaciones ADD COLUMN cliente_id VARCHAR(64)",
+    "socio_id": "ALTER TABLE cotizaciones ADD COLUMN socio_id VARCHAR(36)",
     "degradada": "ALTER TABLE cotizaciones ADD COLUMN degradada BOOLEAN",
     "senales": "ALTER TABLE cotizaciones ADD COLUMN senales JSON",
 }
@@ -77,6 +79,7 @@ class PostgresCotizacionRepository:
                     canal=oferta.canal,
                     vigente_hasta=oferta.vigente_hasta.isoformat(),
                     cliente_id=oferta.cliente_id,
+                    socio_id=oferta.socio_id,
                     degradada=oferta.degradada,
                     senales=[signal.model_dump(mode="json") for signal in oferta.senales],
                 )
@@ -119,6 +122,7 @@ def _oferta(row) -> OfertaCotizacion:
         datos_riesgo=row["datos_riesgo"] or {},
         canal=row["canal"] or "web",
         cliente_id=row["cliente_id"],
+        socio_id=row["socio_id"],
         degradada=bool(row["degradada"]),
         senales=row["senales"] or [],
     )

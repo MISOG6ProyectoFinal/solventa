@@ -321,3 +321,32 @@ def test_no_acepta_un_numero_de_tarjeta():
 def test_el_caso_de_uso_sigue_montado():
     assert router.prefix == "/pagos"
     assert "cobrar" in casos
+
+
+def test_payment_can_be_read_by_id():
+    wire(InMemoryCobroRepository(), PasarelaSimulada())
+    created = client.post("/pagos/cobros", json=_solicitud()).json()
+
+    response = client.get(f"/pagos/cobros/{created['id']}")
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "aprobado"
+    assert response.json()["cotizacion_id"] == "oferta-1"
+
+
+def test_postgres_reads_payment_by_id():
+    repository = PostgresCobroRepository(_engine())
+    wire(repository, PasarelaSimulada())
+    created = client.post("/pagos/cobros", json=_solicitud()).json()
+
+    assert repository.get(created["id"]).estado is EstadoCobro.APROBADO
+    assert repository.get("no-existe") is None
+
+
+def test_unknown_payment_returns_404():
+    wire(InMemoryCobroRepository(), PasarelaSimulada())
+
+    response = client.get("/pagos/cobros/no-existe")
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["codigo"] == "cobro_no_encontrado"
