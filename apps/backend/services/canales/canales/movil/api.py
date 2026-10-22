@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
@@ -270,6 +270,16 @@ def listar_asistencias(aviso_id: str, session: Session):
         siniestros.get,
         f"/siniestros/avisos/{aviso_id}/asistencias",
         headers=_cliente(session),
+    )
+
+
+@authenticated.get("/prestadores/cercanos")
+def prestadores_cercanos(request: Request, session: Session):
+    # The catalog is not per client, and Siniestros validates the query.
+    return call_upstream(
+        siniestros.get,
+        "/siniestros/prestadores/cercanos",
+        params=dict(request.query_params),
     )
 
 

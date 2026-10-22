@@ -80,8 +80,8 @@ function umbrales() {
   const definidos = { errores: [`rate<=${UMBRALES.umbralErrores / 100}`] };
   if (PERFIL !== 'humo') definidos.dropped_iterations = ['count==0'];
   definidos['http_req_duration{fase:prueba}'] = ['max>=0'];
-  for (const { nombre, cotizacion } of PETICIONES) {
-    const objetivo = cotizacion ? UMBRALES.umbralCotizacion : UMBRALES.umbralP95;
+  for (const { nombre, cotizacion, objetivoMs } of PETICIONES) {
+    const objetivo = objetivoMs ?? (cotizacion ? UMBRALES.umbralCotizacion : UMBRALES.umbralP95);
     definidos[`http_req_duration{name:${nombre}}`] = [`p(95)<=${objetivo}`];
     definidos[`errores{name:${nombre}}`] = [`rate<=${UMBRALES.umbralErrores / 100}`];
     definidos[`http_reqs{name:${nombre}}`] = ['count>=0'];
@@ -260,6 +260,10 @@ export function movil() {
   pedir('Listar siniestros', 'GET', `${BASE_URL}/movil/siniestros`, null, {
     headers: autenticado,
     validar: (avisos) => avisos.some((a) => a.id === aviso.id && a.estado === 'radicado' && a.radicado === radicado.radicado),
+  });
+  pedir('Prestadores cercanos', 'GET', `${BASE_URL}/movil/prestadores/cercanos?lat=4.711&lon=-74.0721&radio_km=10`, null, {
+    headers: autenticado,
+    validar: (mapa) => mapa.type === 'FeatureCollection' && mapa.features.length > 0,
   });
 }
 

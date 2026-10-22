@@ -52,7 +52,7 @@ secreto_de_sesion() {
 
 desplegar() {
   echo "==> Overlay local"
-  kubectl_k3s -n "$NAMESPACE" delete job cotizacion-bootstrap --ignore-not-found >/dev/null
+  kubectl_k3s -n "$NAMESPACE" delete job cotizacion-bootstrap siniestros-prestadores-sync --ignore-not-found >/dev/null
   kubectl_k3s apply -k /solventa/k8s/overlays/local >/dev/null
   kubectl_k3s -n "$NAMESPACE" rollout restart deployment -l app.kubernetes.io/part-of=solventa >/dev/null
   kubectl_k3s -n "$NAMESPACE" rollout status statefulset/postgres --timeout=5m
