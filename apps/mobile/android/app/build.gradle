@@ -77,7 +77,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.mobile"
+    namespace "com.solventa"
     // CMake 3.22 ships Ninja 1.10, which rejects paths longer than 260 characters.
     // 3.31.6 ships Ninja 1.12, which accepts them when Windows long paths are enabled.
     externalNativeBuild {
@@ -86,7 +86,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.mobile"
+        applicationId "com.solventa"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
