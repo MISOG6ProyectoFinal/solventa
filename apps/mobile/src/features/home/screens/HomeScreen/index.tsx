@@ -3,7 +3,7 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { useSessionStore } from '../../../session/store/useSessionStore';
-import { homeSummary, type HomeDestination } from '../../homeSummary';
+import { homeSummary, type HomeShortcutDestination } from '../../homeSummary';
 import { texts } from '../../texts';
 import styles from './styles';
 
@@ -12,7 +12,11 @@ export default function HomeScreen() {
   const firstName = useSessionStore((state) => state.firstName);
   const { renewal } = homeSummary;
 
-  const openDestination = (destination: HomeDestination) => {
+  const openDestination = (destination: HomeShortcutDestination) => {
+    if (destination === 'NearbyProviders') {
+      navigation.navigate(destination);
+      return;
+    }
     navigation.navigate('Main', { screen: destination });
   };
 

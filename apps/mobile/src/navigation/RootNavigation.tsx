@@ -9,6 +9,7 @@ import AssistanceConfirmScreen from '../features/claims/screens/AssistanceConfir
 import AssistanceServiceScreen from '../features/claims/screens/AssistanceServiceScreen';
 import AvisoDetailScreen from '../features/claims/screens/AvisoDetailScreen';
 import ClaimsScreen from '../features/claims/screens/ClaimsScreen';
+import NearbyProvidersScreen from '../features/providers/screens/NearbyProvidersScreen';
 import DevToolsScreen from '../features/devtools/screens/DevToolsScreen';
 import { QuoteStack } from '../features/quote/QuoteStack';
 import ProductsScreen from '../features/quote/screens/ProductsScreen';
@@ -77,6 +78,7 @@ export const RootStack = createNativeStackNavigator({
         AvisoDetail: AvisoDetailScreen,
         AssistanceService: AssistanceServiceScreen,
         AssistanceConfirm: AssistanceConfirmScreen,
+        NearbyProviders: NearbyProvidersScreen,
         Quote: QuoteStack,
       },
     },

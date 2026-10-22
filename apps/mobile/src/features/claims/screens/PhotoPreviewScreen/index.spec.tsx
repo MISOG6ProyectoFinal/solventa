@@ -10,6 +10,8 @@ jest.mock('../../../../shared/location', () => ({
     Promise.resolve({
       address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
       gps: 'GPS 4.5981, -74.0760 (±12 m)',
+      latitude: 4.5981,
+      longitude: -74.076,
     }),
   ),
 }));

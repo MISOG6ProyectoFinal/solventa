@@ -110,6 +110,7 @@ const iconLabels: Record<IconName, string> = {
   api: 'API',
   ubicacion: 'Ubicación',
   grua: 'Grúa',
+  taller: 'Taller',
   ambulancia: 'Ambulancia',
   perito: 'Perito',
   calendario: 'Calendario',

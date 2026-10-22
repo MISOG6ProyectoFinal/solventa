@@ -24,6 +24,8 @@ jest.mock('../../../../shared/location', () => ({
 const PLACE = {
   address: 'Calle 85 #12-34, Chapinero, Bogotá',
   gps: 'GPS 4.6683, -74.0531 (±8 m)',
+  latitude: 4.6683,
+  longitude: -74.0531,
 };
 
 const AVISO: Aviso = {
@@ -92,6 +94,26 @@ describe('AssistanceServiceScreen', () => {
       'AssistanceConfirm',
       expect.objectContaining({ service: 'perito' }),
     );
+  });
+
+  it('opens the nearby providers map for the selected service', async () => {
+    const { getByText } = await render(<AssistanceServiceScreen route={{ params: { aviso: AVISO } }} />);
+
+    await fireEvent.press(getByText('Ver prestadores cercanos'));
+    expect(useNavigation().navigate).toHaveBeenLastCalledWith('NearbyProviders', { filter: 'grua' });
+
+    await fireEvent.press(getByText('Ambulancia'));
+    await fireEvent.press(getByText('Ver prestadores cercanos'));
+    expect(useNavigation().navigate).toHaveBeenLastCalledWith('NearbyProviders', { filter: 'ambulancia' });
+  });
+
+  it('opens the nearby providers map without waiting for the location', async () => {
+    readLocationMock.mockReturnValue(new Promise(() => undefined));
+    const { getByText } = await render(<AssistanceServiceScreen route={{ params: { aviso: AVISO } }} />);
+
+    await fireEvent.press(getByText('Ver prestadores cercanos'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('NearbyProviders', { filter: 'grua' });
   });
 
   it('does not continue while the location is loading', async () => {

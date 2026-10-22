@@ -113,6 +113,21 @@ jest.mock('react-native', () => {
   };
 });
 
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const host = (name: string) => {
+    return ({ children, ...props }: { children?: unknown }) =>
+      React.createElement(name, props, children);
+  };
+
+  return {
+    __esModule: true,
+    default: host('MapView'),
+    Marker: host('Marker'),
+    PROVIDER_GOOGLE: 'google',
+  };
+});
+
 jest.mock('react-native-keychain', () => ({
   getGenericPassword: jest.fn(async () => false),
   setGenericPassword: jest.fn(async () => true),

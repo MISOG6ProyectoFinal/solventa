@@ -1,7 +1,7 @@
 import Geolocation from '@react-native-community/geolocation';
 
 function loadReader() {
-  let readLocation: (options?: { fresh?: boolean }) => Promise<{ address: string; gps: string }>;
+  let readLocation: (options?: { fresh?: boolean }) => Promise<{ address: string; gps: string; latitude: number; longitude: number }>;
 
   jest.isolateModules(() => {
     readLocation = require('./location').readLocation;
@@ -19,6 +19,8 @@ jest.mock('@react-native-community/geolocation', () => ({
 const place = {
   address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
   gps: 'GPS 4.5981, -74.0760 (±12 m)',
+  latitude: 4.5981,
+  longitude: -74.076,
 };
 
 function stubPosition() {
@@ -102,6 +104,8 @@ describe('readLocation', () => {
     await expect(readLocation({ fresh: true })).resolves.toEqual({
       address: 'Calle 85 #12-34, Chapinero, Bogotá',
       gps: 'GPS 4.7110, -74.0721 (±8 m)',
+      latitude: 4.711,
+      longitude: -74.0721,
     });
     expect(Geolocation.getCurrentPosition).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenCalledTimes(1);

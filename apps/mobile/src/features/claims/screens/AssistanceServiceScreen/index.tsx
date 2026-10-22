@@ -57,6 +57,12 @@ export default function AssistanceServiceScreen({ route }: Readonly<Props>) {
           </AppText>
         ) : null}
       </Card>
+      <Button
+        title={texts.assistance.nearbyProvidersButton}
+        variant="primaryOutline"
+        icon="ubicacion"
+        onPress={() => navigation.navigate('NearbyProviders', { filter: service })}
+      />
       <Button title={texts.assistance.continueButton} disabled={!location} onPress={next} />
     </AssistanceLayout>
   );

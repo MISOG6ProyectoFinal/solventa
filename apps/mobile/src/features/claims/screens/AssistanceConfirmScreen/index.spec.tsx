@@ -23,6 +23,8 @@ jest.mock('@react-navigation/native', () => {
 const PLACE = {
   address: 'Calle 85 #12-34, Chapinero, Bogotá',
   gps: 'GPS 4.6683, -74.0531 (±8 m)',
+  latitude: 4.6683,
+  longitude: -74.0531,
 };
 
 const AVISO: Aviso = {
