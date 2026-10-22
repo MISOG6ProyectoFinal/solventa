@@ -1,10 +1,13 @@
 export type HomeDestination = 'Policies' | 'Claims' | 'Buy';
 
-export type HomeShortcutId = 'claims' | 'buy';
+// A tab of the main navigator, or a screen of the root stack.
+export type HomeShortcutDestination = HomeDestination | 'NearbyProviders';
+
+export type HomeShortcutId = 'claims' | 'buy' | 'nearbyProviders';
 
 export type HomeShortcut = {
   id: HomeShortcutId;
-  destination: HomeDestination;
+  destination: HomeShortcutDestination;
 };
 
 export type HomeRenewal = {
@@ -24,6 +27,7 @@ export const homeSummary: HomeSummary = {
   shortcuts: [
     { id: 'claims', destination: 'Claims' },
     { id: 'buy', destination: 'Buy' },
+    { id: 'nearbyProviders', destination: 'NearbyProviders' },
   ],
   renewal: {
     productName: 'Protección Celular',

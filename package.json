@@ -103,6 +103,7 @@
     "react-native-blob-util": "^0.25.1",
     "react-native-gesture-handler": "^3.3.0",
     "react-native-keychain": "^10.0.0",
+    "react-native-maps": "^1.29.11",
     "react-native-nitro-image": "^0.15.2",
     "react-native-nitro-modules": "^0.37.1",
     "react-native-reanimated": "^4.7.1",

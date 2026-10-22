@@ -31,6 +31,8 @@ jest.mock('../../../../shared/location', () => ({
     Promise.resolve({
       address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
       gps: 'GPS 4.5981, -74.0760 (±12 m)',
+      latitude: 4.5981,
+      longitude: -74.076,
     }),
   ),
 }));
@@ -38,6 +40,8 @@ jest.mock('../../../../shared/location', () => ({
 const currentPlace = {
   address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
   gps: 'GPS 4.5981, -74.0760 (±12 m)',
+  latitude: 4.5981,
+  longitude: -74.076,
 };
 
 const fixedNow = new Date(2026, 8, 12, 10, 30, 0);
@@ -92,6 +96,8 @@ function mockFiling() {
 const otherPlace = {
   address: 'Calle 85 #12-34, Chapinero, Bogotá',
   gps: 'GPS 4.7110, -74.0721 (±8 m)',
+  latitude: 4.711,
+  longitude: -74.0721,
 };
 
 function mockCreateFailure() {
@@ -597,6 +603,8 @@ describe('ReportClaimScreen', () => {
     finishRefresh({
       address: 'Calle 85 #12-34, Chapinero, Bogotá',
       gps: 'GPS 4.7110, -74.0721 (±8 m)',
+      latitude: 4.711,
+      longitude: -74.0721,
     });
 
     await waitFor(() => {

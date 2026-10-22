@@ -4,6 +4,8 @@ import { PermissionsAndroid, Platform } from 'react-native';
 export type Place = {
   address: string;
   gps: string;
+  latitude: number;
+  longitude: number;
 };
 
 type NominatimAddress = {
@@ -127,6 +129,8 @@ async function loadPlace(): Promise<Place> {
   return {
     address: address ?? currentLocation,
     gps: formatGps(position.latitude, position.longitude, position.accuracy),
+    latitude: position.latitude,
+    longitude: position.longitude,
   };
 }
 

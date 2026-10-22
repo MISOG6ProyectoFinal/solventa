@@ -31,10 +31,12 @@ export default StyleSheet.create({
   },
   shortcuts: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.space.md,
   },
   shortcut: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '45%',
   },
   shortcutCopy: {
     gap: 2,

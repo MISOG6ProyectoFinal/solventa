@@ -17,6 +17,10 @@ export const texts = {
         title: 'Comprar seguro',
         hint: 'Cotiza y paga en minutos',
       },
+      nearbyProviders: {
+        title: 'Asistencia cercana',
+        hint: 'Prestadores aliados cerca de ti',
+      },
     },
     renewalBadge: 'Próxima a renovar',
     expiresLabel: 'Vence',

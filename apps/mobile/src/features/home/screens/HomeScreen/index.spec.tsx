@@ -35,6 +35,8 @@ describe('HomeScreen', () => {
     expect(getByText('Consulta y reporta')).toBeTruthy();
     expect(getByText('Comprar seguro')).toBeTruthy();
     expect(getByText('Cotiza y paga en minutos')).toBeTruthy();
+    expect(getByText('Asistencia cercana')).toBeTruthy();
+    expect(getByText('Prestadores aliados cerca de ti')).toBeTruthy();
     expect(getByText('Próxima a renovar')).toBeTruthy();
     expect(getByText('Protección Celular')).toBeTruthy();
     expect(getByText('SLV-2025-01820 · Vence 2026-10-05')).toBeTruthy();
@@ -59,6 +61,14 @@ describe('HomeScreen', () => {
 
     await fireEvent.press(getByText('Comprar seguro'));
     expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Buy' });
+  });
+
+  it('opens the nearby providers map from its shortcut', async () => {
+    const { getByText } = await render(<HomeScreen />);
+
+    await fireEvent.press(getByText('Asistencia cercana'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('NearbyProviders');
   });
 
   it('opens the dev tools from a long press on the menu in dev', async () => {

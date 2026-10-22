@@ -78,6 +78,7 @@ export const texts = {
     },
     currentLocation: 'Ubicación actual',
     continueButton: 'Continuar',
+    nearbyProvidersButton: 'Ver prestadores cercanos',
     confirmTitle: 'Confirma tu solicitud',
     serviceLabel: 'Servicio:',
     locationLabel: 'Ubicación:',

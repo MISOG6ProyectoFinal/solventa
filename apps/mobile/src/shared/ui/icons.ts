@@ -55,6 +55,7 @@ import {
   Wallet,
   Wifi,
   WifiOff,
+  Wrench,
   X,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -100,6 +101,7 @@ export const icons = {
   api: Code,
   ubicacion: MapPin,
   grua: Truck,
+  taller: Wrench,
   ambulancia: Ambulance,
   perito: UserCheck,
   calendario: Calendar,
