@@ -11,7 +11,8 @@
     "typecheck-mobile": "tsc -p apps/mobile/tsconfig.app.json --noEmit",
     "postinstall": "node apps/mobile/scripts/sync-native-deps.mjs",
     "prepare": "node scripts/install-git-hooks.mjs",
-    "validate-be": "nx tf-validate backend"
+    "validate-be": "nx tf-validate backend",
+    "release": "node scripts/create-release.mts"
   },
   "keywords": [],
   "author": "",

@@ -172,7 +172,7 @@ ENV=dev ./deploy/scripts/bootstrap-ci.sh
 
 Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
 
-El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
+El backend se despliega al publicar un release en GitHub. Para crearlo desde `main`, corra `npm run release` (siguiente parche; `-- minor`, `-- major` o `-- v1.2.0` para otra versión, `-- --draft` para no desplegar todavía, `-- --dry-run` para simular). El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
 `CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 
