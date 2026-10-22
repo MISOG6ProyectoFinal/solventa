@@ -58,7 +58,7 @@ def test_devuelve_los_prestadores_del_radio_del_mas_cercano_al_mas_lejano():
     etas = [p["eta_min"] for p in props]
     assert etas == sorted(etas)
     assert all(isinstance(eta, int) and eta >= 6 for eta in etas)
-    assert props[0]["calificacion"] == 4.5
+    assert props[0]["calificacion"] == pytest.approx(4.5)
 
 
 def test_el_radio_por_defecto_es_10_km():
@@ -191,7 +191,7 @@ def test_sincronizar_actualiza_la_fila_existente():
     SincronizarCatalogoUseCase(repository, [_FuenteFija([nueva])]).execute()
 
     assert len(repository.prestadores) == 1
-    assert next(iter(repository.prestadores.values())).calificacion == 4.8
+    assert next(iter(repository.prestadores.values())).calificacion == pytest.approx(4.8)
 
 
 def test_si_overpass_falla_se_carga_el_seed_y_se_conservan_las_filas_osm_previas():
