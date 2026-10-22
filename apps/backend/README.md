@@ -47,6 +47,7 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 | `polizas` | `suscripcion`, `ciclo_vida`, `reaseguro` | Suscripción, Pólizas y Ciclo de Vida, Reaseguro y Cesión | polizas |
 | `identidad` | `kyc`, `perfilamiento` | Identidad, Consentimiento y KYC; Perfilamiento y Personalización | identidad |
 | `siniestros` | `avisos` | Siniestros | siniestros |
+| | `prestadores` | Catálogo de prestadores y consulta geoespacial (PostGIS) | siniestros |
 | | `parametrico` | Siniestro Paramétrico + Idempotency Key Validator | siniestros |
 | `siniestros-worker` | `parametrico.worker` | Workers de Absorción (Picos), misma imagen que `siniestros` | siniestros |
 | `pagos` | `cobros` | Cobros y Pagos | pagos |
@@ -111,6 +112,12 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
   poetry run python -m cotizacion.bootstrap
 DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
   poetry run uvicorn cotizacion.main:app --reload
+```
+
+Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS, por eso Compose y k3s usan imágenes `postgis/postgis`. El catálogo se carga aparte, con el seed de aliados y los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda el seed:
+
+```bash
+docker compose run --rm siniestros-prestadores-sync
 ```
 
 Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo. Copie `.env.example` a `.env` y defina `SESION_SECRETO`: identidad firma la sesión y canales la verifica con esa clave.
