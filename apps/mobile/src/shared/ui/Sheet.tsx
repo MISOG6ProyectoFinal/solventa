@@ -23,16 +23,21 @@ type SheetProps = {
 
 export const Sheet = forwardRef<SheetHandle, SheetProps>(function Sheet({ onClose, testID, children }, ref) {
   const modal = useRef<BottomSheetModal>(null);
+  // Dismissing a sheet that is not open leaves the library stuck, and the next present() does nothing.
+  const open = useRef(false);
   const insets = useSafeAreaInsets();
 
   useImperativeHandle(
     ref,
     () => ({
       present: () => {
+        open.current = true;
         modal.current?.present();
       },
       dismiss: () => {
-        modal.current?.dismiss();
+        if (open.current) {
+          modal.current?.dismiss();
+        }
       },
     }),
     [],
@@ -57,7 +62,10 @@ export const Sheet = forwardRef<SheetHandle, SheetProps>(function Sheet({ onClos
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleIndicatorStyle={styles.handle}
-      onDismiss={onClose}
+      onDismiss={() => {
+        open.current = false;
+        onClose();
+      }}
     >
       <BottomSheetView
         testID={testID}
