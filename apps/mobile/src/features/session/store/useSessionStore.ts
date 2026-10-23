@@ -13,7 +13,6 @@ type Status = 'checking' | 'signedIn' | 'signedOut';
 
 type SessionState = {
   status: Status;
-  token: string | null;
   clienteId: string | null;
   email: string | null;
   firstName: string | null;
@@ -28,18 +27,15 @@ let restoreGeneration = 0;
 
 type SessionSnapshot = {
   status: Status;
-  token: string | null;
   clienteId: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
 };
 
-function withProfile(token: string, profile: ClientProfile): SessionSnapshot {
-  setAccessToken(token);
+function withProfile(profile: ClientProfile): SessionSnapshot {
   return {
     status: 'signedIn',
-    token,
     clienteId: profile.cliente_id,
     email: profile.correo,
     firstName: profile.nombre,
@@ -47,11 +43,9 @@ function withProfile(token: string, profile: ClientProfile): SessionSnapshot {
   };
 }
 
-function withoutProfile(token: string): SessionSnapshot {
-  setAccessToken(token);
+function withoutProfile(): SessionSnapshot {
   return {
     status: 'signedIn',
-    token,
     clienteId: null,
     email: null,
     firstName: null,
@@ -63,7 +57,6 @@ function signedOut(): SessionSnapshot {
   setAccessToken(null);
   return {
     status: 'signedOut',
-    token: null,
     clienteId: null,
     email: null,
     firstName: null,
@@ -78,7 +71,7 @@ async function rememberProfile(token: string, generation: number): Promise<void>
     if (generation !== restoreGeneration) {
       return;
     }
-    useSessionStore.setState(withProfile(token, profile));
+    useSessionStore.setState(withProfile(profile));
   } catch (error) {
     if (generation !== restoreGeneration) {
       return;
@@ -89,13 +82,12 @@ async function rememberProfile(token: string, generation: number): Promise<void>
       throw error;
     }
     // Offline, the stored token still opens the app.
-    useSessionStore.setState(withoutProfile(token));
+    useSessionStore.setState(withoutProfile());
   }
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
   status: 'checking',
-  token: null,
   clienteId: null,
   email: null,
   firstName: null,

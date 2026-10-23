@@ -123,7 +123,6 @@ describe('sesión del cliente', () => {
     setAccessToken(null);
     useSessionStore.setState({
       status: 'checking',
-      token: null,
       clienteId: null,
       email: null,
       firstName: null,
