@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { type DrawerContentComponentProps } from '@react-navigation/drawer';
 
 import { setAccessToken } from '../../shared/api/accessToken';
+import { apiClient } from '../../shared/api/client';
 import HomeDrawerContent from '../home/screens/HomeDrawerContent';
 import HomeScreen from '../home/screens/HomeScreen';
 import CheckingScreen from './screens/CheckingScreen';
@@ -317,6 +318,23 @@ describe('sesión del cliente', () => {
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
     await fireEvent.press(view.getByText('Cerrar sesión'));
+
+    await waitFor(() => expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0));
+    expect(saved).toBeNull();
+    expect(view.queryByText(GREETING)).toBeNull();
+  });
+
+  it('returns to login and forgets the token when a later request is rejected with 401', async () => {
+    saved = 'token-guardado';
+    global.fetch = jest.fn(async (input: RequestInfo | URL) =>
+      String(input).endsWith('/movil/sesion')
+        ? profileResponse()
+        : jsonResponse({ detail: 'La sesión no es válida' }, 401),
+    ) as typeof fetch;
+    const view = await render(<Shell />);
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+
+    await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 401 });
 
     await waitFor(() => expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0));
     expect(saved).toBeNull();

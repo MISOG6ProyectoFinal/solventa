@@ -1,5 +1,6 @@
 import { getAccessToken } from './accessToken';
 import { getApiBaseUrl } from './apiBaseUrl';
+import { notifyUnauthorized } from './unauthorized';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -60,6 +61,10 @@ async function requestJson<T>(
   });
   const body = (await response.json().catch(() => null)) as { detail?: unknown; } | null;
   if (!response.ok) {
+    // Without a token the 401 is a login failure, not an expired session.
+    if (response.status === 401 && getAccessToken()) {
+      notifyUnauthorized();
+    }
     const detail = body ? detailText(body.detail) : null;
     throw new ApiError(response.status, detail);
   }

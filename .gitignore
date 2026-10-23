@@ -92,3 +92,5 @@ CLAUDE.md
 .env
 
 tools/project-metrics/.cache/
+
+apps/mobile/IMPROVEMENTS.md

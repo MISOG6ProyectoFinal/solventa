@@ -1,6 +1,7 @@
 import { setAccessToken } from './accessToken';
 import { cloudApiUrl, selectCloudApi, selectCustomApi } from './apiBaseUrl';
 import { ApiError, apiClient } from './client';
+import { setUnauthorizedHandler } from './unauthorized';
 
 const baseUrl = cloudApiUrl;
 
@@ -162,6 +163,43 @@ describe('apiClient', () => {
     await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({
       status: 422,
       detail: null,
+    });
+  });
+
+  describe('when the server rejects the session', () => {
+    const unauthorized = jest.fn();
+
+    beforeEach(() => {
+      unauthorized.mockClear();
+      setUnauthorizedHandler(unauthorized);
+      jest.mocked(fetch).mockResolvedValue(jsonResponse({ detail: 'La sesión no es válida' }, 401) as Response);
+    });
+
+    afterEach(() => {
+      setUnauthorizedHandler(null);
+    });
+
+    it('notifies the handler and still throws when a signed-in request gets 401', async () => {
+      setAccessToken('token-vencido');
+
+      await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 401 });
+
+      expect(unauthorized).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not notify the handler when no token was sent, such as a wrong password at login', async () => {
+      await expect(apiClient.post('/movil/sesiones', {})).rejects.toMatchObject({ status: 401 });
+
+      expect(unauthorized).not.toHaveBeenCalled();
+    });
+
+    it('does not notify the handler for other errors', async () => {
+      setAccessToken('token-vigente');
+      jest.mocked(fetch).mockResolvedValue(jsonResponse({ detail: 'Prohibido' }, 403) as Response);
+
+      await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 403 });
+
+      expect(unauthorized).not.toHaveBeenCalled();
     });
   });
 });

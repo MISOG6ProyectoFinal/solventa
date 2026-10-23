@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { setAccessToken } from '../../../shared/api/accessToken';
 import { loadApiBaseUrl } from '../../../shared/api/apiBaseUrl';
 import { ApiError } from '../../../shared/api/client';
+import { setUnauthorizedHandler } from '../../../shared/api/unauthorized';
 import { getSession, type ClientProfile } from '../api/getSession';
 import { registerClient } from '../api/registerClient';
 import { startSession } from '../api/startSession';
@@ -143,3 +144,11 @@ export const useSessionStore = create<SessionState>((set) => ({
     set(signedOut());
   },
 }));
+
+// Restore and sign-in handle their own 401, so only an open session signs out here.
+setUnauthorizedHandler(() => {
+  const { status, signOut } = useSessionStore.getState();
+  if (status === 'signedIn') {
+    signOut().catch(() => undefined);
+  }
+});
