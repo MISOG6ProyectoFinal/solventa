@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -30,6 +30,10 @@ function unlink(path: string): Promise<void> {
   return Promise.resolve();
 }
 
+function stat(path: string): Promise<{ size: number }> {
+  return Promise.resolve({ size: statSync(path).size });
+}
+
 function cp(source: string, destination: string): Promise<boolean> {
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(source, destination);
@@ -49,6 +53,7 @@ const ReactNativeBlobUtil = {
     writeFile,
     readFile,
     unlink,
+    stat,
     cp,
     mv,
   },
