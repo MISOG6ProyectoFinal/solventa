@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
-import { Screen } from '../../../../shared/ui';
+import { theme } from '../../../../shared/theme';
+import { BrandLogo, Screen } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
+import { texts } from '../../texts';
+import styles from './styles';
 
 export default function CheckingScreen() {
   const restore = useSessionStore((state) => state.restore);
@@ -13,5 +17,12 @@ export default function CheckingScreen() {
     void load();
   }, [restore]);
 
-  return <Screen testID="session-checking" header={{ hide: true }} />;
+  return (
+    <Screen testID="session-checking" header={{ hide: true }}>
+      <View style={styles.content}>
+        <BrandLogo />
+        <ActivityIndicator accessibilityLabel={texts.checking.loading} color={theme.colors.blue} />
+      </View>
+    </Screen>
+  );
 }

@@ -23,9 +23,6 @@ export default StyleSheet.create({
     right: theme.space.lg,
   },
   logo: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: theme.space.sm,
     paddingBottom: theme.space.lg,
   },
 });

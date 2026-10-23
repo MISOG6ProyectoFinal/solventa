@@ -131,7 +131,7 @@ describe('sesión del cliente', () => {
     installFetch();
   });
 
-  it('shows a blank screen while the stored token is still loading', async () => {
+  it('shows the brand and a loading indicator while the stored token is still loading', async () => {
     let resolveToken: (token: string | null) => void = () => undefined;
     jest.mocked(storage.readToken).mockImplementation(
       () =>
@@ -142,6 +142,8 @@ describe('sesión del cliente', () => {
 
     const view = await render(<Shell />);
 
+    expect(view.getByText('Solventa')).toBeTruthy();
+    expect(view.getByLabelText('Cargando')).toBeTruthy();
     expect(view.queryByText('Iniciar sesión')).toBeNull();
     expect(view.queryByText(GREETING)).toBeNull();
 

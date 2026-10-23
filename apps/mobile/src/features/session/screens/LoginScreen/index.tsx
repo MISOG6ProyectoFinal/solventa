@@ -11,9 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '../../../../shared/api/client';
-import Logo from '../../../../shared/brand/solventa-logo.svg';
 import { theme } from '../../../../shared/theme';
-import { AppText, Banner, Button, IconButton, Screen, TextField } from '../../../../shared/ui';
+import { Banner, BrandLogo, Button, IconButton, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
 import { texts } from '../../texts';
 import styles from './styles';
@@ -75,10 +74,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.logo}>
-            <Logo width={88} height={103} />
-            <AppText variant="sectionTitle">Solventa</AppText>
-          </View>
+          <BrandLogo style={styles.logo} />
           {error ? <Banner variant="error">{error}</Banner> : null}
           <TextField
             label={texts.login.emailLabel}

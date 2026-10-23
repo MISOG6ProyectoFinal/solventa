@@ -1,4 +1,7 @@
 export const texts = {
+  checking: {
+    loading: 'Cargando',
+  },
   login: {
     title: 'Iniciar sesión',
     emailLabel: 'Correo',

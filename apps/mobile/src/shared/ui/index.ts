@@ -2,6 +2,7 @@ export { Amount } from './Amount';
 export { AppHeader } from './AppHeader';
 export { AppText } from './AppText';
 export { Banner } from './Banner';
+export { BrandLogo } from './BrandLogo';
 export { Button } from './Button';
 export { Card } from './Card';
 export { CheckboxField } from './CheckboxField';
