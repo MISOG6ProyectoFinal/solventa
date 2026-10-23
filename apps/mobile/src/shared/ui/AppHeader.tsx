@@ -2,6 +2,7 @@ import { StatusBar, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTexts } from '../texts';
 import { theme } from '../theme';
 import { AppText } from './AppText';
 import { Button } from './Button';
@@ -26,9 +27,14 @@ export type AppHeaderProps = {
   };
 };
 
-function leadingControl(displayBackBtn: boolean, leadingIcon: LeadingIcon | undefined, onBack: () => void) {
+function leadingControl(
+  displayBackBtn: boolean,
+  leadingIcon: LeadingIcon | undefined,
+  onBack: () => void,
+  backLabel: string,
+) {
   if (displayBackBtn) {
-    return <IconButton label="Volver" icon="volver" onPress={onBack} />;
+    return <IconButton label={backLabel} icon="volver" onPress={onBack} />;
   }
   if (!leadingIcon) {
     return null;
@@ -46,6 +52,7 @@ function leadingControl(displayBackBtn: boolean, leadingIcon: LeadingIcon | unde
 export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action }: Readonly<AppHeaderProps>) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const texts = useTexts();
 
   const displayBackBtn = navigation.canGoBack() && !hideBackButton && leadingIcon == null;
   const hasLeadingIcon = displayBackBtn || leadingIcon != null;
@@ -54,7 +61,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>
       <StatusBar barStyle="light-content" />
       <View testID="app-header-row" style={styles.row}>
-        {leadingControl(displayBackBtn, leadingIcon, () => navigation.goBack())}
+        {leadingControl(displayBackBtn, leadingIcon, () => navigation.goBack(), texts.back)}
         <View style={[styles.copy, !hasLeadingIcon && styles.noLeadingSpace]}>
           <AppText variant="screenTitle" numberOfLines={1} style={styles.title}>
             {title}

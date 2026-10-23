@@ -15,6 +15,7 @@
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
     "src/test-setup.ts",
+    "src/test-i18n.ts",
     "src/test-react-native-blob-util.ts"
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"]

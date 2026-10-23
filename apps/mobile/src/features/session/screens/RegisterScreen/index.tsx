@@ -5,10 +5,11 @@ import { useNavigation } from '@react-navigation/native';
 import { errorMessage } from '../../../../shared/api/client';
 import { Banner, Button, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function RegisterScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const register = useSessionStore((state) => state.register);
   const [firstName, setFirstName] = useState('');

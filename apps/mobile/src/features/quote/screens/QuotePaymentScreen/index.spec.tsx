@@ -2,7 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
+import { es as texts } from '../../texts/es';
 import { OfertaCotizacion, ProductoMovil } from '../../types';
 import { formatVigenteHasta, quoteReference } from '../../utils';
 import QuotePaymentScreen from './index';

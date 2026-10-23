@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { ScrollView } from 'react-native';
 
 import { Banner, Screen } from '../../../shared/ui';
-import { texts } from '../texts';
+import { useTexts } from '../texts';
 import detailStyles from './detailStyles';
 
 type Props = {
@@ -13,6 +13,7 @@ type Props = {
 };
 
 export function AssistanceLayout({ testID, policyId, error, children }: Readonly<Props>) {
+  const texts = useTexts();
   return (
     <Screen testID={testID} header={{ title: texts.assistance.screenTitle }}>
       <ScrollView style={detailStyles.scroll} contentContainerStyle={detailStyles.content}>

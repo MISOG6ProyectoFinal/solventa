@@ -16,17 +16,19 @@ import {
 } from '../../../../shared/ui';
 import { createQuote } from '../../api/createQuote';
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
-import { destinos, QuoteFormValues } from '../../types';
+import { useTexts } from '../../texts';
+import { destinos, type QuoteFormError, QuoteFormValues } from '../../types';
 import { defaultQuoteForm, digitsOnly, validateQuoteForm } from '../../utils';
 import styles from './styles';
 
 export default function QuoteFormScreen() {
+  const texts = useTexts();
+  const fieldError = (key?: QuoteFormError) => (key ? texts.form[key] : undefined);
   const navigation = useNavigation();
   const product = useQuoteStore((state) => state.product);
   const setOferta = useQuoteStore((state) => state.setOferta);
   const [values, setValues] = useState<QuoteFormValues>(defaultQuoteForm);
-  const [errors, setErrors] = useState<Partial<QuoteFormValues>>({});
+  const [errors, setErrors] = useState<ReturnType<typeof validateQuoteForm>>({});
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +94,7 @@ export default function QuoteFormScreen() {
             value={values.nombre}
             onChangeText={(nombre) => setValues((current) => ({ ...current, nombre }))}
             required
-            errorMessage={errors.nombre}
+            errorMessage={fieldError(errors.nombre)}
             testID="quote-nombre"
           />
           <TextField
@@ -101,7 +103,7 @@ export default function QuoteFormScreen() {
             onChangeText={(cedula) => setValues((current) => ({ ...current, cedula: digitsOnly(cedula) }))}
             keyboardType="number-pad"
             required
-            errorMessage={errors.cedula}
+            errorMessage={fieldError(errors.cedula)}
             testID="quote-documento"
           />
           <SelectField
@@ -110,7 +112,7 @@ export default function QuoteFormScreen() {
             options={destinos.map((destino) => ({ value: destino, label: destino }))}
             onChange={(destino) => setValues((current) => ({ ...current, destino }))}
             required
-            errorMessage={errors.destino}
+            errorMessage={fieldError(errors.destino)}
             testID="quote-field-destino"
           />
           <DateField
@@ -118,7 +120,7 @@ export default function QuoteFormScreen() {
             value={values.fechaSalida}
             onChange={(fechaSalida) => setValues((current) => ({ ...current, fechaSalida }))}
             required
-            errorMessage={errors.fechaSalida}
+            errorMessage={fieldError(errors.fechaSalida)}
             testID="quote-field-fechaSalida"
           />
           <DateField
@@ -126,7 +128,7 @@ export default function QuoteFormScreen() {
             value={values.fechaRegreso}
             onChange={(fechaRegreso) => setValues((current) => ({ ...current, fechaRegreso }))}
             required
-            errorMessage={errors.fechaRegreso}
+            errorMessage={fieldError(errors.fechaRegreso)}
             testID="quote-field-fechaRegreso"
           />
           <TextField
@@ -135,7 +137,7 @@ export default function QuoteFormScreen() {
             onChangeText={(viajeros) => setValues((current) => ({ ...current, viajeros: digitsOnly(viajeros) }))}
             keyboardType="number-pad"
             required
-            errorMessage={errors.viajeros}
+            errorMessage={fieldError(errors.viajeros)}
             testID="quote-field-viajeros"
           />
         </Card>

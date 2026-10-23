@@ -9,7 +9,7 @@ import { maxEvidenceBytes, photoQuality } from '../../constants';
 import { readFileSize } from '../../fileSize';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import { photoUri } from '../../photo';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 type CapturedPhoto = {
@@ -18,6 +18,7 @@ type CapturedPhoto = {
 };
 
 export default function TakePhotoScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const photoOutput = usePhotoOutput({ quality: photoQuality });
   const { hasPermission, requestPermission } = useCameraPermission();

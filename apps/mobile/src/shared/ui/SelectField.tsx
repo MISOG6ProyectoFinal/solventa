@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
+import { useTexts } from '../texts';
 import { theme } from '../theme';
 import { AppText } from './AppText';
 import { FieldFrame } from './FieldFrame';
@@ -33,11 +34,12 @@ export function SelectField({
   errorMessage,
   testID,
 }: Readonly<SelectFieldProps>) {
+  const texts = useTexts();
   const sheet = useRef<SheetHandle>(null);
   const [focused, setFocused] = useState(false);
   const selected = options.find((option) => option.value === value);
   const shown = selected?.label ?? value;
-  const selectText = shown != null && shown.length > 0 ? shown : 'Selecciona';
+  const selectText = shown != null && shown.length > 0 ? shown : texts.select;
   const failed = error || errorMessage != null;
 
   const choose = (next: string) => {
@@ -52,7 +54,7 @@ export function SelectField({
         required={required}
         error={failed}
         focused={focused}
-        message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
+        message={errorMessage ?? (error ? texts.required : undefined)}
         testID={testID}
         onPress={
           options.length > 0

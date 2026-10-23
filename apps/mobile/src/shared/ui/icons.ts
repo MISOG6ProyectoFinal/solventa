@@ -41,6 +41,7 @@ import Plus from 'lucide-react-native/icons/plus';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import Search from 'lucide-react-native/icons/search';
+import Settings from 'lucide-react-native/icons/settings';
 import Send from 'lucide-react-native/icons/send';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
@@ -101,6 +102,7 @@ export const icons = {
   ubicacion: MapPin,
   grua: Truck,
   taller: Wrench,
+  ajustes: Settings,
   ambulancia: Ambulance,
   perito: UserCheck,
   calendario: Calendar,

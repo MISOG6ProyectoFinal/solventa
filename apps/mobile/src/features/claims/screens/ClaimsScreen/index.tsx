@@ -7,11 +7,12 @@ import { theme } from '../../../../shared/theme';
 import { Banner, EmptyState, ErrorState, LoadingState, Screen } from '../../../../shared/ui';
 import { listAvisos, type Aviso } from '../../api/listAvisos';
 import { listReports, type StoredReport } from '../../offline/listReports';
-import { texts } from '../../texts';
+import { getTexts, useTexts } from '../../texts';
 import { ClaimRow, claimKey, type ClaimItem } from './ClaimRow';
 import styles from './styles';
 
 export default function ClaimsScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [pending, setPending] = useState<StoredReport[]>([]);
@@ -48,7 +49,7 @@ export default function ClaimsScreen() {
         if (mode === 'replace') {
           setAvisos([]);
         }
-        setError(errorMessage(cause, texts.claims.loadFailed));
+        setError(errorMessage(cause, getTexts().claims.loadFailed));
       })
       .finally(() => {
         saved.then((reports) => {

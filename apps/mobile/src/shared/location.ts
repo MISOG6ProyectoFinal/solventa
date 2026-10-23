@@ -1,6 +1,9 @@
 import Geolocation from '@react-native-community/geolocation';
 import { PermissionsAndroid, Platform } from 'react-native';
 
+import { useLanguageStore } from './i18n/useLanguageStore';
+import { getTexts } from './texts';
+
 export type Place = {
   address: string;
   gps: string;
@@ -23,7 +26,6 @@ type NominatimPlace = {
   address?: NominatimAddress;
 };
 
-const currentLocation = 'Ubicación actual';
 
 Geolocation.setRNConfiguration({
   skipPermissionRequests: false,
@@ -89,7 +91,7 @@ async function lookupAddress(latitude: number, longitude: number) {
   endpoint.searchParams.set('lat', String(latitude));
   endpoint.searchParams.set('lon', String(longitude));
   endpoint.searchParams.set('format', 'jsonv2');
-  endpoint.searchParams.set('accept-language', 'es');
+  endpoint.searchParams.set('accept-language', useLanguageStore.getState().language);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -127,7 +129,7 @@ async function loadPlace(): Promise<Place> {
   const address = await lookupAddress(position.latitude, position.longitude);
 
   return {
-    address: address ?? currentLocation,
+    address: address ?? getTexts().currentLocation,
     gps: formatGps(position.latitude, position.longitude, position.accuracy),
     latitude: position.latitude,
     longitude: position.longitude,

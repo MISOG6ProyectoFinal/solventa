@@ -4,10 +4,11 @@ import { StyleSheet, View } from 'react-native';
 import { theme } from '../../../shared/theme';
 import { AppText, Icon } from '../../../shared/ui';
 import { categories, providerTypes } from '../categories';
-import { texts } from '../texts';
+import { useTexts } from '../texts';
 
 // Static, so it is built once instead of on every render of the screen.
 export const Legend = memo(function Legend() {
+  const texts = useTexts();
   return (
     <View style={styles.legend}>
       {providerTypes.map((type) => (

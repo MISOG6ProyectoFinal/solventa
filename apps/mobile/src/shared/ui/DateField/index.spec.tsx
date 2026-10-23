@@ -1,6 +1,7 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useLanguageStore } from '../../i18n/useLanguageStore';
 import { theme } from '../../theme';
 import { DateField } from '.';
 
@@ -9,6 +10,16 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 describe('DateField', () => {
+  it('shows the placeholder in English', async () => {
+    const { getByText } = await render(<DateField label="Departure" />);
+
+    await act(async () => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+
+    expect(getByText('dd/mm/yyyy')).toBeTruthy();
+  });
+
   it('shows the placeholder when no date is set', async () => {
     const { getByText } = await render(<DateField label="Fecha de salida" />);
 

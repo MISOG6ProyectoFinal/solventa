@@ -1,6 +1,6 @@
-import { NEARBY_RADIUS_KM } from './constants';
+import { NEARBY_RADIUS_KM } from '../constants';
 
-export const texts = {
+export const es = {
   providers: {
     screenTitle: 'Asistencia cercana',
     refreshButton: 'Actualizar',
@@ -32,3 +32,5 @@ export const texts = {
     },
   },
 };
+
+export type Texts = typeof es;

@@ -4,10 +4,11 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { useSessionStore } from '../../../session/store/useSessionStore';
 import { homeSummary, type HomeShortcutDestination } from '../../homeSummary';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function HomeScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const firstName = useSessionStore((state) => state.firstName);
   const { renewal } = homeSummary;

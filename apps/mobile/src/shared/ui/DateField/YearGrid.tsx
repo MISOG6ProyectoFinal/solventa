@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View, type StyleProp, type 
 
 import { theme } from '../../theme';
 import { AppText } from '../AppText';
+import { useTexts } from '../../texts';
 import { yearsPerPage } from './date';
 
 const columns = 3;
@@ -16,10 +17,11 @@ type YearProps = {
 };
 
 const Year = memo(function Year({ year, selected, style, onChoose }: YearProps) {
+  const texts = useTexts();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Año ${year}`}
+      accessibilityLabel={texts.date.year(year)}
       accessibilityState={{ selected }}
       onPress={() => onChoose(year)}
       style={style}

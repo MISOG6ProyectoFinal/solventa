@@ -20,12 +20,13 @@ import { EvidenceTile } from '../../components/EvidenceTile';
 import { photoLimit } from '../../constants';
 import { photoUri } from '../../photo';
 import { useClaimsStore } from '../../store/useClaimsStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 import { useReportForm } from './useReportForm';
 import { useSubmitReport } from './useSubmitReport';
 
 export default function ReportClaimScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const form = useReportForm();
   const { policy, claimType, occurredAt, description, restoredAddress } = form;
@@ -147,7 +148,7 @@ export default function ReportClaimScreen() {
               {photos.map((photo) => (
                 <EvidenceTile
                   key={photo.filePath}
-                  label={photo.label}
+                  label={texts.report.photoLabel(photo.position)}
                   bytes={photo.bytes}
                   onPress={() =>
                     navigation.navigate('ClaimReport', {
@@ -162,7 +163,7 @@ export default function ReportClaimScreen() {
               {videos.map((video) => (
                 <EvidenceTile
                   key={video.filePath}
-                  label={video.label}
+                  label={texts.report.videoLabel(video.position)}
                   bytes={video.bytes}
                   onPress={() =>
                     navigation.navigate('ClaimReport', {

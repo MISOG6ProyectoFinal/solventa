@@ -57,6 +57,10 @@ $env:GOOGLE_MAPS_API_KEY = "<clave>"        # Windows (PowerShell)
 
 También puede ir en `~/.gradle/gradle.properties` como `GOOGLE_MAPS_API_KEY=<clave>`. Sin clave la app compila y el mapa se ve vacío. En Google Cloud restringe la clave al paquete `com.solventa` y al SHA-1 del keystore que firma el APK. El workflow `mobile-apk.yml` la toma del secreto `GOOGLE_MAPS_API_KEY` del repositorio.
 
+## Idiomas
+
+La app está en español e inglés. El texto de cada feature vive en `texts/es.ts` y `texts/en.ts`, y una clave nueva va en los dos: `en.ts` está tipado con `es.ts`, así que `npm run typecheck-mobile` falla si falta alguna. Los componentes leen el texto con `useTexts()`. El código que corre fuera del render usa `getTexts()`. El idioma se cambia en Ajustes, desde el menú de Inicio, y se guarda en el dispositivo.
+
 ## APK
 
 Estos scripts generan un APK de release. No abren el emulador y no necesitan Metro: el JavaScript va dentro del APK. Hace falta Node.js (recomendado 22.22.3; también compatibles 24.15+ y 26.x), Java y el Android SDK en `ANDROID_HOME`, con el NDK y CMake de arriba. En Windows, si `ANDROID_HOME` no está definido, el script usa `%LOCALAPPDATA%\Android\Sdk`.

@@ -6,12 +6,13 @@ import { errorMessage } from '../../../../shared/api/client';
 import { AppText, Card, ErrorState, LoadingState, Screen, StatusChip } from '../../../../shared/ui';
 import { getProducts } from '../../api/getProducts';
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
+import { getTexts, useTexts } from '../../texts';
 import { ProductoMovil } from '../../types';
 import { formatMoney } from '../../utils';
 import styles from './styles';
 
 export default function ProductsScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const selectProduct = useQuoteStore((state) => state.selectProduct);
   const [products, setProducts] = useState<ProductoMovil[]>([]);
@@ -33,7 +34,7 @@ export default function ProductsScreen() {
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setError(errorMessage(cause, texts.products.loadFailed));
+          setError(errorMessage(cause, getTexts().products.loadFailed));
         }
       })
       .finally(() => {

@@ -2,22 +2,21 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
 import { photoLimit } from '../constants';
-import { texts } from '../texts';
 import { formatClock } from '../utils';
 import { ClaimPhoto, ClaimPhotos, ClaimVideo } from './types';
 
-function photoOf(photo: Omit<ClaimPhoto, 'label' | 'capturedAt'> & { capturedAt?: string }, position: number) {
+function photoOf(photo: Omit<ClaimPhoto, 'position' | 'capturedAt'> & { capturedAt?: string }, position: number) {
   return {
     ...photo,
-    label: texts.report.photoLabel(position),
+    position,
     capturedAt: photo.capturedAt ?? formatClock(new Date()),
   };
 }
 
-function videoOf(video: Omit<ClaimVideo, 'label' | 'capturedAt'> & { capturedAt?: string }, position: number) {
+function videoOf(video: Omit<ClaimVideo, 'position' | 'capturedAt'> & { capturedAt?: string }, position: number) {
   return {
     ...video,
-    label: texts.report.videoLabel(position),
+    position,
     capturedAt: video.capturedAt ?? formatClock(new Date()),
   };
 }

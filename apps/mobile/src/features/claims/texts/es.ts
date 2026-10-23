@@ -1,4 +1,4 @@
-export const texts = {
+export const es = {
   claims: {
     screenTitle: 'Siniestros',
     emptyMessage: 'Aún no tienes reportes.',
@@ -103,3 +103,5 @@ export const texts = {
     pauseButton: 'Pausar',
   },
 };
+
+export type Texts = typeof es;

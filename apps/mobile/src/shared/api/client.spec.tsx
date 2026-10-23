@@ -1,3 +1,4 @@
+import { useLanguageStore } from '../i18n/useLanguageStore';
 import { setAccessToken } from './accessToken';
 import { cloudApiUrl, selectCloudApi, selectCustomApi } from './apiBaseUrl';
 import { ApiError, apiClient } from './client';
@@ -29,7 +30,7 @@ describe('apiClient', () => {
 
     expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ poliza_id: 'SLV-2026-03105' }),
     });
   });
@@ -43,7 +44,7 @@ describe('apiClient', () => {
       `${baseUrl}/movil/siniestros/aviso-1/evidencias/ev-1/confirmar`,
       {
         method: 'POST',
-        headers: undefined,
+        headers: { 'Accept-Language': 'es' },
         body: undefined,
       },
     );
@@ -62,7 +63,7 @@ describe('apiClient', () => {
 
     expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ estado: 'borrador' }),
     });
   });
@@ -74,7 +75,7 @@ describe('apiClient', () => {
 
     expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method: 'DELETE',
-      headers: undefined,
+      headers: { 'Accept-Language': 'es' },
       body: undefined,
     });
   });
@@ -98,9 +99,21 @@ describe('apiClient', () => {
 
     expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/sesion`, {
       method: 'GET',
-      headers: { Authorization: 'Bearer token-firmado' },
+      headers: { 'Accept-Language': 'es', Authorization: 'Bearer token-firmado' },
       body: undefined,
     });
+  });
+
+  it('sends the current app language on every request', async () => {
+    jest.mocked(fetch).mockResolvedValue(jsonResponse({}) as Response);
+    useLanguageStore.setState({ language: 'en' });
+
+    await apiClient.get('/movil/sesion');
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${baseUrl}/movil/sesion`,
+      expect.objectContaining({ headers: { 'Accept-Language': 'en' } }),
+    );
   });
 
   it('sends requests to the selected API base URL', async () => {
@@ -119,7 +132,7 @@ describe('apiClient', () => {
 
     expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1/evidencias`, {
       method: 'GET',
-      headers: undefined,
+      headers: { 'Accept-Language': 'es' },
       body: undefined,
     });
   });

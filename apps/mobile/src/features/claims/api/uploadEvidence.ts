@@ -3,7 +3,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { apiClient } from '../../../shared/api/client';
 import { filePathOf } from '../photo';
 import { readFileSize } from '../fileSize';
-import { texts } from '../texts';
+import { getTexts } from '../texts';
 
 export type EvidenceFile = {
   kind: 'photo' | 'video';
@@ -32,7 +32,7 @@ async function putEvidence(target: UploadTarget, filePath: string) {
   );
   const { status } = uploaded.info();
   if (status < 200 || status >= 300) {
-    throw new Error(texts.report.sendFailed);
+    throw new Error(getTexts().report.sendFailed);
   }
 }
 

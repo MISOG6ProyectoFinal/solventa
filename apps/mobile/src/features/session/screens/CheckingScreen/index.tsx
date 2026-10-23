@@ -4,10 +4,11 @@ import { ActivityIndicator, View } from 'react-native';
 import { theme } from '../../../../shared/theme';
 import { BrandLogo, Screen } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function CheckingScreen() {
+  const texts = useTexts();
   const restore = useSessionStore((state) => state.restore);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import { AppText, Button, Card, KeyValue } from '../../../../shared/ui';
 import { type AssistanceService, type Asistencia, getAssistance } from '../../api/getAssistance';
 import { type Aviso } from '../../api/listAvisos';
 import { requestAssistance } from '../../api/requestAssistance';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import { AssistanceLayout } from '../../components/AssistanceLayout';
 import detailStyles from '../../components/detailStyles';
 
@@ -18,6 +18,7 @@ type Props = StaticScreenProps<{
 }>;
 
 export default function AssistanceConfirmScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
   const navigation = useNavigation();
   const { aviso, service, place } = route.params;
   const [requesting, setRequesting] = useState(false);

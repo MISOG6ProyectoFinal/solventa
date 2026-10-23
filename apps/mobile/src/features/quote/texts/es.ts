@@ -1,4 +1,4 @@
-export const texts = {
+export const es = {
   products: {
     screenTitle: 'Comprar seguro',
     screenSubtitle: 'Cotiza y activa tu cobertura',
@@ -28,6 +28,7 @@ export const texts = {
     validBadge: 'Cotización vigente',
     reference: (ref: string, until: string) => `${ref} · Válida hasta ${until}`,
     taxesIncluded: 'Prima total, impuestos incluidos',
+    today: 'hoy',
     validity: (desde: string, hasta: string) => `Vigencia propuesta: ${desde} a ${hasta}`,
     continueButton: 'Continuar al pago',
   },
@@ -49,3 +50,5 @@ export const texts = {
     failed: 'No se pudo procesar el pago.',
   },
 };
+
+export type Texts = typeof es;

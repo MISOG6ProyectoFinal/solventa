@@ -1,4 +1,4 @@
-export const texts = {
+export const es = {
   checking: {
     loading: 'Cargando',
   },
@@ -22,3 +22,5 @@ export const texts = {
     failed: 'No se pudo crear la cuenta.',
   },
 };
+
+export type Texts = typeof es;

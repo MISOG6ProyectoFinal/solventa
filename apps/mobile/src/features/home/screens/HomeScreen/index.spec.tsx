@@ -1,6 +1,7 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { useSessionStore } from '../../../session/store/useSessionStore';
 import HomeScreen from './index';
 
@@ -45,6 +46,18 @@ describe('HomeScreen', () => {
     expect(queryByText('Sin conexión')).toBeNull();
     expect(queryByText('Componentes')).toBeNull();
     expect(queryByText(/Contador/)).toBeNull();
+  });
+
+  it('shows the greeting and shortcuts in English', async () => {
+    const { getByText, queryByText } = await render(<HomeScreen />);
+
+    await act(async () => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+
+    expect(getByText('Hello, Ana')).toBeTruthy();
+    expect(getByText('Nearby assistance')).toBeTruthy();
+    expect(queryByText('Hola, Ana')).toBeNull();
   });
 
   it('opens the matching tab from the coverage actions and the shortcuts', async () => {

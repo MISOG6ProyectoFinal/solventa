@@ -14,10 +14,11 @@ import { errorMessage } from '../../../../shared/api/client';
 import { theme } from '../../../../shared/theme';
 import { Banner, BrandLogo, Button, IconButton, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function LoginScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const signIn = useSessionStore((state) => state.signIn);

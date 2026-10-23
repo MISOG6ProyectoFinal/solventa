@@ -1,4 +1,5 @@
 import { getAccessToken } from './accessToken';
+import { useLanguageStore } from '../i18n/useLanguageStore';
 import { getApiBaseUrl } from './apiBaseUrl';
 import { notifyUnauthorized } from './unauthorized';
 
@@ -37,8 +38,8 @@ function detailText(detail: unknown): string | null {
   return null;
 }
 
-function requestHeaders(payload: unknown): Record<string, string> | undefined {
-  const headers: Record<string, string> = {};
+function requestHeaders(payload: unknown): Record<string, string> {
+  const headers: Record<string, string> = { 'Accept-Language': useLanguageStore.getState().language };
   if (payload !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -46,7 +47,7 @@ function requestHeaders(payload: unknown): Record<string, string> | undefined {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  return Object.keys(headers).length > 0 ? headers : undefined;
+  return headers;
 }
 
 async function requestJson<T>(

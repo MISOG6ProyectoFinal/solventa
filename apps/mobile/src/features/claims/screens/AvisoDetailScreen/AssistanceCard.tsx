@@ -1,9 +1,10 @@
 import { AppText, Card, StatusChip } from '../../../../shared/ui';
 import { type Asistencia } from '../../api/getAssistance';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import detailStyles from '../../components/detailStyles';
 
 export function AssistanceCard({ asistencia }: Readonly<{ asistencia: Asistencia; }>) {
+  const texts = useTexts();
   return (
     <Card>
       <StatusChip variant="info">{texts.assistance.statusRequested}</StatusChip>

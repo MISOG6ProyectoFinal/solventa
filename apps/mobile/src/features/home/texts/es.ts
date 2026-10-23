@@ -1,4 +1,4 @@
-export const texts = {
+export const es = {
   home: {
     greeting: (firstName: string) => `Hola, ${firstName}`,
     greetingWithoutName: 'Hola',
@@ -26,5 +26,8 @@ export const texts = {
     expiresLabel: 'Vence',
     renewalButton: 'Ver oferta de renovación',
     signOutButton: 'Cerrar sesión',
+    settingsButton: 'Ajustes',
   },
 };
+
+export type Texts = typeof es;

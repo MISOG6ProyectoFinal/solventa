@@ -6,7 +6,7 @@ import { ApiError } from '../../../../shared/api/client';
 import { AppText, Banner, Button, Card, CheckboxField, Screen } from '../../../../shared/ui';
 import { crearIntentoId, payQuote } from '../../api/payQuote';
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import { SimulacionPago } from '../../types';
 import { formatMoney, formatVigenteHasta, quoteReference } from '../../utils';
 import styles from './styles';
@@ -14,6 +14,7 @@ import styles from './styles';
 type PaymentStatus = 'ready' | 'processing' | 'approved' | 'rejected' | 'expired';
 
 export default function QuotePaymentScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const focused = useIsFocused();
   const product = useQuoteStore((state) => state.product);

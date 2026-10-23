@@ -4,11 +4,12 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, CoverageList, Screen, StatusChip } from '../../../../shared/ui';
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import { formatMoney, formatVigenteHasta, fromApiDate, quoteReference } from '../../utils';
 import styles from './styles';
 
 export default function QuoteResultScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const focused = useIsFocused();
   const product = useQuoteStore((state) => state.product);

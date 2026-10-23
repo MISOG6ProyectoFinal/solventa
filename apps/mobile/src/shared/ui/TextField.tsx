@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput, type KeyboardTypeOptions } from 'react-native';
 
+import { useTexts } from '../texts';
 import { theme } from '../theme';
 import { FieldFrame } from './FieldFrame';
 
@@ -33,6 +34,7 @@ export function TextField({
   secureTextEntry = false,
   testID,
 }: Readonly<TextFieldProps>) {
+  const texts = useTexts();
   const [focused, setFocused] = useState(false);
   const failed = error || errorMessage != null;
 
@@ -42,7 +44,7 @@ export function TextField({
       required={required}
       error={failed}
       focused={focused}
-      message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
+      message={errorMessage ?? (error ? texts.required : undefined)}
       testID={testID}
     >
       <TextInput

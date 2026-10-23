@@ -7,7 +7,8 @@ import { AppText, Banner, Button, Card, LoadingState, Screen, StatusChip } from 
 import { getAssistance, type Asistencia } from '../../api/getAssistance';
 import { listEvidencias, type Evidencia } from '../../api/listEvidencias';
 import { type Aviso } from '../../api/listAvisos';
-import { texts } from '../../texts';
+import { getTexts, useTexts } from '../../texts';
+import { type Texts } from '../../texts/es';
 import { formatOccurredAt } from '../../utils';
 import detailStyles from '../../components/detailStyles';
 import { AssistanceCard } from './AssistanceCard';
@@ -30,7 +31,7 @@ function formatSize(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-function evidenceTiles(items: Evidencia[]): { id: string; label: string; size: string; }[] {
+function evidenceTiles(items: Evidencia[], texts: Texts): { id: string; label: string; size: string; }[] {
   let photos = 0;
   let videos = 0;
 
@@ -39,13 +40,13 @@ function evidenceTiles(items: Evidencia[]): { id: string; label: string; size: s
     const count = video ? ++videos : ++photos;
     return {
       id: item.id,
-      label: video ? `Video ${count}` : `Foto ${count}`,
+      label: video ? texts.report.videoLabel(count) : texts.report.photoLabel(count),
       size: formatSize(item.bytes),
     };
   });
 }
 
-function bannerText(aviso: Aviso): string | null {
+function bannerText(aviso: Aviso, texts: Texts): string | null {
   if (aviso.radicado) {
     return texts.detail.filedSuccess(aviso.radicado);
   }
@@ -63,9 +64,10 @@ function AvisoDetailBody({
   assistanceFailed,
   onRequestAssistance,
 }: Readonly<DetailBodyProps>) {
+  const texts = useTexts();
   const filed = aviso.estado === 'radicado';
-  const banner = bannerText(aviso);
-  const tiles = evidenceTiles(evidencias);
+  const banner = bannerText(aviso, texts);
+  const tiles = evidenceTiles(evidencias, texts);
   const statusLabel = filed ? texts.detail.status : texts.claims.statusDraft;
 
   return (
@@ -114,6 +116,7 @@ function AvisoDetailBody({
 }
 
 export default function AvisoDetailScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
   const navigation = useNavigation();
   const aviso = route.params.aviso;
   const requested = route.params.asistencia ?? null;
@@ -138,7 +141,7 @@ export default function AvisoDetailScreen({ route }: Readonly<Props>) {
       .catch((cause: unknown) => {
         if (!cancelled) {
           setEvidencias([]);
-          setError(errorMessage(cause, texts.detail.evidencesFailed));
+          setError(errorMessage(cause, getTexts().detail.evidencesFailed));
         }
       })
       .finally(() => {

@@ -5,6 +5,7 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/src/**/*.spec.tsx'],
   setupFiles: ['<rootDir>/src/test-setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/test-i18n.ts'],
   moduleNameMapper: {
     '\\.(png|jpg|jpeg|gif|webp)$': '<rootDir>/src/test-file-stub.js',
     '\\.svg$': '<rootDir>/src/test-svg-stub.js',

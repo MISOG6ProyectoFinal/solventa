@@ -16,8 +16,9 @@ import {
 import { listNearbyProviders } from '../../api/listNearbyProviders';
 import { Legend } from '../../components/Legend';
 import { categories } from '../../categories';
+import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { formatDecimal } from '../../formatDecimal';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import { type NearbyProvider, type ProviderFilter, type ProviderType } from '../../types';
 import styles from './styles';
 
@@ -26,12 +27,17 @@ type Status = 'loading' | 'ready' | 'error';
 // The request flow opens the map already filtered to the service being requested.
 type Props = StaticScreenProps<{ filter?: ProviderType } | undefined>;
 
-const filterOptions = (Object.keys(texts.providers.filters) as ProviderFilter[]).map((id) => ({
-  id,
-  label: texts.providers.filters[id],
-}));
-
 export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
+  const language = useLanguageStore((state) => state.language);
+  const filterOptions = useMemo(
+    () =>
+      (Object.keys(texts.providers.filters) as ProviderFilter[]).map((id) => ({
+        id,
+        label: texts.providers.filters[id],
+      })),
+    [texts],
+  );
   const { location, failed, refresh } = useLocation();
   const [filter, setFilter] = useState<ProviderFilter>(route.params?.filter ?? 'all');
   const [providers, setProviders] = useState<NearbyProvider[]>([]);
@@ -159,12 +165,12 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
               {selected.name}
             </AppText>
             <AppText variant="bodySmall">{texts.providers.categories[selected.type]}</AppText>
-            <AppText variant="body">{texts.providers.distance(formatDecimal(selected.distanceKm))}</AppText>
+            <AppText variant="body">{texts.providers.distance(formatDecimal(selected.distanceKm, language))}</AppText>
             <AppText variant="body">{texts.providers.eta(selected.etaMin)}</AppText>
             <AppText variant="body">
               {selected.rating === null
                 ? texts.providers.noRating
-                : texts.providers.rating(formatDecimal(selected.rating))}
+                : texts.providers.rating(formatDecimal(selected.rating, language))}
             </AppText>
           </View>
         ) : null}

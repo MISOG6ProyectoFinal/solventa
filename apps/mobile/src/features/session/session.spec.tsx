@@ -172,14 +172,14 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/sesiones$/);
     expect(init).toEqual({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ correo: CORREO, contrasena: CONTRASENA }),
     });
     const [profileUrl, profileInit] = calls[1];
     expect(String(profileUrl)).toMatch(/\/movil\/sesion$/);
     expect(profileInit).toEqual({
       method: 'GET',
-      headers: { Authorization: `Bearer ${TOKEN}` },
+      headers: { 'Accept-Language': 'es', Authorization: `Bearer ${TOKEN}` },
       body: undefined,
     });
     expect(useSessionStore.getState()).toMatchObject({
@@ -242,7 +242,7 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/registros$/);
     expect(init).toEqual({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({
         correo: CORREO,
         contrasena: CONTRASENA,
@@ -298,7 +298,7 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/sesion$/);
     expect(init).toEqual({
       method: 'GET',
-      headers: { Authorization: 'Bearer token-guardado' },
+      headers: { 'Accept-Language': 'es', Authorization: 'Bearer token-guardado' },
       body: undefined,
     });
   });

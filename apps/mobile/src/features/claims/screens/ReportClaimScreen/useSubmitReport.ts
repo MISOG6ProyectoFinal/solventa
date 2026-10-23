@@ -7,7 +7,7 @@ import { toEvidenceFiles } from '../../evidenceFiles';
 import { deleteReport } from '../../offline/deleteReport';
 import { saveReport } from '../../offline/saveReport';
 import { useClaimsStore } from '../../store/useClaimsStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 
 type ReportFields = {
   policy: string;
@@ -20,6 +20,7 @@ type ReportFields = {
 // Files the report, or keeps it on the device when the aviso could not even be created.
 export function useSubmitReport(fields: ReportFields) {
   const navigation = useNavigation();
+  const texts = useTexts();
   const photos = useClaimsStore((state) => state.photos);
   const videos = useClaimsStore((state) => state.videos);
   const [submitted, setSubmitted] = useState(false);

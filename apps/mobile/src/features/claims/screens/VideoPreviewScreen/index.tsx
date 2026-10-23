@@ -4,7 +4,7 @@ import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 import { Button, Screen, VideoPlayer } from '../../../../shared/ui';
 import { formatFileSize, photoUri } from '../../photo';
 import { useClaimsStore } from '../../store/useClaimsStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 type Props = StaticScreenProps<{
@@ -12,6 +12,7 @@ type Props = StaticScreenProps<{
 }>;
 
 export default function VideoPreviewScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
   const navigation = useNavigation();
   const video = useClaimsStore((state) =>
     state.videos.find((item) => item.filePath === route.params.filePath),
@@ -30,7 +31,7 @@ export default function VideoPreviewScreen({ route }: Readonly<Props>) {
   return (
     <Screen
       testID="video-preview-screen"
-      header={{ title: texts.savedVideo.screenTitle, subtitle: video?.label }}
+      header={{ title: texts.savedVideo.screenTitle, subtitle: video ? texts.report.videoLabel(video.position) : undefined }}
     >
       {video ? (
         <View style={styles.body}>

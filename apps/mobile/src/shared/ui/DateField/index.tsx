@@ -8,7 +8,8 @@ import { Button } from '../Button';
 import { FieldFrame } from '../FieldFrame';
 import { Icon } from '../Icon';
 import { Sheet, type SheetHandle } from '../Sheet';
-import { formatDate, formatTime, months, parseDate, parseTime } from './date';
+import { useTexts } from '../../texts';
+import { formatDate, formatTime, parseDate, parseTime } from './date';
 import { MonthGrid } from './MonthGrid';
 import { TimePicker } from './TimePicker';
 
@@ -35,6 +36,7 @@ export function DateField({
   timeSelection = false,
   testID,
 }: Readonly<DateFieldProps>) {
+  const texts = useTexts();
   const failed = error || errorMessage != null;
   const parsed = useMemo(() => parseDate(value), [value]);
   const sheet = useRef<SheetHandle>(null);
@@ -98,7 +100,7 @@ export function DateField({
   }, []);
 
   const shown = parsed ? formatDate(parsed) : value;
-  const datePlaceholder = timeSelection ? 'dd/mm/aaaa hh:mm' : 'dd/mm/aaaa';
+  const datePlaceholder = timeSelection ? texts.date.placeholderWithTime : texts.date.placeholder;
   const dateText = shown != null && shown.length > 0 ? shown : datePlaceholder;
 
   return (
@@ -108,7 +110,7 @@ export function DateField({
         required={required}
         error={failed}
         focused={focused}
-        message={errorMessage ?? (error ? 'Obligatorio' : undefined)}
+        message={errorMessage ?? (error ? texts.required : undefined)}
         testID={testID}
         onPress={open}
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
@@ -134,12 +136,12 @@ export function DateField({
         {focused && pickingTime ? (
           <>
             <AppText variant="subtitle" style={styles.chosen}>
-              {`${pendingDay} de ${months[cursor.month - 1]} de ${cursor.year}`}
+              {texts.date.longDate(pendingDay, texts.date.months[cursor.month - 1] ?? '', cursor.year)}
             </AppText>
             <TimePicker hour={clock.hour} minute={clock.minute} onHour={setHour} onMinute={setMinute} />
             <View style={{height: theme.space.md}} />
-            <Button title="Listo" onPress={confirmTime} />
-            <Button title="Cambiar fecha" variant="text" onPress={() => setPendingDay(null)} />
+            <Button title={texts.date.done} onPress={confirmTime} />
+            <Button title={texts.date.changeDate} variant="text" onPress={() => setPendingDay(null)} />
           </>
         ) : null}
       </Sheet>

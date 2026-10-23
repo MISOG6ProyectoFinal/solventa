@@ -5,7 +5,8 @@ import { theme } from '../../../../shared/theme';
 import { AppText, Card, StatusChip } from '../../../../shared/ui';
 import { type Aviso } from '../../api/listAvisos';
 import { type StoredReport } from '../../offline/listReports';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
+import { type Texts } from '../../texts/es';
 
 export type ClaimItem = { kind: 'pending'; report: StoredReport } | { kind: 'filed'; aviso: Aviso };
 
@@ -18,7 +19,7 @@ export function claimKey(item: ClaimItem): string {
   return item.kind === 'pending' ? `pending-${item.report.poliza_id}` : item.aviso.id;
 }
 
-function claimStatus(estado: string): { label: string; variant: 'pending' | 'success' } {
+function claimStatus(estado: string, texts: Texts): { label: string; variant: 'pending' | 'success' } {
   if (estado === 'radicado') {
     return { label: texts.claims.statusFiled, variant: 'success' };
   }
@@ -26,11 +27,12 @@ function claimStatus(estado: string): { label: string; variant: 'pending' | 'suc
 }
 
 export const ClaimRow = memo(function ClaimRow({ item, onOpen }: Readonly<ClaimRowProps>) {
+  const texts = useTexts();
   const claim = item.kind === 'pending' ? item.report : item.aviso;
   const status =
     item.kind === 'pending'
       ? { label: texts.claims.statusPendingSync, variant: 'pending' as const }
-      : claimStatus(item.aviso.estado);
+      : claimStatus(item.aviso.estado, texts);
 
   return (
     <Card testID="claim-item" onPress={() => onOpen(item)}>

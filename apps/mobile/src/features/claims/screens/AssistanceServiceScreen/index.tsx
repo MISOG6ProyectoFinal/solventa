@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
@@ -6,18 +6,22 @@ import { useLocation } from '../../../../shared/useLocation';
 import { AppText, Button, Card, IconButton, OptionList } from '../../../../shared/ui';
 import { type AssistanceService } from '../../api/getAssistance';
 import { type Aviso } from '../../api/listAvisos';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import { AssistanceLayout } from '../../components/AssistanceLayout';
 import styles from './styles';
 
 type Props = StaticScreenProps<{ aviso: Aviso }>;
 
-const options = (Object.keys(texts.assistance.services) as AssistanceService[]).map((id) => ({
-  id,
-  label: texts.assistance.services[id],
-}));
-
 export default function AssistanceServiceScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
+  const options = useMemo(
+    () =>
+      (Object.keys(texts.assistance.services) as AssistanceService[]).map((id) => ({
+        id,
+        label: texts.assistance.services[id],
+      })),
+    [texts],
+  );
   const navigation = useNavigation();
   const aviso = route.params.aviso;
   const [service, setService] = useState<AssistanceService>('grua');

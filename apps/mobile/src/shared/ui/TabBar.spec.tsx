@@ -1,5 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
+import { useLanguageStore } from '../i18n/useLanguageStore';
 import { theme } from '../theme';
 import { TabBar } from './TabBar';
 
@@ -17,5 +18,18 @@ describe('TabBar', () => {
     await fireEvent.press(getByLabelText('Pólizas'));
 
     expect(onChange).toHaveBeenCalledWith('Policies');
+  });
+
+  it('shows the labels in English', async () => {
+    const { getByLabelText } = await render(<TabBar value="Home" onChange={jest.fn()} />);
+
+    await act(async () => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+
+    expect(getByLabelText('Home')).toBeTruthy();
+    expect(getByLabelText('Policies')).toBeTruthy();
+    expect(getByLabelText('Claims')).toBeTruthy();
+    expect(getByLabelText('Buy')).toBeTruthy();
   });
 });

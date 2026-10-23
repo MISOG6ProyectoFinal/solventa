@@ -1,5 +1,5 @@
 export type ClaimPhoto = {
-  label: string;
+  position: number;
   filePath: string;
   bytes: number;
   capturedAt: string;
@@ -12,7 +12,7 @@ type NewPhoto = {
 };
 
 export type ClaimVideo = {
-  label: string;
+  position: number;
   filePath: string;
   bytes: number;
   capturedAt: string;
