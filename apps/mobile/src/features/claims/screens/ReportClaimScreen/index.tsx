@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
-import { StackActions, useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import { Image, ScrollView, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import {
   AppText,
@@ -14,96 +14,36 @@ import {
   SelectField,
   TextField,
 } from '../../../../shared/ui';
-import { photoLimit } from '../../constants';
-import { useClaimsStore } from '../../store/useClaimsStore';
-import { formatFileSize, photoUri } from '../../photo';
-import { claimReport } from '../../claimReport';
-import { SubmitAvisoError, submitAviso } from '../../api/submitAviso';
-import { deleteReport } from '../../offline/deleteReport';
-import { listReports } from '../../offline/listReports';
-import { saveReport } from '../../offline/saveReport';
-import { errorMessage } from '../../../../shared/api/client';
 import { useLocation } from '../../../../shared/useLocation';
+import { claimReport } from '../../claimReport';
+import { EvidenceTile } from '../../components/EvidenceTile';
+import { photoLimit } from '../../constants';
+import { photoUri } from '../../photo';
+import { useClaimsStore } from '../../store/useClaimsStore';
 import { texts } from '../../texts';
 import styles from './styles';
-import { formatDate, fromIsoOccurredAt } from '../../utils';
+import { useReportForm } from './useReportForm';
+import { useSubmitReport } from './useSubmitReport';
 
 export default function ReportClaimScreen() {
   const navigation = useNavigation();
-  const [policy, setPolicy] = useState(claimReport.policy);
-  const [claimType, setClaimType] = useState(claimReport.claimType);
-  const [occurredAt, setOccurredAt] = useState(() => formatDate(new Date()));
-  const [description, setDescription] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [filing, setFiling] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const form = useReportForm();
+  const { policy, claimType, occurredAt, description, restoredAddress } = form;
   const [limitReached, setLimitReached] = useState(false);
-  const [restoredAddress, setRestoredAddress] = useState<string | null>(null);
   const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimsStore((state) => state.photos);
   const videos = useClaimsStore((state) => state.videos);
   const evidenceCount = photos.length + videos.length;
+  const address = restoredAddress ?? location?.address ?? '';
+  const { submit, submitted, filing, sendError } = useSubmitReport({
+    policy,
+    claimType,
+    occurredAt,
+    description,
+    address,
+  });
   const descriptionMissing = submitted && description.trim() === '';
   const evidenceMissing = submitted && evidenceCount === 0;
-  const address = restoredAddress ?? location?.address ?? '';
-
-  const submit = async () => {
-    const files = [
-      ...photos.map((photo) => ({
-        kind: 'photo' as const,
-        filePath: photo.filePath,
-        bytes: photo.bytes,
-        capturedAt: photo.capturedAt,
-      })),
-      ...videos.map((video) => ({
-        kind: 'video' as const,
-        filePath: video.filePath,
-        bytes: video.bytes,
-        capturedAt: video.capturedAt,
-      })),
-    ];
-    setSubmitted(true);
-    setSendError(null);
-    if (description.trim() === '' || files.length === 0) {
-      return;
-    }
-
-    setFiling(true);
-    try {
-      const filed = await submitAviso({
-        policy,
-        claimType,
-        occurredAt,
-        location: address,
-        description: description.trim(),
-        files,
-      });
-      await deleteReport();
-      navigation.dispatch(StackActions.replace('AvisoDetail', { aviso: filed }));
-    } catch (error) {
-      if (error instanceof SubmitAvisoError && !error.avisoCreated) {
-        try {
-          await saveReport({
-            policy,
-            claimType,
-            occurredAt,
-            location: address,
-            description: description.trim(),
-            files,
-          });
-          navigation.navigate('Main', { screen: 'Claims' });
-          return;
-        } catch (saveError) {
-          setSendError(errorMessage(saveError, texts.report.sendFailed));
-          return;
-        }
-      }
-      const cause = error instanceof SubmitAvisoError ? error.cause : error;
-      setSendError(errorMessage(cause, texts.report.sendFailed));
-    } finally {
-      setFiling(false);
-    }
-  };
 
   const openCamera = (screen: 'TakePhoto' | 'RecordVideo') => {
     if (evidenceCount >= photoLimit) {
@@ -114,32 +54,6 @@ export default function ReportClaimScreen() {
     navigation.navigate('ClaimReport', { screen });
   };
 
-  useEffect(() => {
-    let active = true;
-    listReports().then((reports) => {
-      if (!active) {
-        return;
-      }
-      const saved = reports[0];
-      if (!saved) {
-        return;
-      }
-      const policyMatch = claimReport.policies.find((option) => option.value.split(' · ').pop() === saved.poliza_id);
-      setPolicy(policyMatch?.value ?? saved.poliza_id);
-      setClaimType(saved.tipo);
-      setOccurredAt(fromIsoOccurredAt(saved.ocurrido_en));
-      setDescription(saved.descripcion);
-      if (saved.ubicacion) {
-        setRestoredAddress(saved.ubicacion);
-      }
-      useClaimsStore.getState().replaceEvidence(saved.files);
-    });
-    return () => {
-      active = false;
-      useClaimsStore.getState().clear();
-    };
-  }, []);
-
   return (
     <Screen testID="report-claim-screen" header={{ title: texts.report.screenTitle }}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -148,20 +62,20 @@ export default function ReportClaimScreen() {
             label={texts.report.policyLabel}
             value={policy}
             options={claimReport.policies}
-            onChange={setPolicy}
+            onChange={form.setPolicy}
             required
           />
           <SelectField
             label={texts.report.claimTypeLabel}
             value={claimType}
             options={claimReport.claimTypes}
-            onChange={setClaimType}
+            onChange={form.setClaimType}
             required
           />
           <DateField
             label={texts.report.occurredAtLabel}
             value={occurredAt}
-            onChange={setOccurredAt}
+            onChange={form.setOccurredAt}
             required
             timeSelection
           />
@@ -175,7 +89,7 @@ export default function ReportClaimScreen() {
                 icon="sincronizar"
                 color="primary"
                 onPress={() => {
-                  setRestoredAddress(null);
+                  form.setRestoredAddress(null);
                   refresh();
                 }}
               />
@@ -196,7 +110,7 @@ export default function ReportClaimScreen() {
           <TextField
             label={texts.report.descriptionLabel}
             value={description}
-            onChangeText={setDescription}
+            onChangeText={form.setDescription}
             placeholder={texts.report.descriptionPlaceholder}
             multiline
             required
@@ -231,11 +145,10 @@ export default function ReportClaimScreen() {
           {evidenceCount > 0 ? (
             <View style={styles.thumbs}>
               {photos.map((photo) => (
-                <Pressable
+                <EvidenceTile
                   key={photo.filePath}
-                  accessibilityRole="button"
-                  accessibilityLabel={photo.label}
-                  style={styles.thumb}
+                  label={photo.label}
+                  bytes={photo.bytes}
                   onPress={() =>
                     navigation.navigate('ClaimReport', {
                       screen: 'PhotoPreview',
@@ -243,25 +156,14 @@ export default function ReportClaimScreen() {
                     })
                   }
                 >
-                  <Image
-                    testID="evidence-photo"
-                    style={styles.thumbPhoto}
-                    source={{ uri: photoUri(photo.filePath) }}
-                  />
-                  <AppText variant="caption" style={styles.thumbLabel}>
-                    {photo.label}
-                  </AppText>
-                  <AppText variant="caption" style={styles.thumbSize}>
-                    {formatFileSize(photo.bytes)}
-                  </AppText>
-                </Pressable>
+                  <Image testID="evidence-photo" style={styles.thumbPhoto} source={{ uri: photoUri(photo.filePath) }} />
+                </EvidenceTile>
               ))}
               {videos.map((video) => (
-                <Pressable
+                <EvidenceTile
                   key={video.filePath}
-                  accessibilityRole="button"
-                  accessibilityLabel={video.label}
-                  style={styles.thumb}
+                  label={video.label}
+                  bytes={video.bytes}
                   onPress={() =>
                     navigation.navigate('ClaimReport', {
                       screen: 'VideoPreview',
@@ -272,13 +174,7 @@ export default function ReportClaimScreen() {
                   <View style={styles.thumbVideo}>
                     <Icon name="video" size={24} color="primary" />
                   </View>
-                  <AppText variant="caption" style={styles.thumbLabel}>
-                    {video.label}
-                  </AppText>
-                  <AppText variant="caption" style={styles.thumbSize}>
-                    {formatFileSize(video.bytes)}
-                  </AppText>
-                </Pressable>
+                </EvidenceTile>
               ))}
             </View>
           ) : null}

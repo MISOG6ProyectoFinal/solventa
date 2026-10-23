@@ -32,6 +32,8 @@ export const texts = {
     missingEvidence: 'Agrega al menos una evidencia',
     evidenceLimit: 'Este reporte ya tiene 10 evidencias.',
     fileTooLarge: 'El archivo supera 50 MB.',
+    photoLabel: (position: number) => `Foto ${position}`,
+    videoLabel: (position: number) => `Video ${position}`,
   },
   camera: {
     screenTitle: 'Tomar foto',
