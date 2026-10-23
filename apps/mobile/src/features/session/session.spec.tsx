@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { type DrawerContentComponentProps } from '@react-navigation/drawer';
 
 import { setAccessToken } from '../../shared/api/accessToken';
+import * as apiBaseUrl from '../../shared/api/apiBaseUrl';
 import { apiClient } from '../../shared/api/client';
 import HomeDrawerContent from '../home/screens/HomeDrawerContent';
 import HomeScreen from '../home/screens/HomeScreen';
@@ -270,6 +271,19 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Ya tengo cuenta');
     expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0);
     expect(view.queryByText('Ya existe una cuenta con este correo.')).toBeNull();
+  });
+
+  it('reads the stored token without waiting for the saved API address', async () => {
+    jest.mocked(storage.readToken).mockClear();
+    const load = jest.spyOn(apiBaseUrl, 'loadApiBaseUrl').mockImplementation(() => new Promise(() => undefined));
+    try {
+      await render(<Shell />);
+
+      await waitFor(() => expect(load).toHaveBeenCalled());
+      expect(storage.readToken).toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+    }
   });
 
   it('opens Inicio when the stored token is still valid', async () => {

@@ -94,8 +94,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   lastName: null,
   restore: async () => {
     const generation = ++restoreGeneration;
-    await loadApiBaseUrl();
-    const token = await readToken();
+    const [, token] = await Promise.all([loadApiBaseUrl(), readToken()]);
     if (generation !== restoreGeneration) {
       return;
     }
