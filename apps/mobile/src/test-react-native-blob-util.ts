@@ -45,7 +45,16 @@ function mv(source: string, destination: string): Promise<boolean> {
   return Promise.resolve(true);
 }
 
+// Uploads stream from disk natively. Tests replace this to inspect or fail a request.
+const fetch = jest.fn(async () => ({ info: () => ({ status: 200 }) }));
+
+function wrap(path: string): string {
+  return `wrap:${path}`;
+}
+
 const ReactNativeBlobUtil = {
+  fetch,
+  wrap,
   fs: {
     dirs: { DocumentDir },
     exists,

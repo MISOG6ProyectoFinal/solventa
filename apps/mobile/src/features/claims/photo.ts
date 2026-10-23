@@ -8,6 +8,10 @@ export function photoUri(filePath: string) {
   return `file://${filePath}`;
 }
 
+export function filePathOf(uri: string) {
+  return uri.replace(/^file:\/\//, '');
+}
+
 export function formatFileSize(bytes: number) {
   let value = bytes;
   let unitIndex = 0;

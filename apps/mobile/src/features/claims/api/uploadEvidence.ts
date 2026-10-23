@@ -1,5 +1,8 @@
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
 import { apiClient } from '../../../shared/api/client';
-import { photoUri } from '../photo';
+import { filePathOf } from '../photo';
+import { readFileSize } from '../fileSize';
 import { texts } from '../texts';
 
 export type EvidenceFile = {
@@ -19,33 +22,26 @@ type UploadTarget = {
   headers: Record<string, string>;
 };
 
-async function readEvidence(filePath: string): Promise<Blob> {
-  const file = await fetch(photoUri(filePath));
-  if (!file.ok) {
-    throw new Error(texts.report.sendFailed);
-  }
-
-  return file.blob();
-}
-
-async function putEvidence(target: UploadTarget, body: Blob) {
-  const uploaded = await fetch(target.upload_url, {
-    method: 'PUT',
-    headers: target.headers,
-    body,
-  });
-  if (!uploaded.ok) {
+// The file streams from disk natively, so a 50 MB video never passes through JS memory.
+async function putEvidence(target: UploadTarget, filePath: string) {
+  const uploaded = await ReactNativeBlobUtil.fetch(
+    'PUT',
+    target.upload_url,
+    target.headers,
+    ReactNativeBlobUtil.wrap(filePathOf(filePath)),
+  );
+  const { status } = uploaded.info();
+  if (status < 200 || status >= 300) {
     throw new Error(texts.report.sendFailed);
   }
 }
 
 export async function uploadEvidence(avisoId: string, file: EvidenceFile) {
   // The camera buffer and the saved file can differ in size. Declare the bytes that are uploaded.
-  const body = await readEvidence(file.filePath);
   const target = await apiClient.post<UploadTarget>(`/movil/siniestros/${avisoId}/evidencias/cargas`, {
     content_type: contentType[file.kind],
-    bytes: body.size,
+    bytes: await readFileSize(file.filePath),
   });
-  await putEvidence(target, body);
+  await putEvidence(target, file.filePath);
   await apiClient.post(`/movil/siniestros/${avisoId}/evidencias/${target.evidencia_id}/confirmar`);
 }

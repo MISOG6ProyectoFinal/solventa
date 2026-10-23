@@ -4,6 +4,8 @@ import { StackActions, useNavigation } from '@react-navigation/native';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
 import { readLocation } from '../../../../shared/location';
 import { deleteReport } from '../../offline/deleteReport';
 import { listReports } from '../../offline/listReports';
@@ -129,6 +131,8 @@ describe('ReportClaimScreen', () => {
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
     global.fetch = mockFiling() as typeof fetch;
+    jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+    jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({ info: () => ({ status: 200 }) } as never);
   });
 
   afterEach(() => {
@@ -258,6 +262,29 @@ describe('ReportClaimScreen', () => {
     const uploadCall = jest.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/evidencias/cargas'));
     const upload = JSON.parse((uploadCall?.[1] as { body: string }).body) as { bytes: number };
     expect(upload.bytes).toBe(3);
+
+    expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+      'PUT',
+      'http://uploads.test/foto',
+      expect.objectContaining({ 'Content-Type': 'image/jpeg' }),
+      ReactNativeBlobUtil.wrap('/tmp/foto.jpg'),
+    );
+    expect(
+      jest.mocked(fetch).mock.calls.some(([url, init]) => String(url).startsWith('file://') || init?.method === 'PUT'),
+    ).toBe(false);
+  });
+
+  it('keeps the form open when the storage service rejects an upload', async () => {
+    jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({ info: () => ({ status: 403 }) } as never);
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const { getByText, getByPlaceholderText, getByTestId, findByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(getByTestId('submit-report'));
+
+    expect(await findByText('No se pudo enviar el reporte.')).toBeTruthy();
+    expect(getByText('Enviar reporte')).toBeTruthy();
+    expect(useNavigation().dispatch).not.toHaveBeenCalled();
   });
 
   it('keeps the form open when the aviso was created but a later step fails', async () => {
