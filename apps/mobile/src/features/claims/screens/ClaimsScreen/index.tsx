@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
 import { theme } from '../../../../shared/theme';
-import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { AppText, Banner, Card, EmptyState, ErrorState, LoadingState, Screen, StatusChip } from '../../../../shared/ui';
 import { listAvisos, type Aviso } from '../../api/listAvisos';
 import { listReports, type StoredReport } from '../../offline/listReports';
 import { texts } from '../../texts';
@@ -88,7 +88,7 @@ export default function ClaimsScreen() {
       }}
     >
       {loading ? (
-        <ActivityIndicator testID="claims-loading" style={styles.loading} />
+        <LoadingState testID="claims-loading" label={texts.claims.loading} />
       ) : (
         <ScrollView
           style={styles.scroll}
@@ -103,15 +103,15 @@ export default function ClaimsScreen() {
             />
           }
         >
-          {error ? <Banner variant="error">{error}</Banner> : null}
+          {error ? (
+            <ErrorState message={error} retry={{ label: texts.claims.retryButton, onPress: () => load('replace') }} />
+          ) : null}
           {pending.length > 0 ? <Banner variant="info">{texts.claims.savedOnDevice}</Banner> : null}
           {avisos.length === 0 && pending.length === 0 && error === null ? (
-            <Card style={styles.empty}>
-              <AppText variant="bodySmall" style={styles.emptyMessage}>
-                {texts.claims.emptyMessage}
-              </AppText>
-              <Button title={texts.claims.reportButton} onPress={report} />
-            </Card>
+            <EmptyState
+              message={texts.claims.emptyMessage}
+              action={{ label: texts.claims.reportButton, onPress: report }}
+            />
           ) : (
             <>
               {pending.map((saved) => (

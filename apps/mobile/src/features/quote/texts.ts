@@ -5,6 +5,8 @@ export const texts = {
     comingSoon: 'Próximamente',
     fromPrice: (amount: string) => `Desde ${amount}`,
     loadFailed: 'No se pudieron cargar los productos.',
+    loading: 'Cargando productos...',
+    retryButton: 'Reintentar',
   },
   form: {
     nameLabel: 'Nombre completo',

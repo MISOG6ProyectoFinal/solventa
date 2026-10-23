@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
-import { theme } from '../../../../shared/theme';
 import {
   AppText,
   Banner,
   Button,
   Card,
   DateField,
+  LoadingState,
   Screen,
   SelectField,
   TextField,
@@ -70,14 +70,7 @@ export default function QuoteFormScreen() {
         testID="quote-form-screen"
         header={{ title: texts.products.screenTitle, subtitle: texts.products.screenSubtitle }}
       >
-        <View style={styles.loading}>
-          <ActivityIndicator
-            testID="quote-loading"
-            accessibilityLabel={texts.form.calculating}
-            color={theme.colors.blue}
-          />
-          <AppText variant="bodySmall">{texts.form.calculating}</AppText>
-        </View>
+        <LoadingState testID="quote-loading" label={texts.form.calculating} />
       </Screen>
     );
   }

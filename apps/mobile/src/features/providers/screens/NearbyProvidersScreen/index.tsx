@@ -5,9 +5,8 @@ import { type StaticScreenProps } from '@react-navigation/native';
 import { useLocation } from '../../../../shared/useLocation';
 import {
   AppText,
-  Banner,
-  Button,
   ChipSelector,
+  ErrorState,
   IconButton,
   PinMap,
   Screen,
@@ -114,10 +113,10 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
             <ChipSelector options={filterOptions} value={filter} onChange={changeFilter} />
             <Legend />
             {status === 'error' ? (
-              <>
-                <Banner variant="error">{texts.providers.loadFailed}</Banner>
-                <Button title={texts.providers.retryButton} variant="outlined" onPress={load} />
-              </>
+              <ErrorState
+                message={texts.providers.loadFailed}
+                retry={{ label: texts.providers.retryButton, onPress: load }}
+              />
             ) : null}
             <View style={styles.mapArea}>
               <PinMap

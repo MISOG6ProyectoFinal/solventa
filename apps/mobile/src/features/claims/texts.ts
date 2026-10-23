@@ -10,6 +10,8 @@ export const texts = {
     savedOnDevice:
       'Tu reporte quedó guardado en este dispositivo. Ábrelo de nuevo y envíalo cuando tengas señal.',
     loadFailed: 'No se pudieron cargar los reportes.',
+    loading: 'Cargando reportes...',
+    retryButton: 'Reintentar',
   },
   report: {
     screenTitle: 'Reportar siniestro',
@@ -65,6 +67,7 @@ export const texts = {
     assistButton: 'Solicitar asistencia en sitio',
     filedSuccess: (radicado: string) => `Siniestro #${radicado} radicado exitosamente.`,
     filed: 'Siniestro radicado exitosamente.',
+    loading: 'Cargando reporte...',
     evidencesFailed: 'No se pudieron cargar las evidencias.',
     occurred: (datetime: string, location: string) =>
       location === '' ? `Ocurrió ${datetime}` : `Ocurrió ${datetime} · ${location}`,

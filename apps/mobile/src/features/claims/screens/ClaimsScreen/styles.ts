@@ -11,19 +11,6 @@ export default StyleSheet.create({
     padding: theme.space.lg,
     gap: theme.space.md,
   },
-  empty: {
-    padding: theme.space.xl,
-    gap: theme.space.lg,
-  },
-  emptyMessage: {
-    textAlign: 'center',
-  },
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.space.lg,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
-import { AppText, Banner, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { AppText, Banner, Button, Card, LoadingState, Screen, StatusChip } from '../../../../shared/ui';
 import { getAssistance, type Asistencia } from '../../api/getAssistance';
 import { listEvidencias, type Evidencia } from '../../api/listEvidencias';
 import { type Aviso } from '../../api/listAvisos';
@@ -11,7 +11,6 @@ import { texts } from '../../texts';
 import { formatOccurredAt } from '../../utils';
 import detailStyles from '../../components/detailStyles';
 import { AssistanceCard } from './AssistanceCard';
-import styles from './styles';
 
 type Props = StaticScreenProps<{ aviso: Aviso; asistencia?: Asistencia; }>;
 
@@ -192,7 +191,7 @@ export default function AvisoDetailScreen({ route }: Readonly<Props>) {
   return (
     <Screen testID="aviso-detail-screen" header={{ title: texts.detail.screenTitle }}>
       {loading || assistanceLoading || evidencias === null ? (
-        <ActivityIndicator testID="aviso-detail-loading" style={styles.loading} />
+        <LoadingState testID="aviso-detail-loading" label={texts.detail.loading} />
       ) : (
         <AvisoDetailBody
           aviso={aviso}

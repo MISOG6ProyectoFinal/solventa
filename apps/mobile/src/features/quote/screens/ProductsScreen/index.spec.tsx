@@ -122,4 +122,26 @@ describe('ProductsScreen', () => {
 
     expect(await findByText('No se pudieron cargar los productos.')).toBeTruthy();
   });
+
+  it('shows a loading message while the catalog loads', async () => {
+    global.fetch = jest.fn(() => new Promise(() => undefined)) as typeof fetch;
+    const { getByTestId, getByText } = await render(<ProductsScreen />);
+
+    expect(getByTestId('products-loading')).toBeTruthy();
+    expect(getByText('Cargando productos...')).toBeTruthy();
+  });
+
+  it('retries loading the catalog from the error state', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Catálogo no disponible.' }, 503))
+      .mockResolvedValueOnce(jsonResponse(PRODUCTS)) as typeof fetch;
+    const { findByText, getByText, queryByText } = await render(<ProductsScreen />);
+
+    await findByText('Catálogo no disponible.');
+    await fireEvent.press(getByText('Reintentar'));
+
+    expect(await findByText('Viaje Internacional')).toBeTruthy();
+    expect(queryByText('Catálogo no disponible.')).toBeNull();
+  });
 });
