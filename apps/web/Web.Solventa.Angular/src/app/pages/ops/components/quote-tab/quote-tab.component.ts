@@ -40,10 +40,13 @@ export class QuoteTabComponent {
   protected readonly isCalculating = signal(false);
   protected readonly quoteResult = signal<OfertaCotizacionResponse | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly consentValidated = signal(false);
+  protected readonly formValues = signal<Record<string, string>>({});
 
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
   protected readonly ramoLabel = computed(() => this.ramoMeta()?.label ?? '');
   protected readonly requiresConsent = computed(() => this.ramoMeta()?.requiresConsent ?? false);
+  protected readonly puedeCalcular = computed(() => !this.requiresConsent() || this.consentValidated());
 
   protected onQuoteReady(values: Record<string, string>): void {
     this.isCalculating.set(true);

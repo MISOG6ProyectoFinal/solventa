@@ -43,6 +43,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, *args):
+        # Silenciar logs del servidor HTTP durante las pruebas
         pass
 
 

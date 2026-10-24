@@ -7,4 +7,9 @@ export const API_ENDPOINTS = {
   ramos: `${environment.apiBaseUrl}/web/ramos`,
   partners: `${environment.apiBaseUrl}/web/socios`,
   partnerConfig: (partnerId: string) => `${environment.apiBaseUrl}/web/socios/${partnerId}/configuracion`,
+  consentimientos: {
+    solicitar: `${environment.apiBaseUrl}/web/consentimientos/solicitar`,
+    validar: `${environment.apiBaseUrl}/web/consentimientos/validar`,
+    consultar: (id: string) => `${environment.apiBaseUrl}/web/consentimientos/${id}`,
+  },
 } as const;

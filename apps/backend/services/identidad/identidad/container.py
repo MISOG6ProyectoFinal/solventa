@@ -1,8 +1,18 @@
 from sqlalchemy.engine import Engine
 
 from identidad.config import settings
+from identidad.kyc.adapters.consentimiento_repository import (
+    InMemoryConsentimientoRepository,
+    PostgresConsentimientoRepository,
+)
 from identidad.kyc.adapters.repository import InMemoryClientRepository, PostgresClientRepository
-from identidad.kyc.domain.use_cases import RegisterClient, StartSession
+from identidad.kyc.domain.use_cases import (
+    ConsultarConsentimiento,
+    RegisterClient,
+    SolicitarConsentimiento,
+    StartSession,
+    ValidarConsentimiento,
+)
 
 
 class Container:
@@ -12,17 +22,26 @@ class Container:
 
     def use_memory(self) -> None:
         self.clients = InMemoryClientRepository()
+        self.consentimientos = InMemoryConsentimientoRepository()
         self._wire()
 
     def use_postgres(self, engine: Engine) -> None:
-        repository = PostgresClientRepository(engine)
-        repository.create_schema()
-        self.clients = repository
+        client_repo = PostgresClientRepository(engine)
+        client_repo.create_schema()
+        self.clients = client_repo
+
+        consent_repo = PostgresConsentimientoRepository(engine)
+        consent_repo.create_schema()
+        self.consentimientos = consent_repo
+
         self._wire()
 
     def _wire(self) -> None:
         self.start_session = StartSession(self.clients, self.secret)
         self.register_client = RegisterClient(self.clients, self.secret)
+        self.solicitar_consentimiento = SolicitarConsentimiento(self.consentimientos, self.clients)
+        self.validar_consentimiento = ValidarConsentimiento(self.consentimientos)
+        self.consultar_consentimiento = ConsultarConsentimiento(self.consentimientos, self.clients)
 
 
 container = Container()
