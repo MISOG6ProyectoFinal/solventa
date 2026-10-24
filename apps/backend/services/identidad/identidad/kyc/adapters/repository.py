@@ -17,7 +17,6 @@ clients = Table(
     Column("email", String(254), nullable=False),
     Column("telefono", String(30), nullable=True),
     Column("pais", String(50), nullable=True, default="Colombia"),
-    Column("correo", String(254), nullable=True),
     Column("apellido", String(120), nullable=True, default=""),
     Column("password_hash", String(64), nullable=True, default=""),
     Column("salt", String(32), nullable=True, default=""),
@@ -25,7 +24,7 @@ clients = Table(
 
 
 def _client(row) -> Client:
-    email = row.get("email") or row.get("correo") or ""
+    email = row.get("email") or ""
     return Client(
         id=row["id"],
         email=email,
@@ -79,7 +78,10 @@ class PostgresClientRepository:
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS pais VARCHAR(50) DEFAULT 'Colombia';"))
-                conn.execute(text("UPDATE clientes SET email = correo WHERE email IS NULL AND correo IS NOT NULL;"))
+                try:
+                    conn.execute(text("UPDATE clientes SET email = correo WHERE email IS NULL OR email = '';"))
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -96,7 +98,6 @@ class PostgresClientRepository:
                         email=client.email,
                         telefono=client.telefono,
                         pais=client.pais,
-                        correo=client.email,
                         apellido=client.last_name,
                         password_hash=client.password_hash,
                         salt=client.salt,
@@ -118,7 +119,6 @@ class PostgresClientRepository:
                     email=client.email,
                     telefono=client.telefono,
                     pais=client.pais,
-                    correo=client.email,
                 )
             )
 
@@ -147,11 +147,7 @@ class PostgresClientRepository:
     def get_by_email(self, email: str) -> Client | None:
         normalized = email.lower()
         with self.engine.connect() as conn:
-            row = (
-                conn.execute(select(clients).where((clients.c.email == normalized) | (clients.c.correo == normalized)))
-                .mappings()
-                .first()
-            )
+            row = conn.execute(select(clients).where(clients.c.email == normalized)).mappings().first()
         return _client(row) if row else None
 
 
