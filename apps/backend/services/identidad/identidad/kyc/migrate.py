@@ -12,11 +12,14 @@ turns on a Postgres advisory lock:
 """
 
 from solventa_common.db import build_engine
+from solventa_common.settings import ServiceSettings
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
-from identidad.config import settings
 from identidad.kyc.adapters.account_repository import accounts
+
+# Only the database settings: the init container does not receive SESION_SECRETO.
+settings = ServiceSettings(service_name="identidad")
 
 _LOCK_KEY = 7_340_001
 

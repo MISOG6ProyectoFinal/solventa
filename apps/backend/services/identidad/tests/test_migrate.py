@@ -1,5 +1,8 @@
 """La migración de clientes anteriores corre como init container del Deployment, no dentro del servicio."""
 
+import os
+import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -145,3 +148,20 @@ def test_main_ejecuta_la_migracion_con_el_engine(settings, build_engine, migrate
 
     build_engine.assert_called_once_with(settings.database_url)
     migrate_fn.assert_called_once_with(build_engine.return_value)
+
+
+def test_la_migracion_arranca_sin_el_secreto_de_sesion(tmp_path):
+    env = {k: v for k, v in os.environ.items() if k not in ("SESION_SECRETO", "DB_HOST", "DB_NAME")}
+    env["PYTHONPATH"] = os.pathsep.join(sys.path)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "identidad.kyc.migrate"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert "La migración necesita DB_HOST y DB_NAME" in result.stderr
+    assert "sesion_secreto" not in result.stderr
