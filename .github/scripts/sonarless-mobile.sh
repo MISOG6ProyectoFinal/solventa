@@ -34,6 +34,7 @@ sonar.tests=apps/mobile/src
 sonar.test.inclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
 sonar.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
 sonar.coverage.exclusions=apps/mobile/src/**/*.spec.tsx,apps/mobile/src/test-setup.ts,apps/mobile/src/test-file-stub.js
+sonar.cpd.exclusions=apps/mobile/src/**/texts/*.ts
 EOF
 }
 

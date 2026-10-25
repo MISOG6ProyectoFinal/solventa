@@ -56,9 +56,7 @@ export default function QuotePaymentScreen() {
       return;
     }
 
-    if (!intentoId.current) {
-      intentoId.current = crearIntentoId();
-    }
+    intentoId.current ??= crearIntentoId();
     const intento = intentoId.current;
     inFlight.current = true;
     setError(null);

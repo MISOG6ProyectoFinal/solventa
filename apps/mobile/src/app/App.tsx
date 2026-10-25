@@ -12,7 +12,7 @@ export default function App() {
   const loadLanguage = useLanguageStore((state) => state.load);
 
   useEffect(() => {
-    void loadLanguage();
+    loadLanguage().catch(() => undefined);
   }, [loadLanguage]);
 
   // Waiting for the saved choice avoids a first frame in the wrong language.

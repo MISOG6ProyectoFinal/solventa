@@ -44,6 +44,10 @@ const APELLIDO = 'Rojas';
 const TOKEN = 'token-firmado';
 const CLIENTE = 'cliente-1';
 const GREETING = `Hola, ${NOMBRE}`;
+const DOCUMENTO = '1020304050';
+const TELEFONO = '3001234567';
+const BIRTH_YEAR = new Date().getFullYear() - 29;
+const BIRTH_MONTH = new Date().getMonth() + 1;
 
 function jsonResponse(body: unknown, status = 200) {
   return {
@@ -102,6 +106,21 @@ async function openLogin() {
   const view = await render(<Shell />);
   await waitFor(() => expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0));
   return view;
+}
+
+async function fillRegistration(view: Awaited<ReturnType<typeof render>>) {
+  await fireEvent.changeText(view.getByLabelText('Nombre'), `  ${NOMBRE}  `);
+  await fireEvent.changeText(view.getByLabelText('Apellido'), `  ${APELLIDO}  `);
+  await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
+  await fireEvent.changeText(view.getByLabelText('Número de documento'), ` ${DOCUMENTO} `);
+  await fireEvent.changeText(view.getByLabelText('Teléfono'), TELEFONO);
+  await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+  await fireEvent.press(view.getByText('dd/mm/aaaa'));
+  await fireEvent.press(view.getByLabelText('Cambiar año'));
+  await fireEvent.press(view.getByLabelText('Años anteriores'));
+  await fireEvent.press(view.getByLabelText('Años anteriores'));
+  await fireEvent.press(view.getByLabelText(`Año ${BIRTH_YEAR}`));
+  await fireEvent.press(view.getByLabelText(new RegExp(`^15 de .* de ${BIRTH_YEAR}$`)));
 }
 
 async function pressLabel(view: { getAllByText: (text: string) => Array<{ props: unknown }> }, label: string) {
@@ -228,13 +247,10 @@ describe('sesión del cliente', () => {
 
     await pressLabel(view, 'Crear cuenta');
     await pressLabel(view, 'Crear cuenta');
-    expect(view.getAllByText('Obligatorio')).toHaveLength(4);
+    expect(view.getAllByText('Obligatorio')).toHaveLength(7);
     expect(fetch).not.toHaveBeenCalled();
 
-    await fireEvent.changeText(view.getByLabelText('Nombre'), `  ${NOMBRE}  `);
-    await fireEvent.changeText(view.getByLabelText('Apellido'), `  ${APELLIDO}  `);
-    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
-    await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+    await fillRegistration(view);
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
@@ -248,8 +264,41 @@ describe('sesión del cliente', () => {
         contrasena: CONTRASENA,
         nombre: NOMBRE,
         apellido: APELLIDO,
+        tipo_documento: 'CC',
+        numero_documento: DOCUMENTO,
+        telefono: TELEFONO,
+        fecha_nacimiento: `${BIRTH_YEAR}-${String(BIRTH_MONTH).padStart(2, '0')}-15`,
       }),
     });
+  });
+
+  it('sends the document type the person chooses', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    expect(view.getByText('Cédula de ciudadanía')).toBeTruthy();
+    await fireEvent.press(view.getByText('Cédula de ciudadanía'));
+    await fireEvent.press(view.getByLabelText('Pasaporte'));
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+    const [, init] = jest.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toMatchObject({ tipo_documento: 'Pasaporte' });
+  });
+
+  it('shows the duplicate document error', async () => {
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ detail: 'Ya existe una cuenta con este documento.' }, 409),
+    ) as typeof fetch;
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText('Ya existe una cuenta con este documento.')).toBeTruthy());
+    expect(view.queryByText(GREETING)).toBeNull();
   });
 
   it('shows the duplicate email error and stays on Crear cuenta', async () => {
@@ -259,10 +308,7 @@ describe('sesión del cliente', () => {
     const view = await openLogin();
 
     await pressLabel(view, 'Crear cuenta');
-    await fireEvent.changeText(view.getByLabelText('Nombre'), NOMBRE);
-    await fireEvent.changeText(view.getByLabelText('Apellido'), APELLIDO);
-    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
-    await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+    await fillRegistration(view);
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText('Ya existe una cuenta con este correo.')).toBeTruthy());

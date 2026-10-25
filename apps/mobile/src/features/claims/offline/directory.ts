@@ -3,16 +3,6 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 const directory = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/pending-report`;
 const staging = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/pending-report-next`;
 
-// The 0.25 types omit cp and mv. Both exist on the runtime.
-type CopyableFs = {
-  cp(source: string, destination: string): Promise<boolean>;
-  mv(source: string, destination: string): Promise<boolean>;
-};
-
-function files(): CopyableFs {
-  return ReactNativeBlobUtil.fs as typeof ReactNativeBlobUtil.fs & CopyableFs;
-}
-
 export async function prepareReportDirectory(): Promise<void> {
   if (await ReactNativeBlobUtil.fs.exists(staging)) {
     await ReactNativeBlobUtil.fs.unlink(staging);
@@ -22,7 +12,7 @@ export async function prepareReportDirectory(): Promise<void> {
 
 export async function commitReportDirectory(): Promise<void> {
   await removeReportDirectory();
-  await files().mv(staging, directory);
+  await ReactNativeBlobUtil.fs.mv(staging, directory);
 }
 
 export async function removeReportDirectory(): Promise<void> {
@@ -36,7 +26,7 @@ export async function writeReportText(name: string, contents: string): Promise<v
 }
 
 export async function copyReportFile(source: string, name: string): Promise<void> {
-  await files().cp(source, `${staging}/${name}`);
+  await ReactNativeBlobUtil.fs.cp(source, `${staging}/${name}`);
 }
 
 export async function readReportText(name: string): Promise<string | null> {

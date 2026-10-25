@@ -8,6 +8,7 @@ import { getSession, type ClientProfile } from '../api/getSession';
 import { registerClient } from '../api/registerClient';
 import { startSession } from '../api/startSession';
 import { deleteToken, readToken, saveToken } from '../storage';
+import { type RegisterValues } from '../types';
 
 type Status = 'checking' | 'signedIn' | 'signedOut';
 
@@ -19,7 +20,7 @@ type SessionState = {
   lastName: string | null;
   restore: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  register: (values: RegisterValues) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -120,9 +121,16 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
     await rememberProfile(session.token, generation);
   },
-  register: async (email, password, firstName, lastName) => {
+  register: async (values) => {
     const generation = ++restoreGeneration;
-    const session = await registerClient(email.trim(), password, firstName.trim(), lastName.trim());
+    const session = await registerClient({
+      ...values,
+      email: values.email.trim(),
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      documentNumber: values.documentNumber.trim(),
+      phone: values.phone.trim(),
+    });
     await saveToken(session.token);
     if (generation !== restoreGeneration) {
       return;

@@ -36,6 +36,10 @@ export default function ReportClaimScreen() {
   const videos = useClaimsStore((state) => state.videos);
   const evidenceCount = photos.length + videos.length;
   const address = restoredAddress ?? location?.address ?? '';
+  let addressText = address;
+  if (address === '') {
+    addressText = locationFailed ? texts.report.locationUnavailable : texts.report.locationPending;
+  }
   const { submit, submitted, filing, sendError } = useSubmitReport({
     policy,
     claimType,
@@ -96,11 +100,7 @@ export default function ReportClaimScreen() {
               />
             </View>
             <AppText variant="bodySmall" style={styles.address}>
-              {address !== ''
-                ? address
-                : locationFailed
-                  ? texts.report.locationUnavailable
-                  : texts.report.locationPending}
+              {addressText}
             </AppText>
             {location && restoredAddress == null ? (
               <AppText variant="bodySmall" style={styles.detail}>

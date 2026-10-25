@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, type ListRenderItemInfo, RefreshControl, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
@@ -83,7 +83,7 @@ export default function ClaimsScreen() {
   );
 
   const renderClaim = useCallback(
-    ({ item }: { item: ClaimItem }) => <ClaimRow item={item} onOpen={openClaim} />,
+    (info: ListRenderItemInfo<ClaimItem>) => <ClaimRow item={info.item} onOpen={openClaim} />,
     [openClaim],
   );
 

@@ -55,7 +55,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action
   const texts = useTexts();
 
   const displayBackBtn = navigation.canGoBack() && !hideBackButton && leadingIcon == null;
-  const hasLeadingIcon = displayBackBtn || leadingIcon != null;
+  const hasLeadingIcon = leadingIcon != null || displayBackBtn;
 
   return (
     <View testID="app-header" style={[styles.bar, { paddingTop: insets.top + theme.space.md }]}>

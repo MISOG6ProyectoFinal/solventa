@@ -5,7 +5,8 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { AppText, Button, Card, CoverageList, Screen, StatusChip } from '../../../../shared/ui';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { useTexts } from '../../texts';
-import { formatMoney, formatVigenteHasta, fromApiDate, quoteReference } from '../../utils';
+import { fromApiDate } from '../../../../shared/date';
+import { formatMoney, formatVigenteHasta, quoteReference } from '../../utils';
 import styles from './styles';
 
 export default function QuoteResultScreen() {

@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { ProductoMovil } from '../../types';
-import { defaultQuoteForm, toApiDate } from '../../utils';
+import { toApiDate } from '../../../../shared/date';
+import { defaultQuoteForm } from '../../utils';
 import QuoteFormScreen from './index';
 
 jest.mock('@react-navigation/native', () => {

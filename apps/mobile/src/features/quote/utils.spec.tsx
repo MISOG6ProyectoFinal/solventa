@@ -1,14 +1,12 @@
+import { toDisplayDate } from '../../shared/date';
 import { destinos, QuoteFormValues } from './types';
 import {
   addDays,
   defaultQuoteForm,
   digitsOnly,
   formatMoney,
-  fromApiDate,
   formatVigenteHasta,
   quoteReference,
-  toApiDate,
-  toDisplayDate,
   validateQuoteForm,
 } from './utils';
 
@@ -41,10 +39,7 @@ describe('quote utils', () => {
     expect(formatVigenteHasta('sin-fecha', today)).toBe('sin-fecha');
   });
 
-  it('converts dates without shifting a day through UTC', () => {
-    expect(toApiDate('10/10/2026')).toBe('2026-10-10');
-    expect(fromApiDate('2026-10-24')).toBe('24/10/2026');
-    expect(toDisplayDate(new Date(2026, 9, 10))).toBe('10/10/2026');
+  it('adds days to a local date', () => {
     expect(toDisplayDate(addDays(new Date(2026, 9, 10), 14))).toBe('24/10/2026');
   });
 

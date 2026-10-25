@@ -33,12 +33,4 @@ export default StyleSheet.create({
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
   },
-  summary: {
-    gap: theme.space.xs,
-  },
-  summaryName: {
-    color: theme.colors.text,
-    fontFamily: theme.type.subtitle.fontFamily,
-    fontWeight: theme.type.subtitle.fontWeight,
-  },
 });

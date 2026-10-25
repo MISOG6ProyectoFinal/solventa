@@ -15,9 +15,8 @@ import {
 } from '../../../../shared/ui';
 import { listNearbyProviders } from '../../api/listNearbyProviders';
 import { Legend } from '../../components/Legend';
+import { ProviderSummary } from '../../components/ProviderSummary';
 import { categories } from '../../categories';
-import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
-import { formatDecimal } from '../../formatDecimal';
 import { useTexts } from '../../texts';
 import { type NearbyProvider, type ProviderFilter, type ProviderType } from '../../types';
 import styles from './styles';
@@ -29,7 +28,6 @@ type Props = StaticScreenProps<{ filter?: ProviderType } | undefined>;
 
 export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
   const texts = useTexts();
-  const language = useLanguageStore((state) => state.language);
   const filterOptions = useMemo(
     () =>
       (Object.keys(texts.providers.filters) as ProviderFilter[]).map((id) => ({
@@ -159,21 +157,7 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
         ) : null}
       </View>
       <Sheet ref={sheet} testID="provider-summary" onClose={clearSelection}>
-        {selected ? (
-          <View style={styles.summary}>
-            <AppText variant="subtitle" style={styles.summaryName}>
-              {selected.name}
-            </AppText>
-            <AppText variant="bodySmall">{texts.providers.categories[selected.type]}</AppText>
-            <AppText variant="body">{texts.providers.distance(formatDecimal(selected.distanceKm, language))}</AppText>
-            <AppText variant="body">{texts.providers.eta(selected.etaMin)}</AppText>
-            <AppText variant="body">
-              {selected.rating === null
-                ? texts.providers.noRating
-                : texts.providers.rating(formatDecimal(selected.rating, language))}
-            </AppText>
-          </View>
-        ) : null}
+        {selected ? <ProviderSummary provider={selected} /> : null}
       </Sheet>
     </Screen>
   );
