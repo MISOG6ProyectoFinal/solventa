@@ -513,6 +513,342 @@
       "linesCovered": 1098,
       "linesValid": 1219,
       "runId": 39181823103
+    },
+    {
+      "date": "2026-10-20T14:37:31Z",
+      "app": "Mobile",
+      "coverage": 91,
+      "linesCovered": 1195,
+      "linesValid": 1313,
+      "runId": 39440508708
+    },
+    {
+      "date": "2026-10-20T14:38:18Z",
+      "app": "Backend",
+      "coverage": 91,
+      "linesCovered": 2686,
+      "linesValid": 2951,
+      "runId": 39440508708
+    },
+    {
+      "date": "2026-10-20T23:47:40Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 2917,
+      "linesValid": 3183,
+      "runId": 39516944473
+    },
+    {
+      "date": "2026-10-20T23:47:53Z",
+      "app": "Backend",
+      "coverage": 91.7,
+      "linesCovered": 2922,
+      "linesValid": 3188,
+      "runId": 39516959193
+    },
+    {
+      "date": "2026-10-21T02:23:41Z",
+      "app": "Backend",
+      "coverage": 91.7,
+      "linesCovered": 2925,
+      "linesValid": 3190,
+      "runId": 39532517333
+    },
+    {
+      "date": "2026-10-21T02:37:40Z",
+      "app": "Backend",
+      "coverage": 92.1,
+      "linesCovered": 3189,
+      "linesValid": 3464,
+      "runId": 39533751042
+    },
+    {
+      "date": "2026-10-21T03:09:34Z",
+      "app": "Backend",
+      "coverage": 92.4,
+      "linesCovered": 3386,
+      "linesValid": 3664,
+      "runId": 39536728906
+    },
+    {
+      "date": "2026-10-21T05:29:43Z",
+      "app": "Mobile",
+      "coverage": 91.8,
+      "linesCovered": 1314,
+      "linesValid": 1432,
+      "runId": 39549610618
+    },
+    {
+      "date": "2026-10-21T05:32:56Z",
+      "app": "Mobile",
+      "coverage": 91.8,
+      "linesCovered": 1321,
+      "linesValid": 1439,
+      "runId": 39549995988
+    },
+    {
+      "date": "2026-10-22T18:53:13Z",
+      "app": "Backend",
+      "coverage": 92,
+      "linesCovered": 3547,
+      "linesValid": 3857,
+      "runId": 39834793078
+    },
+    {
+      "date": "2026-10-22T19:03:11Z",
+      "app": "Backend",
+      "coverage": 92,
+      "linesCovered": 3547,
+      "linesValid": 3857,
+      "runId": 39836183681
+    },
+    {
+      "date": "2026-10-22T21:49:57Z",
+      "app": "Web",
+      "coverage": 96,
+      "linesCovered": 958,
+      "linesValid": 998,
+      "runId": 39860159264
+    },
+    {
+      "date": "2026-10-22T21:50:14Z",
+      "app": "Mobile",
+      "coverage": 92.4,
+      "linesCovered": 1427,
+      "linesValid": 1545,
+      "runId": 39860159264
+    },
+    {
+      "date": "2026-10-22T21:50:52Z",
+      "app": "Backend",
+      "coverage": 92,
+      "linesCovered": 3547,
+      "linesValid": 3857,
+      "runId": 39860159264
+    },
+    {
+      "date": "2026-10-23T21:05:07Z",
+      "app": "Mobile",
+      "coverage": 92.4,
+      "linesCovered": 1436,
+      "linesValid": 1554,
+      "runId": 40023798116
+    },
+    {
+      "date": "2026-10-23T21:09:36Z",
+      "app": "Mobile",
+      "coverage": 92.4,
+      "linesCovered": 1434,
+      "linesValid": 1552,
+      "runId": 40024368137
+    },
+    {
+      "date": "2026-10-23T21:20:50Z",
+      "app": "Mobile",
+      "coverage": 92.6,
+      "linesCovered": 1450,
+      "linesValid": 1566,
+      "runId": 40025744725
+    },
+    {
+      "date": "2026-10-23T21:22:43Z",
+      "app": "Mobile",
+      "coverage": 92.6,
+      "linesCovered": 1452,
+      "linesValid": 1568,
+      "runId": 40026000784
+    },
+    {
+      "date": "2026-10-23T21:30:11Z",
+      "app": "Mobile",
+      "coverage": 92.7,
+      "linesCovered": 1463,
+      "linesValid": 1579,
+      "runId": 40026925115
+    },
+    {
+      "date": "2026-10-23T21:36:26Z",
+      "app": "Mobile",
+      "coverage": 92.7,
+      "linesCovered": 1475,
+      "linesValid": 1591,
+      "runId": 40027644015
+    },
+    {
+      "date": "2026-10-23T21:47:00Z",
+      "app": "Mobile",
+      "coverage": 92.7,
+      "linesCovered": 1475,
+      "linesValid": 1591,
+      "runId": 40028983092
+    },
+    {
+      "date": "2026-10-23T21:48:24Z",
+      "app": "Mobile",
+      "coverage": 92.7,
+      "linesCovered": 1477,
+      "linesValid": 1593,
+      "runId": 40029079522
+    },
+    {
+      "date": "2026-10-23T21:57:22Z",
+      "app": "Mobile",
+      "coverage": 92.9,
+      "linesCovered": 1479,
+      "linesValid": 1592,
+      "runId": 40030147374
+    },
+    {
+      "date": "2026-10-23T21:59:59Z",
+      "app": "Mobile",
+      "coverage": 92.9,
+      "linesCovered": 1478,
+      "linesValid": 1591,
+      "runId": 40030414583
+    },
+    {
+      "date": "2026-10-23T22:21:11Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1566,
+      "linesValid": 1699,
+      "runId": 40032742228
+    },
+    {
+      "date": "2026-10-24T03:15:37Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1566,
+      "linesValid": 1699,
+      "runId": 40057380833
+    },
+    {
+      "date": "2026-10-24T03:15:39Z",
+      "app": "Backend",
+      "coverage": 91.3,
+      "linesCovered": 3899,
+      "linesValid": 4271,
+      "runId": 40057380833
+    },
+    {
+      "date": "2026-10-24T03:15:45Z",
+      "app": "Web",
+      "coverage": 96.4,
+      "linesCovered": 1147,
+      "linesValid": 1190,
+      "runId": 40057380833
+    },
+    {
+      "date": "2026-10-25T17:30:58Z",
+      "app": "Web",
+      "coverage": 96.4,
+      "linesCovered": 1147,
+      "linesValid": 1190,
+      "runId": 40216673561
+    },
+    {
+      "date": "2026-10-25T17:31:07Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1566,
+      "linesValid": 1699,
+      "runId": 40216673561
+    },
+    {
+      "date": "2026-10-25T17:32:05Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4005,
+      "linesValid": 4372,
+      "runId": 40216673561
+    },
+    {
+      "date": "2026-10-25T17:46:34Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1571,
+      "linesValid": 1704,
+      "runId": 40217880097
+    },
+    {
+      "date": "2026-10-25T17:46:47Z",
+      "app": "Web",
+      "coverage": 96.4,
+      "linesCovered": 1147,
+      "linesValid": 1190,
+      "runId": 40217880097
+    },
+    {
+      "date": "2026-10-25T17:46:49Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4005,
+      "linesValid": 4372,
+      "runId": 40217880097
+    },
+    {
+      "date": "2026-10-25T17:53:06Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4006,
+      "linesValid": 4373,
+      "runId": 40218325869
+    },
+    {
+      "date": "2026-10-25T19:58:50Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1576,
+      "linesValid": 1709,
+      "runId": 40228403644
+    },
+    {
+      "date": "2026-10-25T20:03:41Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1581,
+      "linesValid": 1715,
+      "runId": 40228757972
+    },
+    {
+      "date": "2026-10-25T20:04:48Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4013,
+      "linesValid": 4380,
+      "runId": 40228757972
+    },
+    {
+      "date": "2026-10-25T20:58:40Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1594,
+      "linesValid": 1728,
+      "runId": 40233064076
+    },
+    {
+      "date": "2026-10-25T20:58:54Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4021,
+      "linesValid": 4388,
+      "runId": 40233064076
+    },
+    {
+      "date": "2026-10-25T21:06:49Z",
+      "app": "Mobile",
+      "coverage": 92.2,
+      "linesCovered": 1594,
+      "linesValid": 1728,
+      "runId": 40233791036
+    },
+    {
+      "date": "2026-10-25T21:08:01Z",
+      "app": "Backend",
+      "coverage": 91.6,
+      "linesCovered": 4021,
+      "linesValid": 4388,
+      "runId": 40233791036
     }
   ]
 }

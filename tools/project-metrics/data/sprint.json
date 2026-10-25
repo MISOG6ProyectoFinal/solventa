@@ -1,6 +1,6 @@
 {
   "sprint": {
-    "totalStoryPoints": 38,
+    "totalStoryPoints": 46,
     "totalDays": 14,
     "days": [
       {
@@ -9,11 +9,11 @@
       },
       {
         "day": 2,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 13
       },
       {
         "day": 3,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 5
       },
       {
         "day": 4,
@@ -21,47 +21,18 @@
       },
       {
         "day": 5,
-        "completedStoryPoints": 8
+        "completedStoryPoints": 0
       },
       {
         "day": 6,
-        "completedStoryPoints": 5
+        "completedStoryPoints": 0
       },
       {
         "day": 7,
-        "completedStoryPoints": 10
-      },
-      {
-        "day": 8,
         "completedStoryPoints": 0
-      },
-      {
-        "day": 9,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 10,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 11,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 12,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 13,
-        "completedStoryPoints": 5
-      },
-      {
-        "day": 14,
-        "completedStoryPoints": 10
       }
     ]
   },
-
   "velocity": [
     {
       "week": 1,
@@ -76,7 +47,7 @@
     {
       "week": 3,
       "planned": 23,
-      "actual": 0
+      "actual": 18
     },
     {
       "week": 4,
@@ -104,7 +75,6 @@
       "actual": 0
     }
   ],
-
   "businessValue": {
     "totalDays": 56,
     "daysPerWeek": 7,
@@ -147,7 +117,7 @@
       },
       {
         "day": 10,
-        "valueDelivered": 0
+        "valueDelivered": 5
       },
       {
         "day": 11,
@@ -163,11 +133,38 @@
       },
       {
         "day": 14,
-        "valueDelivered": 2
+        "valueDelivered": 0
+      },
+      {
+        "day": 15,
+        "valueDelivered": 0
+      },
+      {
+        "day": 16,
+        "valueDelivered": 10
+      },
+      {
+        "day": 17,
+        "valueDelivered": 4
+      },
+      {
+        "day": 18,
+        "valueDelivered": 0
+      },
+      {
+        "day": 19,
+        "valueDelivered": 0
+      },
+      {
+        "day": 20,
+        "valueDelivered": 0
+      },
+      {
+        "day": 21,
+        "valueDelivered": 0
       }
     ]
   },
-
   "releaseBurndown": {
     "sprints": [
       {
@@ -179,7 +176,7 @@
       {
         "sprint": 2,
         "plannedStoryPoints": 46,
-        "completedStoryPoints": 0,
+        "completedStoryPoints": 18,
         "closed": false
       },
       {
