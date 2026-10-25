@@ -20,7 +20,8 @@ from identidad.kyc.domain.models import (
     SolicitudConsentimiento,
 )
 
-EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+# The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 

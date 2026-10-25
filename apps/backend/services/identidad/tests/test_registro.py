@@ -276,9 +276,18 @@ def test_el_ingreso_no_exige_largo_para_no_bloquear_cuentas_anteriores():
 
 
 def test_registro_rechaza_un_correo_con_formato_invalido():
-    for indice, correo in enumerate(
-        ["sin-arroba", "a@b", "a b@solventa.test", "@solventa.test", "ana@", "a@@solventa.test"]
-    ):
+    invalidos = [
+        "sin-arroba",
+        "a@b",
+        "a b@solventa.test",
+        "@solventa.test",
+        "ana@",
+        "a@@solventa.test",
+        "ana@solventa..test",
+        "ana@.test",
+        "ana@solventa.",
+    ]
+    for indice, correo in enumerate(invalidos):
         cuenta = _cuenta(correo, str(555200 + indice))
 
         assert client.post("/identidad/clientes", json=cuenta).status_code == 422, correo
