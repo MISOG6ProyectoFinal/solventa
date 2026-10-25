@@ -18,6 +18,7 @@ export const en: Texts = {
     firstNameLabel: 'First name',
     lastNameLabel: 'Last name',
     emailLabel: 'Email',
+    emailInvalid: 'Enter a valid email.',
     documentTypeLabel: 'Document type',
     documentTypes: {
       CC: 'Citizenship card',

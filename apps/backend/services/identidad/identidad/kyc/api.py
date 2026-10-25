@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, status
@@ -18,6 +19,8 @@ from identidad.kyc.domain.models import (
     RespuestaValidacion,
     SolicitudConsentimiento,
 )
+
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 
@@ -55,6 +58,13 @@ class SolicitudRegistro(SolicitudSesion):
         if not stripped:
             raise ValueError("El campo es obligatorio")
         return stripped
+
+    @field_validator("correo")
+    @classmethod
+    def _formato_correo(cls, value: str) -> str:
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("El correo no tiene un formato válido.")
+        return value
 
     @field_validator("contrasena")
     @classmethod

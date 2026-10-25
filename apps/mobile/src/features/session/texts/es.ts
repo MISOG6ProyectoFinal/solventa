@@ -16,6 +16,7 @@ export const es = {
     firstNameLabel: 'Nombre',
     lastNameLabel: 'Apellido',
     emailLabel: 'Correo',
+    emailInvalid: 'Ingresa un correo válido.',
     documentTypeLabel: 'Tipo de documento',
     documentTypes: {
       CC: 'Cédula de ciudadanía',

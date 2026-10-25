@@ -15,6 +15,7 @@ export { Icon } from './Icon';
 export { IconButton } from './IconButton';
 export type { IconColor, IconName } from './Icon';
 export { Indicator } from './Indicator';
+export { LanguageSelector } from './LanguageSelector';
 export { KeyValue } from './KeyValue';
 export { LoadingState } from './LoadingState';
 export { OptionList } from './OptionList';

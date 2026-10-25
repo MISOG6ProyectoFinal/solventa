@@ -112,6 +112,7 @@ const iconLabels: Record<IconName, string> = {
   grua: 'Grúa',
   taller: 'Taller',
   ajustes: 'Ajustes',
+  idioma: 'Idioma',
   ambulancia: 'Ambulancia',
   perito: 'Perito',
   calendario: 'Calendario',

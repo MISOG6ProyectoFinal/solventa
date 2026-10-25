@@ -8,6 +8,7 @@ export const es = {
   required: 'Obligatorio',
   back: 'Volver',
   select: 'Selecciona',
+  language: 'Idioma',
   currentLocation: 'Ubicación actual',
   date: {
     placeholder: 'dd/mm/aaaa',

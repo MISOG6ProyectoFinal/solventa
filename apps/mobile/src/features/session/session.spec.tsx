@@ -25,8 +25,10 @@ jest.mock('@react-navigation/drawer', () => {
 });
 
 jest.mock('@react-navigation/native', () => ({
+  StackActions: jest.requireActual('@react-navigation/native').StackActions,
   useNavigation: () => ({
     navigate: mockNavigate,
+    dispatch: (action: { payload: { name: string } }) => mockNavigate(action.payload.name),
     goBack: jest.fn(),
     canGoBack: () => false,
   }),
@@ -210,21 +212,28 @@ describe('sesión del cliente', () => {
     expect(saved).toBe(TOKEN);
   });
 
-  it('switches the login language from the top left corner and back', async () => {
+  it('shows the active language on the button and picks another from a sheet', async () => {
     const view = await openLogin();
 
-    expect(view.queryByText('Español')).toBeNull();
+    expect(view.getByTestId('language-button')).toHaveTextContent('Español');
+    expect(view.queryByText('English')).toBeNull();
+    await fireEvent.press(view.getByTestId('language-button'));
+    expect(view.getByText('Idioma')).toBeTruthy();
+    expect(view.getByText('English')).toBeTruthy();
+
     await fireEvent.press(view.getByText('English'));
 
     expect(useLanguageStore.getState().language).toBe('en');
     expect(view.getAllByText('Sign in').length).toBeGreaterThan(0);
     expect(view.getByLabelText('Password')).toBeTruthy();
-    expect(view.queryByText('English')).toBeNull();
+    expect(view.getByTestId('language-button')).toHaveTextContent('English');
 
+    await fireEvent.press(view.getByTestId('language-button'));
+    expect(view.getByText('Language')).toBeTruthy();
     await fireEvent.press(view.getByText('Español'));
 
     expect(useLanguageStore.getState().language).toBe('es');
-    expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0);
+    expect(view.getByTestId('language-button')).toHaveTextContent('Español');
   });
 
   it('shows the same error for a wrong password and stays on login', async () => {
@@ -288,6 +297,23 @@ describe('sesión del cliente', () => {
         fecha_nacimiento: `${BIRTH_YEAR}-${String(BIRTH_MONTH).padStart(2, '0')}-15`,
       }),
     });
+  });
+
+  it('blocks an email without a valid format before calling the API', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await fireEvent.changeText(view.getByLabelText('Correo'), 'ana@solventa');
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(view.getByText('Ingresa un correo válido.')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
   });
 
   it('blocks a password shorter than 8 characters before calling the API', async () => {

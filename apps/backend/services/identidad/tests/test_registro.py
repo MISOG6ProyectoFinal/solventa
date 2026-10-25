@@ -273,3 +273,18 @@ def test_el_ingreso_no_exige_largo_para_no_bloquear_cuentas_anteriores():
     response = client.post("/identidad/sesiones", json={"correo": "nadie@solventa.test", "contrasena": "abc"})
 
     assert response.status_code == 401
+
+
+def test_registro_rechaza_un_correo_con_formato_invalido():
+    for indice, correo in enumerate(
+        ["sin-arroba", "a@b", "a b@solventa.test", "@solventa.test", "ana@", "a@@solventa.test"]
+    ):
+        cuenta = _cuenta(correo, str(555200 + indice))
+
+        assert client.post("/identidad/clientes", json=cuenta).status_code == 422, correo
+
+
+def test_el_ingreso_no_valida_el_formato_del_correo_para_no_bloquear_cuentas_anteriores():
+    response = client.post("/identidad/sesiones", json={"correo": "usuario-antiguo", "contrasena": "clave-nueva"})
+
+    assert response.status_code == 401

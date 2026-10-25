@@ -10,6 +10,7 @@ export const en: Texts = {
   required: 'Required',
   back: 'Back',
   select: 'Select',
+  language: 'Language',
   currentLocation: 'Current location',
   date: {
     placeholder: 'dd/mm/yyyy',

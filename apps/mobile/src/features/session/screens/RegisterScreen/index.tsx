@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { StackActions, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
 import { isPastDate } from '../../../../shared/date';
+import { isValidEmail } from '../../../../shared/email';
 import { Banner, Button, DateField, Screen, SelectField, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useTexts } from '../../texts';
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
   const register = useSessionStore((state) => state.register);
   const [values, setValues] = useState<RegisterValues>(emptyValues);
   const [missing, setMissing] = useState<TextKey[]>([]);
+  const [emailInvalid, setEmailInvalid] = useState(false);
   const [birthDateInvalid, setBirthDateInvalid] = useState(false);
   const [passwordTooShort, setPasswordTooShort] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +49,12 @@ export default function RegisterScreen() {
     const empty = requiredKeys.filter((key) => values[key].trim() === '');
     const futureBirthDate = values.birthDate !== '' && !isPastDate(values.birthDate);
     const shortPassword = values.password.trim() !== '' && values.password.trim().length < minPasswordLength;
+    const badEmail = values.email.trim() !== '' && !isValidEmail(values.email.trim());
     setMissing(empty);
+    setEmailInvalid(badEmail);
     setBirthDateInvalid(futureBirthDate);
     setPasswordTooShort(shortPassword);
-    if (empty.length > 0 || futureBirthDate || shortPassword) {
+    if (empty.length > 0 || badEmail || futureBirthDate || shortPassword) {
       return;
     }
 
@@ -99,6 +103,7 @@ export default function RegisterScreen() {
             autoCapitalize="none"
             required
             error={isMissing('email')}
+            errorMessage={emailInvalid ? texts.register.emailInvalid : undefined}
           />
           <SelectField
             label={texts.register.documentTypeLabel}
@@ -142,7 +147,7 @@ export default function RegisterScreen() {
             errorMessage={passwordTooShort ? texts.register.passwordTooShort(minPasswordLength) : undefined}
           />
           <Button title={texts.register.submit} loading={submitting} onPress={() => void submit()} />
-          <Button title={texts.register.signIn} variant="text" onPress={() => navigation.navigate('Login')} />
+          <Button title={texts.register.signIn} variant="text" onPress={() => navigation.dispatch(StackActions.popTo('Login'))} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

@@ -20,6 +20,7 @@ import CreditCard from 'lucide-react-native/icons/credit-card';
 import FileExclamationPoint from 'lucide-react-native/icons/file-exclamation-point';
 import FileText from 'lucide-react-native/icons/file-text';
 import Funnel from 'lucide-react-native/icons/funnel';
+import Globe from 'lucide-react-native/icons/globe';
 import Heart from 'lucide-react-native/icons/heart';
 import House from 'lucide-react-native/icons/house';
 import HouseHeart from 'lucide-react-native/icons/house-heart';
@@ -103,6 +104,7 @@ export const icons = {
   grua: Truck,
   taller: Wrench,
   ajustes: Settings,
+  idioma: Globe,
   ambulancia: Ambulance,
   perito: UserCheck,
   calendario: Calendar,
