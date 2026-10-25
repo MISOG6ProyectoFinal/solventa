@@ -1,6 +1,6 @@
 {
   "sprint": {
-    "totalStoryPoints": 46,
+    "totalStoryPoints": 54,
     "totalDays": 14,
     "days": [
       {
@@ -9,7 +9,7 @@
       },
       {
         "day": 2,
-        "completedStoryPoints": 13
+        "completedStoryPoints": 21
       },
       {
         "day": 3,
@@ -47,26 +47,26 @@
     {
       "week": 3,
       "planned": 23,
-      "actual": 18
+      "actual": 26
     },
     {
       "week": 4,
-      "planned": 23,
+      "planned": 31,
       "actual": 0
     },
     {
       "week": 5,
-      "planned": 21,
+      "planned": 28,
       "actual": 0
     },
     {
       "week": 6,
-      "planned": 21,
+      "planned": 28,
       "actual": 0
     },
     {
       "week": 7,
-      "planned": 20,
+      "planned": 27,
       "actual": 0
     },
     {
@@ -141,7 +141,7 @@
       },
       {
         "day": 16,
-        "valueDelivered": 10
+        "valueDelivered": 15
       },
       {
         "day": 17,
@@ -175,13 +175,13 @@
       },
       {
         "sprint": 2,
-        "plannedStoryPoints": 46,
-        "completedStoryPoints": 18,
+        "plannedStoryPoints": 54,
+        "completedStoryPoints": 26,
         "closed": false
       },
       {
         "sprint": 3,
-        "plannedStoryPoints": 62,
+        "plannedStoryPoints": 83,
         "completedStoryPoints": 0,
         "closed": false
       }
