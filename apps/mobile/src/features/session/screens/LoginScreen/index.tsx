@@ -11,6 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '../../../../shared/api/client';
+import { languageNames } from '../../../../shared/i18n/language';
+import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { theme } from '../../../../shared/theme';
 import { Banner, BrandLogo, Button, IconButton, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
@@ -22,6 +24,9 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const signIn = useSessionStore((state) => state.signIn);
+  const language = useLanguageStore((state) => state.language);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const otherLanguage = language === 'es' ? 'en' : 'es';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailEmpty, setEmailEmpty] = useState(false);
@@ -103,6 +108,9 @@ export default function LoginScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+      <View style={[styles.languageToggle, { top: insets.top + theme.space.sm }]}>
+        <Button title={languageNames[otherLanguage]} variant="text" onPress={() => setLanguage(otherLanguage)} />
+      </View>
       {__DEV__ ? (
         <View style={[styles.devTools, { top: insets.top + theme.space.sm }]}>
           <IconButton

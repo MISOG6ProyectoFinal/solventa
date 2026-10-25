@@ -22,6 +22,10 @@ export default StyleSheet.create({
     position: 'absolute',
     right: theme.space.lg,
   },
+  languageToggle: {
+    position: 'absolute',
+    left: theme.space.lg,
+  },
   logo: {
     paddingBottom: theme.space.lg,
   },

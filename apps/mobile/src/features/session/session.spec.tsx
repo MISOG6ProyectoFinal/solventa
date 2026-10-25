@@ -5,6 +5,7 @@ import { type DrawerContentComponentProps } from '@react-navigation/drawer';
 import { setAccessToken } from '../../shared/api/accessToken';
 import * as apiBaseUrl from '../../shared/api/apiBaseUrl';
 import { apiClient } from '../../shared/api/client';
+import { useLanguageStore } from '../../shared/i18n/useLanguageStore';
 import HomeDrawerContent from '../home/screens/HomeDrawerContent';
 import HomeScreen from '../home/screens/HomeScreen';
 import CheckingScreen from './screens/CheckingScreen';
@@ -207,6 +208,23 @@ describe('sesión del cliente', () => {
       lastName: APELLIDO,
     });
     expect(saved).toBe(TOKEN);
+  });
+
+  it('switches the login language from the top left corner and back', async () => {
+    const view = await openLogin();
+
+    expect(view.queryByText('Español')).toBeNull();
+    await fireEvent.press(view.getByText('English'));
+
+    expect(useLanguageStore.getState().language).toBe('en');
+    expect(view.getAllByText('Sign in').length).toBeGreaterThan(0);
+    expect(view.getByLabelText('Password')).toBeTruthy();
+    expect(view.queryByText('English')).toBeNull();
+
+    await fireEvent.press(view.getByText('Español'));
+
+    expect(useLanguageStore.getState().language).toBe('es');
+    expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0);
   });
 
   it('shows the same error for a wrong password and stays on login', async () => {
