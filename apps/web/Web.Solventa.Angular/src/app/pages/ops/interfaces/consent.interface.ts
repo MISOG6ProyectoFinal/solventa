@@ -6,7 +6,6 @@ export interface SolicitudConsentimiento {
   email?: string;
   telefono?: string;
   fecha_nacimiento?: string;
-  pais?: string;
   ramo: string;
   canal: 'sms' | 'email';
   contacto?: string;

@@ -67,12 +67,19 @@ class SolicitudSesion(BaseModel):
 class SolicitudRegistro(SolicitudSesion):
     nombre: str
     apellido: str
+    tipo_documento: str
+    numero_documento: str
+    telefono: str
+    fecha_nacimiento: date
 
     @model_validator(mode="after")
     def _validar_registro(self) -> "SolicitudRegistro":
         self.nombre = self.nombre.strip()
         self.apellido = self.apellido.strip()
-        if not self.nombre or not self.apellido:
+        self.tipo_documento = self.tipo_documento.strip()
+        self.numero_documento = self.numero_documento.strip()
+        self.telefono = self.telefono.strip()
+        if not all((self.nombre, self.apellido, self.tipo_documento, self.numero_documento, self.telefono)):
             raise ValueError("El campo es obligatorio")
         return self
 
@@ -136,7 +143,7 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
 
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
 def registrar(solicitud: SolicitudRegistro) -> dict:
-    return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump())
+    return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump(mode="json"))
 
 
 @authenticated.get("/sesion")

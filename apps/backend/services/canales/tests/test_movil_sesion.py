@@ -10,7 +10,15 @@ from solventa_common.sesion import sign_token
 client = TestClient(app)
 
 CUERPO = {"correo": "cliente@solventa.test", "contrasena": "solventa-local"}
-REGISTRO = {**CUERPO, "nombre": "Ana", "apellido": "Rojas"}
+REGISTRO = {
+    **CUERPO,
+    "nombre": "Ana",
+    "apellido": "Rojas",
+    "tipo_documento": "CC",
+    "numero_documento": "1020304050",
+    "telefono": "3001234567",
+    "fecha_nacimiento": "1990-05-20",
+}
 SESION = {"token": "token-firmado", "cliente_id": "cliente-demo"}
 
 
@@ -167,3 +175,14 @@ def test_movil_sesion_vigente_devuelve_el_cliente_sin_consultar_identidad(monkey
         "nombre": "Ana",
         "apellido": "Rojas",
     }
+
+
+def test_movil_exige_los_datos_personales_en_el_registro(monkeypatch):
+    upstream = _Upstream(response=SESION)
+    monkeypatch.setattr("canales.movil.api.identidad", upstream)
+    for campo in ("tipo_documento", "numero_documento", "telefono", "fecha_nacimiento"):
+        sin_campo = {k: v for k, v in REGISTRO.items() if k != campo}
+
+        assert client.post("/movil/registros", json=sin_campo).status_code == 422, campo
+
+    assert upstream.calls == []

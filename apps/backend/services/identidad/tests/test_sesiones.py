@@ -1,3 +1,5 @@
+from itertools import count
+
 from fastapi.testclient import TestClient
 from identidad.container import container
 from identidad.main import app
@@ -11,6 +13,17 @@ CORREO = "acceso@solventa.test"
 CONTRASENA = "solventa-local"
 DETALLE = "Correo o contraseña incorrectos"
 
+_documentos = count(2_000_000)
+
+
+def personales() -> dict:
+    return {
+        "tipo_documento": "CC",
+        "numero_documento": str(next(_documentos)),
+        "telefono": "3001234567",
+        "fecha_nacimiento": "1990-05-20",
+    }
+
 
 def _sqlite():
     return create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
@@ -19,7 +32,7 @@ def _sqlite():
 def test_cliente_registrado_recibe_token_y_cliente_id():
     alta = client.post(
         "/identidad/clientes",
-        json={"correo": CORREO, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
+        json={"correo": CORREO, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas", **personales()},
     )
     assert alta.status_code == 201
 
@@ -38,7 +51,7 @@ def test_contrasena_incorrecta_y_correo_desconocido_responden_igual():
     assert (
         client.post(
             "/identidad/clientes",
-            json={"correo": correo, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas"},
+            json={"correo": correo, "contrasena": CONTRASENA, "nombre": "Ana", "apellido": "Rojas", **personales()},
         ).status_code
         == 201
     )
@@ -69,7 +82,7 @@ def test_cliente_guardado_en_la_base_puede_iniciar_sesion():
     container.use_postgres(engine)
     container.use_postgres(engine)
     cuenta = {"correo": "guardado@solventa.test", "contrasena": CONTRASENA}
-    registro = {**cuenta, "nombre": "Ana", "apellido": "Rojas"}
+    registro = {**cuenta, "nombre": "Ana", "apellido": "Rojas", **personales()}
     try:
         assert client.post("/identidad/sesiones", json=cuenta).status_code == 401
         assert client.post("/identidad/clientes", json=registro).status_code == 201

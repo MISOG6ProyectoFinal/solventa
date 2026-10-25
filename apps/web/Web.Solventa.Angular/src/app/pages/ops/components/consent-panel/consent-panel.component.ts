@@ -153,7 +153,6 @@ export class ConsentPanelComponent {
       email: this.resolveEmail(destino),
       telefono: this.resolveTelefono(destino),
       fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
-      pais: 'Colombia',
       ramo: this.ramoId(),
       canal: this.channel(),
       contacto: destino,

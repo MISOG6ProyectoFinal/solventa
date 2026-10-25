@@ -109,21 +109,29 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
-  identidad:
-    build:
+  identidad-migrate:
+    build: &identidad-build
       context: .
       args:
         SERVICE: identidad
-    environment:
+    command: ["python", "-m", "identidad.kyc.migrate"]
+    environment: &identidad-db
       SERVICE_NAME: identidad
       DB_HOST: postgres
       DB_NAME: identidad
       DB_USER: solventa
       DB_PASSWORD: solventa
-      SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
     depends_on:
       postgres:
         condition: service_healthy
+  identidad:
+    build: *identidad-build
+    environment:
+      <<: *identidad-db
+      SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
+    depends_on:
+      identidad-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
       interval: 5s

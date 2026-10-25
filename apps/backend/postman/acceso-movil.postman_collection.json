@@ -18,6 +18,10 @@
       "value": "clave-nueva"
     },
     {
+      "key": "documento",
+      "value": "1020304050"
+    },
+    {
       "key": "token",
       "value": ""
     },
@@ -60,7 +64,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Rojas\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documento}}\",\n  \"telefono\": \"3001234567\",\n  \"fecha_nacimiento\": \"1990-05-20\"\n}"
         },
         "url": "{{baseUrl}}/movil/registros"
       },
@@ -156,7 +160,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Rojas\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documento}}\",\n  \"telefono\": \"3001234567\",\n  \"fecha_nacimiento\": \"1990-05-20\"\n}"
         },
         "url": "{{baseUrl}}/movil/registros"
       },
@@ -169,6 +173,67 @@
               "pm.test('El correo ya registrado se rechaza', function () {",
               "  pm.response.to.have.status(409);",
               "  pm.expect(pm.response.json().detail).to.eql('Ya existe una cuenta con este correo.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar el mismo documento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"otra-{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Rojas\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documento}}\",\n  \"telefono\": \"3001234567\",\n  \"fecha_nacimiento\": \"1990-05-20\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/registros"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('El documento ya registrado se rechaza', function () {",
+              "  pm.response.to.have.status(409);",
+              "  pm.expect(pm.response.json().detail).to.eql('Ya existe una cuenta con este documento.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar sin datos personales",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"sin-datos-{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Rojas\"\n}"
+        },
+        "url": "{{baseUrl}}/movil/registros"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Faltan los datos personales', function () {",
+              "  pm.response.to.have.status(422);",
               "});"
             ]
           }

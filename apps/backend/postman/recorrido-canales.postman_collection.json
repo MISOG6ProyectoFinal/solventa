@@ -18,6 +18,10 @@
       "value": ""
     },
     {
+      "key": "documento",
+      "value": ""
+    },
+    {
       "key": "contrasena",
       "value": ""
     },
@@ -97,7 +101,7 @@
             "url": "{{baseUrl}}/movil/registros",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Prueba\",\n  \"apellido\": \"Carga\"\n}"
+              "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Prueba\",\n  \"apellido\": \"Carga\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documento}}\",\n  \"telefono\": \"3001234567\",\n  \"fecha_nacimiento\": \"1990-05-20\"\n}"
             }
           },
           "event": [
@@ -108,6 +112,7 @@
                 "exec": [
                   "const sufijo = Date.now() + '-' + pm.variables.replaceIn('{{$guid}}');",
                   "pm.collectionVariables.set('correo', 'carga-' + sufijo + '@solventa.test');",
+                  "pm.collectionVariables.set('documento', String(Date.now()).slice(-10));",
                   "pm.collectionVariables.set('contrasena', pm.variables.replaceIn('{{$randomPassword}}'));"
                 ]
               }

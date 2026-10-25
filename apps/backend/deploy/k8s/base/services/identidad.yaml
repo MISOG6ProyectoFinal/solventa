@@ -27,6 +27,34 @@ spec:
         labelSelector:
           matchLabels:
             app.kubernetes.io/name: identidad
+      initContainers:
+      - name: migrate
+        image: solventa/identidad:local
+        imagePullPolicy: IfNotPresent
+        command: ["python", "-m", "identidad.kyc.migrate"]
+        envFrom:
+        - configMapRef:
+            name: solventa-platform
+        - configMapRef:
+            name: solventa-services
+        - secretRef:
+            name: db-identidad
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+            ephemeral-storage: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: identidad
         image: solventa/identidad:local
