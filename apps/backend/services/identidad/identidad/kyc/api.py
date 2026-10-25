@@ -1,11 +1,15 @@
+from datetime import date
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, field_validator
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
+    TIPOS_DOCUMENTO,
     CodigoOtpInvalido,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
+    DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
     RespuestaConsulta,
@@ -38,14 +42,32 @@ class SolicitudSesion(BaseModel):
 class SolicitudRegistro(SolicitudSesion):
     nombre: str
     apellido: str
+    tipo_documento: str
+    numero_documento: str
+    telefono: str
+    fecha_nacimiento: date
 
-    @field_validator("nombre", "apellido")
+    @field_validator("nombre", "apellido", "tipo_documento", "numero_documento", "telefono")
     @classmethod
-    def _nombre_obligatorio(cls, value: str) -> str:
+    def _dato_obligatorio(cls, value: str) -> str:
         stripped = value.strip()
         if not stripped:
             raise ValueError("El campo es obligatorio")
         return stripped
+
+    @field_validator("tipo_documento")
+    @classmethod
+    def _tipo_documento(cls, value: str) -> str:
+        if value not in TIPOS_DOCUMENTO:
+            raise ValueError("Tipo de documento no válido")
+        return value
+
+    @field_validator("fecha_nacimiento")
+    @classmethod
+    def _fecha_nacimiento(cls, value: date) -> date:
+        if value >= date.today():
+            raise ValueError("La fecha de nacimiento debe ser anterior a hoy")
+        return value
 
 
 class SolicitudValidacionOTP(BaseModel):
@@ -75,9 +97,15 @@ def registrar_cliente(solicitud: SolicitudRegistro) -> dict:
             solicitud.contrasena,
             solicitud.nombre,
             solicitud.apellido,
+            tipo_documento=solicitud.tipo_documento,
+            numero_documento=solicitud.numero_documento,
+            telefono=solicitud.telefono,
+            fecha_nacimiento=solicitud.fecha_nacimiento,
         )
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este correo.") from exc
+    except DocumentAlreadyRegistered as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este documento.") from exc
     return {"token": session.token, "cliente_id": session.client_id}
 
 

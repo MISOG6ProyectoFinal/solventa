@@ -1,12 +1,12 @@
 from typing import Protocol
 
-from identidad.kyc.domain.models import Client, Consentimiento
+from identidad.kyc.domain.models import Account, Client, Consentimiento
 
 
 class ClientRepository(Protocol):
     def get_by_email(self, email: str) -> Client | None: ...
 
-    def get_by_documento(self, tipo: str, numero: str) -> Client | None: ...
+    def get_by_numero_documento(self, numero: str) -> Client | None: ...
 
     def get(self, client_id: str) -> Client | None: ...
 
@@ -15,6 +15,12 @@ class ClientRepository(Protocol):
     def update(self, client: Client) -> None: ...
 
     def upsert(self, client: Client) -> Client: ...
+
+
+class AccountRepository(Protocol):
+    def get(self, client_id: str) -> Account | None: ...
+
+    def add(self, account: Account) -> None: ...
 
 
 class ConsentimientoRepository(Protocol):

@@ -195,7 +195,16 @@ export function movil() {
     'Registrar cliente',
     'POST',
     `${BASE_URL}/movil/registros`,
-    { correo, contrasena, nombre: 'Prueba', apellido: 'Carga' },
+    {
+      correo,
+      contrasena,
+      nombre: 'Prueba',
+      apellido: 'Carga',
+      tipo_documento: 'CC',
+      numero_documento: `${Date.now()}-${__VU}-${__ITER}`,
+      telefono: '3001234567',
+      fecha_nacimiento: '1990-05-20',
+    },
     { estado: 201, validar: (c) => Boolean(c.token) },
   );
   if (!cuenta) return;
