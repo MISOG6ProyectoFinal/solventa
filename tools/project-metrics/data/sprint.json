@@ -1,6 +1,6 @@
 {
   "sprint": {
-    "totalStoryPoints": 46,
+    "totalStoryPoints": 54,
     "totalDays": 14,
     "days": [
       {
@@ -51,22 +51,22 @@
     },
     {
       "week": 4,
-      "planned": 23,
+      "planned": 31,
       "actual": 0
     },
     {
       "week": 5,
-      "planned": 21,
+      "planned": 28,
       "actual": 0
     },
     {
       "week": 6,
-      "planned": 21,
+      "planned": 28,
       "actual": 0
     },
     {
       "week": 7,
-      "planned": 20,
+      "planned": 27,
       "actual": 0
     },
     {
@@ -175,13 +175,13 @@
       },
       {
         "sprint": 2,
-        "plannedStoryPoints": 46,
+        "plannedStoryPoints": 54,
         "completedStoryPoints": 26,
         "closed": false
       },
       {
         "sprint": 3,
-        "plannedStoryPoints": 62,
+        "plannedStoryPoints": 83,
         "completedStoryPoints": 0,
         "closed": false
       }
