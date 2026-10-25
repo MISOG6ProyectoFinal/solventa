@@ -253,3 +253,23 @@ def test_registro_completa_el_documento_de_un_cliente_de_consentimiento_que_no_l
     assert alta.status_code == 201
     assert alta.json()["cliente_id"] == "CLI-SIN-DOC"
     assert container.clients.get("CLI-SIN-DOC").numero_documento == "555006"
+
+
+def test_registro_exige_una_contrasena_de_al_menos_8_caracteres():
+    corta = {**_cuenta("corta@solventa.test", "555100"), "contrasena": "1234567"}
+    con_espacios = {**_cuenta("espacios@solventa.test", "555101"), "contrasena": "  1234567  "}
+    justa = {**_cuenta("justa@solventa.test", "555102"), "contrasena": "12345678"}
+
+    assert client.post("/identidad/clientes", json=corta).status_code == 422
+    assert client.post("/identidad/clientes", json=con_espacios).status_code == 422
+    assert client.post("/identidad/clientes", json=justa).status_code == 201
+    assert (
+        client.post("/identidad/sesiones", json={"correo": "corta@solventa.test", "contrasena": "1234567"}).status_code
+        == 401
+    )
+
+
+def test_el_ingreso_no_exige_largo_para_no_bloquear_cuentas_anteriores():
+    response = client.post("/identidad/sesiones", json={"correo": "nadie@solventa.test", "contrasena": "abc"})
+
+    assert response.status_code == 401

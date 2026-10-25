@@ -290,6 +290,23 @@ describe('sesión del cliente', () => {
     });
   });
 
+  it('blocks a password shorter than 8 characters before calling the API', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), '1234567');
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(view.getByText('La contraseña debe tener al menos 8 caracteres.')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), '12345678');
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+  });
+
   it('sends the document type the person chooses', async () => {
     const view = await openLogin();
 

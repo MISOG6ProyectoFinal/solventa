@@ -29,6 +29,7 @@ export const en: Texts = {
     birthDateLabel: 'Date of birth',
     birthDateInvalid: 'The date must be before today.',
     credentialLabel: 'Password',
+    passwordTooShort: (min: number) => `The password must be at least ${min} characters.`,
     submit: 'Create account',
     signIn: 'I already have an account',
     failed: 'Could not create the account.',

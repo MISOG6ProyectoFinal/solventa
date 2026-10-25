@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, model_validator
 
 TIPOS_DOCUMENTO = ("CC", "CE", "Pasaporte")
+MIN_PASSWORD_LENGTH = 8
 
 
 class Client(BaseModel):

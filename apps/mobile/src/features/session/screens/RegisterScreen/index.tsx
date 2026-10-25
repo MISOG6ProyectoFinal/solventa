@@ -11,6 +11,7 @@ import { type DocumentType, type RegisterValues } from '../../types';
 import styles from './styles';
 
 const documentTypes: DocumentType[] = ['CC', 'CE', 'Pasaporte'];
+const minPasswordLength = 8;
 
 const emptyValues: RegisterValues = {
   firstName: '',
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
   const [values, setValues] = useState<RegisterValues>(emptyValues);
   const [missing, setMissing] = useState<TextKey[]>([]);
   const [birthDateInvalid, setBirthDateInvalid] = useState(false);
+  const [passwordTooShort, setPasswordTooShort] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,9 +46,11 @@ export default function RegisterScreen() {
   const submit = async () => {
     const empty = requiredKeys.filter((key) => values[key].trim() === '');
     const futureBirthDate = values.birthDate !== '' && !isPastDate(values.birthDate);
+    const shortPassword = values.password.trim() !== '' && values.password.trim().length < minPasswordLength;
     setMissing(empty);
     setBirthDateInvalid(futureBirthDate);
-    if (empty.length > 0 || futureBirthDate) {
+    setPasswordTooShort(shortPassword);
+    if (empty.length > 0 || futureBirthDate || shortPassword) {
       return;
     }
 
@@ -135,6 +139,7 @@ export default function RegisterScreen() {
             secureTextEntry
             required
             error={isMissing('password')}
+            errorMessage={passwordTooShort ? texts.register.passwordTooShort(minPasswordLength) : undefined}
           />
           <Button title={texts.register.submit} loading={submitting} onPress={() => void submit()} />
           <Button title={texts.register.signIn} variant="text" onPress={() => navigation.navigate('Login')} />

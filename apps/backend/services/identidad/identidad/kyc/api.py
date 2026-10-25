@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
+    MIN_PASSWORD_LENGTH,
     TIPOS_DOCUMENTO,
     CodigoOtpInvalido,
     ConsentimientoExpirado,
@@ -54,6 +55,13 @@ class SolicitudRegistro(SolicitudSesion):
         if not stripped:
             raise ValueError("El campo es obligatorio")
         return stripped
+
+    @field_validator("contrasena")
+    @classmethod
+    def _largo_contrasena(cls, value: str) -> str:
+        if len(value) < MIN_PASSWORD_LENGTH:
+            raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
+        return value
 
     @field_validator("tipo_documento")
     @classmethod

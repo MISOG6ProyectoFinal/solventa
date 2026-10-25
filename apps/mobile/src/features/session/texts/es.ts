@@ -27,6 +27,7 @@ export const es = {
     birthDateLabel: 'Fecha de nacimiento',
     birthDateInvalid: 'La fecha debe ser anterior a hoy.',
     credentialLabel: 'Contraseña',
+    passwordTooShort: (min: number) => `La contraseña debe tener al menos ${min} caracteres.`,
     submit: 'Crear cuenta',
     signIn: 'Ya tengo cuenta',
     failed: 'No se pudo crear la cuenta.',
