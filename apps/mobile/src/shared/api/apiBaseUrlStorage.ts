@@ -2,7 +2,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 const path = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/api-base-url.json`;
 
-export type StoredApiBaseUrl = { target: 'cloud' | 'custom'; customUrl: string };
+// `cloud` is a legacy value written by older builds. It is never selected again.
+export type StoredApiBaseUrl = { target: 'build' | 'custom' | 'cloud'; customUrl: string };
 
 export async function readApiBaseUrl(): Promise<StoredApiBaseUrl | null> {
   if (!(await ReactNativeBlobUtil.fs.exists(path))) {

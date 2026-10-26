@@ -7,29 +7,31 @@ import {
   defaultCustomUrl,
   getApiBaseUrl,
   getApiTarget,
+  getBuildApiBaseUrl,
   getCustomApiUrl,
   normalizeApiUrl,
-  selectCloudApi,
+  selectBuildApi,
   selectCustomApi,
 } from '../../../../shared/api/apiBaseUrl';
 import { theme } from '../../../../shared/theme';
 import { AppText, Button, Card, OptionList, Screen, TextField } from '../../../../shared/ui';
 
 const options = [
-  { id: 'cloud', label: 'Nube' },
+  { id: 'build', label: 'Del build' },
   { id: 'custom', label: 'Personalizada' },
 ];
 
 export default function DevToolsScreen() {
   const navigation = useNavigation();
+  const buildUrl = getBuildApiBaseUrl();
   const [target, setTarget] = useState(getApiTarget());
   const [customUrl, setCustomUrl] = useState(getCustomApiUrl());
   const [activeUrl, setActiveUrl] = useState(getApiBaseUrl());
   const invalid = target === 'custom' && normalizeApiUrl(customUrl) === null;
 
   const apply = (nextTarget: ApiTarget, url: string) => {
-    if (nextTarget === 'cloud') {
-      selectCloudApi();
+    if (nextTarget === 'build') {
+      selectBuildApi();
     } else if (!selectCustomApi(url)) {
       return;
     }
@@ -66,6 +68,7 @@ export default function DevToolsScreen() {
             />
           ) : null}
           <AppText variant="caption">En uso: {activeUrl}</AppText>
+          <AppText variant="caption">URL del build: {buildUrl}</AppText>
           <AppText variant="caption">
             Emulador Android: http://10.0.2.2:8000. Dispositivo físico: la IP de tu PC. Simulador iOS: http://localhost:8000.
           </AppText>
