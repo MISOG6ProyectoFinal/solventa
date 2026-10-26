@@ -15,7 +15,7 @@ from polizas.ciclo_vida.domain.ports import (
     QuoteNotFound,
     QuoteSource,
 )
-from polizas.ciclo_vida.domain.use_cases import IssuePolicyUseCase
+from polizas.ciclo_vida.domain.use_cases import IssuePolicyUseCase, ListClientPoliciesUseCase
 from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
@@ -27,6 +27,7 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
     if hasattr(policies, "create_schema"):
         policies.create_schema()
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
+    use_cases["list"] = ListClientPoliciesUseCase(policies)
 
 
 def _default_wire() -> None:
@@ -49,6 +50,15 @@ def _error(code: int, codigo: str, mensaje: str) -> HTTPException:
 @router.get("/")
 def info() -> dict:
     return {"component": "Pólizas y Ciclo de Vida"}
+
+
+@router.get("/clientes/{cliente_id}", response_model=list[Policy])
+def list_client_policies(cliente_id: str) -> list[Policy]:
+    """Pólizas activas del cliente. El BFF envía el id de la sesión, no uno elegido en el teléfono."""
+    token = cliente_id.strip()
+    if not token:
+        raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
+    return use_cases["list"].execute(token)
 
 
 @router.post("/emisiones", response_model=Policy, status_code=status.HTTP_201_CREATED)
