@@ -102,6 +102,7 @@
     "react-native": "~0.87.1",
     "react-native-blob-util": "^0.25.1",
     "react-native-gesture-handler": "^3.3.0",
+    "react-native-get-random-values": "^2.0.0",
     "react-native-keychain": "^10.0.0",
     "react-native-maps": "^1.29.11",
     "react-native-nitro-image": "^0.15.2",

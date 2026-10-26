@@ -1,3 +1,5 @@
+jest.mock('react-native-get-random-values', () => ({}));
+
 jest.mock('react-native', () => {
   const React = require('react');
 

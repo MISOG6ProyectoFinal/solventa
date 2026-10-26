@@ -147,14 +147,14 @@ enforce_gate() {
 
   echo "Mobile Quality Gate"
   echo "-------------------"
-  if present "$COVERAGE"; then echo "Coverage: ${COVERAGE}% (minimum 81.4%)"; else echo "Coverage: missing"; fi
+  if present "$COVERAGE"; then echo "Coverage: ${COVERAGE}% (minimum 87.0%)"; else echo "Coverage: missing"; fi
   if present "$DUPLICATION"; then echo "Duplication: ${DUPLICATION}% (maximum 0.0%)"; else echo "Duplication: missing"; fi
-  if present "$CODE_SMELLS"; then echo "Code Smells: ${CODE_SMELLS} (maximum 35)"; else echo "Code Smells: missing"; fi
-  if present "$VIOLATIONS"; then echo "Violations: ${VIOLATIONS} (maximum 35)"; else echo "Violations: missing"; fi
-  if present "$OPEN_ISSUES"; then echo "Open Issues: ${OPEN_ISSUES} (maximum 35)"; else echo "Open Issues: missing"; fi
+  if present "$CODE_SMELLS"; then echo "Code Smells: ${CODE_SMELLS} (maximum 0)"; else echo "Code Smells: missing"; fi
+  if present "$VIOLATIONS"; then echo "Violations: ${VIOLATIONS} (maximum 0)"; else echo "Violations: missing"; fi
+  if present "$OPEN_ISSUES"; then echo "Open Issues: ${OPEN_ISSUES} (maximum 0)"; else echo "Open Issues: missing"; fi
   if present "$BUGS"; then echo "Bugs: ${BUGS} (maximum 0)"; else echo "Bugs: missing"; fi
   if present "$VULNERABILITIES"; then echo "Vulnerabilities: ${VULNERABILITIES} (maximum 0)"; else echo "Vulnerabilities: missing"; fi
-  if present "$SECURITY_HOTSPOTS"; then echo "Security Hotspots: ${SECURITY_HOTSPOTS} (maximum 2)"; else echo "Security Hotspots: missing"; fi
+  if present "$SECURITY_HOTSPOTS"; then echo "Security Hotspots: ${SECURITY_HOTSPOTS} (maximum 0)"; else echo "Security Hotspots: missing"; fi
   if present "$SECURITY_RATING"; then echo "Security Rating: ${SECURITY_RATING} (maximum 1.0)"; else echo "Security Rating: missing"; fi
 
   failed=0
@@ -181,24 +181,24 @@ enforce_gate() {
   require_metric security_hotspots "$SECURITY_HOTSPOTS"
   require_metric security_rating "$SECURITY_RATING"
 
-  if present "$COVERAGE" && [ "$(below "$COVERAGE" 81.4)" -eq 1 ]; then
-    echo "❌ Coverage (${COVERAGE}%) is below baseline (81.4%)"
+  if present "$COVERAGE" && [ "$(below "$COVERAGE" 87.0)" -eq 1 ]; then
+    echo "❌ Coverage (${COVERAGE}%) is below baseline (87.0%)"
     failed=1
   fi
   if present "$DUPLICATION" && [ "$(exceeds "$DUPLICATION" 0.0)" -eq 1 ]; then
     echo "❌ Duplication (${DUPLICATION}%) exceeds baseline (0.0%)"
     failed=1
   fi
-  if present "$CODE_SMELLS" && [ "$(exceeds "$CODE_SMELLS" 35)" -eq 1 ]; then
-    echo "❌ Code Smells (${CODE_SMELLS}) exceed baseline (35)"
+  if present "$CODE_SMELLS" && [ "$(exceeds "$CODE_SMELLS" 0)" -eq 1 ]; then
+    echo "❌ Code Smells (${CODE_SMELLS}) exceed baseline (0)"
     failed=1
   fi
-  if present "$VIOLATIONS" && [ "$(exceeds "$VIOLATIONS" 35)" -eq 1 ]; then
-    echo "❌ Violations (${VIOLATIONS}) exceed baseline (35)"
+  if present "$VIOLATIONS" && [ "$(exceeds "$VIOLATIONS" 0)" -eq 1 ]; then
+    echo "❌ Violations (${VIOLATIONS}) exceed baseline (0)"
     failed=1
   fi
-  if present "$OPEN_ISSUES" && [ "$(exceeds "$OPEN_ISSUES" 35)" -eq 1 ]; then
-    echo "❌ Open Issues (${OPEN_ISSUES}) exceed baseline (35)"
+  if present "$OPEN_ISSUES" && [ "$(exceeds "$OPEN_ISSUES" 0)" -eq 1 ]; then
+    echo "❌ Open Issues (${OPEN_ISSUES}) exceed baseline (0)"
     failed=1
   fi
   if present "$BUGS" && [ "$(exceeds "$BUGS" 0)" -eq 1 ]; then
@@ -209,8 +209,8 @@ enforce_gate() {
     echo "❌ Vulnerabilities (${VULNERABILITIES}) exceed baseline (0)"
     failed=1
   fi
-  if present "$SECURITY_HOTSPOTS" && [ "$(exceeds "$SECURITY_HOTSPOTS" 2)" -eq 1 ]; then
-    echo "❌ Security Hotspots (${SECURITY_HOTSPOTS}) exceed baseline (2)"
+  if present "$SECURITY_HOTSPOTS" && [ "$(exceeds "$SECURITY_HOTSPOTS" 0)" -eq 1 ]; then
+    echo "❌ Security Hotspots (${SECURITY_HOTSPOTS}) exceed baseline (0)"
     failed=1
   fi
   if present "$SECURITY_RATING" && [ "$(exceeds "$SECURITY_RATING" 1.0)" -eq 1 ]; then

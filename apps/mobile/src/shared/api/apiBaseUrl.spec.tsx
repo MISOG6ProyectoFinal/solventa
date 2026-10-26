@@ -1,6 +1,7 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import {
+  defaultCustomUrl,
   getApiBaseUrl,
   getApiTarget,
   getBuildApiBaseUrl,
@@ -23,6 +24,12 @@ describe('apiBaseUrl', () => {
     expect(getApiTarget()).toBe('build');
     expect(getApiBaseUrl()).toBe(buildUrl);
     expect(buildUrl).toBe(process.env.API_BASE_URL);
+    expect(defaultCustomUrl).toBe(buildUrl);
+  });
+
+  it('accepts an emulator host typed in DevTools', () => {
+    expect(selectCustomApi('http://10.0.2.2:8000')).toBe(true);
+    expect(getApiBaseUrl()).toBe('http://10.0.2.2:8000');
   });
 
   it('points to a custom URL without trailing slashes', () => {

@@ -70,7 +70,8 @@ export default function DevToolsScreen() {
           <AppText variant="caption">En uso: {activeUrl}</AppText>
           <AppText variant="caption">URL del build: {buildUrl}</AppText>
           <AppText variant="caption">
-            Emulador Android: http://10.0.2.2:8000. Dispositivo físico: la IP de tu PC. Simulador iOS: http://localhost:8000.
+            Emulador Android: escribe la dirección del host del emulador y el puerto 8000. Dispositivo físico: la IP de tu
+            PC. Simulador iOS: http://localhost:8000.
           </AppText>
         </Card>
         <Button title="Componentes" variant="secondary" onPress={() => navigation.navigate('Components')} />

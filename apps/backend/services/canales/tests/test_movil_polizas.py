@@ -27,17 +27,17 @@ class _Servicio:
         self.error = error
         self.calls: list[tuple[str, dict]] = []
 
-    def get(self, path: str, **kwargs):
+    def _llamar(self, path: str, **kwargs):
         self.calls.append((path, kwargs))
         if self.error:
             raise self.error
         return self.respuesta
 
+    def get(self, path: str, **kwargs):
+        return self._llamar(path, **kwargs)
+
     def post(self, path: str, **kwargs):
-        self.calls.append((path, kwargs))
-        if self.error:
-            raise self.error
-        return self.respuesta
+        return self._llamar(path, **kwargs)
 
 
 def _error(status: int, detail) -> httpx.HTTPStatusError:
