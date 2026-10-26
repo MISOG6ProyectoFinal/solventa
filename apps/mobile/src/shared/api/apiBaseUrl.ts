@@ -1,14 +1,8 @@
-import { Platform } from 'react-native';
-
 import { readApiBaseUrl, writeApiBaseUrl } from './apiBaseUrlStorage';
 
 export type ApiTarget = 'build' | 'custom';
 
 const schemes = ['http:', 'https:'];
-
-// The Android emulator reaches the host machine at 10.0.2.2. A physical device needs the PC's IP instead.
-const devHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-export const defaultCustomUrl = `${schemes[0]}//${devHost}:8000`;
 
 function readBuildApiBaseUrl(): string {
   const configured = process.env.API_BASE_URL;
@@ -20,6 +14,9 @@ function readBuildApiBaseUrl(): string {
 
 // Inlined from apps/mobile/.env by Babel. Local and CI/CD builds both set this value.
 const buildApiBaseUrl = readBuildApiBaseUrl();
+
+// Starting value of the DevTools field. Requests keep using API_BASE_URL until an explicit override.
+export const defaultCustomUrl = buildApiBaseUrl;
 
 // Dev-only override. A release build always uses the URL from the build.
 let target: ApiTarget = 'build';

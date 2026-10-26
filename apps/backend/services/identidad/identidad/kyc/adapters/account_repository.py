@@ -47,6 +47,7 @@ class InMemoryAccountRepository:
         self.accounts_by_client: dict[str, Account] = {}
 
     def create_schema(self) -> None:
+        # Repositorio en memoria: las cuentas viven en un diccionario y no hay esquema físico que crear.
         pass
 
     def add(self, account: Account) -> None:
