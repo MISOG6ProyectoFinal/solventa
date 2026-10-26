@@ -1,8 +1,10 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { cloudApiUrl, getApiBaseUrl, selectCloudApi } from '../../../../shared/api/apiBaseUrl';
+import { getApiBaseUrl, getBuildApiBaseUrl, selectBuildApi } from '../../../../shared/api/apiBaseUrl';
 import DevToolsScreen from './index';
+
+const buildUrl = getBuildApiBaseUrl();
 
 jest.mock('@react-navigation/native', () => {
   const navigate = jest.fn();
@@ -17,13 +19,14 @@ jest.mock('@react-navigation/native', () => {
 
 describe('DevToolsScreen', () => {
   beforeEach(() => {
-    selectCloudApi();
+    selectBuildApi();
   });
 
-  it('uses the cloud API by default', async () => {
+  it('uses the build API by default', async () => {
     const { getByText, queryByLabelText } = await render(<DevToolsScreen />);
 
-    expect(getByText(`En uso: ${cloudApiUrl}`)).toBeTruthy();
+    expect(getByText(`En uso: ${buildUrl}`)).toBeTruthy();
+    expect(getByText(`URL del build: ${buildUrl}`)).toBeTruthy();
     expect(queryByLabelText('URL')).toBeNull();
   });
 
@@ -48,13 +51,13 @@ describe('DevToolsScreen', () => {
     expect(getApiBaseUrl()).toBe(previous);
   });
 
-  it('goes back to the cloud API', async () => {
+  it('goes back to the build API', async () => {
     const { getByText } = await render(<DevToolsScreen />);
 
     await fireEvent.press(getByText('Personalizada'));
-    await fireEvent.press(getByText('Nube'));
+    await fireEvent.press(getByText('Del build'));
 
-    expect(getApiBaseUrl()).toBe(cloudApiUrl);
+    expect(getApiBaseUrl()).toBe(buildUrl);
   });
 
   it('opens the component list', async () => {

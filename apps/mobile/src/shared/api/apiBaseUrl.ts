@@ -2,9 +2,7 @@ import { Platform } from 'react-native';
 
 import { readApiBaseUrl, writeApiBaseUrl } from './apiBaseUrlStorage';
 
-export const cloudApiUrl = 'https://dzwq94g5om86y.cloudfront.net';
-
-export type ApiTarget = 'cloud' | 'custom';
+export type ApiTarget = 'build' | 'custom';
 
 const schemes = ['http:', 'https:'];
 
@@ -12,9 +10,24 @@ const schemes = ['http:', 'https:'];
 const devHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 export const defaultCustomUrl = `${schemes[0]}//${devHost}:8000`;
 
-// Starts on the cloud API until a saved choice is loaded.
-let target: ApiTarget = 'cloud';
+function readBuildApiBaseUrl(): string {
+  const configured = process.env.API_BASE_URL;
+  if (configured === undefined || configured === '') {
+    throw new Error('Falta API_BASE_URL.');
+  }
+  return configured;
+}
+
+// Inlined from apps/mobile/.env by Babel. Local and CI/CD builds both set this value.
+const buildApiBaseUrl = readBuildApiBaseUrl();
+
+// Dev-only override. A release build always uses the URL from the build.
+let target: ApiTarget = 'build';
 let customUrl = defaultCustomUrl;
+
+export function getBuildApiBaseUrl(): string {
+  return buildApiBaseUrl;
+}
 
 export function normalizeApiUrl(url: string): string | null {
   let trimmed = url.trim();
@@ -29,7 +42,7 @@ export function normalizeApiUrl(url: string): string | null {
 }
 
 export function getApiTarget(): ApiTarget {
-  return target;
+  return __DEV__ && target === 'custom' ? 'custom' : 'build';
 }
 
 export function getCustomApiUrl(): string {
@@ -37,32 +50,42 @@ export function getCustomApiUrl(): string {
 }
 
 function persist() {
+  if (!__DEV__) {
+    return;
+  }
   // A failed write only loses the choice for the next launch.
   writeApiBaseUrl({ target, customUrl }).catch(() => undefined);
 }
 
 export async function loadApiBaseUrl() {
+  if (!__DEV__) {
+    return;
+  }
   try {
     const saved = await readApiBaseUrl();
     const normalized = saved ? normalizeApiUrl(saved.customUrl) : null;
-    if (saved && normalized) {
-      target = saved.target === 'custom' ? 'custom' : 'cloud';
+    // Only an explicit custom override replaces API_BASE_URL.
+    // A legacy "cloud" choice is ignored so it cannot pin the app to a hardcoded host.
+    if (saved?.target === 'custom' && normalized) {
+      target = 'custom';
       customUrl = normalized;
+      return;
     }
   } catch {
-    // An unreadable file leaves the default.
+    // An unreadable file leaves the build URL.
   }
+  target = 'build';
 }
 
-export function selectCloudApi() {
-  target = 'cloud';
+export function selectBuildApi() {
+  target = 'build';
   persist();
 }
 
 // Returns false and keeps the current setting when the URL is not valid.
 export function selectCustomApi(url: string): boolean {
   const normalized = normalizeApiUrl(url);
-  if (!normalized) {
+  if (!normalized || !__DEV__) {
     return false;
   }
   target = 'custom';
@@ -72,5 +95,5 @@ export function selectCustomApi(url: string): boolean {
 }
 
 export function getApiBaseUrl(): string {
-  return target === 'cloud' ? cloudApiUrl : customUrl;
+  return getApiTarget() === 'custom' ? customUrl : buildApiBaseUrl;
 }

@@ -1,10 +1,10 @@
 import { useLanguageStore } from '../i18n/useLanguageStore';
 import { setAccessToken } from './accessToken';
-import { cloudApiUrl, selectCloudApi, selectCustomApi } from './apiBaseUrl';
+import { getBuildApiBaseUrl, selectBuildApi, selectCustomApi } from './apiBaseUrl';
 import { ApiError, apiClient } from './client';
 import { setUnauthorizedHandler } from './unauthorized';
 
-const baseUrl = cloudApiUrl;
+const baseUrl = getBuildApiBaseUrl();
 
 function jsonResponse(body: unknown, status = 200) {
   return {
@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe('apiClient', () => {
   beforeEach(() => {
     setAccessToken(null);
-    selectCloudApi();
+    selectBuildApi();
     global.fetch = jest.fn();
   });
 
