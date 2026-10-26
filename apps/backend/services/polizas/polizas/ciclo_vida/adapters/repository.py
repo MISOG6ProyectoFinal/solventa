@@ -82,6 +82,19 @@ class PostgresPolicyRepository:
     def get_by_quote(self, quote_id: str) -> Policy | None:
         return self._first(policies.c.cotizacion_id == quote_id)
 
+    def list_by_client(self, cliente_id: str) -> list[Policy]:
+        with self.engine.connect() as conn:
+            rows = (
+                conn.execute(
+                    select(policies)
+                    .where(policies.c.cliente_id == cliente_id, policies.c.estado == PolicyStatus.ACTIVE.value)
+                    .order_by(policies.c.emitida_en)
+                )
+                .mappings()
+                .all()
+            )
+        return [_policy(row) for row in rows]
+
     def _first(self, condition) -> Policy | None:
         with self.engine.connect() as conn:
             row = conn.execute(select(policies).where(condition)).mappings().first()
@@ -109,3 +122,12 @@ class InMemoryPolicyRepository:
     def get_by_quote(self, quote_id: str) -> Policy | None:
         with self._lock:
             return next((p for p in self.items if p.cotizacion_id == quote_id), None)
+
+    def list_by_client(self, cliente_id: str) -> list[Policy]:
+        with self._lock:
+            found = [
+                policy
+                for policy in self.items
+                if policy.cliente_id == cliente_id and policy.estado is PolicyStatus.ACTIVE
+            ]
+            return sorted(found, key=lambda policy: policy.emitida_en)

@@ -7,6 +7,8 @@ import AssistanceConfirmScreen from '../features/claims/screens/AssistanceConfir
 import AssistanceServiceScreen from '../features/claims/screens/AssistanceServiceScreen';
 import AvisoDetailScreen from '../features/claims/screens/AvisoDetailScreen';
 import ClaimsScreen from '../features/claims/screens/ClaimsScreen';
+import HomeDrawer from '../features/home/HomeStack';
+import PoliciesScreen from '../features/policies/screens/PoliciesScreen';
 import NearbyProvidersScreen from '../features/providers/screens/NearbyProvidersScreen';
 import SettingsScreen from '../features/settings/screens/SettingsScreen';
 import { QuoteStack } from '../features/quote/QuoteStack';
@@ -16,8 +18,6 @@ import LoginScreen from '../features/session/screens/LoginScreen';
 import RegisterScreen from '../features/session/screens/RegisterScreen';
 import { useSessionStore } from '../features/session/store/useSessionStore';
 import { TabBar } from '../shared/ui';
-import { EmptyTabScreen } from './emptyTabs';
-import HomeDrawer from '../features/home/HomeStack';
 
 type DevScreens = {
   DevTools: typeof import('../features/devtools/screens/DevToolsScreen').default;
@@ -66,7 +66,7 @@ const Tabs = createBottomTabNavigator({
   },
   screens: {
     Home: HomeDrawer,
-    Policies: EmptyTabScreen,
+    Policies: PoliciesScreen,
     Claims: ClaimsScreen,
     Buy: ProductsScreen,
   },

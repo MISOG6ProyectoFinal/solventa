@@ -7,7 +7,7 @@ from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, identidad, pagos, siniestros
+from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
@@ -127,8 +127,27 @@ def _cotizacion_vencida() -> HTTPException:
     )
 
 
+class SolicitudEmisionMovil(BaseModel):
+    """Mobile solo identifica el cobro. Pólizas valida el pago y arma la póliza desde la cotización."""
+
+    model_config = ConfigDict(extra="ignore")
+    cobro_id: str
+
+    @field_validator("cobro_id")
+    @classmethod
+    def _cobro(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El pago es obligatorio")
+        return token
+
+
 def _cliente(session: SessionToken) -> dict[str, str]:
     return {"X-Cliente-Id": session.client_id}
+
+
+def _clave_emision(cliente_id: str, cotizacion_id: str, cobro_id: str) -> str:
+    return f"mobile:{cliente_id}:{cotizacion_id}:{cobro_id}"
 
 
 @router.get("/")
@@ -208,6 +227,27 @@ def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
     if isinstance(oferta, dict):
         oferta.pop("cliente_id", None)
     return oferta
+
+
+@authenticated.post("/cotizaciones/{cotizacion_id}/polizas")
+def emitir_poliza(cotizacion_id: str, session: Session, solicitud: SolicitudEmisionMovil) -> dict:
+    """Delega la emisión en Pólizas. El teléfono no declara el pago, el dueño ni los datos de la póliza."""
+    return call_upstream(
+        polizas.post,
+        "/polizas/emisiones",
+        json={
+            "cotizacion_id": cotizacion_id,
+            "cobro_id": solicitud.cobro_id,
+            "idempotency_key": _clave_emision(session.client_id, cotizacion_id, solicitud.cobro_id),
+            "canal": "mobile",
+            "cliente_id": session.client_id,
+        },
+    )
+
+
+@authenticated.get("/polizas")
+def listar_polizas(session: Session) -> list:
+    return call_upstream(polizas.get, f"/polizas/clientes/{session.client_id}")
 
 
 @authenticated.get("/siniestros")
