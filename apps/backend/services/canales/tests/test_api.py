@@ -488,7 +488,7 @@ def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
         def get(self, path: str, **kwargs):
             self.calls.append(("GET", path, kwargs))
             if path == "/identidad/clientes/por-documento/CC/99998888":
-                req = httpx.Request("GET", "http://identidad/clientes")
+                req = httpx.Request("GET", "https://identidad/clientes")
                 resp = httpx.Response(404, request=req)
                 raise httpx.HTTPStatusError("404 Not Found", request=req, response=resp)
             raise RuntimeError(f"Unexpected get {path}")

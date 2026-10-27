@@ -26,13 +26,13 @@ def listar_ramos() -> list:
     return [r for r in ramos if r.get("id") in RAMOS_COTIZABLES_WEB]
 
 
-def _resolver_cliente_id(solicitud: dict) -> str | None:
-    tipo_doc = (solicitud.get("tipo_documento") or solicitud.get("tipoDocumento") or "").strip()
-    num_doc = (solicitud.get("numero_documento") or solicitud.get("numeroDocumento") or "").strip()
-    if not tipo_doc or not num_doc:
-        return solicitud.get("cliente_id")
+def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:
+    tipo_doc = str(solicitud.get("tipo_documento") or solicitud.get("tipoDocumento") or "").strip()
+    num_doc = str(solicitud.get("numero_documento") or solicitud.get("numeroDocumento") or "").strip()
+    return tipo_doc, num_doc
 
-    # 1. Validar si el usuario existe por tipo de documento y número de documento
+
+def _buscar_cliente_por_documento(tipo_doc: str, num_doc: str) -> str | None:
     try:
         cliente = identidad.get(f"/identidad/clientes/por-documento/{tipo_doc}/{num_doc}")
         if cliente and cliente.get("id"):
@@ -40,13 +40,16 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != status.HTTP_404_NOT_FOUND:
             raise
+    return None
 
-    # 2. Si no existe, se debe crear el nuevo cliente
-    nombre = (solicitud.get("nombre") or "").strip()
-    apellido = (solicitud.get("apellido") or "").strip()
-    email = (solicitud.get("email") or "").strip()
-    telefono = (solicitud.get("telefono") or "").strip()
+
+def _asegurar_nuevo_cliente(solicitud: dict, tipo_doc: str, num_doc: str) -> str | None:
+    nombre = str(solicitud.get("nombre") or "").strip() or "Cliente"
+    apellido = str(solicitud.get("apellido") or "").strip()
+    email = str(solicitud.get("email") or "").strip()
+    telefono = str(solicitud.get("telefono") or "").strip()
     fecha_nac = solicitud.get("fecha_nacimiento") or solicitud.get("fechaNacimiento")
+    fecha_nac_str = str(fecha_nac) if fecha_nac else None
 
     nuevo = call_upstream(
         identidad.post,
@@ -54,32 +57,53 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
         json={
             "tipo_documento": tipo_doc,
             "numero_documento": num_doc,
-            "nombre": nombre or "Cliente",
+            "nombre": nombre,
             "apellido": apellido,
             "email": email,
             "telefono": telefono,
-            "fecha_nacimiento": str(fecha_nac) if fecha_nac else None,
+            "fecha_nacimiento": fecha_nac_str,
         },
     )
-    return nuevo.get("id") if nuevo else None
+    if not nuevo:
+        return None
+    return nuevo.get("id")
+
+
+def _resolver_cliente_id(solicitud: dict) -> str | None:
+    tipo_doc, num_doc = _extraer_identificacion(solicitud)
+    if not (tipo_doc and num_doc):
+        return solicitud.get("cliente_id")
+
+    # 1. Validar si el usuario existe por tipo de documento y número de documento
+    cliente_id = _buscar_cliente_por_documento(tipo_doc, num_doc)
+    if cliente_id:
+        return cliente_id
+
+    # 2. Si no existe, se debe crear el nuevo cliente
+    return _asegurar_nuevo_cliente(solicitud, tipo_doc, num_doc)
+
+
+def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
+    producto_id = solicitud.get("producto_id", "")
+    if producto_id not in ("vida-hipotecario", "ramo-vida-hipotecario"):
+        return
+    consentimiento_id = solicitud.get("consentimiento_id")
+    if not consentimiento_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El ramo vida hipotecario requiere consentimiento digital previamente validado",
+        )
+    consentimiento = call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
+    if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != "OTORGADO":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El consentimiento digital no se encuentra otorgado o no es válido",
+        )
 
 
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
-    producto_id = solicitud.get("producto_id", "")
-    if producto_id in ("vida-hipotecario", "ramo-vida-hipotecario"):
-        consentimiento_id = solicitud.get("consentimiento_id")
-        if not consentimiento_id:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="El ramo vida hipotecario requiere consentimiento digital previamente validado",
-            )
-        consentimiento = call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
-        if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != "OTORGADO":
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="El consentimiento digital no se encuentra otorgado o no es válido",
-            )
+    _validar_consentimiento_si_aplica(solicitud)
 
     cliente_id = _resolver_cliente_id(solicitud)
     if cliente_id:
