@@ -230,7 +230,7 @@ def poblar_socios(api: Api, credenciales: dict, conteo: dict) -> None:
             conteo["cotizaciones de socios"] += 1
 
 
-def sesion_de_cliente(api: Api, credenciales: dict, nombre: str, apellido: str, conteo: dict) -> str:
+def sesion_de_cliente(api: Api, credenciales: dict, indice: int, nombre: str, apellido: str, conteo: dict) -> str:
     correo = f"{nombre.lower()}.{apellido.lower()}@solventa.test".translate(str.maketrans("áéíóú", "aeiou"))
     contrasena = credenciales["clientes"].get(correo)
     if contrasena is None:
@@ -239,7 +239,16 @@ def sesion_de_cliente(api: Api, credenciales: dict, nombre: str, apellido: str, 
             cuenta = api.pedir(
                 "POST",
                 "/movil/registros",
-                {"correo": correo, "contrasena": contrasena, "nombre": nombre, "apellido": apellido},
+                {
+                    "correo": correo,
+                    "contrasena": contrasena,
+                    "nombre": nombre,
+                    "apellido": apellido,
+                    "tipo_documento": "CC",
+                    "numero_documento": str(1_010_000_000 + indice),
+                    "telefono": f"300{1_000_000 + indice}",
+                    "fecha_nacimiento": f"{1970 + indice}-06-15",
+                },
             )
             credenciales["clientes"][correo] = contrasena
             conteo["clientes creados"] += 1
@@ -274,7 +283,7 @@ def subir_evidencia(api: Api, token: str, aviso_id: str) -> bool:
 
 def poblar_clientes(api: Api, credenciales: dict, conteo: dict) -> None:
     for indice, (nombre, apellido) in enumerate(CLIENTES):
-        token = sesion_de_cliente(api, credenciales, nombre, apellido, conteo)
+        token = sesion_de_cliente(api, credenciales, indice, nombre, apellido, conteo)
         if not token:
             continue
         for viaje in range(1 + indice % 2):

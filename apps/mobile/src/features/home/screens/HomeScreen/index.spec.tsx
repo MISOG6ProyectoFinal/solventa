@@ -1,6 +1,7 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { useSessionStore } from '../../../session/store/useSessionStore';
 import HomeScreen from './index';
 
@@ -35,6 +36,8 @@ describe('HomeScreen', () => {
     expect(getByText('Consulta y reporta')).toBeTruthy();
     expect(getByText('Comprar seguro')).toBeTruthy();
     expect(getByText('Cotiza y paga en minutos')).toBeTruthy();
+    expect(getByText('Asistencia cercana')).toBeTruthy();
+    expect(getByText('Prestadores aliados cerca de ti')).toBeTruthy();
     expect(getByText('Próxima a renovar')).toBeTruthy();
     expect(getByText('Protección Celular')).toBeTruthy();
     expect(getByText('SLV-2025-01820 · Vence 2026-10-05')).toBeTruthy();
@@ -43,6 +46,18 @@ describe('HomeScreen', () => {
     expect(queryByText('Sin conexión')).toBeNull();
     expect(queryByText('Componentes')).toBeNull();
     expect(queryByText(/Contador/)).toBeNull();
+  });
+
+  it('shows the greeting and shortcuts in English', async () => {
+    const { getByText, queryByText } = await render(<HomeScreen />);
+
+    await act(async () => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+
+    expect(getByText('Hello, Ana')).toBeTruthy();
+    expect(getByText('Nearby assistance')).toBeTruthy();
+    expect(queryByText('Hola, Ana')).toBeNull();
   });
 
   it('opens the matching tab from the coverage actions and the shortcuts', async () => {
@@ -61,13 +76,21 @@ describe('HomeScreen', () => {
     expect(useNavigation().navigate).toHaveBeenCalledWith('Main', { screen: 'Buy' });
   });
 
-  it('opens the component list from a long press on the menu in dev', async () => {
+  it('opens the nearby providers map from its shortcut', async () => {
+    const { getByText } = await render(<HomeScreen />);
+
+    await fireEvent.press(getByText('Asistencia cercana'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('NearbyProviders');
+  });
+
+  it('opens the dev tools from a long press on the menu in dev', async () => {
     global.__DEV__ = true;
     const { getByLabelText } = await render(<HomeScreen />);
 
     await fireEvent(getByLabelText('Menú'), 'longPress');
 
-    expect(useNavigation().navigate).toHaveBeenCalledWith('Components');
+    expect(useNavigation().navigate).toHaveBeenCalledWith('DevTools');
   });
 
   it('ignores a long press on the menu outside dev', async () => {

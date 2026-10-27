@@ -1,24 +1,26 @@
 import { create } from 'zustand';
 
 import { setAccessToken } from '../../../shared/api/accessToken';
+import { loadApiBaseUrl } from '../../../shared/api/apiBaseUrl';
 import { ApiError } from '../../../shared/api/client';
+import { setUnauthorizedHandler } from '../../../shared/api/unauthorized';
 import { getSession, type ClientProfile } from '../api/getSession';
 import { registerClient } from '../api/registerClient';
 import { startSession } from '../api/startSession';
 import { deleteToken, readToken, saveToken } from '../storage';
+import { type RegisterValues } from '../types';
 
 type Status = 'checking' | 'signedIn' | 'signedOut';
 
 type SessionState = {
   status: Status;
-  token: string | null;
   clienteId: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
   restore: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  register: (values: RegisterValues) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -26,18 +28,15 @@ let restoreGeneration = 0;
 
 type SessionSnapshot = {
   status: Status;
-  token: string | null;
   clienteId: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
 };
 
-function withProfile(token: string, profile: ClientProfile): SessionSnapshot {
-  setAccessToken(token);
+function withProfile(profile: ClientProfile): SessionSnapshot {
   return {
     status: 'signedIn',
-    token,
     clienteId: profile.cliente_id,
     email: profile.correo,
     firstName: profile.nombre,
@@ -45,11 +44,9 @@ function withProfile(token: string, profile: ClientProfile): SessionSnapshot {
   };
 }
 
-function withoutProfile(token: string): SessionSnapshot {
-  setAccessToken(token);
+function withoutProfile(): SessionSnapshot {
   return {
     status: 'signedIn',
-    token,
     clienteId: null,
     email: null,
     firstName: null,
@@ -61,7 +58,6 @@ function signedOut(): SessionSnapshot {
   setAccessToken(null);
   return {
     status: 'signedOut',
-    token: null,
     clienteId: null,
     email: null,
     firstName: null,
@@ -76,7 +72,7 @@ async function rememberProfile(token: string, generation: number): Promise<void>
     if (generation !== restoreGeneration) {
       return;
     }
-    useSessionStore.setState(withProfile(token, profile));
+    useSessionStore.setState(withProfile(profile));
   } catch (error) {
     if (generation !== restoreGeneration) {
       return;
@@ -87,20 +83,19 @@ async function rememberProfile(token: string, generation: number): Promise<void>
       throw error;
     }
     // Offline, the stored token still opens the app.
-    useSessionStore.setState(withoutProfile(token));
+    useSessionStore.setState(withoutProfile());
   }
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
   status: 'checking',
-  token: null,
   clienteId: null,
   email: null,
   firstName: null,
   lastName: null,
   restore: async () => {
     const generation = ++restoreGeneration;
-    const token = await readToken();
+    const [, token] = await Promise.all([loadApiBaseUrl(), readToken()]);
     if (generation !== restoreGeneration) {
       return;
     }
@@ -126,9 +121,16 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
     await rememberProfile(session.token, generation);
   },
-  register: async (email, password, firstName, lastName) => {
+  register: async (values) => {
     const generation = ++restoreGeneration;
-    const session = await registerClient(email.trim(), password, firstName.trim(), lastName.trim());
+    const session = await registerClient({
+      ...values,
+      email: values.email.trim(),
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      documentNumber: values.documentNumber.trim(),
+      phone: values.phone.trim(),
+    });
     await saveToken(session.token);
     if (generation !== restoreGeneration) {
       return;
@@ -141,3 +143,11 @@ export const useSessionStore = create<SessionState>((set) => ({
     set(signedOut());
   },
 }));
+
+// Restore and sign-in handle their own 401, so only an open session signs out here.
+setUnauthorizedHandler(() => {
+  const { status, signOut } = useSessionStore.getState();
+  if (status === 'signedIn') {
+    signOut().catch(() => undefined);
+  }
+});

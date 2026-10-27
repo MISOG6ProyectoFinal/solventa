@@ -14,7 +14,7 @@ import { useLocation } from '../../../../shared/useLocation';
 import { maxEvidenceBytes, videoMaxDuration, videoTargetBitRate } from '../../constants';
 import { formatFileSize, photoUri } from '../../photo';
 import { useClaimsStore } from '../../store/useClaimsStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 type CapturedVideo = {
@@ -30,6 +30,7 @@ function formatDuration(seconds: number) {
 }
 
 export default function RecordVideoScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   // iOS defaults to mov. The report only accepts MP4.
   const videoOutput = useVideoOutput({

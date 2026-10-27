@@ -1,3 +1,5 @@
+jest.mock('react-native-get-random-values', () => ({}));
+
 jest.mock('react-native', () => {
   const React = require('react');
 
@@ -52,6 +54,36 @@ jest.mock('react-native', () => {
       children?: unknown;
       refreshControl?: unknown;
     }) => React.createElement('ScrollView', props, refreshControl, children),
+    FlatList: ({
+      data,
+      renderItem,
+      keyExtractor,
+      ListHeaderComponent,
+      ListEmptyComponent,
+      refreshControl,
+      ...props
+    }: {
+      data: unknown[];
+      renderItem: (info: { item: unknown; index: number }) => unknown;
+      keyExtractor: (item: unknown, index: number) => string;
+      ListHeaderComponent?: unknown;
+      ListEmptyComponent?: unknown;
+      refreshControl?: unknown;
+    }) => {
+      const part = (component: unknown) =>
+        typeof component === 'function' ? React.createElement(component as React.ComponentType) : component;
+      return React.createElement(
+        'ScrollView',
+        props,
+        refreshControl,
+        part(ListHeaderComponent),
+        data.length === 0
+          ? part(ListEmptyComponent)
+          : data.map((item, index) =>
+              React.createElement(React.Fragment, { key: keyExtractor(item, index) }, renderItem({ item, index })),
+            ),
+      );
+    },
     RefreshControl: host('RefreshControl'),
     ActivityIndicator: host('ActivityIndicator'),
     Modal: ({ children, visible, ...props }: { children?: unknown; visible?: boolean }) =>
@@ -110,6 +142,21 @@ jest.mock('react-native', () => {
       allowRTL: () => undefined,
       forceRTL: () => undefined,
     },
+  };
+});
+
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const host = (name: string) => {
+    return ({ children, ...props }: { children?: unknown }) =>
+      React.createElement(name, props, children);
+  };
+
+  return {
+    __esModule: true,
+    default: host('MapView'),
+    Marker: host('Marker'),
+    PROVIDER_GOOGLE: 'google',
   };
 });
 

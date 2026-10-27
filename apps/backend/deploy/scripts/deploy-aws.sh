@@ -301,7 +301,7 @@ k8s() {
   fi
 
   # Un Job es inmutable: se recrea para que corra con la imagen de este despliegue.
-  kubectl -n "$NAMESPACE" delete job cotizacion-bootstrap --ignore-not-found
+  kubectl -n "$NAMESPACE" delete job cotizacion-bootstrap siniestros-prestadores-sync --ignore-not-found
   kubectl apply -k "$overlay"
 
   # Rolling update: cada pod nuevo entra al Service solo cuando pasa su readinessProbe.

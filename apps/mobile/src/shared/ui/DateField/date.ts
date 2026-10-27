@@ -5,25 +5,6 @@ export type DateParts = {
   time?: string;
 };
 
-export const months = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
-
-export const monthLabels = months.map(
-  (month) => `${month.charAt(0).toUpperCase()}${month.slice(1)}`,
-);
-
 export function parseDate(value?: string): DateParts | null {
   if (!value) return null;
 

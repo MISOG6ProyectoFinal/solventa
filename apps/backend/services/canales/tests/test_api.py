@@ -520,3 +520,31 @@ def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
     # Verifica que se envio el cliente_id nuevo a la cotizacion
     cotizar_call = cotizacion_mock.calls[0][1]
     assert cotizar_call["json"]["cliente_id"] == "CLI-99998888"
+
+
+def test_movil_reenvia_la_consulta_de_prestadores_cercanos(monkeypatch):
+    collection = {"type": "FeatureCollection", "features": []}
+    upstream = _Upstream(response=collection)
+    monkeypatch.setattr("canales.movil.api.siniestros", upstream)
+
+    response = client.get(
+        "/movil/prestadores/cercanos?lat=4.711&lon=-74.0721&radio_km=5&servicio=grua", headers=authorization()
+    )
+
+    assert response.status_code == 200
+    assert response.json() == collection
+    assert upstream.calls[0][0] == "/siniestros/prestadores/cercanos"
+    assert upstream.calls[0][1]["params"] == {"lat": "4.711", "lon": "-74.0721", "radio_km": "5", "servicio": "grua"}
+    assert "headers" not in upstream.calls[0][1]
+
+
+def test_movil_reenvia_422_de_prestadores_cercanos(monkeypatch):
+    monkeypatch.setattr("canales.movil.api.siniestros", _Upstream(error=_status_error(422, "radio_km fuera de rango")))
+
+    response = client.get("/movil/prestadores/cercanos?lat=4.7&lon=-74&radio_km=99", headers=authorization())
+
+    assert response.status_code == 422
+
+
+def test_movil_prestadores_cercanos_exige_sesion():
+    assert client.get("/movil/prestadores/cercanos?lat=4.7&lon=-74").status_code == 401

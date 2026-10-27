@@ -3,16 +3,21 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { useSessionStore } from '../../../session/store/useSessionStore';
-import { homeSummary, type HomeDestination } from '../../homeSummary';
-import { texts } from '../../texts';
+import { homeSummary, type HomeShortcutDestination } from '../../homeSummary';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function HomeScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const firstName = useSessionStore((state) => state.firstName);
   const { renewal } = homeSummary;
 
-  const openDestination = (destination: HomeDestination) => {
+  const openDestination = (destination: HomeShortcutDestination) => {
+    if (destination === 'NearbyProviders') {
+      navigation.navigate(destination);
+      return;
+    }
     navigation.navigate('Main', { screen: destination });
   };
 
@@ -27,7 +32,7 @@ export default function HomeScreen() {
           icon: 'menu',
           label: texts.home.menuLabel,
           onPress: () => navigation.dispatch(DrawerActions.openDrawer()),
-          onLongPress: __DEV__ ? () => navigation.navigate('Components') : undefined,
+          onLongPress: __DEV__ ? () => navigation.navigate('DevTools') : undefined,
         },
       }}
     >

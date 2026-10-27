@@ -1,6 +1,6 @@
 import logging
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 
 from solventa_common.sesion import sign_token
@@ -8,12 +8,14 @@ from solventa_common.sesion import sign_token
 from identidad.kyc.domain.models import (
     OPEN_DATA,
     OPEN_FINANCE,
+    Account,
     Client,
     ClienteNoEncontrado,
     CodigoOtpInvalido,
     Consentimiento,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
+    DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
     RespuestaCliente,
@@ -25,7 +27,7 @@ from identidad.kyc.domain.models import (
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
-from identidad.kyc.domain.ports import ClientRepository, ConsentimientoRepository
+from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository
 from identidad.kyc.domain.sesion import hash_password, new_salt, password_matches
 
 logger = logging.getLogger(__name__)
@@ -49,43 +51,79 @@ def issue_session(client: Client, secret: str) -> Session:
 
 
 class StartSession:
-    def __init__(self, clients: ClientRepository, secret: str) -> None:
+    def __init__(self, clients: ClientRepository, accounts: AccountRepository, secret: str) -> None:
         self.clients = clients
+        self.accounts = accounts
         self.secret = secret
 
     def execute(self, email: str, password: str) -> Session:
         client = self.clients.get_by_email(email.lower())
+        account = self.accounts.get(client.id) if client else None
         # A missing account still runs the slow check, so the response time does not reveal which case it was.
-        if client is None:
+        if client is None or account is None:
             password_matches(password, _DUMMY_HASH, _DUMMY_SALT)
             raise InvalidCredentials
-        if not password_matches(password, client.password_hash, client.salt):
+        if not password_matches(password, account.password_hash, account.salt):
             raise InvalidCredentials
         return issue_session(client, self.secret)
 
 
 class RegisterClient:
-    def __init__(self, clients: ClientRepository, secret: str) -> None:
+    def __init__(self, clients: ClientRepository, accounts: AccountRepository, secret: str) -> None:
         self.clients = clients
+        self.accounts = accounts
         self.secret = secret
 
-    def execute(self, email: str, password: str, first_name: str, last_name: str) -> Session:
+    def execute(
+        self,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        *,
+        tipo_documento: str,
+        numero_documento: str,
+        telefono: str,
+        fecha_nacimiento: date,
+    ) -> Session:
         normalized = email.lower()
-        if self.clients.get_by_email(normalized) is not None:
+        by_email = self.clients.get_by_email(normalized)
+        by_numero = self.clients.get_by_numero_documento(numero_documento)
+        if by_email is not None and self.accounts.get(by_email.id) is not None:
             raise EmailAlreadyRegistered
+        if by_numero is not None and self.accounts.get(by_numero.id) is not None:
+            raise DocumentAlreadyRegistered
+        # A client from consent is linked only when the email and the document both point to it.
+        if by_numero is not None and (by_email is None or by_email.id != by_numero.id):
+            raise DocumentAlreadyRegistered
+        if by_email is not None and by_email.numero_documento not in ("", numero_documento):
+            raise EmailAlreadyRegistered
+
+        if by_email is None:
+            client = Client(
+                id=str(uuid4()),
+                email=normalized,
+                first_name=first_name,
+                last_name=last_name,
+                tipo_documento=tipo_documento,
+                numero_documento=numero_documento,
+                telefono=telefono,
+                fecha_nacimiento=fecha_nacimiento,
+            )
+            try:
+                self.clients.add(client)
+            except ValueError as exc:
+                raise EmailAlreadyRegistered from exc
+        else:
+            client = by_email
+            client.tipo_documento = tipo_documento
+            client.numero_documento = numero_documento
+            client.telefono = client.telefono or telefono
+            client.fecha_nacimiento = client.fecha_nacimiento or fecha_nacimiento
+            self.clients.update(client)
+
         salt = new_salt()
-        client = Client(
-            id=str(uuid4()),
-            email=normalized,
-            first_name=first_name,
-            last_name=last_name,
-            password_hash=hash_password(password, salt),
-            salt=salt,
-        )
-        try:
-            self.clients.add(client)
-        except ValueError as exc:
-            raise EmailAlreadyRegistered from exc
+        self.accounts.add(Account(client_id=client.id, password_hash=hash_password(password, salt), salt=salt))
         return issue_session(client, self.secret)
 
 
@@ -184,7 +222,6 @@ class SolicitarConsentimiento:
                 email=_resolve_cliente_email(solicitud, cliente_id),
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
-                pais=solicitud.pais or "Colombia",
             )
             cliente_guardado = self.clients.upsert(cliente_obj)
             cliente_id = cliente_guardado.id
@@ -354,7 +391,7 @@ def _cliente_a_respuesta(cliente: Client) -> RespuestaCliente:
         apellido=cliente.last_name,
         email=cliente.email,
         telefono=cliente.telefono,
-        pais=cliente.pais,
+        pais=getattr(cliente, "pais", "Colombia"),
         fecha_nacimiento=fecha_nac,
     )
 
@@ -402,7 +439,6 @@ class AsegurarCliente:
             email=email,
             telefono=solicitud.telefono.strip(),
             fecha_nacimiento=solicitud.fecha_nacimiento,
-            pais=solicitud.pais or "Colombia",
         )
         try:
             guardado = self.clients.upsert(nuevo_cliente)

@@ -4,6 +4,8 @@ import { StackActions, useNavigation } from '@react-navigation/native';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
 import { readLocation } from '../../../../shared/location';
 import { deleteReport } from '../../offline/deleteReport';
 import { listReports } from '../../offline/listReports';
@@ -31,6 +33,8 @@ jest.mock('../../../../shared/location', () => ({
     Promise.resolve({
       address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
       gps: 'GPS 4.5981, -74.0760 (±12 m)',
+      latitude: 4.5981,
+      longitude: -74.076,
     }),
   ),
 }));
@@ -38,6 +42,8 @@ jest.mock('../../../../shared/location', () => ({
 const currentPlace = {
   address: 'Carrera 7 #32-16, La Candelaria, Bogotá',
   gps: 'GPS 4.5981, -74.0760 (±12 m)',
+  latitude: 4.5981,
+  longitude: -74.076,
 };
 
 const fixedNow = new Date(2026, 8, 12, 10, 30, 0);
@@ -82,7 +88,7 @@ function mockFiling() {
     }
 
     if (String(url).endsWith('/radicar')) {
-      return jsonResponse({ id: 'aviso-1', estado: 'radicado', radicado: 'SIN-18247' });
+      return jsonResponse({ id: 'aviso-1', estado: 'radicado', cliente_id: 'cliente-1', radicado: 'SIN-18247' });
     }
 
     return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
@@ -92,6 +98,8 @@ function mockFiling() {
 const otherPlace = {
   address: 'Calle 85 #12-34, Chapinero, Bogotá',
   gps: 'GPS 4.7110, -74.0721 (±8 m)',
+  latitude: 4.711,
+  longitude: -74.0721,
 };
 
 function mockCreateFailure() {
@@ -123,6 +131,8 @@ describe('ReportClaimScreen', () => {
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
     global.fetch = mockFiling() as typeof fetch;
+    jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+    jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({ info: () => ({ status: 200 }) } as never);
   });
 
   afterEach(() => {
@@ -218,20 +228,17 @@ describe('ReportClaimScreen', () => {
 
     await waitFor(() => {
       expect(useNavigation().dispatch).toHaveBeenCalledWith(
-        StackActions.replace(
-          'ClaimReport',
-          expect.objectContaining({
-            screen: 'ClaimDetail',
-            params: expect.objectContaining({
-              radicado: 'SIN-18247',
-              claimType: 'Accidente con vehículo de alquiler',
-              policy: 'Viaje Internacional · SLV-2026-03105',
-              location: currentPlace.address,
-              description: 'Golpe en la puerta',
-              evidences: [expect.objectContaining({ label: 'Foto 1' })],
-            }),
+        StackActions.replace('AvisoDetail', {
+          aviso: expect.objectContaining({
+            id: 'aviso-1',
+            radicado: 'SIN-18247',
+            estado: 'radicado',
+            poliza_id: 'SLV-2026-03105',
+            tipo: 'Accidente con vehículo de alquiler',
+            ubicacion: currentPlace.address,
+            descripcion: 'Golpe en la puerta',
           }),
-        ),
+        }),
       );
     });
 
@@ -255,6 +262,29 @@ describe('ReportClaimScreen', () => {
     const uploadCall = jest.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/evidencias/cargas'));
     const upload = JSON.parse((uploadCall?.[1] as { body: string }).body) as { bytes: number };
     expect(upload.bytes).toBe(3);
+
+    expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+      'PUT',
+      'http://uploads.test/foto',
+      expect.objectContaining({ 'Content-Type': 'image/jpeg' }),
+      ReactNativeBlobUtil.wrap('/tmp/foto.jpg'),
+    );
+    expect(
+      jest.mocked(fetch).mock.calls.some(([url, init]) => String(url).startsWith('file://') || init?.method === 'PUT'),
+    ).toBe(false);
+  });
+
+  it('keeps the form open when the storage service rejects an upload', async () => {
+    jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({ info: () => ({ status: 403 }) } as never);
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const { getByText, getByPlaceholderText, getByTestId, findByText } = await render(<ReportClaimScreen />);
+
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(getByTestId('submit-report'));
+
+    expect(await findByText('No se pudo enviar el reporte.')).toBeTruthy();
+    expect(getByText('Enviar reporte')).toBeTruthy();
+    expect(useNavigation().dispatch).not.toHaveBeenCalled();
   });
 
   it('keeps the form open when the aviso was created but a later step fails', async () => {
@@ -439,7 +469,7 @@ describe('ReportClaimScreen', () => {
 
     await waitFor(() => {
       expect(useNavigation().dispatch).toHaveBeenCalledWith(
-        StackActions.replace('ClaimReport', expect.objectContaining({ screen: 'ClaimDetail' })),
+        StackActions.replace('AvisoDetail', { aviso: expect.objectContaining({ radicado: 'SIN-18247' }) }),
       );
     });
     expect(await listReports()).toEqual([]);
@@ -600,6 +630,8 @@ describe('ReportClaimScreen', () => {
     finishRefresh({
       address: 'Calle 85 #12-34, Chapinero, Bogotá',
       gps: 'GPS 4.7110, -74.0721 (±8 m)',
+      latitude: 4.711,
+      longitude: -74.0721,
     });
 
     await waitFor(() => {

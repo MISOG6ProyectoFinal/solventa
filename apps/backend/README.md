@@ -47,6 +47,7 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 | `polizas` | `suscripcion`, `ciclo_vida`, `reaseguro` | Suscripción, Pólizas y Ciclo de Vida, Reaseguro y Cesión | polizas |
 | `identidad` | `kyc`, `perfilamiento` | Identidad, Consentimiento y KYC; Perfilamiento y Personalización | identidad |
 | `siniestros` | `avisos` | Siniestros | siniestros |
+| | `prestadores` | Catálogo de prestadores y consulta geoespacial (PostGIS) | siniestros |
 | | `parametrico` | Siniestro Paramétrico + Idempotency Key Validator | siniestros |
 | `siniestros-worker` | `parametrico.worker` | Workers de Absorción (Picos), misma imagen que `siniestros` | siniestros |
 | `pagos` | `cobros` | Cobros y Pagos | pagos |
@@ -113,6 +114,12 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
   poetry run uvicorn cotizacion.main:app --reload
 ```
 
+Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS, por eso Compose y k3s usan imágenes `postgis/postgis`. El catálogo se carga aparte, con el seed de aliados y los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda el seed:
+
+```bash
+docker compose run --rm siniestros-prestadores-sync
+```
+
 Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo. Copie `.env.example` a `.env` y defina `SESION_SECRETO`: identidad firma la sesión y canales la verifica con esa clave.
 
 ```bash
@@ -165,7 +172,7 @@ ENV=dev ./deploy/scripts/bootstrap-ci.sh
 
 Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
 
-El backend se despliega al publicar un release en GitHub. El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
+El backend se despliega al publicar un release en GitHub. Para crearlo desde `main`, corra `npm run release` (siguiente parche; `-- minor`, `-- major` o `-- v1.2.0` para otra versión, `-- --draft` para no desplegar todavía, `-- --dry-run` para simular). El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
 `CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 

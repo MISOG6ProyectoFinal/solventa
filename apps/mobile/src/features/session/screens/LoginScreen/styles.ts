@@ -18,10 +18,15 @@ export default StyleSheet.create({
   contentWithKeyboard: {
     justifyContent: 'flex-start',
   },
+  devTools: {
+    position: 'absolute',
+    right: theme.space.lg,
+  },
+  languageToggle: {
+    position: 'absolute',
+    left: theme.space.lg,
+  },
   logo: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: theme.space.sm,
     paddingBottom: theme.space.lg,
   },
 });

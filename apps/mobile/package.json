@@ -23,7 +23,9 @@
     "react-native-nitro-modules": "*",
     "react-native-vision-camera": "*",
     "react-native-video": "*",
-    "react-native-blob-util": "*"
+    "react-native-blob-util": "*",
+    "react-native-maps": "*",
+    "react-native-get-random-values": "*"
   },
   "devDependencies": {}
 }

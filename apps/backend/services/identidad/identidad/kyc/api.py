@@ -1,12 +1,18 @@
+import re
+from datetime import date
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, field_validator
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
+    MIN_PASSWORD_LENGTH,
+    TIPOS_DOCUMENTO,
     ClienteNoEncontrado,
     CodigoOtpInvalido,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
+    DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
     RespuestaCliente,
@@ -16,6 +22,9 @@ from identidad.kyc.domain.models import (
     SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
+
+# The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 
@@ -41,14 +50,46 @@ class SolicitudSesion(BaseModel):
 class SolicitudRegistro(SolicitudSesion):
     nombre: str
     apellido: str
+    tipo_documento: str
+    numero_documento: str
+    telefono: str
+    fecha_nacimiento: date
 
-    @field_validator("nombre", "apellido")
+    @field_validator("nombre", "apellido", "tipo_documento", "numero_documento", "telefono")
     @classmethod
-    def _nombre_obligatorio(cls, value: str) -> str:
+    def _dato_obligatorio(cls, value: str) -> str:
         stripped = value.strip()
         if not stripped:
             raise ValueError("El campo es obligatorio")
         return stripped
+
+    @field_validator("correo")
+    @classmethod
+    def _formato_correo(cls, value: str) -> str:
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("El correo no tiene un formato válido.")
+        return value
+
+    @field_validator("contrasena")
+    @classmethod
+    def _largo_contrasena(cls, value: str) -> str:
+        if len(value) < MIN_PASSWORD_LENGTH:
+            raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
+        return value
+
+    @field_validator("tipo_documento")
+    @classmethod
+    def _tipo_documento(cls, value: str) -> str:
+        if value not in TIPOS_DOCUMENTO:
+            raise ValueError("Tipo de documento no válido")
+        return value
+
+    @field_validator("fecha_nacimiento")
+    @classmethod
+    def _fecha_nacimiento(cls, value: date) -> date:
+        if value >= date.today():
+            raise ValueError("La fecha de nacimiento debe ser anterior a hoy")
+        return value
 
 
 class SolicitudValidacionOTP(BaseModel):
@@ -78,9 +119,15 @@ def registrar_cliente(solicitud: SolicitudRegistro) -> dict:
             solicitud.contrasena,
             solicitud.nombre,
             solicitud.apellido,
+            tipo_documento=solicitud.tipo_documento,
+            numero_documento=solicitud.numero_documento,
+            telefono=solicitud.telefono,
+            fecha_nacimiento=solicitud.fecha_nacimiento,
         )
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este correo.") from exc
+    except DocumentAlreadyRegistered as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este documento.") from exc
     return {"token": session.token, "cliente_id": session.client_id}
 
 

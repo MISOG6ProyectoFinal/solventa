@@ -16,7 +16,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: postgres
-        image: postgres:17.6-alpine
+        image: postgis/postgis:17-3.5-alpine
         env:
         - name: POSTGRES_USER
           value: solventa

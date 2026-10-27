@@ -1,8 +1,14 @@
+import 'react-native-get-random-values';
+
 import { apiClient } from '../../../shared/api/client';
 import { ResultadoPago, SimulacionPago } from '../types';
 
+// Un id por intento de pago. crypto.getRandomValues es la fuente criptográfica del dispositivo.
 export function crearIntentoId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const aleatorio = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${Date.now().toString(36)}-${aleatorio}`;
 }
 
 export function payQuote(

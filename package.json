@@ -11,7 +11,8 @@
     "typecheck-mobile": "tsc -p apps/mobile/tsconfig.app.json --noEmit",
     "postinstall": "node apps/mobile/scripts/sync-native-deps.mjs",
     "prepare": "node scripts/install-git-hooks.mjs",
-    "validate-be": "nx tf-validate backend"
+    "validate-be": "nx tf-validate backend",
+    "release": "node scripts/create-release.mts"
   },
   "keywords": [],
   "author": "",
@@ -101,7 +102,9 @@
     "react-native": "~0.87.1",
     "react-native-blob-util": "^0.25.1",
     "react-native-gesture-handler": "^3.3.0",
+    "react-native-get-random-values": "^2.0.0",
     "react-native-keychain": "^10.0.0",
+    "react-native-maps": "^1.29.11",
     "react-native-nitro-image": "^0.15.2",
     "react-native-nitro-modules": "^0.37.1",
     "react-native-reanimated": "^4.7.1",

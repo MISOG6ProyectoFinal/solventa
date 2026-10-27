@@ -1,14 +1,12 @@
+import { toDisplayDate } from '../../shared/date';
 import { destinos, QuoteFormValues } from './types';
 import {
   addDays,
   defaultQuoteForm,
   digitsOnly,
   formatMoney,
-  fromApiDate,
   formatVigenteHasta,
   quoteReference,
-  toApiDate,
-  toDisplayDate,
   validateQuoteForm,
 } from './utils';
 
@@ -24,6 +22,16 @@ describe('quote utils', () => {
     expect(formatMoney('149940.00')).toBe('$149.940');
   });
 
+  it('uses the thousands separator of the English language', () => {
+    expect(formatMoney('120000', 'en')).toBe('$120,000');
+    expect(formatMoney('149940.00', 'en')).toBe('$149,940');
+  });
+
+  it('says today in English for a same-day payment deadline', () => {
+    const today = new Date(2026, 9, 19, 15, 0, 0);
+    expect(formatVigenteHasta('2026-10-19T23:59:59-05:00', today, 'en')).toBe('today 23:59');
+  });
+
   it('formats the backend payment deadline without inventing the cutoff', () => {
     const today = new Date(2026, 9, 19, 15, 0, 0);
     expect(formatVigenteHasta('2026-10-19T23:59:59-05:00', today)).toBe('hoy 23:59');
@@ -31,10 +39,7 @@ describe('quote utils', () => {
     expect(formatVigenteHasta('sin-fecha', today)).toBe('sin-fecha');
   });
 
-  it('converts dates without shifting a day through UTC', () => {
-    expect(toApiDate('10/10/2026')).toBe('2026-10-10');
-    expect(fromApiDate('2026-10-24')).toBe('24/10/2026');
-    expect(toDisplayDate(new Date(2026, 9, 10))).toBe('10/10/2026');
+  it('adds days to a local date', () => {
     expect(toDisplayDate(addDays(new Date(2026, 9, 10), 14))).toBe('24/10/2026');
   });
 
@@ -53,19 +58,19 @@ describe('quote utils', () => {
 
   it('validates the viaje form', () => {
     expect(validateQuoteForm(form())).toEqual({});
-    expect(validateQuoteForm(form({ nombre: '   ' })).nombre).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ cedula: '' })).cedula).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ cedula: '10A' })).cedula).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ destino: '' })).destino).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ fechaSalida: '' })).fechaSalida).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ fechaRegreso: '' })).fechaRegreso).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ viajeros: '' })).viajeros).toBe('Obligatorio');
-    expect(validateQuoteForm(form({ viajeros: '0' })).viajeros).toBe('Debe ser un número mayor a 0');
+    expect(validateQuoteForm(form({ nombre: '   ' })).nombre).toBe('required');
+    expect(validateQuoteForm(form({ cedula: '' })).cedula).toBe('required');
+    expect(validateQuoteForm(form({ cedula: '10A' })).cedula).toBe('required');
+    expect(validateQuoteForm(form({ destino: '' })).destino).toBe('required');
+    expect(validateQuoteForm(form({ fechaSalida: '' })).fechaSalida).toBe('required');
+    expect(validateQuoteForm(form({ fechaRegreso: '' })).fechaRegreso).toBe('required');
+    expect(validateQuoteForm(form({ viajeros: '' })).viajeros).toBe('required');
+    expect(validateQuoteForm(form({ viajeros: '0' })).viajeros).toBe('travelersAtLeastOne');
     expect(validateQuoteForm(form({ fechaSalida: toDisplayDate(addDays(new Date(), -1)) })).fechaSalida).toBe(
-      'No puede ser anterior a hoy',
+      'departureInPast',
     );
     expect(validateQuoteForm(form({ fechaRegreso: defaultQuoteForm().fechaSalida })).fechaRegreso).toBe(
-      'Debe ser posterior a la salida',
+      'returnBeforeDeparture',
     );
   });
 

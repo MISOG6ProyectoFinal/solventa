@@ -149,22 +149,22 @@ show_metrics() {
     echo "✅ Duplication density: ${DUPLICATION}% (OK)"
   fi
 
-  if (( CODE_SMELLS > 5 )); then
-    echo "❌ Code smells (${CODE_SMELLS}) exceed limit (5)"
+  if (( CODE_SMELLS > 0 )); then
+    echo "❌ Code smells (${CODE_SMELLS}) exceed limit (0)"
     exit 1
   else
     echo "✅ Code smells: ${CODE_SMELLS} (OK)"
   fi
 
-  if (( VIOLATIONS > 5 )); then
-    echo "❌ Violations (${VIOLATIONS}) exceed limit (5)"
+  if (( VIOLATIONS > 0 )); then
+    echo "❌ Violations (${VIOLATIONS}) exceed limit (0)"
     exit 1
   else
     echo "✅ Violations: ${VIOLATIONS} (OK)"
   fi
 
-  if (( OPEN_ISSUES > 5 )); then
-    echo "❌ Open issues (${OPEN_ISSUES}) exceed limit (5)"
+  if (( OPEN_ISSUES > 0 )); then
+    echo "❌ Open issues (${OPEN_ISSUES}) exceed limit (0)"
     exit 1
   else
     echo "✅ Open issues: ${OPEN_ISSUES} (OK)"
@@ -184,8 +184,10 @@ show_metrics() {
     echo "✅ Security rating: ${SECURITY_RATING} (OK)"
   fi
 
-  if (( SECURITY_HOTSPOTS > 20 )); then
-    echo "❌ Security hotspots (${SECURITY_HOTSPOTS}) exceed limit (20)"
+  # Congelado en el conteo medido (19). El tope anterior era 20.
+  # No subirlo: un hotspot nuevo debe fallar mientras se revisan los existentes.
+  if (( SECURITY_HOTSPOTS > 19 )); then
+    echo "❌ Security hotspots (${SECURITY_HOTSPOTS}) exceed limit (19)"
     exit 1
   else
     echo "✅ Security hotspots: ${SECURITY_HOTSPOTS} (OK)"
@@ -198,8 +200,8 @@ show_metrics() {
     echo "✅ Vulnerabilities: ${VULNERABILITIES} (OK)"
   fi
 
-  if (( $(echo "$COVERAGE < 85.0" | bc -l) )); then
-    echo "❌ Coverage (${COVERAGE}%) is below limit (85.0%)"
+  if (( $(echo "$COVERAGE < 89.0" | bc -l) )); then
+    echo "❌ Coverage (${COVERAGE}%) is below limit (89.0%)"
     exit 1
   else
     echo "✅ Coverage: ${COVERAGE}% (OK)"

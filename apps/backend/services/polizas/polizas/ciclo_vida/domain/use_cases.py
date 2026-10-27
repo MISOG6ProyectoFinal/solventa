@@ -72,6 +72,14 @@ class IssuePolicyUseCase:
         return existing
 
 
+class ListClientPoliciesUseCase:
+    def __init__(self, policies: PolicyRepository) -> None:
+        self.policies = policies
+
+    def execute(self, cliente_id: str) -> list[Policy]:
+        return self.policies.list_by_client(cliente_id)
+
+
 def _same_owner(quote: dict, request: IssuePolicyRequest) -> bool:
     if request.canal == "socios":
         return request.socio_id is not None and quote.get("socio_id") == request.socio_id

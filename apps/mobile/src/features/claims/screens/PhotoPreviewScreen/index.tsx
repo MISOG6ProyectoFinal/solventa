@@ -4,7 +4,7 @@ import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 import { Button, Screen } from '../../../../shared/ui';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import { photoUri } from '../../photo';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 type Props = StaticScreenProps<{
@@ -12,6 +12,7 @@ type Props = StaticScreenProps<{
 }>;
 
 export default function PhotoPreviewScreen({ route }: Readonly<Props>) {
+  const texts = useTexts();
   const navigation = useNavigation();
   const photo = useClaimsStore((state) =>
     state.photos.find((item) => item.filePath === route.params.filePath),
@@ -30,7 +31,7 @@ export default function PhotoPreviewScreen({ route }: Readonly<Props>) {
   return (
     <Screen
       testID="photo-preview-screen"
-      header={{ title: texts.savedPhoto.screenTitle, subtitle: photo?.label }}
+      header={{ title: texts.savedPhoto.screenTitle, subtitle: photo ? texts.report.photoLabel(photo.position) : undefined }}
     >
       {photo ? (
         <View style={styles.body}>

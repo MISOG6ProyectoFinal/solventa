@@ -7,12 +7,13 @@ from siniestros.asistencia.api import router as asistencia_router
 from siniestros.avisos.api import router as avisos_router
 from siniestros.config import settings
 from siniestros.parametrico.api import router as parametrico_router
+from siniestros.prestadores.api import router as prestadores_router
 
 engine = optional_engine(settings.database_url)
 
 
 app = create_app(
     settings,
-    routers=[avisos_router, asistencia_router, parametrico_router],
+    routers=[avisos_router, asistencia_router, prestadores_router, parametrico_router],
     readiness_checks=readiness_checks(engine),
 )

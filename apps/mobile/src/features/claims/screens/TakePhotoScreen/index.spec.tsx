@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePhotoOutput } from 'react-native-vision-camera';
 
+import { readFileSize } from '../../fileSize';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import ReportClaimScreen from '../ReportClaimScreen';
 import TakePhotoScreen from './index';
@@ -25,10 +26,14 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
+jest.mock('../../fileSize', () => ({
+  readFileSize: jest.fn(() => Promise.resolve(1536)),
+}));
+
+// The photo exposes no byte reader: its size must come from the saved file, not from loading the image.
 jest.mock('react-native-vision-camera', () => {
   const React = require('react');
   const photo = {
-    getFileDataAsync: () => Promise.resolve(new Uint8Array(1536).buffer),
     saveToTemporaryFileAsync: () => Promise.resolve('/tmp/foto.jpg'),
     dispose: () => undefined,
   };
@@ -141,11 +146,12 @@ describe('TakePhotoScreen', () => {
     await waitFor(() => {
       expect(camera.getByTestId('photo-preview').props.source).toEqual({ uri: 'file:///tmp/foto.jpg' });
     });
+    expect(readFileSize).toHaveBeenCalledWith('/tmp/foto.jpg');
   });
 
   it('refuses a photo larger than 50 MB', async () => {
+    jest.mocked(readFileSize).mockResolvedValueOnce(52_428_801);
     usePhotoOutput().capturePhoto.mockResolvedValueOnce({
-      getFileDataAsync: () => Promise.resolve({ byteLength: 52_428_801 }),
       saveToTemporaryFileAsync: () => Promise.resolve('/tmp/grande.jpg'),
       dispose: () => undefined,
     });

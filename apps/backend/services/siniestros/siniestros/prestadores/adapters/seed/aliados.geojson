@@ -1,0 +1,357 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.0636,
+     4.6533
+    ]
+   },
+   "properties": {
+    "id": "grua-01",
+    "nombre": "Grúas Aliadas Chapinero",
+    "tipo": "grua",
+    "calificacion": 4.5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.045,
+     4.72
+    ]
+   },
+   "properties": {
+    "id": "grua-02",
+    "nombre": "Grúas Norte Express",
+    "tipo": "grua",
+    "calificacion": 4.2
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.085,
+     4.74
+    ]
+   },
+   "properties": {
+    "id": "grua-03",
+    "nombre": "Grúas Suba 24h",
+    "tipo": "grua",
+    "calificacion": 4.7
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.0817,
+     4.6097
+    ]
+   },
+   "properties": {
+    "id": "grua-04",
+    "nombre": "Grúas Centro Bogotá",
+    "tipo": "grua",
+    "calificacion": 4.0
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.15,
+     4.63
+    ]
+   },
+   "properties": {
+    "id": "grua-05",
+    "nombre": "Grúas Kennedy",
+    "tipo": "grua",
+    "calificacion": 3.9
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.145,
+     4.67
+    ]
+   },
+   "properties": {
+    "id": "grua-06",
+    "nombre": "Grúas Fontibón",
+    "tipo": "grua",
+    "calificacion": 4.4
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.03,
+     4.7
+    ]
+   },
+   "properties": {
+    "id": "taller-01",
+    "nombre": "Taller Aliado Usaquén",
+    "tipo": "taller",
+    "calificacion": 4.6
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.055,
+     4.675
+    ]
+   },
+   "properties": {
+    "id": "taller-02",
+    "nombre": "Taller Mecánico Chicó",
+    "tipo": "taller",
+    "calificacion": 4.3
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.09,
+     4.75
+    ]
+   },
+   "properties": {
+    "id": "taller-03",
+    "nombre": "Taller Autoservicio Suba",
+    "tipo": "taller",
+    "calificacion": 4.1
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.09,
+     4.64
+    ]
+   },
+   "properties": {
+    "id": "taller-04",
+    "nombre": "Taller Teusaquillo",
+    "tipo": "taller",
+    "calificacion": 4.5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.11,
+     4.7
+    ]
+   },
+   "properties": {
+    "id": "taller-05",
+    "nombre": "Taller Engativá",
+    "tipo": "taller",
+    "calificacion": 4.0
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.12,
+     4.62
+    ]
+   },
+   "properties": {
+    "id": "taller-06",
+    "nombre": "Taller Puente Aranda",
+    "tipo": "taller",
+    "calificacion": 4.4
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.048,
+     4.68
+    ]
+   },
+   "properties": {
+    "id": "perito-01",
+    "nombre": "Peritos Asociados Chicó",
+    "tipo": "perito",
+    "calificacion": 4.8
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.032,
+     4.735
+    ]
+   },
+   "properties": {
+    "id": "perito-02",
+    "nombre": "Peritaje Rápido Usaquén",
+    "tipo": "perito",
+    "calificacion": 4.5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.07,
+     4.77
+    ]
+   },
+   "properties": {
+    "id": "perito-03",
+    "nombre": "Peritos del Norte",
+    "tipo": "perito",
+    "calificacion": 4.2
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.075,
+     4.615
+    ]
+   },
+   "properties": {
+    "id": "perito-04",
+    "nombre": "Peritaje Centro",
+    "tipo": "perito",
+    "calificacion": 4.0
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.14,
+     4.64
+    ]
+   },
+   "properties": {
+    "id": "perito-05",
+    "nombre": "Peritos Kennedy",
+    "tipo": "perito",
+    "calificacion": 4.3
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.031,
+     4.676
+    ]
+   },
+   "properties": {
+    "id": "ambulancia-01",
+    "nombre": "Ambulancias Chicó",
+    "tipo": "ambulancia",
+    "calificacion": 4.7
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.1,
+     4.66
+    ]
+   },
+   "properties": {
+    "id": "ambulancia-02",
+    "nombre": "Ambulancias Salitre",
+    "tipo": "ambulancia",
+    "calificacion": 4.6
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.08,
+     4.745
+    ]
+   },
+   "properties": {
+    "id": "ambulancia-03",
+    "nombre": "Ambulancias Suba",
+    "tipo": "ambulancia",
+    "calificacion": 4.3
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.082,
+     4.613
+    ]
+   },
+   "properties": {
+    "id": "ambulancia-04",
+    "nombre": "Ambulancias Centro",
+    "tipo": "ambulancia",
+    "calificacion": 4.2
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.14,
+     4.675
+    ]
+   },
+   "properties": {
+    "id": "ambulancia-05",
+    "nombre": "Ambulancias Fontibón",
+    "tipo": "ambulancia",
+    "calificacion": 4.0
+   }
+  }
+ ]
+}

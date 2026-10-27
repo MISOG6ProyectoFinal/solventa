@@ -332,6 +332,7 @@ def test_payment_can_be_read_by_id():
     assert response.status_code == 200
     assert response.json()["estado"] == "aprobado"
     assert response.json()["cotizacion_id"] == "oferta-1"
+    assert response.json()["cliente_id"] == "cliente-demo"
 
 
 def test_postgres_reads_payment_by_id():

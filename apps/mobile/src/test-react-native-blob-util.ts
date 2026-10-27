@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -30,6 +30,10 @@ function unlink(path: string): Promise<void> {
   return Promise.resolve();
 }
 
+function stat(path: string): Promise<{ size: number }> {
+  return Promise.resolve({ size: statSync(path).size });
+}
+
 function cp(source: string, destination: string): Promise<boolean> {
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(source, destination);
@@ -41,7 +45,16 @@ function mv(source: string, destination: string): Promise<boolean> {
   return Promise.resolve(true);
 }
 
+// Uploads stream from disk natively. Tests replace this to inspect or fail a request.
+const fetch = jest.fn(async () => ({ info: () => ({ status: 200 }) }));
+
+function wrap(path: string): string {
+  return `wrap:${path}`;
+}
+
 const ReactNativeBlobUtil = {
+  fetch,
+  wrap,
   fs: {
     dirs: { DocumentDir },
     exists,
@@ -49,6 +62,7 @@ const ReactNativeBlobUtil = {
     writeFile,
     readFile,
     unlink,
+    stat,
     cp,
     mv,
   },

@@ -1,9 +1,11 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useLanguageStore } from '../../../../shared/i18n/useLanguageStore';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { ProductoMovil } from '../../types';
-import { defaultQuoteForm, toApiDate } from '../../utils';
+import { toApiDate } from '../../../../shared/date';
+import { defaultQuoteForm } from '../../utils';
 import QuoteFormScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -107,6 +109,21 @@ describe('QuoteFormScreen', () => {
     expect(useNavigation().navigate).not.toHaveBeenCalled();
   });
 
+  it('shows validation errors in the current language and follows a language change', async () => {
+    const { getByDisplayValue, getByText, queryByText } = await render(<QuoteFormScreen />);
+
+    await fireEvent.changeText(getByDisplayValue('1'), '0');
+    await fireEvent.press(getByText('Calcular cotización'));
+    expect(getByText('Debe ser un número mayor a 0')).toBeTruthy();
+
+    await act(async () => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+
+    expect(getByText('Must be greater than 0')).toBeTruthy();
+    expect(queryByText('Debe ser un número mayor a 0')).toBeNull();
+  });
+
   it('posts the exact viaje payload and opens the result', async () => {
     const defaults = defaultQuoteForm();
     const { getByText } = await render(<QuoteFormScreen />);
@@ -122,7 +139,7 @@ describe('QuoteFormScreen', () => {
     expect(String(url)).toMatch(/\/movil\/cotizaciones$/);
     expect(init).toEqual({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({
         producto_id: 'viaje-internacional',
         nombre: 'María Rodríguez',

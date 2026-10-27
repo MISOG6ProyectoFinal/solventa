@@ -1,19 +1,10 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
+import { useLanguageStore } from '../i18n/useLanguageStore';
 import { setAccessToken } from './accessToken';
+import { getBuildApiBaseUrl, selectBuildApi, selectCustomApi } from './apiBaseUrl';
 import { ApiError, apiClient } from './client';
+import { setUnauthorizedHandler } from './unauthorized';
 
-function apiBaseUrl(): string {
-  const envFile = readFileSync(join(__dirname, '../../../.env'), 'utf8');
-  const line = envFile.split(/\r?\n/).find((entry) => entry.startsWith('API_BASE_URL='));
-  const value = line?.slice('API_BASE_URL='.length).trim();
-  if (!value) {
-    throw new Error('API_BASE_URL is missing from .env');
-  }
-
-  return value;
-}
+const baseUrl = getBuildApiBaseUrl();
 
 function jsonResponse(body: unknown, status = 200) {
   return {
@@ -26,6 +17,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe('apiClient', () => {
   beforeEach(() => {
     setAccessToken(null);
+    selectBuildApi();
     global.fetch = jest.fn();
   });
 
@@ -36,9 +28,9 @@ describe('apiClient', () => {
       id: 'aviso-1',
     });
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ poliza_id: 'SLV-2026-03105' }),
     });
   });
@@ -49,10 +41,10 @@ describe('apiClient', () => {
     await apiClient.post('/movil/siniestros/aviso-1/evidencias/ev-1/confirmar');
 
     expect(fetch).toHaveBeenCalledWith(
-      `${apiBaseUrl()}/movil/siniestros/aviso-1/evidencias/ev-1/confirmar`,
+      `${baseUrl}/movil/siniestros/aviso-1/evidencias/ev-1/confirmar`,
       {
         method: 'POST',
-        headers: undefined,
+        headers: { 'Accept-Language': 'es' },
         body: undefined,
       },
     );
@@ -69,9 +61,9 @@ describe('apiClient', () => {
       id: 'aviso-1',
     });
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ estado: 'borrador' }),
     });
   });
@@ -81,9 +73,9 @@ describe('apiClient', () => {
 
     await apiClient.delete('/movil/siniestros/aviso-1');
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1`, {
       method: 'DELETE',
-      headers: undefined,
+      headers: { 'Accept-Language': 'es' },
       body: undefined,
     });
   });
@@ -105,11 +97,32 @@ describe('apiClient', () => {
 
     await apiClient.get('/movil/sesion');
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/sesion`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/sesion`, {
       method: 'GET',
-      headers: { Authorization: 'Bearer token-firmado' },
+      headers: { 'Accept-Language': 'es', Authorization: 'Bearer token-firmado' },
       body: undefined,
     });
+  });
+
+  it('sends the current app language on every request', async () => {
+    jest.mocked(fetch).mockResolvedValue(jsonResponse({}) as Response);
+    useLanguageStore.setState({ language: 'en' });
+
+    await apiClient.get('/movil/sesion');
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${baseUrl}/movil/sesion`,
+      expect.objectContaining({ headers: { 'Accept-Language': 'en' } }),
+    );
+  });
+
+  it('sends requests to the selected API base URL', async () => {
+    jest.mocked(fetch).mockResolvedValue(jsonResponse({}) as Response);
+    selectCustomApi('http://192.168.1.20:8000');
+
+    await apiClient.get('/movil/sesion');
+
+    expect(fetch).toHaveBeenCalledWith('http://192.168.1.20:8000/movil/sesion', expect.anything());
   });
 
   it('reads JSON with get', async () => {
@@ -117,9 +130,9 @@ describe('apiClient', () => {
 
     await expect(apiClient.get('/movil/siniestros/aviso-1/evidencias')).resolves.toEqual([{ id: 'ev-1' }]);
 
-    expect(fetch).toHaveBeenCalledWith(`${apiBaseUrl()}/movil/siniestros/aviso-1/evidencias`, {
+    expect(fetch).toHaveBeenCalledWith(`${baseUrl}/movil/siniestros/aviso-1/evidencias`, {
       method: 'GET',
-      headers: undefined,
+      headers: { 'Accept-Language': 'es' },
       body: undefined,
     });
   });
@@ -163,6 +176,43 @@ describe('apiClient', () => {
     await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({
       status: 422,
       detail: null,
+    });
+  });
+
+  describe('when the server rejects the session', () => {
+    const unauthorized = jest.fn();
+
+    beforeEach(() => {
+      unauthorized.mockClear();
+      setUnauthorizedHandler(unauthorized);
+      jest.mocked(fetch).mockResolvedValue(jsonResponse({ detail: 'La sesión no es válida' }, 401) as Response);
+    });
+
+    afterEach(() => {
+      setUnauthorizedHandler(null);
+    });
+
+    it('notifies the handler and still throws when a signed-in request gets 401', async () => {
+      setAccessToken('token-vencido');
+
+      await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 401 });
+
+      expect(unauthorized).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not notify the handler when no token was sent, such as a wrong password at login', async () => {
+      await expect(apiClient.post('/movil/sesiones', {})).rejects.toMatchObject({ status: 401 });
+
+      expect(unauthorized).not.toHaveBeenCalled();
+    });
+
+    it('does not notify the handler for other errors', async () => {
+      setAccessToken('token-vigente');
+      jest.mocked(fetch).mockResolvedValue(jsonResponse({ detail: 'Prohibido' }, 403) as Response);
+
+      await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 403 });
+
+      expect(unauthorized).not.toHaveBeenCalled();
     });
   });
 });

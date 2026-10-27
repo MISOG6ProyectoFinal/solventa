@@ -11,7 +11,8 @@ export default StyleSheet.create({
   profile: {
     gap: theme.space.xs,
   },
-  signOut: {
+  footer: {
     marginTop: 'auto',
+    gap: theme.space.md,
   },
 });

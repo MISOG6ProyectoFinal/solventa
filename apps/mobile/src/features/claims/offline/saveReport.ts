@@ -29,7 +29,8 @@ let savedCopies = 0;
 export async function saveReport(draft: ReportDraft): Promise<void> {
   await prepareReportDirectory();
   const evidencias: StoredEvidence[] = [];
-  const copy = `${Date.now().toString(36)}-${(savedCopies += 1).toString(36)}`;
+  savedCopies += 1;
+  const copy = `${Date.now().toString(36)}-${savedCopies.toString(36)}`;
 
   for (const [index, file] of draft.files.entries()) {
     const name = `evidencia-${index + 1}-${copy}${file.kind === 'photo' ? '.jpg' : '.mp4'}`;

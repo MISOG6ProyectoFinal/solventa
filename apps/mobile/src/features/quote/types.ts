@@ -35,6 +35,8 @@ export type ResultadoPago = {
   moneda: string;
 };
 
+export type QuoteFormError = 'required' | 'departureInPast' | 'returnBeforeDeparture' | 'travelersAtLeastOne';
+
 export type QuoteFormValues = {
   nombre: string;
   cedula: string;

@@ -5,10 +5,10 @@ import { theme } from '../../theme';
 import { outfitFont } from '../../theme/fonts';
 import { AppText } from '../AppText';
 import { IconButton } from '../IconButton';
-import { monthLabels, monthLayout, months, yearPageStart, yearsPerPage } from './date';
+import { useTexts } from '../../texts';
+import { monthLayout, yearPageStart, yearsPerPage } from './date';
 import { YearGrid } from './YearGrid';
 
-const weekdays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const cellHeight = 40;
 
 type DayProps = {
@@ -62,7 +62,9 @@ export const MonthGrid = memo(function MonthGrid({
   const cellWidth = (width - theme.space.lg * 2) / 7;
   const cellStyle = useMemo(() => [styles.cell, { width: cellWidth }], [cellWidth]);
   const selectedStyle = useMemo(() => [cellStyle, styles.selectedDay], [cellStyle]);
-  const monthName = months[month - 1];
+  const texts = useTexts();
+  const monthName = texts.date.months[month - 1] ?? '';
+  const monthLabel = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)}`;
   const { lead, days, rows } = monthLayout(year, month);
   const [yearPage, setYearPage] = useState<number | null>(null);
   const pickingYear = yearSelection && yearPage !== null;
@@ -97,14 +99,14 @@ export const MonthGrid = memo(function MonthGrid({
 
   const title =
     yearPage === null
-      ? `${monthLabels[month - 1]} ${year}`
-      : `${yearPage} a ${yearPage + yearsPerPage - 1}`;
+      ? `${monthLabel} ${year}`
+      : texts.date.yearRange(yearPage, yearPage + yearsPerPage - 1);
 
   return (
     <>
       <View style={styles.monthRow}>
         <IconButton
-          label={pickingYear ? 'Años anteriores' : 'Mes anterior'}
+          label={pickingYear ? texts.date.previousYears : texts.date.previousMonth}
           icon="volver"
           color="dark"
           onPress={showPrevious}
@@ -112,7 +114,7 @@ export const MonthGrid = memo(function MonthGrid({
         {yearSelection ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={pickingYear ? 'Volver al mes' : 'Cambiar año'}
+            accessibilityLabel={pickingYear ? texts.date.backToMonth : texts.date.changeYear}
             onPress={toggleYears}
             style={styles.monthTitleHit}
           >
@@ -126,7 +128,7 @@ export const MonthGrid = memo(function MonthGrid({
           </AppText>
         )}
         <IconButton
-          label={pickingYear ? 'Años siguientes' : 'Mes siguiente'}
+          label={pickingYear ? texts.date.nextYears : texts.date.nextMonth}
           icon="siguiente"
           color="dark"
           onPress={showNext}
@@ -136,8 +138,8 @@ export const MonthGrid = memo(function MonthGrid({
         <YearGrid start={yearPage} selectedYear={year} onChoose={chooseYear} />
       ) : (
         <View style={[styles.grid, { height: cellHeight * (1 + rows) }]}>
-          {weekdays.map((weekday) => (
-            <View key={weekday} style={cellStyle}>
+          {texts.date.weekdays.map((weekday, index) => (
+            <View key={`${weekday}-${index}`} style={cellStyle}>
               <AppText variant="caption" style={styles.weekday}>
                 {weekday}
               </AppText>

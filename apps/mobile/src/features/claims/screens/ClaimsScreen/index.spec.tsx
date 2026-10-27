@@ -202,4 +202,26 @@ describe('ClaimsScreen', () => {
     expect(await findByText('Siniestros no disponible.')).toBeTruthy();
     expect(getByText('Accidente con vehículo de alquiler')).toBeTruthy();
   });
+
+  it('shows a loading message while the avisos load', async () => {
+    global.fetch = jest.fn(() => new Promise(() => undefined)) as typeof fetch;
+    const { getByTestId, getByText } = await render(<ClaimsScreen />);
+
+    expect(getByTestId('claims-loading')).toBeTruthy();
+    expect(getByText('Cargando reportes...')).toBeTruthy();
+  });
+
+  it('retries loading the avisos from the error state', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Siniestros no disponible.' }, 503))
+      .mockResolvedValueOnce(jsonResponse(AVISOS)) as typeof fetch;
+    const { findByText, getByText, queryByText } = await render(<ClaimsScreen />);
+
+    await findByText('Siniestros no disponible.');
+    await fireEvent.press(getByText('Reintentar'));
+
+    expect(await findByText('Pérdida de equipaje')).toBeTruthy();
+    expect(queryByText('Siniestros no disponible.')).toBeNull();
+  });
 });

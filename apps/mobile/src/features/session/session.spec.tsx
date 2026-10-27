@@ -3,6 +3,9 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { type DrawerContentComponentProps } from '@react-navigation/drawer';
 
 import { setAccessToken } from '../../shared/api/accessToken';
+import * as apiBaseUrl from '../../shared/api/apiBaseUrl';
+import { apiClient } from '../../shared/api/client';
+import { useLanguageStore } from '../../shared/i18n/useLanguageStore';
 import HomeDrawerContent from '../home/screens/HomeDrawerContent';
 import HomeScreen from '../home/screens/HomeScreen';
 import CheckingScreen from './screens/CheckingScreen';
@@ -22,8 +25,10 @@ jest.mock('@react-navigation/drawer', () => {
 });
 
 jest.mock('@react-navigation/native', () => ({
+  StackActions: jest.requireActual('@react-navigation/native').StackActions,
   useNavigation: () => ({
     navigate: mockNavigate,
+    dispatch: (action: { payload: { name: string } }) => mockNavigate(action.payload.name),
     goBack: jest.fn(),
     canGoBack: () => false,
   }),
@@ -42,6 +47,10 @@ const APELLIDO = 'Rojas';
 const TOKEN = 'token-firmado';
 const CLIENTE = 'cliente-1';
 const GREETING = `Hola, ${NOMBRE}`;
+const DOCUMENTO = '1020304050';
+const TELEFONO = '3001234567';
+const BIRTH_YEAR = new Date().getFullYear() - 29;
+const BIRTH_MONTH = new Date().getMonth() + 1;
 
 function jsonResponse(body: unknown, status = 200) {
   return {
@@ -102,6 +111,21 @@ async function openLogin() {
   return view;
 }
 
+async function fillRegistration(view: Awaited<ReturnType<typeof render>>) {
+  await fireEvent.changeText(view.getByLabelText('Nombre'), `  ${NOMBRE}  `);
+  await fireEvent.changeText(view.getByLabelText('Apellido'), `  ${APELLIDO}  `);
+  await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
+  await fireEvent.changeText(view.getByLabelText('Número de documento'), ` ${DOCUMENTO} `);
+  await fireEvent.changeText(view.getByLabelText('Teléfono'), TELEFONO);
+  await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+  await fireEvent.press(view.getByText('dd/mm/aaaa'));
+  await fireEvent.press(view.getByLabelText('Cambiar año'));
+  await fireEvent.press(view.getByLabelText('Años anteriores'));
+  await fireEvent.press(view.getByLabelText('Años anteriores'));
+  await fireEvent.press(view.getByLabelText(`Año ${BIRTH_YEAR}`));
+  await fireEvent.press(view.getByLabelText(new RegExp(`^15 de .* de ${BIRTH_YEAR}$`)));
+}
+
 async function pressLabel(view: { getAllByText: (text: string) => Array<{ props: unknown }> }, label: string) {
   const matches = view.getAllByText(label);
   await fireEvent.press(matches[matches.length - 1]);
@@ -122,7 +146,6 @@ describe('sesión del cliente', () => {
     setAccessToken(null);
     useSessionStore.setState({
       status: 'checking',
-      token: null,
       clienteId: null,
       email: null,
       firstName: null,
@@ -131,7 +154,7 @@ describe('sesión del cliente', () => {
     installFetch();
   });
 
-  it('shows a blank screen while the stored token is still loading', async () => {
+  it('shows the brand and a loading indicator while the stored token is still loading', async () => {
     let resolveToken: (token: string | null) => void = () => undefined;
     jest.mocked(storage.readToken).mockImplementation(
       () =>
@@ -142,6 +165,8 @@ describe('sesión del cliente', () => {
 
     const view = await render(<Shell />);
 
+    expect(view.getByText('Solventa')).toBeTruthy();
+    expect(view.getByLabelText('Cargando')).toBeTruthy();
     expect(view.queryByText('Iniciar sesión')).toBeNull();
     expect(view.queryByText(GREETING)).toBeNull();
 
@@ -169,14 +194,14 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/sesiones$/);
     expect(init).toEqual({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({ correo: CORREO, contrasena: CONTRASENA }),
     });
     const [profileUrl, profileInit] = calls[1];
     expect(String(profileUrl)).toMatch(/\/movil\/sesion$/);
     expect(profileInit).toEqual({
       method: 'GET',
-      headers: { Authorization: `Bearer ${TOKEN}` },
+      headers: { 'Accept-Language': 'es', Authorization: `Bearer ${TOKEN}` },
       body: undefined,
     });
     expect(useSessionStore.getState()).toMatchObject({
@@ -185,6 +210,30 @@ describe('sesión del cliente', () => {
       lastName: APELLIDO,
     });
     expect(saved).toBe(TOKEN);
+  });
+
+  it('shows the active language on the button and picks another from a sheet', async () => {
+    const view = await openLogin();
+
+    expect(view.getByTestId('language-button')).toHaveTextContent('Español');
+    expect(view.queryByText('English')).toBeNull();
+    await fireEvent.press(view.getByTestId('language-button'));
+    expect(view.getByText('Idioma')).toBeTruthy();
+    expect(view.getByText('English')).toBeTruthy();
+
+    await fireEvent.press(view.getByText('English'));
+
+    expect(useLanguageStore.getState().language).toBe('en');
+    expect(view.getAllByText('Sign in').length).toBeGreaterThan(0);
+    expect(view.getByLabelText('Password')).toBeTruthy();
+    expect(view.getByTestId('language-button')).toHaveTextContent('English');
+
+    await fireEvent.press(view.getByTestId('language-button'));
+    expect(view.getByText('Language')).toBeTruthy();
+    await fireEvent.press(view.getByText('Español'));
+
+    expect(useLanguageStore.getState().language).toBe('es');
+    expect(view.getByTestId('language-button')).toHaveTextContent('Español');
   });
 
   it('shows the same error for a wrong password and stays on login', async () => {
@@ -225,13 +274,10 @@ describe('sesión del cliente', () => {
 
     await pressLabel(view, 'Crear cuenta');
     await pressLabel(view, 'Crear cuenta');
-    expect(view.getAllByText('Obligatorio')).toHaveLength(4);
+    expect(view.getAllByText('Obligatorio')).toHaveLength(7);
     expect(fetch).not.toHaveBeenCalled();
 
-    await fireEvent.changeText(view.getByLabelText('Nombre'), `  ${NOMBRE}  `);
-    await fireEvent.changeText(view.getByLabelText('Apellido'), `  ${APELLIDO}  `);
-    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
-    await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+    await fillRegistration(view);
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
@@ -239,14 +285,81 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/registros$/);
     expect(init).toEqual({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'es' },
       body: JSON.stringify({
         correo: CORREO,
         contrasena: CONTRASENA,
         nombre: NOMBRE,
         apellido: APELLIDO,
+        tipo_documento: 'CC',
+        numero_documento: DOCUMENTO,
+        telefono: TELEFONO,
+        fecha_nacimiento: `${BIRTH_YEAR}-${String(BIRTH_MONTH).padStart(2, '0')}-15`,
       }),
     });
+  });
+
+  it('blocks an email without a valid format before calling the API', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await fireEvent.changeText(view.getByLabelText('Correo'), 'ana@solventa');
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(view.getByText('Ingresa un correo válido.')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+  });
+
+  it('blocks a password shorter than 8 characters before calling the API', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), '1234567');
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(view.getByText('La contraseña debe tener al menos 8 caracteres.')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), '12345678');
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+  });
+
+  it('sends the document type the person chooses', async () => {
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    expect(view.getByText('Cédula de ciudadanía')).toBeTruthy();
+    await fireEvent.press(view.getByText('Cédula de ciudadanía'));
+    await fireEvent.press(view.getByLabelText('Pasaporte'));
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+    const [, init] = jest.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toMatchObject({ tipo_documento: 'Pasaporte' });
+  });
+
+  it('shows the duplicate document error', async () => {
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ detail: 'Ya existe una cuenta con este documento.' }, 409),
+    ) as typeof fetch;
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+    await fillRegistration(view);
+    await pressLabel(view, 'Crear cuenta');
+
+    await waitFor(() => expect(view.getByText('Ya existe una cuenta con este documento.')).toBeTruthy());
+    expect(view.queryByText(GREETING)).toBeNull();
   });
 
   it('shows the duplicate email error and stays on Crear cuenta', async () => {
@@ -256,10 +369,7 @@ describe('sesión del cliente', () => {
     const view = await openLogin();
 
     await pressLabel(view, 'Crear cuenta');
-    await fireEvent.changeText(view.getByLabelText('Nombre'), NOMBRE);
-    await fireEvent.changeText(view.getByLabelText('Apellido'), APELLIDO);
-    await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
-    await fireEvent.changeText(view.getByLabelText('Contraseña'), CONTRASENA);
+    await fillRegistration(view);
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText('Ya existe una cuenta con este correo.')).toBeTruthy());
@@ -268,6 +378,19 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Ya tengo cuenta');
     expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0);
     expect(view.queryByText('Ya existe una cuenta con este correo.')).toBeNull();
+  });
+
+  it('reads the stored token without waiting for the saved API address', async () => {
+    jest.mocked(storage.readToken).mockClear();
+    const load = jest.spyOn(apiBaseUrl, 'loadApiBaseUrl').mockImplementation(() => new Promise(() => undefined));
+    try {
+      await render(<Shell />);
+
+      await waitFor(() => expect(load).toHaveBeenCalled());
+      expect(storage.readToken).toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+    }
   });
 
   it('opens Inicio when the stored token is still valid', async () => {
@@ -282,7 +405,7 @@ describe('sesión del cliente', () => {
     expect(String(url)).toMatch(/\/movil\/sesion$/);
     expect(init).toEqual({
       method: 'GET',
-      headers: { Authorization: 'Bearer token-guardado' },
+      headers: { 'Accept-Language': 'es', Authorization: 'Bearer token-guardado' },
       body: undefined,
     });
   });
@@ -317,6 +440,23 @@ describe('sesión del cliente', () => {
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
     await fireEvent.press(view.getByText('Cerrar sesión'));
+
+    await waitFor(() => expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0));
+    expect(saved).toBeNull();
+    expect(view.queryByText(GREETING)).toBeNull();
+  });
+
+  it('returns to login and forgets the token when a later request is rejected with 401', async () => {
+    saved = 'token-guardado';
+    global.fetch = jest.fn(async (input: RequestInfo | URL) =>
+      String(input).endsWith('/movil/sesion')
+        ? profileResponse()
+        : jsonResponse({ detail: 'La sesión no es válida' }, 401),
+    ) as typeof fetch;
+    const view = await render(<Shell />);
+    await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
+
+    await expect(apiClient.get('/movil/siniestros')).rejects.toMatchObject({ status: 401 });
 
     await waitFor(() => expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0));
     expect(saved).toBeNull();

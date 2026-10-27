@@ -1,11 +1,7 @@
 import { getAccessToken } from './accessToken';
-
-const configuredApiBaseUrl = process.env.API_BASE_URL;
-if (configuredApiBaseUrl === undefined || configuredApiBaseUrl === '') {
-  throw new Error('Falta API_BASE_URL.');
-}
-
-const apiBaseUrl = configuredApiBaseUrl;
+import { useLanguageStore } from '../i18n/useLanguageStore';
+import { getApiBaseUrl } from './apiBaseUrl';
+import { notifyUnauthorized } from './unauthorized';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -42,8 +38,8 @@ function detailText(detail: unknown): string | null {
   return null;
 }
 
-function requestHeaders(payload: unknown): Record<string, string> | undefined {
-  const headers: Record<string, string> = {};
+function requestHeaders(payload: unknown): Record<string, string> {
+  const headers: Record<string, string> = { 'Accept-Language': useLanguageStore.getState().language };
   if (payload !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -51,7 +47,7 @@ function requestHeaders(payload: unknown): Record<string, string> | undefined {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  return Object.keys(headers).length > 0 ? headers : undefined;
+  return headers;
 }
 
 async function requestJson<T>(
@@ -59,13 +55,17 @@ async function requestJson<T>(
   path: string,
   payload?: unknown,
 ): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method,
     headers: requestHeaders(payload),
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
   const body = (await response.json().catch(() => null)) as { detail?: unknown; } | null;
   if (!response.ok) {
+    // Without a token the 401 is a login failure, not an expired session.
+    if (response.status === 401 && getAccessToken()) {
+      notifyUnauthorized();
+    }
     const detail = body ? detailText(body.detail) : null;
     throw new ApiError(response.status, detail);
   }

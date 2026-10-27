@@ -1,13 +1,13 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, identidad, pagos, siniestros
+from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
@@ -67,12 +67,19 @@ class SolicitudSesion(BaseModel):
 class SolicitudRegistro(SolicitudSesion):
     nombre: str
     apellido: str
+    tipo_documento: str
+    numero_documento: str
+    telefono: str
+    fecha_nacimiento: date
 
     @model_validator(mode="after")
     def _validar_registro(self) -> "SolicitudRegistro":
         self.nombre = self.nombre.strip()
         self.apellido = self.apellido.strip()
-        if not self.nombre or not self.apellido:
+        self.tipo_documento = self.tipo_documento.strip()
+        self.numero_documento = self.numero_documento.strip()
+        self.telefono = self.telefono.strip()
+        if not all((self.nombre, self.apellido, self.tipo_documento, self.numero_documento, self.telefono)):
             raise ValueError("El campo es obligatorio")
         return self
 
@@ -120,8 +127,27 @@ def _cotizacion_vencida() -> HTTPException:
     )
 
 
+class SolicitudEmisionMovil(BaseModel):
+    """Mobile solo identifica el cobro. Pólizas valida el pago y arma la póliza desde la cotización."""
+
+    model_config = ConfigDict(extra="ignore")
+    cobro_id: str
+
+    @field_validator("cobro_id")
+    @classmethod
+    def _cobro(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El pago es obligatorio")
+        return token
+
+
 def _cliente(session: SessionToken) -> dict[str, str]:
     return {"X-Cliente-Id": session.client_id}
+
+
+def _clave_emision(cliente_id: str, cotizacion_id: str, cobro_id: str) -> str:
+    return f"mobile:{cliente_id}:{cotizacion_id}:{cobro_id}"
 
 
 @router.get("/")
@@ -136,7 +162,7 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
 
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
 def registrar(solicitud: SolicitudRegistro) -> dict:
-    return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump())
+    return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump(mode="json"))
 
 
 @authenticated.get("/sesion")
@@ -201,6 +227,27 @@ def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
     if isinstance(oferta, dict):
         oferta.pop("cliente_id", None)
     return oferta
+
+
+@authenticated.post("/cotizaciones/{cotizacion_id}/polizas")
+def emitir_poliza(cotizacion_id: str, session: Session, solicitud: SolicitudEmisionMovil) -> dict:
+    """Delega la emisión en Pólizas. El teléfono no declara el pago, el dueño ni los datos de la póliza."""
+    return call_upstream(
+        polizas.post,
+        "/polizas/emisiones",
+        json={
+            "cotizacion_id": cotizacion_id,
+            "cobro_id": solicitud.cobro_id,
+            "idempotency_key": _clave_emision(session.client_id, cotizacion_id, solicitud.cobro_id),
+            "canal": "mobile",
+            "cliente_id": session.client_id,
+        },
+    )
+
+
+@authenticated.get("/polizas")
+def listar_polizas(session: Session) -> list:
+    return call_upstream(polizas.get, f"/polizas/clientes/{session.client_id}")
 
 
 @authenticated.get("/siniestros")
@@ -270,6 +317,16 @@ def listar_asistencias(aviso_id: str, session: Session):
         siniestros.get,
         f"/siniestros/avisos/{aviso_id}/asistencias",
         headers=_cliente(session),
+    )
+
+
+@authenticated.get("/prestadores/cercanos")
+def prestadores_cercanos(request: Request, session: Session):
+    # The catalog is not per client, and Siniestros validates the query.
+    return call_upstream(
+        siniestros.get,
+        "/siniestros/prestadores/cercanos",
+        params=dict(request.query_params),
     )
 
 

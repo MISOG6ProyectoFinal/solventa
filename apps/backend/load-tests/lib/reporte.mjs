@@ -12,6 +12,7 @@ export const PETICIONES = [
   { canal: 'Móvil', nombre: 'Listar evidencias' },
   { canal: 'Móvil', nombre: 'Radicar siniestro' },
   { canal: 'Móvil', nombre: 'Listar siniestros' },
+  { canal: 'Móvil', nombre: 'Prestadores cercanos', objetivoMs: 200 },
   { canal: 'Portal web', nombre: 'Cotizar desde el portal', cotizacion: true },
   { canal: 'Portal web', nombre: 'Listar socios' },
   { canal: 'Portal web', nombre: 'Detalle del socio' },
@@ -46,12 +47,12 @@ function latencias(v) {
 
 export function analizar(data, { umbralP95, umbralCotizacion, umbralErrores, perfil = 'carga' }) {
   const duracionS = Math.max(data.state.testRunDurationMs / 1000, 0.001);
-  const filas = PETICIONES.flatMap(({ canal, nombre, cotizacion }) => {
+  const filas = PETICIONES.flatMap(({ canal, nombre, cotizacion, objetivoMs }) => {
     const duracion = valores(data, `http_req_duration{name:${nombre}}`);
     const peticiones = valores(data, `http_reqs{name:${nombre}}`)?.count ?? 0;
     if (!duracion || peticiones === 0) return [];
     const pctErrores = 100 * (valores(data, `errores{name:${nombre}}`)?.rate ?? 0);
-    const objetivo = cotizacion ? umbralCotizacion : umbralP95;
+    const objetivo = objetivoMs ?? (cotizacion ? umbralCotizacion : umbralP95);
     const fila = { canal, peticion: nombre, cotizacion: Boolean(cotizacion), peticiones, pctErrores, objetivo };
     return [{ ...fila, ...latencias(duracion), cumple: duracion['p(95)'] <= objetivo && pctErrores <= umbralErrores }];
   });

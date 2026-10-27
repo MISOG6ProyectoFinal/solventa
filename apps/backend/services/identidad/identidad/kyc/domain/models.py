@@ -2,6 +2,9 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, model_validator
 
+TIPOS_DOCUMENTO = ("CC", "CE", "Pasaporte")
+MIN_PASSWORD_LENGTH = 8
+
 
 class Client(BaseModel):
     id: str
@@ -13,9 +16,6 @@ class Client(BaseModel):
     numero_documento: str = ""
     fecha_nacimiento: date | str | None = None
     telefono: str = ""
-    pais: str = "Colombia"
-    password_hash: str = ""
-    salt: str = ""
 
     @model_validator(mode="after")
     def _sync_names(self) -> "Client":
@@ -30,6 +30,12 @@ class Client(BaseModel):
         return self
 
 
+class Account(BaseModel):
+    client_id: str
+    password_hash: str
+    salt: str
+
+
 class Session(BaseModel):
     token: str
     client_id: str
@@ -40,6 +46,10 @@ class InvalidCredentials(Exception):
 
 
 class EmailAlreadyRegistered(Exception):
+    pass
+
+
+class DocumentAlreadyRegistered(Exception):
     pass
 
 
@@ -85,7 +95,6 @@ class SolicitudConsentimiento(BaseModel):
     email: str = ""
     telefono: str = ""
     fecha_nacimiento: str | None = None
-    pais: str = "Colombia"
     ramo: str = "VIDA_HIPOTECARIO"
     canal: str = "sms"
     contacto: str = ""

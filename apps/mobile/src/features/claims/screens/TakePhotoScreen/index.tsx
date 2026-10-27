@@ -6,9 +6,10 @@ import { Camera, useCameraPermission, usePhotoOutput } from 'react-native-vision
 import { AppText, Banner, Button, Screen } from '../../../../shared/ui';
 import { useLocation } from '../../../../shared/useLocation';
 import { maxEvidenceBytes, photoQuality } from '../../constants';
+import { readFileSize } from '../../fileSize';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import { photoUri } from '../../photo';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 type CapturedPhoto = {
@@ -17,6 +18,7 @@ type CapturedPhoto = {
 };
 
 export default function TakePhotoScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const photoOutput = usePhotoOutput({ quality: photoQuality });
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -35,9 +37,8 @@ export default function TakePhotoScreen() {
     const photo = await photoOutput.capturePhoto({}, {});
 
     try {
-      const data = await photo.getFileDataAsync();
       const filePath = await photo.saveToTemporaryFileAsync();
-      setCaptured({ filePath, bytes: data.byteLength });
+      setCaptured({ filePath, bytes: await readFileSize(filePath) });
     } finally {
       photo.dispose();
     }

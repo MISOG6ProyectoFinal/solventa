@@ -164,3 +164,15 @@ print_sonar_hotspots() {
   ' "$file"
   echo "Total: ${count}"
 }
+
+# Prints one Sonar listing as a collapsed group in the GitHub log. The title carries the count.
+print_sonar_group() {
+  local title="$1"
+  local kind="$2"
+  local file="$3"
+  local count
+  count="$(jq -r --arg kind "$kind" '(.[$kind] // []) | length' "$file")"
+  echo "::group::${title} (${count})"
+  "print_sonar_${kind}" "$file"
+  echo "::endgroup::"
+}

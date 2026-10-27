@@ -13,7 +13,7 @@
 #     DB_PASSWORD=solventa uvicorn cotizacion.main:app --reload
 services:
   postgres:
-    image: postgres:17
+    image: postgis/postgis:17-3.5
     environment:
       POSTGRES_USER: solventa
       POSTGRES_PASSWORD: solventa
@@ -43,12 +43,12 @@ services:
       retries: 20
       start_period: 15s
   siniestros:
-    build:
+    build: &siniestros-build
       context: .
       args:
         SERVICE: siniestros
     ports: ["8001:8000"]
-    environment:
+    environment: &siniestros-db
       SERVICE_NAME: siniestros
       DB_HOST: postgres
       DB_NAME: siniestros
@@ -72,6 +72,16 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+  # Carga el catálogo de prestadores (seed y OpenStreetMap). Si OpenStreetMap no responde, queda el seed.
+  # Una vez: docker compose run --rm siniestros-prestadores-sync
+  siniestros-prestadores-sync:
+    build: *siniestros-build
+    command: ["python", "-m", "siniestros.prestadores.sync"]
+    environment: *siniestros-db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["sync"]
   cotizacion-bootstrap:
     build: &cotizacion-build
       context: .
@@ -99,21 +109,29 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
-  identidad:
-    build:
+  identidad-migrate:
+    build: &identidad-build
       context: .
       args:
         SERVICE: identidad
-    environment:
+    command: ["python", "-m", "identidad.kyc.migrate"]
+    environment: &identidad-db
       SERVICE_NAME: identidad
       DB_HOST: postgres
       DB_NAME: identidad
       DB_USER: solventa
       DB_PASSWORD: solventa
-      SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
     depends_on:
       postgres:
         condition: service_healthy
+  identidad:
+    build: *identidad-build
+    environment:
+      <<: *identidad-db
+      SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
+    depends_on:
+      identidad-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
       interval: 5s

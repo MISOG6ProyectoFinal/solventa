@@ -1,7 +1,12 @@
-import { texts } from './texts';
-import { QuoteFormValues } from './types';
+import { toApiDate, toDisplayDate } from '../../shared/date';
+import { type Language } from '../../shared/i18n/language';
+import { useLanguageStore } from '../../shared/i18n/useLanguageStore';
+import { textsFor } from './texts';
+import { QuoteFormError, QuoteFormValues } from './types';
 
-function thousands(digits: string): string {
+const thousandsSeparator: Record<Language, string> = { es: '.', en: ',' };
+
+function thousands(digits: string, separator: string): string {
   const groups: string[] = [];
   let rest = digits;
 
@@ -11,32 +16,14 @@ function thousands(digits: string): string {
   }
   groups.unshift(rest);
 
-  return groups.join('.');
+  return groups.join(separator);
 }
 
-/** COP sin decimales en es-CO: $120.000, $149.940. */
-export function formatMoney(value: string | number): string {
+/** COP without decimals: $120.000 in Spanish, $120,000 in English. */
+export function formatMoney(value: string | number, language = useLanguageStore.getState().language): string {
   const amount = Math.round(Number(value));
   const sign = amount < 0 ? '-' : '';
-  return `${sign}$${thousands(String(Math.abs(amount)))}`;
-}
-
-/** dd/MM/yyyy → yyyy-MM-dd por texto, sin pasar por UTC. */
-export function toApiDate(value: string): string {
-  const [day, month, year] = value.split('/');
-  return `${year}-${month}-${day}`;
-}
-
-/** yyyy-MM-dd → dd/MM/yyyy por texto, sin pasar por UTC. */
-export function fromApiDate(value: string): string {
-  const [year, month, day] = value.split('-');
-  return `${day}/${month}/${year}`;
-}
-
-/** Fecha local como dd/MM/yyyy, sin pasar por UTC. */
-export function toDisplayDate(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  return `${sign}$${thousands(String(Math.abs(amount)), thousandsSeparator[language])}`;
 }
 
 export function addDays(date: Date, days: number): Date {
@@ -60,7 +47,11 @@ export function digitsOnly(value: string): string {
 }
 
 /** Muestra el límite que ya calculó el backend, sin volver a decidir la hora de corte. */
-export function formatVigenteHasta(iso: string, now = new Date()): string {
+export function formatVigenteHasta(
+  iso: string,
+  now = new Date(),
+  language = useLanguageStore.getState().language,
+): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
   if (!match) {
     return iso;
@@ -72,7 +63,7 @@ export function formatVigenteHasta(iso: string, now = new Date()): string {
   const clock = `${match[4]}:${match[5]}`;
   const sameDay = now.getFullYear() === year && now.getMonth() + 1 === month && now.getDate() === day;
   if (sameDay) {
-    return `hoy ${clock}`;
+    return `${textsFor(language).result.today} ${clock}`;
   }
 
   return `${match[3]}/${match[2]}/${match[1]} ${clock}`;
@@ -88,39 +79,39 @@ export function quoteReference(ofertaId: string): string {
 }
 
 /** Reglas del formulario de viaje; devuelve un mensaje por campo inválido. */
-export function validateQuoteForm(values: QuoteFormValues): Partial<QuoteFormValues> {
-  const errors: Partial<QuoteFormValues> = {};
+export function validateQuoteForm(values: QuoteFormValues): Partial<Record<keyof QuoteFormValues, QuoteFormError>> {
+  const errors: Partial<Record<keyof QuoteFormValues, QuoteFormError>> = {};
   const today = toApiDate(toDisplayDate(new Date()));
 
   if (values.nombre.trim() === '') {
-    errors.nombre = texts.form.required;
+    errors.nombre = 'required';
   }
 
   if (values.cedula.trim() === '' || !/^\d+$/.test(values.cedula)) {
-    errors.cedula = texts.form.required;
+    errors.cedula = 'required';
   }
 
   if (values.destino === '') {
-    errors.destino = texts.form.required;
+    errors.destino = 'required';
   }
 
   if (values.fechaSalida === '') {
-    errors.fechaSalida = texts.form.required;
+    errors.fechaSalida = 'required';
   } else if (toApiDate(values.fechaSalida) < today) {
-    errors.fechaSalida = texts.form.departureInPast;
+    errors.fechaSalida = 'departureInPast';
   }
 
   if (values.fechaRegreso === '') {
-    errors.fechaRegreso = texts.form.required;
+    errors.fechaRegreso = 'required';
   } else if (values.fechaSalida !== '' && toApiDate(values.fechaRegreso) <= toApiDate(values.fechaSalida)) {
-    errors.fechaRegreso = texts.form.returnBeforeDeparture;
+    errors.fechaRegreso = 'returnBeforeDeparture';
   }
 
   const travelers = Number(values.viajeros);
   if (values.viajeros.trim() === '') {
-    errors.viajeros = texts.form.required;
+    errors.viajeros = 'required';
   } else if (!Number.isInteger(travelers) || travelers < 1) {
-    errors.viajeros = texts.form.travelersAtLeastOne;
+    errors.viajeros = 'travelersAtLeastOne';
   }
 
   return errors;

@@ -10,13 +10,6 @@ export default StyleSheet.create({
     padding: theme.space.lg,
     gap: theme.space.md,
   },
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.space.lg,
-    padding: theme.space.lg,
-  },
   title: {
     fontFamily: theme.type.subtitle.fontFamily,
     fontWeight: theme.type.subtitle.fontWeight,

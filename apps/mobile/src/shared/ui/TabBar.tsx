@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTexts } from '../texts';
 import { theme } from '../theme';
 import { AppText } from './AppText';
 import { Icon, type IconColor } from './Icon';
@@ -17,11 +18,11 @@ import { type IconName } from './icons';
 
 type TabId = 'Home' | 'Policies' | 'Claims' | 'Buy';
 
-const tabs: { id: TabId; label: string; icon: IconName }[] = [
-  { id: 'Home', label: 'Inicio', icon: 'inicio' },
-  { id: 'Policies', label: 'Pólizas', icon: 'polizas' },
-  { id: 'Claims', label: 'Siniestros', icon: 'siniestros' },
-  { id: 'Buy', label: 'Comprar', icon: 'comprar' },
+const tabs: { id: TabId; labelKey: 'home' | 'policies' | 'claims' | 'buy'; icon: IconName }[] = [
+  { id: 'Home', labelKey: 'home', icon: 'inicio' },
+  { id: 'Policies', labelKey: 'policies', icon: 'polizas' },
+  { id: 'Claims', labelKey: 'claims', icon: 'siniestros' },
+  { id: 'Buy', labelKey: 'buy', icon: 'comprar' },
 ];
 
 type TabBarProps = {
@@ -31,6 +32,7 @@ type TabBarProps = {
 
 export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
   const insets = useSafeAreaInsets();
+  const texts = useTexts();
   const [barWidth, setBarWidth] = useState(0);
   const selectedIndex = Math.max(
     tabs.findIndex((tab) => tab.id === value),
@@ -87,7 +89,7 @@ export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
           <Pressable
             key={tab.id}
             accessibilityRole="tab"
-            accessibilityLabel={tab.label}
+            accessibilityLabel={texts.tabs[tab.labelKey]}
             accessibilityState={{ selected }}
             onPress={() => onChange(tab.id)}
             style={styles.item}
@@ -97,7 +99,7 @@ export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
               variant="caption"
               style={{ color: selected ? theme.colors.onNavy : theme.colors.onNavyMuted }}
             >
-              {tab.label}
+              {texts.tabs[tab.labelKey]}
             </AppText>
           </Pressable>
         );

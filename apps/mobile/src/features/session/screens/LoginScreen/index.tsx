@@ -8,16 +8,19 @@ import {
   type ScrollViewInstance,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '../../../../shared/api/client';
-import Logo from '../../../../shared/brand/solventa-logo.svg';
-import { AppText, Banner, Button, Screen, TextField } from '../../../../shared/ui';
+import { theme } from '../../../../shared/theme';
+import { Banner, BrandLogo, Button, IconButton, LanguageSelector, Screen, TextField } from '../../../../shared/ui';
 import { useSessionStore } from '../../store/useSessionStore';
-import { texts } from '../../texts';
+import { useTexts } from '../../texts';
 import styles from './styles';
 
 export default function LoginScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const signIn = useSessionStore((state) => state.signIn);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,10 +75,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.logo}>
-            <Logo width={88} height={103} />
-            <AppText variant="sectionTitle">Solventa</AppText>
-          </View>
+          <BrandLogo style={styles.logo} />
           {error ? <Banner variant="error">{error}</Banner> : null}
           <TextField
             label={texts.login.emailLabel}
@@ -103,6 +103,19 @@ export default function LoginScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+      <View style={[styles.languageToggle, { top: insets.top + theme.space.sm }]}>
+        <LanguageSelector />
+      </View>
+      {__DEV__ ? (
+        <View style={[styles.devTools, { top: insets.top + theme.space.sm }]}>
+          <IconButton
+            label={texts.login.devToolsLabel}
+            icon="api"
+            color="primary"
+            onPress={() => navigation.navigate('DevTools')}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }

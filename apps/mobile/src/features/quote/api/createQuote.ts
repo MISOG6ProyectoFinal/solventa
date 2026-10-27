@@ -1,6 +1,6 @@
 import { apiClient } from '../../../shared/api/client';
 import { OfertaCotizacion, QuoteFormValues } from '../types';
-import { toApiDate } from '../utils';
+import { toApiDate } from '../../../shared/date';
 
 export function createQuote(productoId: string, values: QuoteFormValues): Promise<OfertaCotizacion> {
   return apiClient.post('/movil/cotizaciones', {

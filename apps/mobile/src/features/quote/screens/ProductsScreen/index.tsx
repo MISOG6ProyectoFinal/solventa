@@ -1,25 +1,30 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
-import { AppText, Banner, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { AppText, Card, ErrorState, LoadingState, Screen, StatusChip } from '../../../../shared/ui';
 import { getProducts } from '../../api/getProducts';
 import { useQuoteStore } from '../../store/useQuoteStore';
-import { texts } from '../../texts';
+import { getTexts, useTexts } from '../../texts';
 import { ProductoMovil } from '../../types';
 import { formatMoney } from '../../utils';
 import styles from './styles';
 
 export default function ProductsScreen() {
+  const texts = useTexts();
   const navigation = useNavigation();
   const selectProduct = useQuoteStore((state) => state.selectProduct);
   const [products, setProducts] = useState<ProductoMovil[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
     getProducts()
       .then((items) => {
@@ -29,7 +34,7 @@ export default function ProductsScreen() {
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setError(errorMessage(cause, texts.products.loadFailed));
+          setError(errorMessage(cause, getTexts().products.loadFailed));
         }
       })
       .finally(() => {
@@ -41,7 +46,7 @@ export default function ProductsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   const openProduct = (product: ProductoMovil) => {
     if (!product.disponible) {
@@ -63,10 +68,15 @@ export default function ProductsScreen() {
       }}
     >
       {loading ? (
-        <ActivityIndicator testID="products-loading" style={styles.loading} />
+        <LoadingState testID="products-loading" label={texts.products.loading} />
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-          {error ? <Banner variant="error">{error}</Banner> : null}
+          {error ? (
+            <ErrorState
+              message={error}
+              retry={{ label: texts.products.retryButton, onPress: () => setAttempt((count) => count + 1) }}
+            />
+          ) : null}
           {products.map((product) => (
             <Card
               key={product.id}

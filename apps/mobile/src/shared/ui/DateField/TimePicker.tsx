@@ -5,6 +5,7 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { theme } from '../../theme';
 import { outfitFont } from '../../theme/fonts';
 import { AppText } from '../AppText';
+import { useTexts } from '../../texts';
 
 type TimePartProps = {
   label: string;
@@ -58,13 +59,14 @@ type TimePickerProps = {
 };
 
 export function TimePicker({ hour, minute, onHour, onMinute }: Readonly<TimePickerProps>) {
+  const texts = useTexts();
   return (
     <View style={styles.row}>
-      <TimePart label="Hora" value={hour} max={23} onChange={onHour} />
+      <TimePart label={texts.date.hour} value={hour} max={23} onChange={onHour} />
       <AppText variant="subtitle" accessibilityElementsHidden importantForAccessibility="no" style={styles.colon}>
         :
       </AppText>
-      <TimePart label="Minuto" value={minute} max={59} onChange={onMinute} />
+      <TimePart label={texts.date.minute} value={minute} max={59} onChange={onMinute} />
     </View>
   );
 }
