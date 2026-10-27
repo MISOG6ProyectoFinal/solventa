@@ -41,7 +41,7 @@ export function FieldFrame({
 
   const control = (
     <Animated.View
-      testID={testID}
+      testID={onPress ? undefined : testID}
       style={[
         styles.control,
         {
@@ -73,7 +73,13 @@ export function FieldFrame({
           </AppText>
         ) : null}
       </AppText>
-      {onPress ? <Pressable onPress={onPress}>{control}</Pressable> : control}
+      {onPress ? (
+        <Pressable testID={testID} accessibilityRole="button" onPress={onPress}>
+          {control}
+        </Pressable>
+      ) : (
+        control
+      )}
       {message ? (
         <AppText variant="caption" style={styles.message}>
           {message}

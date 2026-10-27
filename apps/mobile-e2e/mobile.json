@@ -1,0 +1,6 @@
+{
+  "type": "singular",
+  "apk_path": "../mobile/android/app/build/outputs/apk/debug/app-debug.apk",
+  "apk_package": "com.solventa",
+  "apk_launch_activity": "com.solventa.MainActivity"
+}

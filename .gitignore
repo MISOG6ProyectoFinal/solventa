@@ -91,6 +91,12 @@ CLAUDE.md
 
 .env
 
+# Credenciales y salida local de mobile-e2e. El ejemplo versionado es properties.example.json.
+apps/mobile-e2e/properties.json
+apps/mobile-e2e/.kraken/
+apps/mobile-e2e/reports/
+apps/mobile-e2e/.appium/
+
 tools/project-metrics/.cache/
 
 apps/mobile/IMPROVEMENTS.md

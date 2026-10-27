@@ -1,0 +1,16 @@
+{
+  "name": "mobile-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/mobile-e2e",
+  "tags": [],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node run.js",
+        "cwd": "apps/mobile-e2e"
+      }
+    }
+  }
+}
