@@ -3,14 +3,17 @@ from pydantic import BaseModel, field_validator
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
+    ClienteNoEncontrado,
     CodigoOtpInvalido,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
     RespuestaValidacion,
+    SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
 
@@ -79,6 +82,19 @@ def registrar_cliente(solicitud: SolicitudRegistro) -> dict:
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este correo.") from exc
     return {"token": session.token, "cliente_id": session.client_id}
+
+
+@router.get("/clientes/por-documento/{tipo_documento}/{numero_documento}", response_model=RespuestaCliente)
+def buscar_cliente_por_documento(tipo_documento: str, numero_documento: str) -> RespuestaCliente:
+    try:
+        return container.buscar_cliente_por_documento.execute(tipo_documento, numero_documento)
+    except ClienteNoEncontrado as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.post("/clientes/asegurar", response_model=RespuestaCliente)
+def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
+    return container.asegurar_cliente.execute(solicitud)
 
 
 # --- Endpoints de Consentimiento Digital (HU002) ---

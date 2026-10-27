@@ -7,6 +7,8 @@ from identidad.kyc.adapters.consentimiento_repository import (
 )
 from identidad.kyc.adapters.repository import InMemoryClientRepository, PostgresClientRepository
 from identidad.kyc.domain.use_cases import (
+    AsegurarCliente,
+    BuscarClientePorDocumento,
     ConsultarConsentimiento,
     RegisterClient,
     SolicitarConsentimiento,
@@ -42,6 +44,8 @@ class Container:
         self.solicitar_consentimiento = SolicitarConsentimiento(self.consentimientos, self.clients)
         self.validar_consentimiento = ValidarConsentimiento(self.consentimientos)
         self.consultar_consentimiento = ConsultarConsentimiento(self.consentimientos, self.clients)
+        self.buscar_cliente_por_documento = BuscarClientePorDocumento(self.clients)
+        self.asegurar_cliente = AsegurarCliente(self.clients)
 
 
 container = Container()

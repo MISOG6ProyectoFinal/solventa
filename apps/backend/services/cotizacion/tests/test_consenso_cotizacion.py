@@ -1,6 +1,7 @@
 """Pruebas de la oferta de cotización vía consenso (persistencia de negocio)."""
 
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from cotizacion.catalogo.domain.models import Producto
 from cotizacion.container import container
@@ -308,3 +309,20 @@ def test_calculo_de_rating_no_persiste_cotizacion():
     assert "coberturas" not in response.json()
     assert "vigencia_propuesta" not in response.json()
     assert container.cotizaciones.count() == antes
+
+
+def test_cotizacion_incluye_desglose_y_estado_vigente():
+    response = post_viaje()
+    assert response.status_code == 200
+    data = response.json()
+    assert data["estado"] == "VIGENTE"
+    assert data["desglose"] is not None
+    assert data["desglose"]["prima_basica"] == "126000.00"
+    assert data["desglose"]["impuestos"] == "23940.00"
+    assert data["desglose"]["total"] == "149940.00"
+
+    guardada = container.cotizaciones.get(data["id"])
+    assert guardada is not None
+    assert guardada.estado == "VIGENTE"
+    assert guardada.desglose is not None
+    assert guardada.desglose.total == Decimal("149940.00")

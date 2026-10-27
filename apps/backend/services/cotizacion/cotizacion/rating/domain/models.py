@@ -10,6 +10,7 @@ class SolicitudCotizacion(BaseModel):
     suma_asegurada: Decimal = Field(gt=0)
     edad: int = Field(ge=18, le=99)
     score_riesgo: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
+    cliente_id: str | None = None
 
 
 class SolicitudCotizacionViaje(BaseModel):
@@ -18,6 +19,7 @@ class SolicitudCotizacionViaje(BaseModel):
     fecha_salida: date
     fecha_regreso: date
     viajeros: int = Field(ge=1)
+    cliente_id: str | None = None
 
     @model_validator(mode="after")
     def _regreso_posterior_a_salida(self) -> Self:
@@ -32,6 +34,7 @@ class SolicitudCotizacionMicroseguroVida(BaseModel):
     suma_asegurada: Decimal = Field(gt=0)
     beneficiario: str
     parentesco: Literal["Cónyuge", "Hijo(a)", "Padre / Madre", "Otro"]
+    cliente_id: str | None = None
 
 
 class SolicitudCotizacionVidaHipotecario(BaseModel):
@@ -41,6 +44,8 @@ class SolicitudCotizacionVidaHipotecario(BaseModel):
     valor_credito: Decimal = Field(gt=0)
     plazo_anios: int = Field(ge=1)
     score_riesgo: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
+    consentimiento_id: str | None = None
+    cliente_id: str | None = None
 
 
 class SolicitudCotizacionParametrico(BaseModel):
@@ -49,6 +54,7 @@ class SolicitudCotizacionParametrico(BaseModel):
     referencia: str
     fecha_evento: date
     valor_indemnizar: Decimal = Field(gt=0)
+    cliente_id: str | None = None
 
 
 SolicitudRating = (
@@ -60,8 +66,17 @@ SolicitudRating = (
 )
 
 
+class DesgloseCotizacion(BaseModel):
+    prima_basica: Decimal
+    recargo_riesgo: Decimal = Decimal("0.00")
+    coberturas_adicionales: Decimal = Decimal("0.00")
+    impuestos: Decimal = Decimal("0.00")
+    total: Decimal
+
+
 class Cotizacion(BaseModel):
     producto_id: str
     prima: Decimal
     version_reglas: str
     instancia: str
+    desglose: DesgloseCotizacion | None = None

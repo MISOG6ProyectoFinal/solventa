@@ -25,7 +25,14 @@ export type ConsentPanelState = 'idle' | 'enviando' | 'pending' | 'validando' | 
 /** Consentimiento digital Open Finance / Open Data (solo obligatorio en ramos que lo requieren). */
 @Component({
   selector: 'slv-consent-panel',
-  imports: [FormsModule, CardComponent, AlertComponent, FieldComponent, InputDirective, ButtonComponent],
+  imports: [
+    FormsModule,
+    CardComponent,
+    AlertComponent,
+    FieldComponent,
+    InputDirective,
+    ButtonComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './consent-panel.component.html',
 })
@@ -40,6 +47,7 @@ export class ConsentPanelComponent {
   readonly documento = input<string>('');
   readonly tipoDocumento = input<string>('CC');
   readonly nombre = input<string>('');
+  readonly apellido = input<string>('');
   readonly fechaNacimiento = input<string>('');
   readonly requested = output<void>();
   readonly consentValidated = output<boolean>();
@@ -106,7 +114,11 @@ export class ConsentPanelComponent {
         }
       }
       const message = errorObj['message'];
-      if (typeof message === 'string' && !message.startsWith('Http failure') && message.trim().length > 0) {
+      if (
+        typeof message === 'string' &&
+        !message.startsWith('Http failure') &&
+        message.trim().length > 0
+      ) {
         return message;
       }
     }
@@ -143,6 +155,7 @@ export class ConsentPanelComponent {
 
     const rawTipoDoc = this.tipoDocumento()?.trim();
     const rawNombre = this.nombre()?.trim();
+    const rawApellido = this.apellido()?.trim();
     const rawNacimiento = this.fechaNacimiento()?.trim();
 
     return {
@@ -150,6 +163,7 @@ export class ConsentPanelComponent {
       tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
       numero_documento: doc ?? '',
       nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
+      apellido: rawApellido && rawApellido.length > 0 ? rawApellido : '',
       email: this.resolveEmail(destino),
       telefono: this.resolveTelefono(destino),
       fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
@@ -169,10 +183,12 @@ export class ConsentPanelComponent {
     const rawDoc = this.documento()?.trim();
     const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${rawDoc}` : 'CLI-51502';
     const rawNom = this.nombre()?.trim();
-    const fallbackNom = rawNom && rawNom.length > 0 ? rawNom : 'Cliente';
-    const alcancesArr = [this.openFinance() ? 'Open Finance' : '', this.openData() ? 'Open Data' : ''].filter(
-      Boolean
-    );
+    const rawApe = this.apellido()?.trim();
+    const fallbackNom = [rawNom, rawApe].filter(Boolean).join(' ') || 'Cliente';
+    const alcancesArr = [
+      this.openFinance() ? 'Open Finance' : '',
+      this.openData() ? 'Open Data' : '',
+    ].filter(Boolean);
 
     return {
       consentimiento_id: this.consentimientoId(),
@@ -194,7 +210,9 @@ export class ConsentPanelComponent {
     const destino = this.contactoDestino();
     if (!destino) {
       const canalTxt = this.channel() === 'sms' ? 'el celular' : 'el correo electrónico';
-      this.errorMsg.set(`Por favor ingrese ${canalTxt} del cliente en el formulario antes de solicitar el código.`);
+      this.errorMsg.set(
+        `Por favor ingrese ${canalTxt} del cliente en el formulario antes de solicitar el código.`,
+      );
       return;
     }
 
@@ -246,7 +264,9 @@ export class ConsentPanelComponent {
         });
       },
       error: (err) => {
-        this.errorMsg.set(this.extractErrorMessage(err, 'Código OTP incorrecto. Vuelva a intentarlo.'));
+        this.errorMsg.set(
+          this.extractErrorMessage(err, 'Código OTP incorrecto. Vuelva a intentarlo.'),
+        );
         this.estado.set('pending');
       },
     });
@@ -262,5 +282,9 @@ export class ConsentPanelComponent {
     if (!/^\d$/.test(event.key)) {
       event.preventDefault();
     }
+  }
+
+  public getConsentimientoId(): string {
+    return this.consentimientoId();
   }
 }

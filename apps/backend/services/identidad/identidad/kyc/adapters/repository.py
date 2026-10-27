@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import Column, Date, MetaData, String, Table, insert, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -10,11 +12,12 @@ clients = Table(
     "clientes",
     metadata,
     Column("id", String(36), primary_key=True),
+    Column("correo", String(254), nullable=True),
     Column("tipo_documento", String(10), nullable=True, default="CC"),
     Column("numero_documento", String(30), nullable=True, index=True),
     Column("nombre", String(120), nullable=False),
     Column("fecha_nacimiento", Date, nullable=True),
-    Column("email", String(254), nullable=False),
+    Column("email", String(254), nullable=False, unique=True),
     Column("telefono", String(30), nullable=True),
     Column("pais", String(50), nullable=True, default="Colombia"),
     Column("apellido", String(120), nullable=True, default=""),
@@ -23,12 +26,24 @@ clients = Table(
 )
 
 
+def _parse_date(val: date | str | None) -> date | None:
+    if not val:
+        return None
+    if isinstance(val, date):
+        return val
+    try:
+        return date.fromisoformat(str(val).split("T")[0])
+    except Exception:
+        return None
+
+
 def _client(row) -> Client:
-    email = row.get("email") or ""
+    email = row.get("email") or row.get("correo") or ""
     return Client(
         id=row["id"],
         email=email,
         nombre=row.get("nombre") or "",
+        last_name=row.get("apellido") or "",
         tipo_documento=row.get("tipo_documento") or "CC",
         numero_documento=row.get("numero_documento") or "",
         fecha_nacimiento=row.get("fecha_nacimiento"),
@@ -43,17 +58,19 @@ def _merge_and_save_client(repo, client: Client) -> Client:
     existing = None
     if client.numero_documento:
         existing = repo.get_by_documento(client.tipo_documento, client.numero_documento)
-    if not existing and client.email:
-        existing = repo.get_by_email(client.email)
     if not existing and client.id:
         existing = repo.get(client.id)
+    if not existing and client.email and not client.numero_documento:
+        existing = repo.get_by_email(client.email)
 
     if existing:
         existing.nombre = client.nombre or existing.nombre
+        existing.last_name = client.last_name or existing.last_name
         existing.telefono = client.telefono or existing.telefono
         existing.email = client.email or existing.email
         existing.tipo_documento = client.tipo_documento or existing.tipo_documento
         existing.numero_documento = client.numero_documento or existing.numero_documento
+        existing.pais = client.pais or existing.pais
         if client.fecha_nacimiento:
             existing.fecha_nacimiento = client.fecha_nacimiento
         repo.update(existing)
@@ -70,6 +87,10 @@ class PostgresClientRepository:
         metadata.create_all(self.engine)
         try:
             with self.engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE clientes ALTER COLUMN correo DROP NOT NULL;"))
+                except Exception:
+                    pass
                 conn.execute(
                     text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(10) DEFAULT 'CC';")
                 )
@@ -78,8 +99,22 @@ class PostgresClientRepository:
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;"))
                 conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS pais VARCHAR(50) DEFAULT 'Colombia';"))
+                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS apellido VARCHAR(120) DEFAULT '';"))
+                try:
+                    conn.execute(
+                        text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS ix_clientes_email_unique"
+                            " ON clientes (LOWER(email)) WHERE email IS NOT NULL AND email != '';"
+                        )
+                    )
+                except Exception:
+                    pass
                 try:
                     conn.execute(text("UPDATE clientes SET email = correo WHERE email IS NULL OR email = '';"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("UPDATE clientes SET correo = email WHERE correo IS NULL OR correo = '';"))
                 except Exception:
                     pass
         except Exception:
@@ -91,16 +126,17 @@ class PostgresClientRepository:
                 conn.execute(
                     insert(clients).values(
                         id=client.id,
+                        correo=client.email,
                         tipo_documento=client.tipo_documento,
                         numero_documento=client.numero_documento,
                         nombre=client.nombre,
-                        fecha_nacimiento=client.fecha_nacimiento if client.fecha_nacimiento else None,
+                        fecha_nacimiento=_parse_date(client.fecha_nacimiento),
                         email=client.email,
                         telefono=client.telefono,
                         pais=client.pais,
-                        apellido=client.last_name,
-                        password_hash=client.password_hash,
-                        salt=client.salt,
+                        apellido=client.last_name or "",
+                        password_hash=client.password_hash or "",
+                        salt=client.salt or "",
                     )
                 )
         except IntegrityError as exc:
@@ -112,10 +148,12 @@ class PostgresClientRepository:
                 update(clients)
                 .where(clients.c.id == client.id)
                 .values(
+                    correo=client.email,
                     tipo_documento=client.tipo_documento,
                     numero_documento=client.numero_documento,
                     nombre=client.nombre,
-                    fecha_nacimiento=client.fecha_nacimiento if client.fecha_nacimiento else None,
+                    apellido=client.last_name or "",
+                    fecha_nacimiento=_parse_date(client.fecha_nacimiento),
                     email=client.email,
                     telefono=client.telefono,
                     pais=client.pais,
@@ -147,7 +185,11 @@ class PostgresClientRepository:
     def get_by_email(self, email: str) -> Client | None:
         normalized = email.lower()
         with self.engine.connect() as conn:
-            row = conn.execute(select(clients).where(clients.c.email == normalized)).mappings().first()
+            row = (
+                conn.execute(select(clients).where((clients.c.email == normalized) | (clients.c.correo == normalized)))
+                .mappings()
+                .first()
+            )
         return _client(row) if row else None
 
 

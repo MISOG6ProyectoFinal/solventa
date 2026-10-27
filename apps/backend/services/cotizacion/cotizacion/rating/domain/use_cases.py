@@ -8,11 +8,11 @@ from cotizacion.rating.domain.models import (
 )
 from cotizacion.rating.domain.rating import (
     ReglasRating,
-    calcular_prima,
-    calcular_prima_microseguro_vida,
-    calcular_prima_parametrico,
-    calcular_prima_viaje,
-    calcular_prima_vida_hipotecario,
+    calcular_desglose_generico,
+    calcular_desglose_microseguro_vida,
+    calcular_desglose_parametrico,
+    calcular_desglose_viaje,
+    calcular_desglose_vida_hipotecario,
 )
 
 
@@ -23,15 +23,15 @@ class CotizarUseCase:
 
     def execute(self, solicitud: SolicitudRating) -> Cotizacion:
         if isinstance(solicitud, SolicitudCotizacionViaje):
-            prima = calcular_prima_viaje(self.reglas, solicitud)
+            desglose = calcular_desglose_viaje(self.reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionMicroseguroVida):
-            prima = calcular_prima_microseguro_vida(self.reglas, solicitud)
+            desglose = calcular_desglose_microseguro_vida(self.reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionVidaHipotecario):
-            prima = calcular_prima_vida_hipotecario(self.reglas, solicitud)
+            desglose = calcular_desglose_vida_hipotecario(self.reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionParametrico):
-            prima = calcular_prima_parametrico(self.reglas, solicitud)
+            desglose = calcular_desglose_parametrico(self.reglas, solicitud)
         else:
-            prima = calcular_prima(
+            desglose = calcular_desglose_generico(
                 self.reglas,
                 solicitud.producto_id,
                 solicitud.suma_asegurada,
@@ -40,7 +40,8 @@ class CotizarUseCase:
             )
         return Cotizacion(
             producto_id=solicitud.producto_id,
-            prima=prima,
+            prima=desglose.total,
             version_reglas=self.reglas.version,
             instancia=self.instancia,
+            desglose=desglose,
         )

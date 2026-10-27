@@ -49,39 +49,39 @@ describe('QuoteFormComponent', () => {
     ].sort());
   });
 
-  it('renders the 5 client fields plus the risk fields of the selected ramo', () => {
-    expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 4);
+  it('renders the 6 client fields plus the risk fields of the selected ramo', () => {
+    expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
   });
 
   it('swaps the risk fields when the ramo changes', async () => {
     fixture.componentRef.setInput('ramo', 'VIAJE');
     await fixture.whenStable();
 
-    expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 5);
+    expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
     expect(el.textContent).toContain('Datos del riesgo · Viaje');
   });
 
   describe('HU001: Pruebas esperadas del formulario dinámico', () => {
     it('P1: renderiza únicamente los campos correspondientes a los 4 ramos de la HU', async () => {
-      // Viaje: 5 cliente + 5 riesgo
+      // Viaje: 6 cliente + 5 riesgo
       fixture.componentRef.setInput('ramo', 'VIAJE');
       await fixture.whenStable();
-      expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 5);
+      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
 
-      // Microseguro: 5 cliente + 4 riesgo
+      // Microseguro: 6 cliente + 4 riesgo
       fixture.componentRef.setInput('ramo', 'MICROSEGURO_VIDA');
       await fixture.whenStable();
-      expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 4);
+      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
-      // Vida Hipotecario: 5 cliente + 4 riesgo
+      // Vida Hipotecario: 6 cliente + 4 riesgo
       fixture.componentRef.setInput('ramo', 'VIDA_HIPOTECARIO');
       await fixture.whenStable();
-      expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 4);
+      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
-      // Paramétrico: 5 cliente + 4 riesgo
+      // Paramétrico: 6 cliente + 4 riesgo
       fixture.componentRef.setInput('ramo', 'PARAMETRICO');
       await fixture.whenStable();
-      expect(el.querySelectorAll('slv-quote-field').length).toBe(5 + 4);
+      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
     });
 
     it('P2: limpia los datos de riesgo al cambiar de ramo sin conservar los del ramo anterior', async () => {
@@ -135,7 +135,8 @@ describe('QuoteFormComponent', () => {
       // Llenar datos de cliente
       (comp as any).setValue('tipoDocumento', 'CC');
       (comp as any).setValue('numeroDocumento', '1020304050');
-      (comp as any).setValue('nombre', 'Juan Pérez');
+      (comp as any).setValue('nombre', 'Juan');
+      (comp as any).setValue('apellido', 'Pérez');
       (comp as any).setValue('email', 'juan@email.com');
       (comp as any).setValue('telefono', '3001234567');
 
@@ -150,7 +151,8 @@ describe('QuoteFormComponent', () => {
 
       expect(result).toBe(true);
       expect(emittedData).not.toBeNull();
-      expect(emittedData.nombre).toBe('Juan Pérez');
+      expect(emittedData.nombre).toBe('Juan');
+      expect(emittedData.apellido).toBe('Pérez');
       expect(emittedData.valorCredito).toBe('200000000');
     });
 

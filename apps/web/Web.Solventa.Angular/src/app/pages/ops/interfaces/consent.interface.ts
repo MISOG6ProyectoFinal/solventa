@@ -3,6 +3,7 @@ export interface SolicitudConsentimiento {
   tipo_documento?: string;
   numero_documento?: string;
   nombre?: string;
+  apellido?: string;
   email?: string;
   telefono?: string;
   fecha_nacimiento?: string;

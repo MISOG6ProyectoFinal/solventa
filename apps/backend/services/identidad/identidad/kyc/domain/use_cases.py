@@ -9,16 +9,19 @@ from identidad.kyc.domain.models import (
     OPEN_DATA,
     OPEN_FINANCE,
     Client,
+    ClienteNoEncontrado,
     CodigoOtpInvalido,
     Consentimiento,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
     RespuestaValidacion,
     Session,
+    SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
@@ -79,7 +82,10 @@ class RegisterClient:
             password_hash=hash_password(password, salt),
             salt=salt,
         )
-        self.clients.add(client)
+        try:
+            self.clients.add(client)
+        except ValueError as exc:
+            raise EmailAlreadyRegistered from exc
         return issue_session(client, self.secret)
 
 
@@ -174,6 +180,7 @@ class SolicitarConsentimiento:
                 tipo_documento=solicitud.tipo_documento or "CC",
                 numero_documento=solicitud.numero_documento or "",
                 nombre=solicitud.nombre or "Cliente",
+                last_name=solicitud.apellido or "",
                 email=_resolve_cliente_email(solicitud, cliente_id),
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
@@ -329,3 +336,77 @@ class ConsultarConsentimiento:
             alcance=alcance_str,
             alcance_lista=consentimiento.alcance,
         )
+
+
+def _cliente_a_respuesta(cliente: Client) -> RespuestaCliente:
+    fecha_nac = None
+    if cliente.fecha_nacimiento:
+        fecha_nac = (
+            cliente.fecha_nacimiento.isoformat()
+            if hasattr(cliente.fecha_nacimiento, "isoformat")
+            else str(cliente.fecha_nacimiento)
+        )
+    return RespuestaCliente(
+        id=cliente.id,
+        tipo_documento=cliente.tipo_documento,
+        numero_documento=cliente.numero_documento,
+        nombre=cliente.nombre,
+        apellido=cliente.last_name,
+        email=cliente.email,
+        telefono=cliente.telefono,
+        pais=cliente.pais,
+        fecha_nacimiento=fecha_nac,
+    )
+
+
+class BuscarClientePorDocumento:
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, tipo_documento: str, numero_documento: str) -> RespuestaCliente:
+        cliente = self.clients.get_by_documento(tipo_documento.strip(), numero_documento.strip())
+        if cliente is None:
+            raise ClienteNoEncontrado(f"Cliente con {tipo_documento} {numero_documento} no encontrado")
+        return _cliente_a_respuesta(cliente)
+
+
+class AsegurarCliente:
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
+        tipo = solicitud.tipo_documento.strip().upper()
+        numero = solicitud.numero_documento.strip()
+        existente = self.clients.get_by_documento(tipo, numero)
+        if existente is not None:
+            return _cliente_a_respuesta(existente)
+
+        cliente_id = f"CLI-{numero}"
+        email = (
+            solicitud.email.strip()
+            if solicitud.email and solicitud.email.strip()
+            else f"{cliente_id.lower()}@solventa.com"
+        )
+        existing_by_email = self.clients.get_by_email(email)
+        if existing_by_email and (
+            existing_by_email.numero_documento != numero or existing_by_email.tipo_documento != tipo
+        ):
+            email = f"{cliente_id.lower()}-{secrets.randbelow(9000) + 1000}@solventa.com"
+
+        nuevo_cliente = Client(
+            id=cliente_id,
+            tipo_documento=tipo,
+            numero_documento=numero,
+            nombre=solicitud.nombre.strip() or "Cliente",
+            last_name=solicitud.apellido.strip(),
+            email=email,
+            telefono=solicitud.telefono.strip(),
+            fecha_nacimiento=solicitud.fecha_nacimiento,
+            pais=solicitud.pais or "Colombia",
+        )
+        try:
+            guardado = self.clients.upsert(nuevo_cliente)
+        except ValueError:
+            nuevo_cliente.email = f"{cliente_id.lower()}-{secrets.randbelow(9000) + 1000}@solventa.com"
+            guardado = self.clients.upsert(nuevo_cliente)
+        return _cliente_a_respuesta(guardado)

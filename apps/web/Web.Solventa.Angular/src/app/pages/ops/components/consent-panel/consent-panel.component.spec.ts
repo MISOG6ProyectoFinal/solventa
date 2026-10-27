@@ -439,6 +439,27 @@ describe('ConsentPanelComponent', () => {
     });
   });
 
+  it('sends apellido when provided in input', async () => {
+    await render(true);
+    fixture.componentRef.setInput('nombre', 'Carlos');
+    fixture.componentRef.setInput('apellido', 'Gómez');
+    await fixture.whenStable();
+
+    el.querySelector('button')!.click();
+    await fixture.whenStable();
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
+    expect(req.request.body.nombre).toBe('Carlos');
+    expect(req.request.body.apellido).toBe('Gómez');
+    req.flush({
+      consentimiento_id: 'CNS-APE-1',
+      estado: 'PENDIENTE',
+      contacto_mask: '***4567',
+      codigo_demo: '112233',
+      expira_en: '2026-09-12T13:05:00Z',
+    });
+  });
+
   it('extracts error messages from error.message property as fallback', async () => {
     await render(true);
 
