@@ -188,7 +188,31 @@ tcp:8081 tcp:8081
 adb -s <device-id> shell pm path com.solventa
 ```
 
-Si devuelve una ruta `package:...`, la app está instalada. Si no devuelve nada, instala antes la build debug correspondiente.
+Si devuelve una ruta `package:...`, la app está instalada. Si no devuelve nada, instala la APK debug.
+
+Cambios solo de JavaScript, TypeScript o TSX se prueban con Metro, sin reconstruir la APK. Una dependencia nativa nueva o modificada no entra en una APK ya instalada: hay que reconstruirla e instalarla de nuevo.
+
+El caso real es `react-native-get-random-values`. El polyfill de `crypto` se carga desde `apps/mobile/src/main.tsx`. Al ser un módulo nativo, si se instala o cambia hay que reconstruir e instalar la APK otra vez.
+
+El comando que genera el APK debug de este proyecto es:
+
+```powershell
+npx nx build-android mobile --tasks=assembleDebug
+```
+
+`npx nx build-android mobile` sin `--tasks=assembleDebug` ejecuta `app:bundleDebug` y no genera el APK que se instala.
+
+La APK queda en:
+
+```text
+apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Instalación:
+
+```powershell
+adb -s <device-id> install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
 
 ## Ejecución
 
@@ -226,9 +250,9 @@ login
 → Mis pólizas
 ```
 
-El flujo automatiza E001 completo. La infraestructura Maestro y las interacciones de UI están validadas hasta la pantalla de pago; la emisión final de la póliza continúa en depuración.
+E001 está validado de punta a punta en un dispositivo físico Android con Maestro: login, cotización, pago aprobado, emisión y Mis pólizas.
 
-El pago no marca las simulaciones de rechazo ni de cotización vencida. Cuando la emisión quede estable, la comprobación usa el número `POL-` de esa corrida. Cada corrida puede emitir otra póliza.
+El pago no marca las simulaciones de rechazo ni de cotización vencida. La comprobación usa el número `POL-` de esa corrida. Cada corrida puede emitir otra póliza.
 
 ## Decisiones de implementación
 
@@ -267,8 +291,6 @@ No hace falta abrir DevTools ni presionar `j` antes del E2E.
 
 En desarrollo, la app desactiva las notificaciones visuales de LogBox para que los overlays de warnings no cubran controles durante la automatización. Los errores fatales siguen siendo visibles.
 
-`Unable to load script` normalmente significa que Metro no está disponible o que el dispositivo no puede llegar al puerto 8081.
-
 ## Troubleshooting
 
 ### Maestro no encuentra dispositivo
@@ -297,6 +319,17 @@ adb -s <device-id> reverse --list
 
 El health check tiene que responder y el reverse de `8000` tiene que existir.
 
+### La app no tiene un módulo nativo nuevo
+
+Reconstruye e instala la APK debug:
+
+```powershell
+npx nx build-android mobile --tasks=assembleDebug
+adb -s <device-id> install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Metro solo no incorpora un módulo nativo a una APK ya instalada.
+
 ### Maestro CLI no encontrada
 
 ```powershell
@@ -307,7 +340,6 @@ Tiene que funcionar desde PowerShell. Si no, la CLI no está en `PATH`.
 
 ## Estado actual
 
-- Maestro funciona en Android físico.
-- El mismo runner soporta Android Emulator mediante `MAESTRO_DEVICE_ID`.
-- Login, navegación, cotización, selectores, fechas, cálculo y entrada a Pago están validados.
-- La emisión final de póliza sigue siendo el tramo pendiente de estabilizar.
+E001 está validado de punta a punta en un dispositivo físico Android con Maestro.
+
+El runner soporta dispositivo físico y Android Emulator mediante `MAESTRO_DEVICE_ID`. E001 ha sido validado de punta a punta en un dispositivo físico Android.

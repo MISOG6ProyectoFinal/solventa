@@ -75,18 +75,7 @@ export function FieldFrame({
         ) : null}
       </AppText>
       {onPress ? (
-        <Pressable
-          testID={testID}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityActions={[{ name: 'activate' }]}
-          onAccessibilityAction={(event) => {
-            if (event.nativeEvent.actionName === 'activate') {
-              onPress();
-            }
-          }}
-          onPress={onPress}
-        >
+        <Pressable testID={testID} accessibilityRole="button" onPress={onPress}>
           {control}
         </Pressable>
       ) : (

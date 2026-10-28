@@ -327,6 +327,20 @@ describe('QuotePaymentScreen', () => {
     expect(cuerpo(0)).toEqual({ intento_id: expect.any(String) });
   });
 
+  it('shows the payment error when creating the attempt id fails', async () => {
+    const random = jest.spyOn(crypto, 'getRandomValues').mockImplementation(() => {
+      throw new Error('RNGetRandomValues could not be found');
+    });
+    const { getByText } = await render(<QuotePaymentScreen />);
+
+    await fireEvent.press(getByText('Pagar $149.940'));
+
+    await waitFor(() => expect(getByText(texts.payment.failed)).toBeTruthy());
+    expect(getByText('Pagar $149.940')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+    random.mockRestore();
+  });
+
   it('does not issue when the payment stays processing', async () => {
     global.fetch = jest.fn(async () =>
       jsonResponse({ ...PAGO_APROBADO, estado: 'procesando' }),

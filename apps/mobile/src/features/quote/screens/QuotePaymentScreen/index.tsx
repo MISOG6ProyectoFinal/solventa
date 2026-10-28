@@ -80,13 +80,13 @@ export default function QuotePaymentScreen() {
       return;
     }
 
-    intentoId.current ??= crearIntentoId();
-    const intento = intentoId.current;
-    inFlight.current = true;
-    setError(null);
-    setPolicy(null);
-    setStatus('processing');
     try {
+      intentoId.current ??= crearIntentoId();
+      const intento = intentoId.current;
+      inFlight.current = true;
+      setError(null);
+      setPolicy(null);
+      setStatus('processing');
       const resultado = await payQuote(oferta.id, intento, simulacion());
       if (resultado.estado === 'rechazado') {
         setStatus('rejected');
