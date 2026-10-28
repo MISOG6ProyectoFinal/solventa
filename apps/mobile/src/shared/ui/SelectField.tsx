@@ -78,6 +78,7 @@ export function SelectField({
           return (
             <Pressable
               key={option.value}
+              testID={`select-option-${option.value}`}
               accessibilityRole="button"
               accessibilityLabel={option.label}
               accessibilityState={{ selected: selectedOption }}

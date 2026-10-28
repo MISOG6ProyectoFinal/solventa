@@ -1,12 +1,5 @@
-import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  useAnimatedValue,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Animated, Easing, StyleSheet, useAnimatedValue, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';

@@ -76,8 +76,9 @@ export default function LoginScreen() {
           automaticallyAdjustKeyboardInsets
         >
           <BrandLogo style={styles.logo} />
-          {error ? <Banner variant="error">{error}</Banner> : null}
+          {error ? <Banner testID="login-error" variant="error">{error}</Banner> : null}
           <TextField
+            testID="login-email"
             label={texts.login.emailLabel}
             value={email}
             onChangeText={setEmail}
@@ -87,6 +88,7 @@ export default function LoginScreen() {
             error={emailEmpty}
           />
           <TextField
+            testID="login-password"
             label={texts.login.credentialLabel}
             value={password}
             onChangeText={setPassword}
@@ -95,7 +97,7 @@ export default function LoginScreen() {
             required
             error={passwordEmpty}
           />
-          <Button title={texts.login.submit} loading={submitting} onPress={() => void submit()} />
+          <Button testID="login-submit" title={texts.login.submit} loading={submitting} onPress={() => void submit()} />
           <Button
             title={texts.login.createAccount}
             variant="text"

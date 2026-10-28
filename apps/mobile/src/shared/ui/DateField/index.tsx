@@ -115,7 +115,11 @@ export function DateField({
         onPress={open}
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
       >
-        <AppText variant="bodySmall" style={shown ? styles.value : styles.placeholder}>
+        <AppText
+          testID={testID ? `${testID}-value` : undefined}
+          variant="bodySmall"
+          style={shown ? styles.value : styles.placeholder}
+        >
           {dateText}
         </AppText>
       </FieldFrame>

@@ -1,5 +1,18 @@
 jest.mock('react-native-get-random-values', () => ({}));
 
+jest.mock('react-native-gesture-handler', () => {
+  const React = require('react');
+
+  const host = (name: string) => {
+    return ({ children, ...props }: { children?: unknown }) => React.createElement(name, props, children);
+  };
+
+  return {
+    GestureHandlerRootView: host('GestureHandlerRootView'),
+    Pressable: host('Pressable'),
+  };
+});
+
 jest.mock('react-native', () => {
   const React = require('react');
 

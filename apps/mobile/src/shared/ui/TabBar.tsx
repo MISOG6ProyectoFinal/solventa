@@ -88,6 +88,7 @@ export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
         return (
           <Pressable
             key={tab.id}
+            testID={`tab-${tab.labelKey}`}
             accessibilityRole="tab"
             accessibilityLabel={texts.tabs[tab.labelKey]}
             accessibilityState={{ selected }}

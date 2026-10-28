@@ -48,19 +48,29 @@ describe('DateField', () => {
 
   it('chooses a day and closes the calendar', async () => {
     const onChange = jest.fn();
-    const { getByLabelText, getByText, queryByText } = await render(
-      <DateField label="Fecha de salida" value="10/10/2026" onChange={onChange} />,
+    const { getByLabelText, getByTestId, getByText, queryByText } = await render(
+      <DateField
+        label="Fecha de salida"
+        testID="quote-field-fechaSalida"
+        value="10/10/2026"
+        onChange={onChange}
+      />,
     );
+
+    expect(getByTestId('quote-field-fechaSalida-value')).toBeTruthy();
 
     await fireEvent.press(getByText('10/10/2026'));
 
     expect(getByText('Octubre 2026')).toBeTruthy();
+    expect(getByTestId('date-month-previous')).toBeTruthy();
+    expect(getByTestId('date-month-next')).toBeTruthy();
+    expect(getByTestId('date-day-2026-10-15')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('Mes siguiente'));
     expect(getByText('Noviembre 2026')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('Mes anterior'));
-    await fireEvent.press(getByLabelText('15 de octubre de 2026'));
+    await fireEvent.press(getByTestId('date-day-2026-10-15'));
 
     expect(onChange).toHaveBeenCalledWith('15/10/2026');
     expect(queryByText('Octubre 2026')).toBeNull();

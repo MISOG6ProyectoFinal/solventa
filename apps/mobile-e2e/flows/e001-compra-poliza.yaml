@@ -1,0 +1,261 @@
+appId: ${APP_ID}
+---
+# E001: comprar una póliza de viaje con pago aprobado y verla en Mis pólizas.
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 90000
+- tapOn:
+    id: login-email
+- inputText: ${E2E_EMAIL}
+- tapOn:
+    id: login-password
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 90000
+
+- tapOn:
+    id: tab-buy
+- extendedWaitUntil:
+    visible:
+      id: products-screen
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "${'product-' + PRODUCT_ID}"
+    timeout: 30000
+- tapOn:
+    id: "${'product-' + PRODUCT_ID}"
+- extendedWaitUntil:
+    visible:
+      id: quote-form-screen
+    timeout: 30000
+
+- scrollUntilVisible:
+    element:
+      id: quote-nombre
+    direction: DOWN
+- tapOn:
+    id: quote-nombre
+- eraseText: 100
+- pressKey: back
+- inputText: ${QUOTE_NOMBRE}
+- assertVisible:
+    id: quote-nombre
+    containsDescendants:
+      - text: ${QUOTE_NOMBRE}
+
+- scrollUntilVisible:
+    element:
+      id: quote-documento
+    direction: DOWN
+- tapOn:
+    id: quote-documento
+- eraseText: 100
+- inputText: ${QUOTE_CEDULA}
+- tapOn:
+    id: app-header
+- scrollUntilVisible:
+    element:
+      id: quote-nombre
+    direction: UP
+    centerElement: true
+- assertVisible:
+    id: quote-nombre
+    containsDescendants:
+      - text: ${QUOTE_NOMBRE}
+
+- scrollUntilVisible:
+    element:
+      id: quote-field-destino
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: quote-field-destino
+- extendedWaitUntil:
+    visible:
+      id: select-sheet
+    timeout: 10000
+- tapOn:
+    id: "${'select-option-' + QUOTE_DESTINO}"
+- extendedWaitUntil:
+    notVisible:
+      id: select-sheet
+    timeout: 10000
+
+# El calendario abre en el mes del valor visible (dd/mm/aaaa). run.js envía el día y el índice del mes buscados.
+- scrollUntilVisible:
+    element:
+      id: quote-field-fechaSalida-value
+    direction: DOWN
+    centerElement: true
+- copyTextFrom:
+    id: quote-field-fechaSalida-value
+- evalScript: ${output.anchorText = maestro.copiedText.trim()}
+- evalScript: ${output.anchorParts = output.anchorText.split('/').length}
+- assertTrue: ${output.anchorParts == 3}
+- evalScript: ${output.anchorIndex = Number(output.anchorText.split('/')[2]) * 12 + Number(output.anchorText.split('/')[1]) - 1}
+- assertTrue: "${!Number.isNaN(output.anchorIndex)}"
+- evalScript: ${output.delta = Number(QUOTE_SALIDA_INDEX) - output.anchorIndex}
+- evalScript: "${output.monthNext = output.delta > 0 ? output.delta : 0}"
+- evalScript: "${output.monthPrev = output.delta < 0 ? -output.delta : 0}"
+- assertTrue: ${output.monthNext <= 18}
+- assertTrue: ${output.monthPrev <= 18}
+- tapOn:
+    id: quote-field-fechaSalida
+- extendedWaitUntil:
+    visible:
+      id: date-sheet
+    timeout: 10000
+- evalScript: ${output.remaining = output.monthNext}
+- repeat:
+    while:
+      true: ${output.remaining > 0}
+    commands:
+      - tapOn:
+          id: date-month-next
+      - evalScript: ${output.remaining = output.remaining - 1}
+- evalScript: ${output.remaining = output.monthPrev}
+- repeat:
+    while:
+      true: ${output.remaining > 0}
+    commands:
+      - tapOn:
+          id: date-month-previous
+      - evalScript: ${output.remaining = output.remaining - 1}
+- extendedWaitUntil:
+    visible:
+      id: ${QUOTE_SALIDA_DAY_ID}
+    timeout: 5000
+- tapOn:
+    id: ${QUOTE_SALIDA_DAY_ID}
+- extendedWaitUntil:
+    notVisible:
+      id: date-sheet
+    timeout: 10000
+
+- scrollUntilVisible:
+    element:
+      id: quote-field-fechaRegreso-value
+    direction: DOWN
+    centerElement: true
+- copyTextFrom:
+    id: quote-field-fechaRegreso-value
+- evalScript: ${output.anchorText = maestro.copiedText.trim()}
+- evalScript: ${output.anchorParts = output.anchorText.split('/').length}
+- assertTrue: ${output.anchorParts == 3}
+- evalScript: ${output.anchorIndex = Number(output.anchorText.split('/')[2]) * 12 + Number(output.anchorText.split('/')[1]) - 1}
+- assertTrue: "${!Number.isNaN(output.anchorIndex)}"
+- evalScript: ${output.delta = Number(QUOTE_REGRESO_INDEX) - output.anchorIndex}
+- evalScript: "${output.monthNext = output.delta > 0 ? output.delta : 0}"
+- evalScript: "${output.monthPrev = output.delta < 0 ? -output.delta : 0}"
+- assertTrue: ${output.monthNext <= 18}
+- assertTrue: ${output.monthPrev <= 18}
+- tapOn:
+    id: quote-field-fechaRegreso
+- extendedWaitUntil:
+    visible:
+      id: date-sheet
+    timeout: 10000
+- evalScript: ${output.remaining = output.monthNext}
+- repeat:
+    while:
+      true: ${output.remaining > 0}
+    commands:
+      - tapOn:
+          id: date-month-next
+      - evalScript: ${output.remaining = output.remaining - 1}
+- evalScript: ${output.remaining = output.monthPrev}
+- repeat:
+    while:
+      true: ${output.remaining > 0}
+    commands:
+      - tapOn:
+          id: date-month-previous
+      - evalScript: ${output.remaining = output.remaining - 1}
+- extendedWaitUntil:
+    visible:
+      id: ${QUOTE_REGRESO_DAY_ID}
+    timeout: 5000
+- tapOn:
+    id: ${QUOTE_REGRESO_DAY_ID}
+- extendedWaitUntil:
+    notVisible:
+      id: date-sheet
+    timeout: 10000
+
+- scrollUntilVisible:
+    element:
+      id: quote-field-viajeros
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: quote-field-viajeros
+- eraseText: 100
+- inputText: ${QUOTE_VIAJEROS}
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      id: quote-nombre
+    direction: UP
+    centerElement: true
+- assertVisible:
+    id: quote-nombre
+    containsDescendants:
+      - text: ${QUOTE_NOMBRE}
+- scrollUntilVisible:
+    element:
+      id: quote-calc
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: quote-calc
+- extendedWaitUntil:
+    visible:
+      id: quote-continue-pay
+    timeout: 60000
+- tapOn:
+    id: quote-continue-pay
+- extendedWaitUntil:
+    visible:
+      id: quote-payment-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: quote-pay
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: quote-pay
+- extendedWaitUntil:
+    visible:
+      id: policy-issued-banner
+    timeout: 60000
+- copyTextFrom:
+    id: policy-number
+- evalScript: "${output.policyNumber = (maestro.copiedText.match(/POL-[A-F0-9]+/) || [''])[0]}"
+- assertTrue: ${output.policyNumber.length == 14}
+
+- tapOn:
+    id: view-policy
+- extendedWaitUntil:
+    visible:
+      id: policies-screen
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: policies-loading
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ${output.policyNumber}
+    direction: DOWN
+    timeout: 20000
