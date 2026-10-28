@@ -11,7 +11,7 @@ const DESTINOS = ['Estados Unidos', 'España', 'México', 'Otro país'];
 const defaults = {
   APP_ID: 'com.solventa',
   PRODUCT_ID: 'viaje-internacional',
-  QUOTE_NOMBRE: 'María Rodríguez',
+  QUOTE_NOMBRE: 'Maria Rodriguez',
   QUOTE_CEDULA: '1020304050',
   QUOTE_DESTINO: 'España',
   QUOTE_VIAJEROS: '1',

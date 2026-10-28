@@ -1,5 +1,3 @@
-import 'react-native-get-random-values';
-
 import { apiClient } from '../../../shared/api/client';
 import { ResultadoPago, SimulacionPago } from '../types';
 

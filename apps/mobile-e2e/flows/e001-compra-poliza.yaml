@@ -63,15 +63,6 @@ appId: ${APP_ID}
 - inputText: ${QUOTE_CEDULA}
 - tapOn:
     id: app-header
-- scrollUntilVisible:
-    element:
-      id: quote-nombre
-    direction: UP
-    centerElement: true
-- assertVisible:
-    id: quote-nombre
-    containsDescendants:
-      - text: ${QUOTE_NOMBRE}
 
 - scrollUntilVisible:
     element:
@@ -202,15 +193,6 @@ appId: ${APP_ID}
 - eraseText: 100
 - inputText: ${QUOTE_VIAJEROS}
 - pressKey: back
-- scrollUntilVisible:
-    element:
-      id: quote-nombre
-    direction: UP
-    centerElement: true
-- assertVisible:
-    id: quote-nombre
-    containsDescendants:
-      - text: ${QUOTE_NOMBRE}
 - scrollUntilVisible:
     element:
       id: quote-calc

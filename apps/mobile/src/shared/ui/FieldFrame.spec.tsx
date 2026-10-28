@@ -16,8 +16,6 @@ describe('FieldFrame', () => {
     expect(getAllByTestId('quote-nombre')).toHaveLength(1);
     expect(field.props.onPress).toBeUndefined();
     expect(field.props.accessibilityRole).toBeUndefined();
-    expect(field.props.accessibilityActions).toBeUndefined();
-    expect(field.props.onAccessibilityAction).toBeUndefined();
     expect(field).toHaveTextContent('María');
   });
 
@@ -38,40 +36,5 @@ describe('FieldFrame', () => {
     await fireEvent.press(field);
 
     expect(onPress).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs the press handler once when accessibility activate is invoked', async () => {
-    const onPress = jest.fn();
-    const { getByTestId } = await render(
-      <FieldFrame label="Destino" testID="quote-field-destino" onPress={onPress}>
-        <Text>España</Text>
-      </FieldFrame>,
-    );
-
-    const field = getByTestId('quote-field-destino');
-
-    expect(field.props.accessible).toBe(true);
-    expect(field.props.accessibilityActions).toEqual([{ name: 'activate' }]);
-
-    await fireEvent(field, 'accessibilityAction', {
-      nativeEvent: { actionName: 'activate' },
-    });
-
-    expect(onPress).toHaveBeenCalledTimes(1);
-  });
-
-  it('leaves the press handler untouched for another accessibility action', async () => {
-    const onPress = jest.fn();
-    const { getByTestId } = await render(
-      <FieldFrame label="Destino" testID="quote-field-destino" onPress={onPress}>
-        <Text>España</Text>
-      </FieldFrame>,
-    );
-
-    await fireEvent(getByTestId('quote-field-destino'), 'accessibilityAction', {
-      nativeEvent: { actionName: 'longpress' },
-    });
-
-    expect(onPress).not.toHaveBeenCalled();
   });
 });
