@@ -10,9 +10,17 @@ type IconButtonProps = {
   color?: IconColor;
   onPress?: () => void;
   onLongPress?: () => void;
+  testID?: string;
 };
 
-export function IconButton({ label, icon, color = 'onNavy', onPress, onLongPress }: Readonly<IconButtonProps>) {
+export function IconButton({
+  label,
+  icon,
+  color = 'onNavy',
+  onPress,
+  onLongPress,
+  testID,
+}: Readonly<IconButtonProps>) {
   const pressed = useAnimatedValue(0);
 
   const animatePressed = (toValue: number) => {
@@ -26,6 +34,7 @@ export function IconButton({ label, icon, color = 'onNavy', onPress, onLongPress
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}

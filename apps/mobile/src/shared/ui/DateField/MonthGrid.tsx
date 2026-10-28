@@ -13,15 +13,20 @@ const cellHeight = 40;
 
 type DayProps = {
   day: number;
+  month: number;
+  year: number;
   label: string;
   selected: boolean;
   style: StyleProp<ViewStyle>;
   onChoose: (day: number) => void;
 };
 
-const Day = memo(function Day({ day, label, selected, style, onChoose }: DayProps) {
+const Day = memo(function Day({ day, month, year, label, selected, style, onChoose }: DayProps) {
+  const pad = (value: number) => String(value).padStart(2, '0');
+
   return (
     <Pressable
+      testID={`date-day-${year}-${pad(month)}-${pad(day)}`}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
@@ -106,6 +111,7 @@ export const MonthGrid = memo(function MonthGrid({
     <>
       <View style={styles.monthRow}>
         <IconButton
+          testID={pickingYear ? undefined : 'date-month-previous'}
           label={pickingYear ? texts.date.previousYears : texts.date.previousMonth}
           icon="volver"
           color="dark"
@@ -128,6 +134,7 @@ export const MonthGrid = memo(function MonthGrid({
           </AppText>
         )}
         <IconButton
+          testID={pickingYear ? undefined : 'date-month-next'}
           label={pickingYear ? texts.date.nextYears : texts.date.nextMonth}
           icon="siguiente"
           color="dark"
@@ -154,6 +161,8 @@ export const MonthGrid = memo(function MonthGrid({
               <Day
                 key={day}
                 day={day}
+                month={month}
+                year={year}
                 label={`${day} de ${monthName} de ${year}`}
                 selected={selected}
                 style={selected ? selectedStyle : cellStyle}

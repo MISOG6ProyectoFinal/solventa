@@ -91,6 +91,8 @@ CLAUDE.md
 
 .env
 
+apps/mobile-e2e/properties.json
+
 tools/project-metrics/.cache/
 
 apps/mobile/IMPROVEMENTS.md

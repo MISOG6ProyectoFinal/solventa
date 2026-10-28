@@ -1,11 +1,15 @@
 import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { LogBox, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import RootNavigation from '../navigation/RootNavigation';
 import { useLanguageStore } from '../shared/i18n/useLanguageStore';
+
+if (__DEV__) {
+  LogBox.ignoreAllLogs();
+}
 
 export default function App() {
   const loaded = useLanguageStore((state) => state.loaded);
