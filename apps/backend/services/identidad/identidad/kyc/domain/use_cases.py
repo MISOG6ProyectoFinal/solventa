@@ -140,11 +140,12 @@ def id_cliente(tipo_documento: str, numero_documento: str) -> str:
 
 
 def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
+    # Con documento el id lo calcula el servidor; el cliente_id enviado solo se respeta sin documento.
+    if solicitud.numero_documento.strip():
+        return id_cliente(solicitud.tipo_documento or "CC", solicitud.numero_documento)
     cid = (solicitud.cliente_id or "").strip()
     if cid:
         return cid
-    if solicitud.numero_documento:
-        return id_cliente(solicitud.tipo_documento or "CC", solicitud.numero_documento)
     return _generate_random_id("CLI")
 
 

@@ -427,7 +427,7 @@ describe('ConsentPanelComponent', () => {
     await fixture.whenStable();
 
     const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
-    expect(req.request.body.cliente_id).toBe('CLI-1098700941');
+    expect(req.request.body.cliente_id).toBeUndefined();
     expect(req.request.body.nombre).toBe('Pedro Perez');
     expect(req.request.body.fecha_nacimiento).toBe('1990-05-15');
     expect(req.request.body.alcance).toEqual([]);

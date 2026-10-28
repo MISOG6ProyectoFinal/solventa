@@ -143,8 +143,6 @@ export class ConsentPanelComponent {
 
   private buildSolicitudPayload(destino: string): SolicitudConsentimiento {
     const doc = this.documento()?.trim();
-    const clienteId = doc && doc.length > 0 ? `CLI-${doc}` : 'CLI-51502';
-
     const alcances: string[] = [];
     if (this.openFinance()) {
       alcances.push('Open Finance');
@@ -159,7 +157,6 @@ export class ConsentPanelComponent {
     const rawNacimiento = this.fechaNacimiento()?.trim();
 
     return {
-      cliente_id: clienteId,
       tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
       numero_documento: doc ?? '',
       nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
@@ -180,7 +177,7 @@ export class ConsentPanelComponent {
 
   private buildFallbackRegistro(): RespuestaConsultaConsentimiento {
     const rawDoc = this.documento()?.trim();
-    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${rawDoc}` : 'CLI-51502';
+    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${this.tipoDocumento() || 'CC'}-${rawDoc}` : 'CLI-51502';
     const rawNom = this.nombre()?.trim();
     const rawApe = this.apellido()?.trim();
     const fallbackNom = [rawNom, rawApe].filter(Boolean).join(' ') || 'Cliente';

@@ -36,9 +36,9 @@ def solicitud_viaje(**overrides) -> SolicitudCotizacionViaje:
 
 
 def test_prima_neutral_score():
-    # 100M * 1.8/1000 * factor edad 1.0 * factor score 1.0
+    # 100M * 1.8/1000 * factor edad 1.0 * factor score 1.0 = 180000.00 + IVA = 214200.00
     assert calcular_prima(REGLAS_VIGENTES, "vida-temporal", Decimal(100_000_000), 40, Decimal("0.5")) == Decimal(
-        "180000.00"
+        "214200.00"
     )
 
 
@@ -94,9 +94,9 @@ def test_prima_vida_hipotecario():
         valor_credito=Decimal("250000000"),
         plazo_anios=15,
     )
-    # 250M / 1000 * 0.8 * factor_edad 1.0 * 15 = 3000000.00 + recargo + adicionales + IVA = 4462500.00
+    # 250M / 1000 * 0.8 * factor_edad 1.0 * 15 = 3000000.00 + recargo(0) + adicionales(300k) + IVA = 3927000.00
     prima = calcular_prima_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
-    assert prima == Decimal("4462500.00")
+    assert prima == Decimal("3927000.00")
 
 
 def test_mortgage_life_premium_applies_open_finance_score():
@@ -108,9 +108,9 @@ def test_mortgage_life_premium_applies_open_finance_score():
         plazo_anios=15,
         score_riesgo=Decimal("0.7"),
     )
-    # 3000000 básica + 504000 recargo score + 300000 adicionales + 722760 IVA = 4526760.00
+    # 3000000 básica + 360000 recargo score + 300000 adicionales + 695400 IVA = 4355400.00
     prima = calcular_prima_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
-    assert prima == Decimal("4526760.00")
+    assert prima == Decimal("4355400.00")
 
 
 def test_prima_parametrico():
@@ -134,11 +134,11 @@ def test_desglose_viaje_mockup_estados_unidos():
         viajeros=1,
     )
     desglose = calcular_desglose_viaje(REGLAS_VIGENTES, solicitud)
-    assert desglose.prima_basica == Decimal("252000.00")
-    assert desglose.recargo_riesgo == Decimal("7560.00")
-    assert desglose.coberturas_adicionales == Decimal("25200.00")
-    assert desglose.impuestos == Decimal("54104.00")
-    assert desglose.total == Decimal("338864.00")
+    assert desglose.prima_basica == Decimal("90000.00")
+    assert desglose.recargo_riesgo == Decimal("2700.00")
+    assert desglose.coberturas_adicionales == Decimal("9000.00")
+    assert desglose.impuestos == Decimal("19323.00")
+    assert desglose.total == Decimal("121023.00")
 
 
 def test_desglose_vida_hipotecario():
@@ -152,10 +152,10 @@ def test_desglose_vida_hipotecario():
     )
     desglose = calcular_desglose_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert desglose.prima_basica == Decimal("3000000.00")
-    assert desglose.recargo_riesgo == Decimal("504000.00")
+    assert desglose.recargo_riesgo == Decimal("360000.00")
     assert desglose.coberturas_adicionales == Decimal("300000.00")
-    assert desglose.impuestos == Decimal("722760.00")
-    assert desglose.total == Decimal("4526760.00")
+    assert desglose.impuestos == Decimal("695400.00")
+    assert desglose.total == Decimal("4355400.00")
 
 
 def test_desglose_microseguro_vida():

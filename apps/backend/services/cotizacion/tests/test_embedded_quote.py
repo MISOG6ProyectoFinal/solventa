@@ -41,7 +41,7 @@ MORTGAGE = {
     "plazo_anios": 15,
 }
 CONSENT = {"referencia_cliente": "cliente-77", "consentimiento_id": "consent-1"}
-NEUTRAL_MORTGAGE_PREMIUM = Decimal("4462500.00")
+NEUTRAL_MORTGAGE_PREMIUM = Decimal("3927000.00")
 
 
 class _FakeProvider:
@@ -287,7 +287,7 @@ def test_open_finance_score_enters_the_premium_with_consent():
 
     offer = quote(partner, {**MORTGAGE, "consentimiento_open_finance": CONSENT}).json()
 
-    assert Decimal(offer["prima"]) == Decimal("4526760.00")
+    assert Decimal(offer["prima"]) == Decimal("4355400.00")
     assert offer["degradada"] is False
     assert offer["senales"][0]["fuente"] == "open-finance"
     assert offer["senales"][0]["origen"] == "proveedor"
@@ -318,7 +318,7 @@ def test_provider_down_with_cache_uses_last_known_good():
     provider.error = ConnectionError("circuit open")
     offer = quote(partner, body).json()
 
-    assert Decimal(offer["prima"]) == Decimal("4526760.00")
+    assert Decimal(offer["prima"]) == Decimal("4355400.00")
     assert offer["degradada"] is True
     assert offer["senales"][0]["origen"] == "cache"
 

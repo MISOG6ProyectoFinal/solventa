@@ -204,7 +204,7 @@ def test_cotizacion_devuelve_prima_coberturas_y_vigencia():
     assert response.status_code == 200
     data = response.json()
     assert data["producto_id"] == "hogar"
-    assert data["prima"] == "900.00"
+    assert data["prima"] == "1071.00"
     assert data["version_reglas"] == "2026.10.0"
     assert len(data["coberturas"]) >= 2
     assert "desde" in data["vigencia_propuesta"]

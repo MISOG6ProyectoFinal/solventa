@@ -423,3 +423,18 @@ def test_solicitar_consentimiento_sin_email_no_inventa_cliente():
     assert container.clients.get("CLI-CC-7770005") is None
     asegurado = _asegurar("CC", "7770005", "sincorreo@test.com")
     assert asegurado.json()["id"] == "CLI-CC-7770005"
+
+
+def test_solicitar_consentimiento_ignora_cliente_id_enviado_con_documento():
+    payload = {
+        "cliente_id": "CLI-7770006",
+        "tipo_documento": "CC",
+        "numero_documento": "7770006",
+        "nombre": "Ana",
+        "email": "ana.7770006@test.com",
+        "canal": "sms",
+        "contacto": "3001234567",
+    }
+    response = client.post("/identidad/solicitar", json=payload)
+    assert response.json()["cliente_id"] == "CLI-CC-7770006"
+    assert container.clients.get("CLI-7770006") is None

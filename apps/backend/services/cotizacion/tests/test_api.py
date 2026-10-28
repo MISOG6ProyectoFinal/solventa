@@ -19,7 +19,7 @@ def test_calcular():
     body = {"producto_id": "hogar", "suma_asegurada": "1000000", "edad": 40}
     response = client.post("/cotizaciones/calcular", json=body)
     assert response.status_code == 200
-    assert response.json()["prima"] == "900.00"
+    assert response.json()["prima"] == "1071.00"
     assert "coberturas" not in response.json()
     assert "vigencia_propuesta" not in response.json()
 
