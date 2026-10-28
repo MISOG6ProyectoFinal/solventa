@@ -48,7 +48,6 @@ export function mapFormValuesToQuotePayload(
         valor_credito: Number(values['valorCredito']) || 0,
         plazo_anios: Number(values['plazoAnios']) || 1,
         consentimiento_id: values['consentimiento_id'] || undefined,
-        cliente_id: values['numeroDocumento'] || values['documento'] || undefined,
       };
 
     case 'PARAMETRICO':

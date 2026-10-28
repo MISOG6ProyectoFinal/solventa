@@ -117,9 +117,8 @@ describe('QuoteTabComponent', () => {
     expect(el.textContent).toContain('Producto sin tarifa');
   });
 
-  it('renders amber degraded banner when scenario is degradado', async () => {
+  it('renders amber degraded banner when response is degradada', async () => {
     const comp = fixture.componentInstance;
-    (comp as unknown as { scenario: { set: (v: string) => void } }).scenario.set('degradado');
     (comp as unknown as { onQuoteReady: (v: Record<string, string>) => void }).onQuoteReady({
       valorCredito: '200000000',
     });
@@ -132,24 +131,11 @@ describe('QuoteTabComponent', () => {
       coberturas: [],
       vigencia_propuesta: { desde: '2026-10-12', hasta: '2046-10-12' },
       version_reglas: '2026.10.0',
-      degradada: false,
+      degradada: true,
     });
 
     await fixture.whenStable();
     expect(el.textContent).toContain('Calculado en modo degradado con la última información válida disponible');
-  });
-
-  it('renders error message when scenario is caida', async () => {
-    const comp = fixture.componentInstance;
-    (comp as unknown as { scenario: { set: (v: string) => void } }).scenario.set('caida');
-    (comp as unknown as { onQuoteReady: (v: Record<string, string>) => void }).onQuoteReady({
-      valorCredito: '200000000',
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await fixture.whenStable();
-
-    expect(el.textContent).toContain('Error en el servicio de cotización: dependencias externas no disponibles');
   });
 
   it('renders default error message when calculation error has no detail', async () => {

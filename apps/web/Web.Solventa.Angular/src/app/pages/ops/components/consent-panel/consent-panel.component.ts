@@ -50,7 +50,7 @@ export class ConsentPanelComponent {
   readonly apellido = input<string>('');
   readonly fechaNacimiento = input<string>('');
   readonly requested = output<void>();
-  readonly consentValidated = output<boolean>();
+  readonly consentValidated = output<string>();
 
   protected readonly channels = CONSENT_CHANNELS;
   protected readonly channel = signal<'sms' | 'email'>(CONSENT_CHANNELS[0].id as 'sms' | 'email');
@@ -253,12 +253,12 @@ export class ConsentPanelComponent {
           next: (reg) => {
             this.registro.set(reg);
             this.estado.set('validated');
-            this.consentValidated.emit(true);
+            this.consentValidated.emit(this.consentimientoId());
           },
           error: () => {
             this.registro.set(this.buildFallbackRegistro());
             this.estado.set('validated');
-            this.consentValidated.emit(true);
+            this.consentValidated.emit(this.consentimientoId());
           },
         });
       },
@@ -281,9 +281,5 @@ export class ConsentPanelComponent {
     if (!/^\d$/.test(event.key)) {
       event.preventDefault();
     }
-  }
-
-  public getConsentimientoId(): string {
-    return this.consentimientoId();
   }
 }

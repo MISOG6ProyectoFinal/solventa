@@ -28,7 +28,7 @@
       [nombre]="formValues()['nombre'] || quoteForm.valueOf('nombre')"
       [apellido]="formValues()['apellido'] || quoteForm.valueOf('apellido')"
       [fechaNacimiento]="formValues()['fechaNacimiento'] || quoteForm.valueOf('fechaNacimiento')"
-      (consentValidated)="consentValidated.set($event)"
+      (consentValidated)="onConsentValidated($event)"
     />
 
     <slv-card>

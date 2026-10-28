@@ -4,7 +4,6 @@ import {
   computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RamoId } from '../../../../core/models/ramo.model';
@@ -39,7 +38,6 @@ import { QuoteFormComponent } from '../quote-form/quote-form.component';
 })
 export class QuoteTabComponent {
   private readonly quotesService = inject(QuotesService);
-  protected readonly consentPanel = viewChild(ConsentPanelComponent);
 
   protected readonly scenarios = PROVIDER_SCENARIOS;
   protected readonly scenario = signal(PROVIDER_SCENARIOS[0].id);
@@ -49,6 +47,7 @@ export class QuoteTabComponent {
   protected readonly quoteResult = signal<OfertaCotizacionResponse | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly consentValidated = signal(false);
+  protected readonly consentimientoId = signal<string | null>(null);
   protected readonly formValues = signal<Record<string, string>>({});
 
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
@@ -58,24 +57,16 @@ export class QuoteTabComponent {
     () => !this.requiresConsent() || this.consentValidated(),
   );
 
-  protected onQuoteReady(values: Record<string, string>): void {
-    if (this.scenario() === 'caida') {
-      this.isCalculating.set(true);
-      this.errorMessage.set(null);
-      this.quoteResult.set(null);
-      setTimeout(() => {
-        this.errorMessage.set(
-          'Error en el servicio de cotización: dependencias externas no disponibles (timeout / circuit open)',
-        );
-        this.isCalculating.set(false);
-      }, 250);
-      return;
-    }
+  protected onConsentValidated(consentimientoId: string): void {
+    this.consentimientoId.set(consentimientoId);
+    this.consentValidated.set(true);
+  }
 
+  protected onQuoteReady(values: Record<string, string>): void {
     this.isCalculating.set(true);
     this.errorMessage.set(null);
 
-    const consentId = this.consentPanel()?.getConsentimientoId();
+    const consentId = this.consentimientoId();
     const enrichedValues = {
       ...values,
       ...(consentId ? { consentimiento_id: consentId } : {}),
@@ -84,10 +75,9 @@ export class QuoteTabComponent {
     const payload = mapFormValuesToQuotePayload(this.ramo(), enrichedValues);
     this.quotesService.cotizar(payload).subscribe({
       next: (response) => {
-        const isDegradedScenario = this.scenario() === 'degradado' || response.degradada;
         this.quoteResult.set({
           ...response,
-          degradada: isDegradedScenario,
+          degradada: response.degradada,
         });
         this.isCalculating.set(false);
       },

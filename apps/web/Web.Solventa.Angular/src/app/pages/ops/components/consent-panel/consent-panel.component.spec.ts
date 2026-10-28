@@ -143,7 +143,7 @@ describe('ConsentPanelComponent', () => {
     });
     await fixture.whenStable();
 
-    expect(validatedSpy).toHaveBeenCalledWith(true);
+    expect(validatedSpy).toHaveBeenCalledWith('CNS-51502');
     expect(el.textContent).toContain('Consentimiento validado. Puede continuar con la cotización.');
     expect(el.textContent).toContain('CNS-51502');
     expect(el.textContent).toContain('Otorgado');

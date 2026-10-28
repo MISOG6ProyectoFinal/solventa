@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
   name: 'dev',
-  apiBaseUrl: 'http://localhost:8000',
+  apiBaseUrl: 'https://api.dev.solventa.com',
 };
