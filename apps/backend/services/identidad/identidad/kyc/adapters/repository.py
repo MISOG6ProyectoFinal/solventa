@@ -55,6 +55,17 @@ def _client(row) -> Client:
     )
 
 
+def _merge_client_fields(existing: Client, client: Client) -> None:
+    existing.nombre = client.nombre or existing.nombre
+    existing.last_name = client.last_name or existing.last_name
+    existing.telefono = client.telefono or existing.telefono
+    existing.email = client.email or existing.email
+    existing.tipo_documento = client.tipo_documento or existing.tipo_documento
+    existing.numero_documento = client.numero_documento or existing.numero_documento
+    if client.fecha_nacimiento:
+        existing.fecha_nacimiento = client.fecha_nacimiento
+
+
 def _merge_and_save_client(repo, client: Client) -> Client:
     existing = None
     if client.numero_documento:
@@ -69,14 +80,7 @@ def _merge_and_save_client(repo, client: Client) -> Client:
         existing = por_email
 
     if existing:
-        existing.nombre = client.nombre or existing.nombre
-        existing.last_name = client.last_name or existing.last_name
-        existing.telefono = client.telefono or existing.telefono
-        existing.email = client.email or existing.email
-        existing.tipo_documento = client.tipo_documento or existing.tipo_documento
-        existing.numero_documento = client.numero_documento or existing.numero_documento
-        if client.fecha_nacimiento:
-            existing.fecha_nacimiento = client.fecha_nacimiento
+        _merge_client_fields(existing, client)
         repo.update(existing)
         return existing
     repo.add(client)
