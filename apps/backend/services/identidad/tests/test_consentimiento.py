@@ -35,13 +35,13 @@ def test_solicitar_consentimiento_modelo_dominio_cliente():
     response = client.post("/identidad/solicitar", json=payload)
     assert response.status_code == 201
     data = response.json()
-    assert data["cliente_id"] == "CLI-1098700941"
+    assert data["cliente_id"] == "CLI-CC-1098700941"
     assert data["fuente"] == "SMS: 3176663766"
     assert data["alcance"] == ["Open Finance", "Open Data"]
     assert data["estado"] == "PENDIENTE"
 
     # Verificar que el Cliente fue creado en el repositorio
-    cliente = container.clients.get("CLI-1098700941")
+    cliente = container.clients.get("CLI-CC-1098700941")
     assert cliente is not None
     assert cliente.nombre == "Pedro Perez"
     assert cliente.numero_documento == "1098700941"
@@ -62,14 +62,14 @@ def test_solicitar_consentimiento_modelo_dominio_cliente():
     get_resp = client.get(f"/identidad/{data['consentimiento_id']}")
     assert get_resp.status_code == 200
     get_data = get_resp.json()
-    assert get_data["cliente_id"] == "CLI-1098700941"
+    assert get_data["cliente_id"] == "CLI-CC-1098700941"
     assert get_data["cliente_nombre"] == "Pedro Perez"
     assert get_data["fuente"] == "SMS: 3176663766"
 
 
 def test_solicitar_consentimiento_con_celular_real():
     payload = {
-        "cliente_id": "CLI-1098700941",
+        "cliente_id": "CLI-CC-1098700941",
         "ramo": "VIDA_HIPOTECARIO",
         "canal": "sms",
         "contacto": "3176663766",
@@ -86,7 +86,7 @@ def test_solicitar_consentimiento_con_celular_real():
 
 def test_solicitar_consentimiento_con_correo_real():
     payload = {
-        "cliente_id": "CLI-1098700941",
+        "cliente_id": "CLI-CC-1098700941",
         "ramo": "VIDA_HIPOTECARIO",
         "canal": "email",
         "contacto": "pperez@notmail.com",
@@ -287,9 +287,9 @@ def test_solicitar_consentimiento_con_apellidos():
     response = client.post("/identidad/solicitar", json=payload)
     assert response.status_code == 201
     data = response.json()
-    assert data["cliente_id"] == "CLI-1010202030"
+    assert data["cliente_id"] == "CLI-CC-1010202030"
 
-    cliente = container.clients.get("CLI-1010202030")
+    cliente = container.clients.get("CLI-CC-1010202030")
     assert cliente is not None
     assert cliente.nombre == "Ana María"
     assert cliente.last_name == "Gómez Restrepo"
@@ -364,14 +364,62 @@ def test_asegurar_cliente_nuevo_y_luego_buscar():
     assert data["tipo_documento"] == "CC"
     assert data["nombre"] == "Mariana"
     assert data["apellido"] == "Rios"
-    assert data["id"] == "CLI-1088776655"
+    assert data["id"] == "CLI-CC-1088776655"
 
     # Buscarlo por documento debe responder 200 con el mismo id
     buscar_resp = client.get("/identidad/clientes/por-documento/CC/1088776655")
     assert buscar_resp.status_code == 200
-    assert buscar_resp.json()["id"] == "CLI-1088776655"
+    assert buscar_resp.json()["id"] == "CLI-CC-1088776655"
 
     # Reasegurarlo debe ser idempotente y retornar el mismo id
     reasegurar_resp = client.post("/identidad/clientes/asegurar", json=payload)
     assert reasegurar_resp.status_code == 200
-    assert reasegurar_resp.json()["id"] == "CLI-1088776655"
+    assert reasegurar_resp.json()["id"] == "CLI-CC-1088776655"
+
+
+def _asegurar(tipo: str, numero: str, email: str):
+    return client.post(
+        "/identidad/clientes/asegurar",
+        json={"tipo_documento": tipo, "numero_documento": numero, "nombre": "Ana", "email": email},
+    )
+
+
+def test_asegurar_cliente_distingue_tipo_de_documento():
+    cc = _asegurar("CC", "7770001", "cc.7770001@test.com")
+    ce = _asegurar("CE", "7770001", "ce.7770001@test.com")
+    assert cc.json()["id"] == "CLI-CC-7770001"
+    assert ce.json()["id"] == "CLI-CE-7770001"
+    assert client.get("/identidad/clientes/por-documento/CC/7770001").json()["id"] == "CLI-CC-7770001"
+    assert client.get("/identidad/clientes/por-documento/CE/7770001").json()["id"] == "CLI-CE-7770001"
+
+
+def test_asegurar_cliente_rechaza_email_de_otro_documento():
+    assert _asegurar("CC", "7770002", "compartido@test.com").status_code == 200
+    resp = _asegurar("CC", "7770003", "compartido@test.com")
+    assert resp.status_code == 409
+    assert client.get("/identidad/clientes/por-documento/CC/7770003").status_code == 404
+
+
+def test_asegurar_cliente_exige_email_valido():
+    sin_email = client.post(
+        "/identidad/clientes/asegurar",
+        json={"tipo_documento": "CC", "numero_documento": "7770004", "nombre": "Ana"},
+    )
+    assert sin_email.status_code == 422
+    assert _asegurar("CC", "7770004", "no-es-correo").status_code == 422
+
+
+def test_solicitar_consentimiento_sin_email_no_inventa_cliente():
+    payload = {
+        "tipo_documento": "CC",
+        "numero_documento": "7770005",
+        "nombre": "Sin Correo",
+        "canal": "sms",
+        "contacto": "3001234567",
+    }
+    response = client.post("/identidad/solicitar", json=payload)
+    assert response.status_code == 201
+    assert response.json()["cliente_id"] == "CLI-CC-7770005"
+    assert container.clients.get("CLI-CC-7770005") is None
+    asegurado = _asegurar("CC", "7770005", "sincorreo@test.com")
+    assert asegurado.json()["id"] == "CLI-CC-7770005"

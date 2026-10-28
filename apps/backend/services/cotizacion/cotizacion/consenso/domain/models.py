@@ -14,7 +14,7 @@ ESTADO_COTIZACION_VIGENTE = "VIGENTE"
 
 
 def generar_id_cotizacion() -> str:
-    return f"COT-2026-{uuid4().hex[:4].upper()}"
+    return f"COT-{date.today().year}-{uuid4().hex[:8].upper()}"
 
 
 class CoberturaOferta(BaseModel):

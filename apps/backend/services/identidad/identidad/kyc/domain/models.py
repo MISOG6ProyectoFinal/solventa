@@ -1,9 +1,12 @@
+import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 TIPOS_DOCUMENTO = ("CC", "CE", "Pasaporte")
 MIN_PASSWORD_LENGTH = 8
+# The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 
 
 class Client(BaseModel):
@@ -169,10 +172,18 @@ class SolicitudAsegurarCliente(BaseModel):
     numero_documento: str
     nombre: str
     apellido: str = ""
-    email: str = ""
+    email: str
     telefono: str = ""
     fecha_nacimiento: date | str | None = None
     pais: str = "Colombia"
+
+    @field_validator("email")
+    @classmethod
+    def _formato_email(cls, value: str) -> str:
+        value = value.strip()
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("El correo no tiene un formato válido.")
+        return value
 
 
 class RespuestaCliente(BaseModel):

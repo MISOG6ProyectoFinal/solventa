@@ -135,21 +135,25 @@ def _generate_random_id(prefix: str) -> str:
     return f"{prefix}-{n}"
 
 
+def id_cliente(tipo_documento: str, numero_documento: str) -> str:
+    return f"CLI-{tipo_documento.strip().upper()}-{numero_documento.strip()}"
+
+
 def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
     cid = (solicitud.cliente_id or "").strip()
     if cid:
         return cid
     if solicitud.numero_documento:
-        return f"CLI-{solicitud.numero_documento.strip()}"
+        return id_cliente(solicitud.tipo_documento or "CC", solicitud.numero_documento)
     return _generate_random_id("CLI")
 
 
-def _resolve_cliente_email(solicitud: SolicitudConsentimiento, cliente_id: str) -> str:
+def _resolve_cliente_email(solicitud: SolicitudConsentimiento) -> str | None:
     if solicitud.email and solicitud.email.strip():
         return solicitud.email.strip()
     if solicitud.canal == "email" and solicitud.contacto:
         return solicitud.contacto.strip()
-    return f"{cliente_id.lower()}@solventa.com"
+    return None
 
 
 def _resolve_cliente_telefono(solicitud: SolicitudConsentimiento) -> str:
@@ -212,14 +216,16 @@ class SolicitarConsentimiento:
         # 1. Identificar o Registrar el Cliente según el Modelo de Dominio
         cliente_id = _resolve_cliente_id(solicitud)
 
-        if self.clients is not None:
+        # Sin email real no se guarda el cliente: el id es determinista y `asegurar` lo creará después.
+        email = _resolve_cliente_email(solicitud)
+        if self.clients is not None and email:
             cliente_obj = Client(
                 id=cliente_id,
                 tipo_documento=solicitud.tipo_documento or "CC",
                 numero_documento=solicitud.numero_documento or "",
                 nombre=solicitud.nombre or "Cliente",
                 last_name=solicitud.apellido or "",
-                email=_resolve_cliente_email(solicitud, cliente_id),
+                email=email,
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
             )
@@ -418,31 +424,15 @@ class AsegurarCliente:
         if existente is not None:
             return _cliente_a_respuesta(existente)
 
-        cliente_id = f"CLI-{numero}"
-        email = (
-            solicitud.email.strip()
-            if solicitud.email and solicitud.email.strip()
-            else f"{cliente_id.lower()}@solventa.com"
-        )
-        existing_by_email = self.clients.get_by_email(email)
-        if existing_by_email and (
-            existing_by_email.numero_documento != numero or existing_by_email.tipo_documento != tipo
-        ):
-            email = f"{cliente_id.lower()}-{secrets.randbelow(9000) + 1000}@solventa.com"
-
         nuevo_cliente = Client(
-            id=cliente_id,
+            id=id_cliente(tipo, numero),
             tipo_documento=tipo,
             numero_documento=numero,
             nombre=solicitud.nombre.strip() or "Cliente",
             last_name=solicitud.apellido.strip(),
-            email=email,
+            email=solicitud.email,
             telefono=solicitud.telefono.strip(),
             fecha_nacimiento=solicitud.fecha_nacimiento,
         )
-        try:
-            guardado = self.clients.upsert(nuevo_cliente)
-        except ValueError:
-            nuevo_cliente.email = f"{cliente_id.lower()}-{secrets.randbelow(9000) + 1000}@solventa.com"
-            guardado = self.clients.upsert(nuevo_cliente)
+        guardado = self.clients.upsert(nuevo_cliente)
         return _cliente_a_respuesta(guardado)

@@ -19,6 +19,8 @@ RAMOS_COTIZABLES_WEB = {
     "ramo-parametrico",
 }
 
+RAMOS_CON_CONSENTIMIENTO = {"vida-hipotecario", "ramo-vida-hipotecario"}
+
 
 @router.get("/ramos")
 def listar_ramos() -> list:
@@ -85,7 +87,7 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
 
 def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
     producto_id = solicitud.get("producto_id", "")
-    if producto_id not in ("vida-hipotecario", "ramo-vida-hipotecario"):
+    if producto_id not in RAMOS_CON_CONSENTIMIENTO:
         return
     consentimiento_id = solicitud.get("consentimiento_id")
     if not consentimiento_id:

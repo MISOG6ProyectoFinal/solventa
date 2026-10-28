@@ -12,7 +12,6 @@ clients = Table(
     "clientes",
     metadata,
     Column("id", String(36), primary_key=True),
-    Column("correo", String(254), nullable=True),
     Column("tipo_documento", String(10), nullable=True, default="CC"),
     Column("numero_documento", String(30), nullable=True),
     Column("nombre", String(120), nullable=False),
@@ -22,7 +21,8 @@ clients = Table(
     Column("apellido", String(120), nullable=True, default=""),
     Index("uq_clientes_email", "email", unique=True),
     Index(
-        "uq_clientes_numero_documento",
+        "uq_clientes_documento",
+        "tipo_documento",
         "numero_documento",
         unique=True,
         postgresql_where=text("numero_documento IS NOT NULL"),
@@ -43,10 +43,9 @@ def _parse_date(val: date | str | None) -> date | None:
 
 
 def _client(row) -> Client:
-    email = row.get("email") or row.get("correo") or ""
     return Client(
         id=row["id"],
-        email=email,
+        email=row["email"],
         nombre=row.get("nombre") or "",
         last_name=row.get("apellido") or "",
         tipo_documento=row.get("tipo_documento") or "CC",
@@ -59,11 +58,15 @@ def _client(row) -> Client:
 def _merge_and_save_client(repo, client: Client) -> Client:
     existing = None
     if client.numero_documento:
-        existing = repo.get_by_numero_documento(client.numero_documento)
-    if not existing and client.email and not client.numero_documento:
-        existing = repo.get_by_email(client.email)
+        existing = repo.get_by_documento(client.tipo_documento, client.numero_documento)
     if not existing and client.id:
         existing = repo.get(client.id)
+    if not existing and client.email:
+        por_email = repo.get_by_email(client.email)
+        if por_email and por_email.numero_documento and client.numero_documento:
+            # El email ya pertenece a otra persona (otro tipo o número de documento).
+            raise ValueError(client.email)
+        existing = por_email
 
     if existing:
         existing.nombre = client.nombre or existing.nombre
@@ -86,30 +89,6 @@ class PostgresClientRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
-        try:
-            with self.engine.begin() as conn:
-                try:
-                    conn.execute(text("ALTER TABLE clientes ALTER COLUMN correo DROP NOT NULL;"))
-                except Exception:
-                    pass
-                conn.execute(
-                    text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(10) DEFAULT 'CC';")
-                )
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS numero_documento VARCHAR(30);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email VARCHAR(254);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS apellido VARCHAR(120) DEFAULT '';"))
-                try:
-                    conn.execute(text("UPDATE clientes SET email = correo WHERE email IS NULL OR email = '';"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("UPDATE clientes SET correo = email WHERE correo IS NULL OR correo = '';"))
-                except Exception:
-                    pass
-        except Exception:
-            pass
 
     def add(self, client: Client) -> None:
         try:
@@ -117,7 +96,6 @@ class PostgresClientRepository:
                 conn.execute(
                     insert(clients).values(
                         id=client.id,
-                        correo=client.email,
                         tipo_documento=client.tipo_documento,
                         numero_documento=client.numero_documento or None,
                         nombre=client.nombre,
@@ -136,7 +114,6 @@ class PostgresClientRepository:
                 update(clients)
                 .where(clients.c.id == client.id)
                 .values(
-                    correo=client.email,
                     tipo_documento=client.tipo_documento,
                     numero_documento=client.numero_documento or None,
                     nombre=client.nombre,
@@ -161,19 +138,19 @@ class PostgresClientRepository:
         return _client(row) if row else None
 
     def get_by_documento(self, tipo: str, numero: str) -> Client | None:
-        client = self.get_by_numero_documento(numero)
-        if client and tipo and client.tipo_documento and client.tipo_documento != tipo:
-            return None
-        return client
-
-    def get_by_email(self, email: str) -> Client | None:
-        normalized = email.lower()
         with self.engine.connect() as conn:
             row = (
-                conn.execute(select(clients).where((clients.c.email == normalized) | (clients.c.correo == normalized)))
+                conn.execute(
+                    select(clients).where(clients.c.tipo_documento == tipo, clients.c.numero_documento == numero)
+                )
                 .mappings()
                 .first()
             )
+        return _client(row) if row else None
+
+    def get_by_email(self, email: str) -> Client | None:
+        with self.engine.connect() as conn:
+            row = conn.execute(select(clients).where(clients.c.email == email.lower())).mappings().first()
         return _client(row) if row else None
 
 
@@ -187,7 +164,9 @@ class InMemoryClientRepository:
         pass
 
     def add(self, client: Client) -> None:
-        if client.email in self.clients_by_email or self.get_by_numero_documento(client.numero_documento):
+        if client.email.lower() in self.clients_by_email or self.get_by_documento(
+            client.tipo_documento, client.numero_documento
+        ):
             raise ValueError(client.email)
         self.clients_by_id[client.id] = client
         self.clients_by_email[client.email.lower()] = client
@@ -208,10 +187,12 @@ class InMemoryClientRepository:
         return next((c for c in self.clients_by_id.values() if c.numero_documento == numero), None)
 
     def get_by_documento(self, tipo: str, numero: str) -> Client | None:
-        client = self.get_by_numero_documento(numero)
-        if client and tipo and client.tipo_documento and client.tipo_documento != tipo:
+        if not numero:
             return None
-        return client
+        return next(
+            (c for c in self.clients_by_id.values() if c.numero_documento == numero and c.tipo_documento == tipo),
+            None,
+        )
 
     def get_by_email(self, email: str) -> Client | None:
         return self.clients_by_email.get(email.lower())

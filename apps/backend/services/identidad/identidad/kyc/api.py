@@ -1,4 +1,3 @@
-import re
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, status
@@ -6,6 +5,7 @@ from pydantic import BaseModel, field_validator
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
+    EMAIL_PATTERN,
     MIN_PASSWORD_LENGTH,
     TIPOS_DOCUMENTO,
     ClienteNoEncontrado,
@@ -22,9 +22,6 @@ from identidad.kyc.domain.models import (
     SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
-
-# The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
-EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 
@@ -141,7 +138,10 @@ def buscar_cliente_por_documento(tipo_documento: str, numero_documento: str) -> 
 
 @router.post("/clientes/asegurar", response_model=RespuestaCliente)
 def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
-    return container.asegurar_cliente.execute(solicitud)
+    try:
+        return container.asegurar_cliente.execute(solicitud)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "El correo ya está registrado con otro documento") from exc
 
 
 # --- Endpoints de Consentimiento Digital (HU002) ---

@@ -21,12 +21,8 @@ from cotizacion.rating.domain.models import (
 TASA_IVA = Decimal("0.19")
 
 # Ramo Viaje
-RECARGO_DESTINO_USA = Decimal("0.03")
-COBERTURAS_ADICIONALES_FACTOR_VIAJE = Decimal("0.10")
-TARIFA_VIAJE_USA = Decimal("25200")
 
 # Ramo Vida Hipotecario
-RECARGO_FACTOR_HIPOTECARIO = Decimal("0.15")
 COBERTURAS_ADICIONALES_FACTOR_HIPOTECARIO = Decimal("0.10")
 
 # Ramo Microseguro de Vida
@@ -38,12 +34,20 @@ RECARGO_FACTOR_PARAMETRICO = Decimal("0.10")
 COBERTURAS_ADICIONALES_FACTOR_PARAMETRICO = Decimal("0.07")
 
 
+def _iva(base: Decimal) -> Decimal:
+    return (base * TASA_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 class ReglasRating(BaseModel):
     version: str
     tasa_base_por_mil: dict[str, Decimal]
     factor_edad: list[tuple[int, Decimal]]  # (edad máxima, factor), ordenado
     peso_score: Decimal
     tarifa_viaje_por_dia: dict[str, Decimal] = Field(default_factory=dict)  # COP por día y viajero
+    recargo_viaje_por_destino: dict[str, Decimal] = Field(default_factory=dict)  # factor sobre prima básica
+    coberturas_adicionales_viaje_por_destino: dict[str, Decimal] = Field(
+        default_factory=dict
+    )  # factor sobre prima básica
     factor_impuestos: Decimal = Decimal("1.19")  # IVA 19%
     tarifa_parametrico: dict[str, Decimal] = Field(default_factory=dict)
     tasa_vida_hipotecario_por_mil: Decimal = Decimal("0.8")
@@ -56,6 +60,8 @@ REGLAS_VIGENTES = ReglasRating(
     factor_edad=[(30, Decimal("0.9")), (45, Decimal("1.0")), (60, Decimal("1.35")), (99, Decimal("2.1"))],
     peso_score=Decimal("0.6"),
     tarifa_viaje_por_dia={"viaje-internacional": Decimal("9000")},
+    recargo_viaje_por_destino={"Estados Unidos": Decimal("0.03")},
+    coberturas_adicionales_viaje_por_destino={"Estados Unidos": Decimal("0.10")},
     tarifa_parametrico={"Retraso de vuelo": Decimal("45000"), "Lluvia excesiva": Decimal("60000")},
     tasa_vida_hipotecario_por_mil=Decimal("0.8"),
     tasa_microseguro_por_mil=Decimal("1.2"),
@@ -81,14 +87,15 @@ def calcular_desglose_generico(
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
     prima_basica = (suma / Decimal(1000) * tasa * factor_edad).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     factor_score = risk_factor(reglas, score)
-    total = (prima_basica * factor_score).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    recargo_riesgo = max(Decimal("0.00"), total - prima_basica)
+    subtotal = (prima_basica * factor_score).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    recargo_riesgo = max(Decimal("0.00"), subtotal - prima_basica)
+    impuestos = _iva(subtotal)
     return DesgloseCotizacion(
         prima_basica=prima_basica,
         recargo_riesgo=recargo_riesgo,
         coberturas_adicionales=Decimal("0.00"),
-        impuestos=Decimal("0.00"),
-        total=total,
+        impuestos=impuestos,
+        total=subtotal + impuestos,
     )
 
 
@@ -99,26 +106,6 @@ def calcular_prima(reglas: ReglasRating, producto_id: str, suma: Decimal, edad: 
 def calcular_desglose_viaje(reglas: ReglasRating, solicitud: SolicitudCotizacionViaje) -> DesgloseCotizacion:
     """Tarifa diaria × días de viaje × viajeros × recargos e impuestos."""
     dias = (solicitud.fecha_regreso - solicitud.fecha_salida).days
-    if solicitud.destino == "Estados Unidos":
-        tarifa_dia = TARIFA_VIAJE_USA
-        prima_basica = (tarifa_dia * Decimal(dias) * Decimal(solicitud.viajeros)).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
-        recargo_riesgo = (prima_basica * RECARGO_DESTINO_USA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        coberturas_adicionales = (prima_basica * COBERTURAS_ADICIONALES_FACTOR_VIAJE).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
-        subtotal = prima_basica + recargo_riesgo + coberturas_adicionales
-        impuestos = (subtotal * TASA_IVA).quantize(Decimal("1"), rounding=ROUND_HALF_UP).quantize(Decimal("0.01"))
-        total = subtotal + impuestos
-        return DesgloseCotizacion(
-            prima_basica=prima_basica,
-            recargo_riesgo=recargo_riesgo,
-            coberturas_adicionales=coberturas_adicionales,
-            impuestos=impuestos,
-            total=total,
-        )
-
     try:
         tarifa_dia = reglas.tarifa_viaje_por_dia[solicitud.producto_id]
     except KeyError as exc:
@@ -127,14 +114,20 @@ def calcular_desglose_viaje(reglas: ReglasRating, solicitud: SolicitudCotizacion
     prima_basica = (tarifa_dia * Decimal(dias) * Decimal(solicitud.viajeros)).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
-    total = (prima_basica * reglas.factor_impuestos).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    impuestos = (total - prima_basica).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    recargo_riesgo = (prima_basica * reglas.recargo_viaje_por_destino.get(solicitud.destino, Decimal(0))).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    coberturas_adicionales = (
+        prima_basica * reglas.coberturas_adicionales_viaje_por_destino.get(solicitud.destino, Decimal(0))
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    subtotal = prima_basica + recargo_riesgo + coberturas_adicionales
+    impuestos = _iva(subtotal)
     return DesgloseCotizacion(
         prima_basica=prima_basica,
-        recargo_riesgo=Decimal("0.00"),
-        coberturas_adicionales=Decimal("0.00"),
+        recargo_riesgo=recargo_riesgo,
+        coberturas_adicionales=coberturas_adicionales,
         impuestos=impuestos,
-        total=total,
+        total=subtotal + impuestos,
     )
 
 
@@ -156,7 +149,7 @@ def calcular_desglose_microseguro_vida(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
     subtotal = prima_basica + recargo_riesgo + coberturas_adicionales
-    impuestos = (subtotal * TASA_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    impuestos = _iva(subtotal)
     total = subtotal + impuestos
     return DesgloseCotizacion(
         prima_basica=prima_basica,
@@ -188,14 +181,14 @@ def calcular_desglose_vida_hipotecario(
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     factor_score = risk_factor(reglas, solicitud.score_riesgo)
-    recargo_riesgo = (prima_basica * RECARGO_FACTOR_HIPOTECARIO * factor_score).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
+    recargo_riesgo = max(
+        Decimal("0.00"), (prima_basica * (factor_score - 1)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     )
     coberturas_adicionales = (prima_basica * COBERTURAS_ADICIONALES_FACTOR_HIPOTECARIO).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
     subtotal = prima_basica + recargo_riesgo + coberturas_adicionales
-    impuestos = (subtotal * TASA_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    impuestos = _iva(subtotal)
     total = subtotal + impuestos
     return DesgloseCotizacion(
         prima_basica=prima_basica,
@@ -225,7 +218,7 @@ def calcular_desglose_parametrico(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
     subtotal = prima_basica + recargo_riesgo + coberturas_adicionales
-    impuestos = (subtotal * TASA_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    impuestos = _iva(subtotal)
     total = subtotal + impuestos
     return DesgloseCotizacion(
         prima_basica=prima_basica,
