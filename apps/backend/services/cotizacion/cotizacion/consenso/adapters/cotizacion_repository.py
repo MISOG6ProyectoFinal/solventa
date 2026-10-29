@@ -1,5 +1,7 @@
 """Persistencia de la cotización de negocio (una por oferta post-consenso)."""
 
+from decimal import Decimal
+
 from solventa_common.vigencia_cotizacion import VIGENTE_HASTA_DESCONOCIDO
 from sqlalchemy import (
     JSON,
@@ -19,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine
 
 from cotizacion.consenso.domain.models import OfertaCotizacion, VigenciaPropuesta
+from cotizacion.rating.domain.models import DesgloseCotizacion
 
 metadata = MetaData()
 
@@ -39,6 +42,10 @@ cotizaciones = Table(
     Column("socio_id", String(36), nullable=True),
     Column("degradada", Boolean, nullable=True, default=False),
     Column("senales", JSON, nullable=True),
+    Column("estado", String(32), nullable=True, default="VIGENTE"),
+    Column("impuestos", Numeric(18, 2), nullable=True, default=0.00),
+    Column("desglose", JSON, nullable=True),
+    Column("consentimiento_id", String(64), nullable=True),
 )
 
 COLUMNAS_POSTERIORES = {
@@ -49,6 +56,10 @@ COLUMNAS_POSTERIORES = {
     "socio_id": "ALTER TABLE cotizaciones ADD COLUMN socio_id VARCHAR(36)",
     "degradada": "ALTER TABLE cotizaciones ADD COLUMN degradada BOOLEAN",
     "senales": "ALTER TABLE cotizaciones ADD COLUMN senales JSON",
+    "estado": "ALTER TABLE cotizaciones ADD COLUMN estado VARCHAR(32)",
+    "impuestos": "ALTER TABLE cotizaciones ADD COLUMN impuestos NUMERIC(18, 2)",
+    "desglose": "ALTER TABLE cotizaciones ADD COLUMN desglose JSON",
+    "consentimiento_id": "ALTER TABLE cotizaciones ADD COLUMN consentimiento_id VARCHAR(64)",
 }
 
 
@@ -82,6 +93,10 @@ class PostgresCotizacionRepository:
                     socio_id=oferta.socio_id,
                     degradada=oferta.degradada,
                     senales=[signal.model_dump(mode="json") for signal in oferta.senales],
+                    estado=oferta.estado,
+                    impuestos=oferta.impuestos,
+                    desglose=oferta.desglose.model_dump(mode="json") if oferta.desglose else None,
+                    consentimiento_id=oferta.consentimiento_id,
                 )
             )
 
@@ -111,6 +126,7 @@ class InMemoryCotizacionRepository:
 
 def _oferta(row) -> OfertaCotizacion:
     vigente = row["vigente_hasta"] or VIGENTE_HASTA_DESCONOCIDO.isoformat()
+    desglose_data = row["desglose"] if "desglose" in row else None
     return OfertaCotizacion(
         id=row["id"],
         producto_id=row["producto_id"],
@@ -125,4 +141,8 @@ def _oferta(row) -> OfertaCotizacion:
         socio_id=row["socio_id"],
         degradada=bool(row["degradada"]),
         senales=row["senales"] or [],
+        estado=row["estado"] if "estado" in row and row["estado"] else "VIGENTE",
+        impuestos=row["impuestos"] if "impuestos" in row and row["impuestos"] is not None else Decimal("0.00"),
+        desglose=DesgloseCotizacion(**desglose_data) if desglose_data else None,
+        consentimiento_id=row["consentimiento_id"] if "consentimiento_id" in row else None,
     )

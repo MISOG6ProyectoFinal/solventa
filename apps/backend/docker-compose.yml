@@ -194,7 +194,7 @@ services:
       PAGOS_URL: http://pagos:8000
       POLIZAS_URL: http://polizas:8000
       SESION_SECRETO: ${SESION_SECRETO:?Defina SESION_SECRETO en el archivo .env de este directorio}
-      CORS_ORIGINS: http://localhost:4200
+      CORS_ORIGINS: http://localhost:4200,http://127.0.0.1:4200,http://localhost:4201,http://127.0.0.1:4201
     depends_on:
       siniestros:
         condition: service_healthy

@@ -143,7 +143,7 @@ describe('ConsentPanelComponent', () => {
     });
     await fixture.whenStable();
 
-    expect(validatedSpy).toHaveBeenCalledWith(true);
+    expect(validatedSpy).toHaveBeenCalledWith('CNS-51502');
     expect(el.textContent).toContain('Consentimiento validado. Puede continuar con la cotización.');
     expect(el.textContent).toContain('CNS-51502');
     expect(el.textContent).toContain('Otorgado');
@@ -427,13 +427,34 @@ describe('ConsentPanelComponent', () => {
     await fixture.whenStable();
 
     const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
-    expect(req.request.body.cliente_id).toBe('CLI-1098700941');
+    expect(req.request.body.cliente_id).toBeUndefined();
     expect(req.request.body.nombre).toBe('Pedro Perez');
     expect(req.request.body.fecha_nacimiento).toBe('1990-05-15');
     expect(req.request.body.alcance).toEqual([]);
     req.flush({
       consentimiento_id: 'CNS-FULL',
       estado: 'PENDIENTE',
+      codigo_demo: '112233',
+      expira_en: '2026-09-12T13:05:00Z',
+    });
+  });
+
+  it('sends apellido when provided in input', async () => {
+    await render(true);
+    fixture.componentRef.setInput('nombre', 'Carlos');
+    fixture.componentRef.setInput('apellido', 'Gómez');
+    await fixture.whenStable();
+
+    el.querySelector('button')!.click();
+    await fixture.whenStable();
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
+    expect(req.request.body.nombre).toBe('Carlos');
+    expect(req.request.body.apellido).toBe('Gómez');
+    req.flush({
+      consentimiento_id: 'CNS-APE-1',
+      estado: 'PENDIENTE',
+      contacto_mask: '***4567',
       codigo_demo: '112233',
       expira_en: '2026-09-12T13:05:00Z',
     });

@@ -383,6 +383,145 @@ def test_movil_asistencia_exige_sesion():
     assert client.get("/movil/siniestros/aviso-1/asistencias").status_code == 401
 
 
+def test_web_cotizacion_hipotecario_sin_consentimiento_responde_422():
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "valor_credito": 200000000},
+    )
+    assert response.status_code == 422
+    assert "requiere consentimiento digital" in response.json()["detail"]
+
+
+def test_web_cotizacion_hipotecario_consentimiento_no_otorgado_responde_422(monkeypatch):
+    identidad_mock = _Upstream(response={"id": "cons-1", "estado": "SOLICITADO"})
+    monkeypatch.setattr("canales.web.api.identidad", identidad_mock)
+
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+    )
+    assert response.status_code == 422
+    assert "no se encuentra otorgado" in response.json()["detail"]
+
+
+def test_web_cotizacion_hipotecario_consentimiento_otorgado_reenvia(monkeypatch):
+    identidad_mock = _Upstream(response={"id": "cons-1", "estado": "OTORGADO"})
+    cotizacion_mock = _Upstream(response={"id": "COT-2026-1234", "prima": "357000.00"})
+    monkeypatch.setattr("canales.web.api.identidad", identidad_mock)
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
+
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == "COT-2026-1234"
+    assert cotizacion_mock.calls[0][0] == "/consenso/cotizaciones"
+
+
+def test_web_cotizacion_hipotecario_consentimiento_otorgado_title_case_reenvia(monkeypatch):
+    identidad_mock = _Upstream(response={"id": "cons-1", "estado": "Otorgado"})
+    cotizacion_mock = _Upstream(response={"id": "COT-2026-1234", "prima": "357000.00"})
+    monkeypatch.setattr("canales.web.api.identidad", identidad_mock)
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
+
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == "COT-2026-1234"
+    assert cotizacion_mock.calls[0][0] == "/consenso/cotizaciones"
+
+
+def test_web_obtener_cotizacion_persistida(monkeypatch):
+    cotizacion_mock = _Upstream(response={"id": "COT-2026-7641", "estado": "VIGENTE"})
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
+
+    response = client.get("/web/cotizaciones/COT-2026-7641")
+    assert response.status_code == 200
+    assert response.json()["id"] == "COT-2026-7641"
+    assert cotizacion_mock.calls[0][0] == "/consenso/cotizaciones/COT-2026-7641"
+
+
+def test_web_cotizacion_asocia_cliente_existente_por_documento(monkeypatch):
+    class RouterMock:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, path: str, **kwargs):
+            self.calls.append(("GET", path, kwargs))
+            if path == "/identidad/clientes/por-documento/CC/10203040":
+                return {"id": "CLI-10203040", "nombre": "Juan"}
+            raise RuntimeError(f"Unexpected get {path}")
+
+        def post(self, path: str, **kwargs):
+            self.calls.append(("POST", path, kwargs))
+            raise RuntimeError("Should not create client if it already exists")
+
+    cotizacion_mock = _Upstream(response={"id": "COT-2026-0001", "prima": "100000.00"})
+    monkeypatch.setattr("canales.web.api.identidad", RouterMock())
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
+
+    payload = {
+        "producto_id": "viaje-internacional",
+        "tipo_documento": "CC",
+        "numero_documento": "10203040",
+        "nombre": "Juan",
+        "fecha_salida": "2026-11-01",
+        "fecha_regreso": "2026-11-10",
+        "viajeros": 1,
+        "destino": "España",
+    }
+    resp = client.post("/web/cotizaciones", json=payload)
+    assert resp.status_code == 200
+    # Verifica que a cotizacion le llego el cliente_id existente
+    cotizar_call = cotizacion_mock.calls[0][1]
+    assert cotizar_call["json"]["cliente_id"] == "CLI-10203040"
+
+
+def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
+    class RouterMock:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, path: str, **kwargs):
+            self.calls.append(("GET", path, kwargs))
+            if path == "/identidad/clientes/por-documento/CC/99998888":
+                req = httpx.Request("GET", "https://identidad/clientes")
+                resp = httpx.Response(404, request=req)
+                raise httpx.HTTPStatusError("404 Not Found", request=req, response=resp)
+            raise RuntimeError(f"Unexpected get {path}")
+
+        def post(self, path: str, **kwargs):
+            self.calls.append(("POST", path, kwargs))
+            if path == "/identidad/clientes/asegurar":
+                return {"id": "CLI-99998888", "nombre": "Lucia"}
+            raise RuntimeError(f"Unexpected post {path}")
+
+    cotizacion_mock = _Upstream(response={"id": "COT-2026-0002", "prima": "50000.00"})
+    monkeypatch.setattr("canales.web.api.identidad", RouterMock())
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
+
+    payload = {
+        "producto_id": "viaje-internacional",
+        "tipo_documento": "CC",
+        "numero_documento": "99998888",
+        "nombre": "Lucia",
+        "email": "lucia@test.com",
+        "telefono": "3112223344",
+        "fecha_salida": "2026-11-01",
+        "fecha_regreso": "2026-11-10",
+        "viajeros": 1,
+        "destino": "México",
+    }
+    resp = client.post("/web/cotizaciones", json=payload)
+    assert resp.status_code == 200
+    # Verifica que se envio el cliente_id nuevo a la cotizacion
+    cotizar_call = cotizacion_mock.calls[0][1]
+    assert cotizar_call["json"]["cliente_id"] == "CLI-99998888"
+
+
 def test_movil_reenvia_la_consulta_de_prestadores_cercanos(monkeypatch):
     collection = {"type": "FeatureCollection", "features": []}
     upstream = _Upstream(response=collection)

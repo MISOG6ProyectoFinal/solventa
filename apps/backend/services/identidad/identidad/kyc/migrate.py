@@ -64,10 +64,11 @@ def migrate(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE clientes ALTER COLUMN salt DROP NOT NULL"))
         conn.execute(text("UPDATE clientes SET numero_documento = NULL WHERE numero_documento = ''"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_clientes_email ON clientes (email)"))
+        conn.execute(text("DROP INDEX IF EXISTS uq_clientes_numero_documento"))
         conn.execute(
             text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_clientes_numero_documento "
-                "ON clientes (numero_documento) WHERE numero_documento IS NOT NULL"
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_clientes_documento "
+                "ON clientes (tipo_documento, numero_documento) WHERE numero_documento IS NOT NULL"
             )
         )
 

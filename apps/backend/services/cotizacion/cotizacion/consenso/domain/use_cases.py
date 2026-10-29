@@ -11,9 +11,15 @@ from cotizacion.catalogo.domain.models import Canal
 from cotizacion.catalogo.domain.ports import CatalogoRepository
 from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
 from cotizacion.consenso.domain.consensus import votar
-from cotizacion.consenso.domain.models import CoberturaOferta, OfertaCotizacion, VigenciaPropuesta
+from cotizacion.consenso.domain.models import (
+    ESTADO_COTIZACION_VIGENTE,
+    CoberturaOferta,
+    OfertaCotizacion,
+    VigenciaPropuesta,
+)
 from cotizacion.consenso.domain.ports import CotizacionRepository
 from cotizacion.rating.domain.models import (
+    DesgloseCotizacion,
     SolicitudCotizacionParametrico,
     SolicitudCotizacionViaje,
     SolicitudCotizacionVidaHipotecario,
@@ -69,7 +75,7 @@ class CotizarConConsensoUseCase:
         """
         producto = await asyncio.to_thread(self.validar_producto.execute, solicitud.producto_id, canal)
         signals = signals or []
-        body = solicitud.model_dump(mode="json")
+        body = solicitud.model_dump(mode="json", exclude={"cliente_id"})
         respuestas = await self.fanout(body)
         prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
@@ -78,6 +84,11 @@ class CotizarConConsensoUseCase:
             for c in await asyncio.to_thread(self.catalogo.list_coberturas, producto.id)
             if allowed_coverages is None or c.id in allowed_coverages
         ]
+        desglose_dict = elegida.get("desglose")
+        desglose = DesgloseCotizacion(**desglose_dict) if desglose_dict else None
+        impuestos = desglose.impuestos if desglose else Decimal("0.00")
+        consentimiento_id = getattr(solicitud, "consentimiento_id", None)
+
         oferta = OfertaCotizacion(
             producto_id=producto.id,
             prima=prima_ganadora,
@@ -87,10 +98,14 @@ class CotizarConConsensoUseCase:
             version_reglas=str(elegida["version_reglas"]),
             datos_riesgo=body,
             canal=str(canal),
-            cliente_id=_cliente_movil(canal, cliente_id),
+            cliente_id=getattr(solicitud, "cliente_id", None) or _cliente_movil(canal, cliente_id),
             socio_id=partner_id if canal == Canal.SOCIOS else None,
             degradada=any(signal.degraded for signal in signals),
             senales=signals,
+            estado=ESTADO_COTIZACION_VIGENTE,
+            impuestos=impuestos,
+            desglose=desglose,
+            consentimiento_id=consentimiento_id,
         )
         await asyncio.to_thread(self.cotizaciones.save, oferta)
         return oferta

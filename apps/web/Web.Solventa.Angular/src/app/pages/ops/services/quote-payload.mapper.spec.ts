@@ -1,3 +1,4 @@
+import { RamoId } from '../../../core/models/ramo.model';
 import { mapFormValuesToQuotePayload } from './quote-payload.mapper';
 
 describe('mapFormValuesToQuotePayload', () => {
@@ -96,8 +97,28 @@ describe('mapFormValuesToQuotePayload', () => {
   });
 
   it('usa la rama default para ramos no reconocidos', () => {
-    const payload = mapFormValuesToQuotePayload('OTRO_RAMO' as any, { extra: 'dato' });
+    const payload = mapFormValuesToQuotePayload('OTRO_RAMO' as unknown as RamoId, { extra: 'dato' });
     expect(payload['producto_id']).toBe('otro-ramo');
     expect(payload['extra']).toBe('dato');
+  });
+
+  it('incluye siempre los datos del cliente capturados en el formulario', () => {
+    const values = {
+      tipoDocumento: 'CE',
+      numeroDocumento: '88776655',
+      nombre: 'Valeria',
+      apellido: 'Duarte',
+      email: 'valeria@test.com',
+      telefono: '3123456789',
+      fechaSalida: '2026-10-10',
+      fechaRegreso: '2026-10-20',
+    };
+    const payload = mapFormValuesToQuotePayload('VIAJE', values);
+    expect(payload['tipo_documento']).toBe('CE');
+    expect(payload['numero_documento']).toBe('88776655');
+    expect(payload['nombre']).toBe('Valeria');
+    expect(payload['apellido']).toBe('Duarte');
+    expect(payload['email']).toBe('valeria@test.com');
+    expect(payload['telefono']).toBe('3123456789');
   });
 });

@@ -46,7 +46,9 @@ describe('QuoteTabComponent', () => {
   });
 
   it('starts on Vida hipotecario, which requires consent', () => {
-    expect(el.textContent).toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
+    expect(el.textContent).toContain(
+      'Debe solicitar y validar el consentimiento antes de cotizar.',
+    );
   });
 
   it('drops the consent requirement when a ramo without consent is selected', async () => {
@@ -56,7 +58,9 @@ describe('QuoteTabComponent', () => {
     ramoSelect.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
-    expect(el.textContent).not.toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
+    expect(el.textContent).not.toContain(
+      'Debe solicitar y validar el consentimiento antes de cotizar.',
+    );
     expect(el.textContent).toContain('no requiere consentimiento');
   });
 
@@ -90,8 +94,8 @@ describe('QuoteTabComponent', () => {
 
     await fixture.whenStable();
 
-    expect(el.textContent).toContain('Prima Calculada');
-    expect(el.textContent).toContain('2026.10.0');
+    expect(el.textContent).toContain('Cotización generada correctamente.');
+    expect(el.textContent).toContain('quote-123');
     expect(el.textContent).toContain('Fallecimiento (saldo del crédito)');
     expect(el.textContent).toContain('Incapacidad total');
   });
@@ -103,11 +107,35 @@ describe('QuoteTabComponent', () => {
     });
 
     const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
-    req.flush({ detail: 'Producto sin tarifa' }, { status: 422, statusText: 'Unprocessable Entity' });
+    req.flush(
+      { detail: 'Producto sin tarifa' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
 
     await fixture.whenStable();
 
     expect(el.textContent).toContain('Producto sin tarifa');
+  });
+
+  it('renders amber degraded banner when response is degradada', async () => {
+    const comp = fixture.componentInstance;
+    (comp as unknown as { onQuoteReady: (v: Record<string, string>) => void }).onQuoteReady({
+      valorCredito: '200000000',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    req.flush({
+      id: 'COT-2026-DEG1',
+      producto_id: 'vida-hipotecario',
+      prima: 350000,
+      coberturas: [],
+      vigencia_propuesta: { desde: '2026-10-12', hasta: '2046-10-12' },
+      version_reglas: '2026.10.0',
+      degradada: true,
+    });
+
+    await fixture.whenStable();
+    expect(el.textContent).toContain('Calculado en modo degradado con la última información válida disponible');
   });
 
   it('renders default error message when calculation error has no detail', async () => {
@@ -128,12 +156,15 @@ describe('QuoteTabComponent', () => {
     // Starts on VIDA_HIPOTECARIO
     await fixture.whenStable();
 
-    const calcBtn = el.querySelector<HTMLButtonElement>('button[type="button"]:not([variant])') ||
-      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Calcular cotización'))!;
+    const calcBtn =
+      el.querySelector<HTMLButtonElement>('button[type="button"]:not([variant])') ||
+      Array.from(el.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Calcular cotización'),
+      )!;
 
     expect(calcBtn.disabled).toBe(true);
     expect(el.textContent).toContain(
-      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.'
+      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.',
     );
   });
 
@@ -142,11 +173,13 @@ describe('QuoteTabComponent', () => {
     (comp as any).consentValidated.set(true);
     await fixture.whenStable();
 
-    const calcBtn = Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Calcular cotización'))!;
+    const calcBtn = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Calcular cotización'),
+    )!;
 
     expect(calcBtn.disabled).toBe(false);
     expect(el.textContent).not.toContain(
-      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.'
+      'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.',
     );
   });
 });

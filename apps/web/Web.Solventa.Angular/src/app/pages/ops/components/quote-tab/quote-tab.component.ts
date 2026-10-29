@@ -1,9 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RamoId } from '../../../../core/models/ramo.model';
 import { RAMOS } from '../../../../shared/constants/ramos.constants';
 import { InputDirective } from '../../../../shared/directives/input.directive';
-import { CopCurrencyPipe } from '../../../../shared/pipes/cop-currency.pipe';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
@@ -12,6 +17,7 @@ import { OfertaCotizacionResponse } from '../../interfaces/quote-payload.interfa
 import { mapFormValuesToQuotePayload } from '../../services/quote-payload.mapper';
 import { QuotesService } from '../../services/quotes.service';
 import { ConsentPanelComponent } from '../consent-panel/consent-panel.component';
+import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
 
 /** Pestaña "Cotización": formulario por ramo, consentimiento, simulación de proveedores y desglose. */
@@ -25,7 +31,7 @@ import { QuoteFormComponent } from '../quote-form/quote-form.component';
     ButtonComponent,
     QuoteFormComponent,
     ConsentPanelComponent,
-    CopCurrencyPipe,
+    QuoteBreakdownComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-tab.component.html',
@@ -41,20 +47,38 @@ export class QuoteTabComponent {
   protected readonly quoteResult = signal<OfertaCotizacionResponse | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly consentValidated = signal(false);
+  protected readonly consentimientoId = signal<string | null>(null);
   protected readonly formValues = signal<Record<string, string>>({});
 
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
   protected readonly ramoLabel = computed(() => this.ramoMeta()?.label ?? '');
   protected readonly requiresConsent = computed(() => this.ramoMeta()?.requiresConsent ?? false);
-  protected readonly puedeCalcular = computed(() => !this.requiresConsent() || this.consentValidated());
+  protected readonly puedeCalcular = computed(
+    () => !this.requiresConsent() || this.consentValidated(),
+  );
+
+  protected onConsentValidated(consentimientoId: string): void {
+    this.consentimientoId.set(consentimientoId);
+    this.consentValidated.set(true);
+  }
 
   protected onQuoteReady(values: Record<string, string>): void {
     this.isCalculating.set(true);
     this.errorMessage.set(null);
-    const payload = mapFormValuesToQuotePayload(this.ramo(), values);
+
+    const consentId = this.consentimientoId();
+    const enrichedValues = {
+      ...values,
+      ...(consentId ? { consentimiento_id: consentId } : {}),
+    };
+
+    const payload = mapFormValuesToQuotePayload(this.ramo(), enrichedValues);
     this.quotesService.cotizar(payload).subscribe({
       next: (response) => {
-        this.quoteResult.set(response);
+        this.quoteResult.set({
+          ...response,
+          degradada: response.degradada,
+        });
         this.isCalculating.set(false);
       },
       error: (err) => {

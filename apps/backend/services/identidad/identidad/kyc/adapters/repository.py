@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import Column, Date, Index, MetaData, String, Table, insert, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +21,8 @@ clients = Table(
     Column("apellido", String(120), nullable=True, default=""),
     Index("uq_clientes_email", "email", unique=True),
     Index(
-        "uq_clientes_numero_documento",
+        "uq_clientes_documento",
+        "tipo_documento",
         "numero_documento",
         unique=True,
         postgresql_where=text("numero_documento IS NOT NULL"),
@@ -28,12 +31,23 @@ clients = Table(
 )
 
 
+def _parse_date(val: date | str | None) -> date | None:
+    if not val:
+        return None
+    if isinstance(val, date):
+        return val
+    try:
+        return date.fromisoformat(str(val).split("T")[0])
+    except Exception:
+        return None
+
+
 def _client(row) -> Client:
-    email = row.get("email") or ""
     return Client(
         id=row["id"],
-        email=email,
+        email=row["email"],
         nombre=row.get("nombre") or "",
+        last_name=row.get("apellido") or "",
         tipo_documento=row.get("tipo_documento") or "CC",
         numero_documento=row.get("numero_documento") or "",
         fecha_nacimiento=row.get("fecha_nacimiento"),
@@ -41,23 +55,32 @@ def _client(row) -> Client:
     )
 
 
+def _merge_client_fields(existing: Client, client: Client) -> None:
+    existing.nombre = client.nombre or existing.nombre
+    existing.last_name = client.last_name or existing.last_name
+    existing.telefono = client.telefono or existing.telefono
+    existing.email = client.email or existing.email
+    existing.tipo_documento = client.tipo_documento or existing.tipo_documento
+    existing.numero_documento = client.numero_documento or existing.numero_documento
+    if client.fecha_nacimiento:
+        existing.fecha_nacimiento = client.fecha_nacimiento
+
+
 def _merge_and_save_client(repo, client: Client) -> Client:
     existing = None
     if client.numero_documento:
-        existing = repo.get_by_numero_documento(client.numero_documento)
-    if not existing and client.email:
-        existing = repo.get_by_email(client.email)
+        existing = repo.get_by_documento(client.tipo_documento, client.numero_documento)
     if not existing and client.id:
         existing = repo.get(client.id)
+    if not existing and client.email:
+        por_email = repo.get_by_email(client.email)
+        if por_email and por_email.numero_documento and client.numero_documento:
+            # El email ya pertenece a otra persona (otro tipo o número de documento).
+            raise ValueError(client.email)
+        existing = por_email
 
     if existing:
-        existing.nombre = client.nombre or existing.nombre
-        existing.telefono = client.telefono or existing.telefono
-        existing.email = client.email or existing.email
-        existing.tipo_documento = client.tipo_documento or existing.tipo_documento
-        existing.numero_documento = client.numero_documento or existing.numero_documento
-        if client.fecha_nacimiento:
-            existing.fecha_nacimiento = client.fecha_nacimiento
+        _merge_client_fields(existing, client)
         repo.update(existing)
         return existing
     repo.add(client)
@@ -70,17 +93,6 @@ class PostgresClientRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
-        try:
-            with self.engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(10) DEFAULT 'CC';")
-                )
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS numero_documento VARCHAR(30);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email VARCHAR(254);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);"))
-                conn.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;"))
-        except Exception:
-            pass
 
     def add(self, client: Client) -> None:
         try:
@@ -91,10 +103,10 @@ class PostgresClientRepository:
                         tipo_documento=client.tipo_documento,
                         numero_documento=client.numero_documento or None,
                         nombre=client.nombre,
-                        fecha_nacimiento=client.fecha_nacimiento if client.fecha_nacimiento else None,
+                        fecha_nacimiento=_parse_date(client.fecha_nacimiento),
                         email=client.email,
                         telefono=client.telefono,
-                        apellido=client.last_name,
+                        apellido=client.last_name or "",
                     )
                 )
         except IntegrityError as exc:
@@ -109,7 +121,8 @@ class PostgresClientRepository:
                     tipo_documento=client.tipo_documento,
                     numero_documento=client.numero_documento or None,
                     nombre=client.nombre,
-                    fecha_nacimiento=client.fecha_nacimiento if client.fecha_nacimiento else None,
+                    apellido=client.last_name or "",
+                    fecha_nacimiento=_parse_date(client.fecha_nacimiento),
                     email=client.email,
                     telefono=client.telefono,
                 )
@@ -128,10 +141,20 @@ class PostgresClientRepository:
             row = conn.execute(select(clients).where(clients.c.numero_documento == numero)).mappings().first()
         return _client(row) if row else None
 
-    def get_by_email(self, email: str) -> Client | None:
-        normalized = email.lower()
+    def get_by_documento(self, tipo: str, numero: str) -> Client | None:
         with self.engine.connect() as conn:
-            row = conn.execute(select(clients).where(clients.c.email == normalized)).mappings().first()
+            row = (
+                conn.execute(
+                    select(clients).where(clients.c.tipo_documento == tipo, clients.c.numero_documento == numero)
+                )
+                .mappings()
+                .first()
+            )
+        return _client(row) if row else None
+
+    def get_by_email(self, email: str) -> Client | None:
+        with self.engine.connect() as conn:
+            row = conn.execute(select(clients).where(clients.c.email == email.lower())).mappings().first()
         return _client(row) if row else None
 
 
@@ -145,7 +168,9 @@ class InMemoryClientRepository:
         pass
 
     def add(self, client: Client) -> None:
-        if client.email in self.clients_by_email or self.get_by_numero_documento(client.numero_documento):
+        if client.email.lower() in self.clients_by_email or self.get_by_documento(
+            client.tipo_documento, client.numero_documento
+        ):
             raise ValueError(client.email)
         self.clients_by_id[client.id] = client
         self.clients_by_email[client.email.lower()] = client
@@ -164,6 +189,14 @@ class InMemoryClientRepository:
         if not numero:
             return None
         return next((c for c in self.clients_by_id.values() if c.numero_documento == numero), None)
+
+    def get_by_documento(self, tipo: str, numero: str) -> Client | None:
+        if not numero:
+            return None
+        return next(
+            (c for c in self.clients_by_id.values() if c.numero_documento == numero and c.tipo_documento == tipo),
+            None,
+        )
 
     def get_by_email(self, email: str) -> Client | None:
         return self.clients_by_email.get(email.lower())

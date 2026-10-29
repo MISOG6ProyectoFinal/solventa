@@ -10,6 +10,7 @@ from identidad.kyc.domain.models import (
     OPEN_FINANCE,
     Account,
     Client,
+    ClienteNoEncontrado,
     CodigoOtpInvalido,
     Consentimiento,
     ConsentimientoExpirado,
@@ -17,10 +18,12 @@ from identidad.kyc.domain.models import (
     DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
     RespuestaValidacion,
     Session,
+    SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
@@ -107,7 +110,10 @@ class RegisterClient:
                 telefono=telefono,
                 fecha_nacimiento=fecha_nacimiento,
             )
-            self.clients.add(client)
+            try:
+                self.clients.add(client)
+            except ValueError as exc:
+                raise EmailAlreadyRegistered from exc
         else:
             client = by_email
             client.tipo_documento = tipo_documento
@@ -129,21 +135,26 @@ def _generate_random_id(prefix: str) -> str:
     return f"{prefix}-{n}"
 
 
+def id_cliente(tipo_documento: str, numero_documento: str) -> str:
+    return f"CLI-{tipo_documento.strip().upper()}-{numero_documento.strip()}"
+
+
 def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
+    # Con documento el id lo calcula el servidor; el cliente_id enviado solo se respeta sin documento.
+    if solicitud.numero_documento.strip():
+        return id_cliente(solicitud.tipo_documento or "CC", solicitud.numero_documento)
     cid = (solicitud.cliente_id or "").strip()
     if cid:
         return cid
-    if solicitud.numero_documento:
-        return f"CLI-{solicitud.numero_documento.strip()}"
     return _generate_random_id("CLI")
 
 
-def _resolve_cliente_email(solicitud: SolicitudConsentimiento, cliente_id: str) -> str:
+def _resolve_cliente_email(solicitud: SolicitudConsentimiento) -> str | None:
     if solicitud.email and solicitud.email.strip():
         return solicitud.email.strip()
     if solicitud.canal == "email" and solicitud.contacto:
         return solicitud.contacto.strip()
-    return f"{cliente_id.lower()}@solventa.com"
+    return None
 
 
 def _resolve_cliente_telefono(solicitud: SolicitudConsentimiento) -> str:
@@ -206,13 +217,16 @@ class SolicitarConsentimiento:
         # 1. Identificar o Registrar el Cliente según el Modelo de Dominio
         cliente_id = _resolve_cliente_id(solicitud)
 
-        if self.clients is not None:
+        # Sin email real no se guarda el cliente: el id es determinista y `asegurar` lo creará después.
+        email = _resolve_cliente_email(solicitud)
+        if self.clients is not None and email:
             cliente_obj = Client(
                 id=cliente_id,
                 tipo_documento=solicitud.tipo_documento or "CC",
                 numero_documento=solicitud.numero_documento or "",
                 nombre=solicitud.nombre or "Cliente",
-                email=_resolve_cliente_email(solicitud, cliente_id),
+                last_name=solicitud.apellido or "",
+                email=email,
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
             )
@@ -366,3 +380,60 @@ class ConsultarConsentimiento:
             alcance=alcance_str,
             alcance_lista=consentimiento.alcance,
         )
+
+
+def _cliente_a_respuesta(cliente: Client) -> RespuestaCliente:
+    fecha_nac = None
+    if cliente.fecha_nacimiento:
+        fecha_nac = (
+            cliente.fecha_nacimiento.isoformat()
+            if hasattr(cliente.fecha_nacimiento, "isoformat")
+            else str(cliente.fecha_nacimiento)
+        )
+    return RespuestaCliente(
+        id=cliente.id,
+        tipo_documento=cliente.tipo_documento,
+        numero_documento=cliente.numero_documento,
+        nombre=cliente.nombre,
+        apellido=cliente.last_name,
+        email=cliente.email,
+        telefono=cliente.telefono,
+        pais=getattr(cliente, "pais", "Colombia"),
+        fecha_nacimiento=fecha_nac,
+    )
+
+
+class BuscarClientePorDocumento:
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, tipo_documento: str, numero_documento: str) -> RespuestaCliente:
+        cliente = self.clients.get_by_documento(tipo_documento.strip(), numero_documento.strip())
+        if cliente is None:
+            raise ClienteNoEncontrado(f"Cliente con {tipo_documento} {numero_documento} no encontrado")
+        return _cliente_a_respuesta(cliente)
+
+
+class AsegurarCliente:
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
+        tipo = solicitud.tipo_documento.strip().upper()
+        numero = solicitud.numero_documento.strip()
+        existente = self.clients.get_by_documento(tipo, numero)
+        if existente is not None:
+            return _cliente_a_respuesta(existente)
+
+        nuevo_cliente = Client(
+            id=id_cliente(tipo, numero),
+            tipo_documento=tipo,
+            numero_documento=numero,
+            nombre=solicitud.nombre.strip() or "Cliente",
+            last_name=solicitud.apellido.strip(),
+            email=solicitud.email,
+            telefono=solicitud.telefono.strip(),
+            fecha_nacimiento=solicitud.fecha_nacimiento,
+        )
+        guardado = self.clients.upsert(nuevo_cliente)
+        return _cliente_a_respuesta(guardado)

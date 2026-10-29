@@ -5,9 +5,10 @@ import { QuoteFieldDef } from '../interfaces/quote-field.interface';
 export const QUOTE_CLIENT_FIELDS: readonly QuoteFieldDef[] = [
   { key: 'tipoDocumento', label: 'Tipo de documento', type: 'select', required: true, options: ['CC', 'CE', 'Pasaporte'] },
   { key: 'numeroDocumento', label: 'Número de documento', type: 'text', required: true, numeric: true, placeholder: '1020304050' },
-  { key: 'nombre', label: 'Nombre completo', type: 'text', required: true },
-  { key: 'email', label: 'Correo', type: 'email', required: true },
+  { key: 'nombre', label: 'Nombres', type: 'text', required: true },
+  { key: 'apellido', label: 'Apellidos', type: 'text', required: true },
   { key: 'telefono', label: 'Celular', type: 'text', required: true, numeric: true, placeholder: '3001234567' },
+  { key: 'email', label: 'Correo', type: 'email', required: true },
 ];
 
 /** Campos de riesgo por ramo (espejo de `ramoFields` en los mockups). */

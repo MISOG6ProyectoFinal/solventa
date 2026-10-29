@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --configuration local",
     "start:local": "ng serve --configuration local",
     "build": "ng build",
     "build:deploy": "node scripts/write-environment.mjs && ng build --configuration deploy",

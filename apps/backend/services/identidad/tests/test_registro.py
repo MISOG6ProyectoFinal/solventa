@@ -144,6 +144,24 @@ def test_registro_con_campos_vacios_es_validacion():
     assert sin_apellido.status_code == 422
 
 
+def test_registro_colision_concurrente_en_add_responde_409():
+    from unittest.mock import patch
+
+    with patch.object(container.clients, "add", side_effect=ValueError("colision@solventa.test")):
+        response = client.post(
+            "/identidad/clientes",
+            json={
+                "correo": "colision@solventa.test",
+                "contrasena": CONTRASENA,
+                "nombre": "Ana",
+                "apellido": "Rojas",
+                **personales(),
+            },
+        )
+        assert response.status_code == 409
+        assert response.json()["detail"] == DUPLICADO
+
+
 def test_registro_guarda_los_datos_personales_del_cliente():
     alta = client.post(
         "/identidad/clientes", json={**NUEVO, "correo": "datos@solventa.test", "numero_documento": "777001"}

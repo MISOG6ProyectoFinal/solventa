@@ -1,9 +1,12 @@
+import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 TIPOS_DOCUMENTO = ("CC", "CE", "Pasaporte")
 MIN_PASSWORD_LENGTH = 8
+# The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 
 
 class Client(BaseModel):
@@ -21,10 +24,12 @@ class Client(BaseModel):
     def _sync_names(self) -> "Client":
         if not self.nombre and (self.first_name or self.last_name):
             self.nombre = f"{self.first_name} {self.last_name}".strip()
-        elif self.nombre and not self.first_name:
+        elif self.nombre and not self.first_name and not self.last_name:
             parts = self.nombre.split(" ", 1)
             self.first_name = parts[0]
             self.last_name = parts[1] if len(parts) > 1 else ""
+        elif self.nombre and not self.first_name:
+            self.first_name = self.nombre
         return self
 
 
@@ -89,6 +94,7 @@ class SolicitudConsentimiento(BaseModel):
     tipo_documento: str = "CC"
     numero_documento: str = ""
     nombre: str = ""
+    apellido: str = ""
     email: str = ""
     telefono: str = ""
     fecha_nacimiento: str | None = None
@@ -155,3 +161,38 @@ class CodigoOtpInvalido(Exception):
 
 class ConsentimientoExpirado(Exception):
     pass
+
+
+class ClienteNoEncontrado(Exception):
+    pass
+
+
+class SolicitudAsegurarCliente(BaseModel):
+    tipo_documento: str = "CC"
+    numero_documento: str
+    nombre: str
+    apellido: str = ""
+    email: str
+    telefono: str = ""
+    fecha_nacimiento: date | str | None = None
+    pais: str = "Colombia"
+
+    @field_validator("email")
+    @classmethod
+    def _formato_email(cls, value: str) -> str:
+        value = value.strip()
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("El correo no tiene un formato válido.")
+        return value
+
+
+class RespuestaCliente(BaseModel):
+    id: str
+    tipo_documento: str
+    numero_documento: str
+    nombre: str
+    apellido: str = ""
+    email: str
+    telefono: str = ""
+    pais: str = "Colombia"
+    fecha_nacimiento: str | None = None
