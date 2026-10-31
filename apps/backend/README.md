@@ -59,6 +59,7 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 La lógica completa está en los módulos que los experimentos validaron:
 
 - **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, para que actuaría reconstruya la decisión con `GET /consenso/cotizaciones/{id}`.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
 - **Canales**: llaman a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; un circuito abierto responde 503. Cada llamada abre su propia conexión, sin keep-alive, para que `kube-proxy` la reparta entre todas las réplicas del destino.
@@ -254,14 +255,22 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 - **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** cotización asistida, listado, detalle y configuración de socios.
 - **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza y reintentar la emisión con la misma `Idempotency-Key` (HU015).
+- **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 crea un socio de prueba con el ramo de viaje habilitado y los alcances de cotización y emisión. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización y emisión. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
 PERFIL=humo ./load-tests/run.sh
 PERFIL=carga DURACION=5m ./load-tests/run.sh
 PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
 PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
+PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./load-tests/run.sh
+```
+
+El perfil `degradacion` necesita `load-tests/open_finance_simulado.py` corriendo en el equipo (`python3 load-tests/open_finance_simulado.py --puerto 9090`) y Cotización apuntando a él con `OPEN_FINANCE_URL`. En el modo `local`, los pods llegan al equipo por `192.168.65.254`:
+
+```bash
+docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_FINANCE_URL=http://192.168.65.254:9090
 ```
 
 | Perfil | Qué ejecuta |
@@ -270,6 +279,7 @@ PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 | `carga` | Usuarios constantes en móvil y portal web, más cotizaciones y ventas de socios a tasa fija |
 | `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
 | `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir y reintentar la emisión |
+| `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone el simulador en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
 
 | Variable | Por defecto | Uso |
 |---|---|---|
@@ -285,6 +295,10 @@ PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 | `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
 | `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
 | `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
+| `OPEN_FINANCE_SIMULADO_URL` | `http://host.docker.internal:9090` | Simulador que controla k6 en `degradacion` |
+| `SEGUNDOS_POR_FASE`, `MODO_CAIDA` | 60 y `lento` | Duración de cada fase y cómo falla el proveedor (`lento` supera el timeout, `caido` responde 503) |
+| `CLIENTES_OPEN_FINANCE` | 200 | Clientes distintos en las cotizaciones de `degradacion`; los repetidos usan el último valor bueno |
+| `UMBRAL_DISPONIBILIDAD` | 99.9 | Disponibilidad mínima de cada fase en `degradacion` |
 
 Los resultados quedan en `load-tests/resultados/<fecha>-<perfil>/`:
 

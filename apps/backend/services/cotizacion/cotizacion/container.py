@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 from pydantic import TypeAdapter
-from solventa_common.resilience import InMemoryCache, KeyValueCache, RedisCache
+from solventa_common.resilience import CircuitBreaker, InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
@@ -74,7 +74,14 @@ class Container:
         seed_catalogo(self.catalogo)
         self.signal_cache: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
         self.risk_profile_provider = build_provider(
-            settings.open_finance_url, settings.open_finance_api_key, settings.open_finance_timeout_s
+            settings.open_finance_url,
+            settings.open_finance_api_key,
+            settings.open_finance_timeout_s,
+            CircuitBreaker(
+                "open-finance",
+                failure_threshold=settings.open_finance_breaker_failures,
+                reset_timeout_s=settings.open_finance_breaker_reset_s,
+            ),
         )
         self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
         self._wire()

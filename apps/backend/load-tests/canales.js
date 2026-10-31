@@ -1,8 +1,9 @@
-import { check } from 'k6';
+import { check, sleep } from 'k6';
+import exec from 'k6/execution';
 import http from 'k6/http';
 import { Counter, Rate } from 'k6/metrics';
 
-import { generarReportes, PETICIONES } from './lib/reporte.mjs';
+import { FASES_PROVEEDOR, generarReportes, PETICIONES } from './lib/reporte.mjs';
 
 const BASE_URL = (__ENV.BASE_URL || 'https://dzwq94g5om86y.cloudfront.net').replace(/\/$/, '');
 const PERFIL = __ENV.PERFIL || 'carga';
@@ -10,14 +11,21 @@ const UMBRALES = {
   umbralP95: Number(__ENV.UMBRAL_P95_MS || 1000),
   umbralCotizacion: Number(__ENV.UMBRAL_COTIZACION_MS || 400),
   umbralErrores: Number(__ENV.UMBRAL_ERRORES || 1),
+  umbralDisponibilidad: Number(__ENV.UMBRAL_DISPONIBILIDAD || 99.9),
 };
 const PRODUCTO = 'viaje-internacional';
 const RAMO = 'ramo-viaje';
+const RAMO_HIPOTECARIO = 'ramo-vida-hipotecario';
+const SIMULADOR = (__ENV.OPEN_FINANCE_SIMULADO_URL || 'http://host.docker.internal:9090').replace(/\/$/, '');
+const SEGUNDOS_POR_FASE = Number(__ENV.SEGUNDOS_POR_FASE || 60);
+const MODO_CAIDA = __ENV.MODO_CAIDA || 'lento';
+const CLIENTES_OPEN_FINANCE = Number(__ENV.CLIENTES_OPEN_FINANCE || 200);
 const EVIDENCIA = open('./fixtures/evidencia.png', 'b');
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 const errores = new Rate('errores');
 const cotizaciones = new Counter('cotizaciones');
+const degradadas = new Rate('degradadas');
 
 function escenarios() {
   const duracion = __ENV.DURACION || '2m';
@@ -31,6 +39,21 @@ function escenarios() {
   }
   if (PERFIL === 'emision') {
     return { ventas: ventasATasaFija(duracion) };
+  }
+  if (PERFIL === 'degradacion') {
+    const total = `${SEGUNDOS_POR_FASE * FASES_PROVEEDOR.length}s`;
+    return {
+      proveedor: { executor: 'per-vu-iterations', exec: 'controlarProveedor', vus: 1, iterations: 1, maxDuration: total },
+      cotizaciones: {
+        executor: 'constant-arrival-rate',
+        exec: 'cotizarConOpenFinance',
+        rate: Number(__ENV.TASA_SOCIOS || 600),
+        timeUnit: '1m',
+        duration: total,
+        preAllocatedVUs: Number(__ENV.VUS_SOCIOS || 20),
+        maxVUs: Number(__ENV.VUS_MAXIMOS || 200),
+      },
+    };
   }
   if (PERFIL === 'asr04') {
     return {
@@ -86,6 +109,14 @@ function umbrales() {
     definidos[`errores{name:${nombre}}`] = [`rate<=${UMBRALES.umbralErrores / 100}`];
     definidos[`http_reqs{name:${nombre}}`] = ['count>=0'];
   }
+  if (PERFIL === 'degradacion') {
+    for (const fase of FASES_PROVEEDOR) {
+      definidos[`errores{fase_proveedor:${fase}}`] = [`rate<=${(100 - UMBRALES.umbralDisponibilidad) / 100}`];
+      definidos[`http_reqs{fase_proveedor:${fase}}`] = ['count>=0'];
+      definidos[`http_req_duration{fase_proveedor:${fase}}`] = ['max>=0'];
+      definidos[`degradadas{fase_proveedor:${fase}}`] = ['rate>=0'];
+    }
+  }
   return definidos;
 }
 
@@ -109,8 +140,11 @@ function solicitudViaje() {
   return { producto_id: PRODUCTO, destino: 'España', fecha_salida: fecha(30), fecha_regreso: fecha(40), viajeros: 2 };
 }
 
-function pedir(nombre, metodo, url, cuerpo, { estado = 200, headers = {}, validar } = {}) {
-  const parametros = { headers: { ...(cuerpo === null ? {} : JSON_HEADERS), ...headers }, tags: { name: nombre, fase: 'prueba' } };
+function pedir(nombre, metodo, url, cuerpo, { estado = 200, headers = {}, validar, tags = {} } = {}) {
+  const parametros = {
+    headers: { ...(cuerpo === null ? {} : JSON_HEADERS), ...headers },
+    tags: { name: nombre, fase: 'prueba', ...tags },
+  };
   const datos = cuerpo === null || cuerpo instanceof ArrayBuffer ? cuerpo : JSON.stringify(cuerpo);
   const respuesta = http.request(metodo, url, datos, parametros);
   let json = null;
@@ -130,7 +164,7 @@ function pedir(nombre, metodo, url, cuerpo, { estado = 200, headers = {}, valida
     },
     { name: nombre },
   );
-  errores.add(!ok, { name: nombre });
+  errores.add(!ok, { name: nombre, ...tags });
   if (!ok) return null;
   if (json !== null) return json;
   return respuesta.body ? safeJson(respuesta) : null;
@@ -172,13 +206,13 @@ export function setup() {
   if (alta.status !== 201) throw new Error(`Alta del socio de prueba: ${alta.status} ${alta.body}`);
   const socio = alta.json();
   const configuracion = http.get(`${BASE_URL}/web/socios/${socio.id}/configuracion`, { tags: { name: 'Preparación' } });
-  const viaje = configuracion.json().ramos.find((r) => r.id === RAMO);
+  const ramos = configuracion
+    .json()
+    .ramos.filter((r) => r.id === RAMO || r.id === RAMO_HIPOTECARIO)
+    .map((r) => ({ ramo_id: r.id, coberturas: r.coberturas.map((c) => c.id) }));
   const habilitar = http.put(
     `${BASE_URL}/web/socios/${socio.id}/configuracion`,
-    JSON.stringify({
-      ramos: [{ ramo_id: RAMO, coberturas: viaje.coberturas.map((c) => c.id) }],
-      actualizado_por: 'Prueba de carga',
-    }),
+    JSON.stringify({ ramos, actualizado_por: 'Prueba de carga' }),
     { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
   );
   if (habilitar.status !== 200) throw new Error(`Configuración del socio de prueba: ${habilitar.status} ${habilitar.body}`);
@@ -325,6 +359,48 @@ export function ventaSocio(datos) {
     (p) => p.estado === 'activa' && /^POL-/.test(p.numero) && p.cotizacion_id === oferta.id,
   );
   if (poliza) emitir('Reintentar la emisión', (p) => p.id === poliza.id);
+}
+
+function faseDelProveedor() {
+  const transcurridos = (Date.now() - exec.scenario.startTime) / 1000;
+  return FASES_PROVEEDOR[Math.min(Math.floor(transcurridos / SEGUNDOS_POR_FASE), FASES_PROVEEDOR.length - 1)];
+}
+
+function cambiarModo(modo) {
+  const respuesta = http.post(`${SIMULADOR}/modo/${modo}`, null, { tags: { name: 'Control del simulador' } });
+  if (respuesta.status !== 200) throw new Error(`Simulador de Open Finance: ${respuesta.status} ${respuesta.body}`);
+}
+
+export function controlarProveedor() {
+  cambiarModo('normal');
+  sleep(SEGUNDOS_POR_FASE);
+  cambiarModo(MODO_CAIDA);
+  sleep(SEGUNDOS_POR_FASE);
+  cambiarModo('normal');
+}
+
+function solicitudHipotecario() {
+  const cliente = `cliente-${Math.floor(Math.random() * CLIENTES_OPEN_FINANCE)}`;
+  return {
+    producto_id: 'vida-hipotecario',
+    fecha_nacimiento: '1986-01-01',
+    entidad: 'Banco Aurora',
+    valor_credito: '250000000',
+    plazo_anios: 15,
+    consentimiento_open_finance: { referencia_cliente: cliente, consentimiento_id: `consentimiento-${cliente}` },
+  };
+}
+
+export function cotizarConOpenFinance(datos) {
+  const fase = faseDelProveedor();
+  const oferta = pedir('Cotizar con Open Finance', 'POST', `${BASE_URL}/socios/v1/cotizaciones`, solicitudHipotecario(), {
+    headers: { 'X-Client-Id': datos.clientId, 'X-Api-Key': datos.secreto },
+    tags: { fase_proveedor: fase },
+    validar: (o) => Number(o.prima) > 0 && o.senales?.length === 1 && o.degradada === (o.senales[0].origen !== 'proveedor'),
+  });
+  if (!oferta) return;
+  cotizaciones.add(1, { name: 'Cotizar con Open Finance' });
+  degradadas.add(oferta.degradada, { fase_proveedor: fase });
 }
 
 export function handleSummary(data) {

@@ -1,7 +1,13 @@
 from decimal import Decimal
 from typing import Any, Protocol
 
-from cotizacion.signals.domain.models import OpenFinanceConsent
+from cotizacion.signals.domain.models import DegradationReason, OpenFinanceConsent
+
+
+class ProviderFailure(Exception):
+    def __init__(self, reason: DegradationReason) -> None:
+        super().__init__(reason.value)
+        self.reason = reason
 
 
 class RiskProfileProvider(Protocol):

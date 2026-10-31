@@ -1,10 +1,10 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
 from cotizacion.consenso.adapters.cotizacion_repository import cotizaciones as quotes_table
 from cotizacion.consenso.domain.models import OfertaCotizacion, VigenciaPropuesta
-from cotizacion.signals.domain.models import AppliedSignal, SignalOrigin
+from cotizacion.signals.domain.models import AppliedSignal, DegradationReason, SignalOrigin
 from solventa_common.vigencia_cotizacion import ZONA_COTIZACION
 from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.pool import StaticPool
@@ -89,7 +89,12 @@ def test_stores_degraded_flag_and_applied_signal():
     repository = PostgresCotizacionRepository(engine)
     repository.create_schema()
     signal = AppliedSignal(
-        fuente="open-finance", origen=SignalOrigin.CACHE, score_riesgo=Decimal("0.7"), latencia_ms=301
+        fuente="open-finance",
+        origen=SignalOrigin.CACHE,
+        score_riesgo=Decimal("0.7"),
+        latencia_ms=301,
+        motivo=DegradationReason.TIMEOUT,
+        obtenido_en=datetime(2026, 10, 28, 15, 30, tzinfo=UTC),
     )
 
     repository.save(_oferta().model_copy(update={"degradada": True, "senales": [signal]}))
@@ -97,4 +102,14 @@ def test_stores_degraded_flag_and_applied_signal():
     with engine.connect() as conn:
         row = conn.execute(select(quotes_table)).mappings().one()
     assert row["degradada"] is True
-    assert row["senales"] == [{"fuente": "open-finance", "origen": "cache", "score_riesgo": "0.7", "latencia_ms": 301}]
+    assert row["senales"] == [
+        {
+            "fuente": "open-finance",
+            "origen": "cache",
+            "score_riesgo": "0.7",
+            "latencia_ms": 301,
+            "motivo": "timeout",
+            "obtenido_en": "2026-10-28T15:30:00Z",
+        }
+    ]
+    assert repository.get(row["id"]).senales == [signal]
