@@ -16,7 +16,7 @@ const UMBRALES = {
 const PRODUCTO = 'viaje-internacional';
 const RAMO = 'ramo-viaje';
 const RAMO_HIPOTECARIO = 'ramo-vida-hipotecario';
-const SIMULADOR = (__ENV.OPEN_FINANCE_SIMULADO_URL || 'http://host.docker.internal:9090').replace(/\/$/, '');
+const SIMULADOR = (__ENV.OPEN_FINANCE_SIMULADO_URL || '').replace(/\/$/, '');
 const SEGUNDOS_POR_FASE = Number(__ENV.SEGUNDOS_POR_FASE || 60);
 const MODO_CAIDA = __ENV.MODO_CAIDA || 'lento';
 const CLIENTES_OPEN_FINANCE = Number(__ENV.CLIENTES_OPEN_FINANCE || 200);
@@ -367,6 +367,7 @@ function faseDelProveedor() {
 }
 
 function cambiarModo(modo) {
+  if (!SIMULADOR) throw new Error('Falta OPEN_FINANCE_SIMULADO_URL para el perfil degradacion');
   const respuesta = http.post(`${SIMULADOR}/modo/${modo}`, null, { tags: { name: 'Control del simulador' } });
   if (respuesta.status !== 200) throw new Error(`Simulador de Open Finance: ${respuesta.status} ${respuesta.body}`);
 }
@@ -380,7 +381,7 @@ export function controlarProveedor() {
 }
 
 function solicitudHipotecario() {
-  const cliente = `cliente-${Math.floor(Math.random() * CLIENTES_OPEN_FINANCE)}`;
+  const cliente = `cliente-${crypto.getRandomValues(new Uint32Array(1))[0] % CLIENTES_OPEN_FINANCE}`;
   return {
     producto_id: 'vida-hipotecario',
     fecha_nacimiento: '1986-01-01',

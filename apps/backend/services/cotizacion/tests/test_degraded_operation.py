@@ -70,9 +70,6 @@ def open_finance():
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
-        def log_message(self, *args):
-            pass
-
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     server.delay_s = 0
     server.status = 200

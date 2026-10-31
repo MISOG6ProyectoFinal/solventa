@@ -10,12 +10,14 @@ curl localhost:9090/estadisticas          # llamadas recibidas por modo
 import argparse
 import hashlib
 import json
+import logging
 import threading
 import time
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODES = ("normal", "lento", "caido")
+logger = logging.getLogger(__name__)
 
 
 class Simulator:
@@ -75,8 +77,8 @@ def build_handler(simulator: Simulator) -> type[BaseHTTPRequestHandler]:
             print(f"{time.strftime('%H:%M:%S')} modo {mode}", flush=True)
             self._send(200, {"modo": mode})
 
-        def log_message(self, *args):
-            pass
+        def log_message(self, format, *args):
+            logger.debug(format, *args)
 
     return Handler
 
@@ -86,7 +88,7 @@ def main() -> None:
     parser.add_argument("--puerto", type=int, default=9090)
     parser.add_argument("--demora", type=float, default=2.0, help="Segundos que tarda en modo lento")
     args = parser.parse_args()
-    server = ThreadingHTTPServer(("0.0.0.0", args.puerto), build_handler(Simulator(args.demora)))
+    server = ThreadingHTTPServer(("127.0.0.1", args.puerto), build_handler(Simulator(args.demora)))
     print(f"Open Finance simulado en el puerto {args.puerto}", flush=True)
     server.serve_forever()
 
