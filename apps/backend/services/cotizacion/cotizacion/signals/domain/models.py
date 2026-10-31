@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -10,6 +11,13 @@ class SignalOrigin(StrEnum):
     DEFAULT = "valor_por_defecto"
 
 
+class DegradationReason(StrEnum):
+    TIMEOUT = "timeout"
+    CIRCUIT_OPEN = "circuito_abierto"
+    PROVIDER_ERROR = "error_proveedor"
+    INVALID_RESPONSE = "respuesta_invalida"
+
+
 class AppliedSignal(BaseModel):
     """Qué señal entró al precio y de dónde salió, para reconstruir la decisión (ASR-10)."""
 
@@ -17,6 +25,8 @@ class AppliedSignal(BaseModel):
     origen: SignalOrigin
     score_riesgo: Decimal = Field(ge=0, le=1)
     latencia_ms: int = Field(ge=0)
+    motivo: DegradationReason | None = None
+    obtenido_en: datetime | None = None
 
     @property
     def degraded(self) -> bool:

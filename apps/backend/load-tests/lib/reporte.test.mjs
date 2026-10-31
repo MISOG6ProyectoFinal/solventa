@@ -91,3 +91,29 @@ test('generarReportes escribe los archivos en la carpeta indicada', () => {
   ]);
   assert.equal(JSON.parse(archivos['resultados/x/resumen.json']).cumple, true);
 });
+
+test('la prueba de degradación reporta disponibilidad y degradadas por fase del proveedor', () => {
+  const datos = resumen({ 'Cotizar con Open Finance': { p95: 120 } });
+  const fase = (nombre, { cantidad, errores, degradadas }) => {
+    datos.metrics[`http_reqs{fase_proveedor:${nombre}}`] = { values: { count: cantidad } };
+    datos.metrics[`errores{fase_proveedor:${nombre}}`] = { values: { rate: errores } };
+    datos.metrics[`degradadas{fase_proveedor:${nombre}}`] = { values: { rate: degradadas } };
+    datos.metrics[`http_req_duration{fase_proveedor:${nombre}}`] = tendencia(120);
+  };
+  fase('normal', { cantidad: 600, errores: 0, degradadas: 0 });
+  fase('caido', { cantidad: 600, errores: 0.002, degradadas: 1 });
+
+  const analisis = analizar(datos, { ...UMBRALES, umbralDisponibilidad: 99.9 });
+
+  assert.deepEqual(
+    analisis.fases.map((f) => [f.fase, f.disponibilidad, f.pctDegradadas, f.cumple]),
+    [
+      ['normal', 100, 0, true],
+      ['caido', 99.8, 100, false],
+    ],
+  );
+  assert.equal(analisis.cumple, false);
+  assert.match(markdown(analisis), /\| caido \| 600 \| 99\.80 \| 100\.00 \| 120 \| No \|/);
+  assert.match(html(analisis), /Open Finance por fase/);
+  assert.deepEqual(analizar(resumen({ 'Listar socios': { p95: 100 } }), UMBRALES).fases, []);
+});

@@ -22,7 +22,10 @@ export const PETICIONES = [
   { canal: 'API de socios', nombre: 'Pagar como socio' },
   { canal: 'API de socios', nombre: 'Emitir póliza como socio' },
   { canal: 'API de socios', nombre: 'Reintentar la emisión' },
+  { canal: 'API de socios', nombre: 'Cotizar con Open Finance', cotizacion: true },
 ];
+
+export const FASES_PROVEEDOR = ['normal', 'caido', 'recuperado'];
 
 const CHART_JS = {
   src: 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
@@ -45,7 +48,28 @@ function latencias(v) {
   };
 }
 
-export function analizar(data, { umbralP95, umbralCotizacion, umbralErrores, perfil = 'carga' }) {
+function analizarFases(data, umbralDisponibilidad) {
+  return FASES_PROVEEDOR.flatMap((fase) => {
+    const peticiones = valores(data, `http_reqs{fase_proveedor:${fase}}`)?.count ?? 0;
+    if (peticiones === 0) return [];
+    const disponibilidad = 100 - 100 * (valores(data, `errores{fase_proveedor:${fase}}`)?.rate ?? 0);
+    return [
+      {
+        fase,
+        peticiones,
+        disponibilidad,
+        pctDegradadas: 100 * (valores(data, `degradadas{fase_proveedor:${fase}}`)?.rate ?? 0),
+        p95: valores(data, `http_req_duration{fase_proveedor:${fase}}`)?.['p(95)'],
+        cumple: disponibilidad >= umbralDisponibilidad,
+      },
+    ];
+  });
+}
+
+export function analizar(
+  data,
+  { umbralP95, umbralCotizacion, umbralErrores, umbralDisponibilidad = 99.9, perfil = 'carga' },
+) {
   const duracionS = Math.max(data.state.testRunDurationMs / 1000, 0.001);
   const filas = PETICIONES.flatMap(({ canal, nombre, cotizacion, objetivoMs }) => {
     const duracion = valores(data, `http_req_duration{name:${nombre}}`);
@@ -72,6 +96,7 @@ export function analizar(data, { umbralP95, umbralCotizacion, umbralErrores, per
   const cotizacionesOk = valores(data, 'cotizaciones')?.count ?? 0;
   const p95Cotizaciones = Math.max(0, ...filas.filter((f) => f.cotizacion).map((f) => f.p95));
   const iteracionesPerdidas = valores(data, 'dropped_iterations')?.count ?? 0;
+  const fases = analizarFases(data, umbralDisponibilidad);
 
   return {
     perfil,
@@ -84,8 +109,10 @@ export function analizar(data, { umbralP95, umbralCotizacion, umbralErrores, per
     umbralP95,
     umbralCotizacion,
     umbralErrores,
-    cumple: [...filas, total].every((f) => f.cumple) && iteracionesPerdidas === 0,
+    umbralDisponibilidad,
+    cumple: [...filas, total, ...fases].every((f) => f.cumple) && iteracionesPerdidas === 0,
     filas: [...filas, total],
+    fases,
   };
 }
 
@@ -135,6 +162,19 @@ export function markdown(analisis) {
     '',
     `Tiempos en milisegundos. Las cotizaciones se miden contra ${analisis.umbralCotizacion} ms (ASR-01) y el resto contra ${analisis.umbralP95} ms; cada petición cumple además si sus errores no superan ${analisis.umbralErrores} %. La prueba no cumple si k6 dejó iteraciones sin lanzar, porque entonces no sostuvo la tasa pedida.`,
   ];
+  if (analisis.fases.length > 0) {
+    lineas.push(
+      '',
+      '| Fase del proveedor | Peticiones | Disponibilidad (%) | Degradadas (%) | p95 | Cumple |',
+      '|---|---:|---:|---:|---:|---|',
+      ...analisis.fases.map(
+        (f) =>
+          `| ${f.fase} | ${f.peticiones} | ${pct(f.disponibilidad)} | ${pct(f.pctDegradadas)} | ${entero(f.p95)} | ${f.cumple ? 'Sí' : 'No'} |`,
+      ),
+      '',
+      `Cada fase cumple si su disponibilidad llega a ${analisis.umbralDisponibilidad} %.`,
+    );
+  }
   return lineas.join('\n') + '\n';
 }
 
@@ -151,6 +191,21 @@ export function html(analisis) {
     p99: filas.map((f) => Math.round(f.p99)),
     objetivo: filas.map((f) => f.objetivo),
   }).replace(/</g, '\\u003c');
+  const fases = analisis.fases.length
+    ? `<section class="panel tabla"><h2>Open Finance por fase (disponibilidad mínima ${analisis.umbralDisponibilidad} %)</h2>
+<table>
+<thead><tr><th>Fase</th><th>Peticiones</th><th>Disponibilidad %</th><th>Degradadas %</th><th>p95</th><th>Cumple</th></tr></thead>
+<tbody>
+${analisis.fases
+  .map(
+    (f) =>
+      `<tr><td>${escapar(f.fase)}</td><td>${f.peticiones}</td><td>${pct(f.disponibilidad)}</td><td>${pct(f.pctDegradadas)}</td><td>${entero(f.p95)}</td><td class="${f.cumple ? 'ok' : 'mal'}">${f.cumple ? 'Sí' : 'No'}</td></tr>`,
+  )
+  .join('\n')}
+</tbody>
+</table>
+</section>`
+    : '';
   const tabla = analisis.filas
     .map(
       (f) =>
@@ -212,6 +267,7 @@ ${tabla}
 </tbody>
 </table>
 </section>
+${fases}
 </main>
 <script src="${CHART_JS.src}" integrity="${CHART_JS.integrity}" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
