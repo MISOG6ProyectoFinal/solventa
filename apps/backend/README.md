@@ -267,7 +267,7 @@ PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./load-tests/run.sh
 ```
 
-El perfil `degradacion` necesita `load-tests/open_finance_simulado.py` corriendo en el equipo (`python3 load-tests/open_finance_simulado.py --puerto 9090`) y Cotización apuntando a él con `OPEN_FINANCE_URL`. En el modo `local`, los pods llegan al equipo por `192.168.65.254`:
+El perfil `degradacion` necesita `load-tests/open_finance_simulado.py` corriendo en el equipo (`poetry run python load-tests/open_finance_simulado.py --puerto 9090`) y Cotización apuntando a él con `OPEN_FINANCE_URL`. En el modo `local`, los pods llegan al equipo por `192.168.65.254`:
 
 ```bash
 docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_FINANCE_URL=http://192.168.65.254:9090

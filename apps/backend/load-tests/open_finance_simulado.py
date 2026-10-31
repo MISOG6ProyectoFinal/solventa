@@ -1,6 +1,6 @@
 """Open Finance simulado para la prueba de degradación (HU018).
 
-python load-tests/open_finance_simulado.py --puerto 9090
+poetry run python load-tests/open_finance_simulado.py --puerto 9090
 curl -X POST localhost:9090/modo/lento    # responde después del timeout de Cotización
 curl -X POST localhost:9090/modo/caido    # responde 503
 curl -X POST localhost:9090/modo/normal
@@ -8,16 +8,15 @@ curl localhost:9090/estadisticas          # llamadas recibidas por modo
 """
 
 import argparse
+import asyncio
 import hashlib
-import json
-import logging
-import threading
 import time
 from collections import Counter
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
 
 MODES = ("normal", "lento", "caido")
-logger = logging.getLogger(__name__)
 
 
 class Simulator:
@@ -25,12 +24,10 @@ class Simulator:
         self.mode = "normal"
         self.delay_s = delay_s
         self.calls: Counter[str] = Counter()
-        self.lock = threading.Lock()
 
     def record(self) -> str:
-        with self.lock:
-            self.calls[self.mode] += 1
-            return self.mode
+        self.calls[self.mode] += 1
+        return self.mode
 
 
 def score_for(customer_id: str) -> str:
@@ -38,49 +35,31 @@ def score_for(customer_id: str) -> str:
     return f"{(30 + digest[0] % 41) / 100:.2f}"
 
 
-def build_handler(simulator: Simulator) -> type[BaseHTTPRequestHandler]:
-    class Handler(BaseHTTPRequestHandler):
-        def _send(self, status: int, body: dict) -> None:
-            payload = json.dumps(body).encode()
-            try:
-                self.send_response(status)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(payload)))
-                self.end_headers()
-                self.wfile.write(payload)
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+def build_app(simulator: Simulator) -> FastAPI:
+    app = FastAPI(title="Open Finance simulado")
 
-        def do_GET(self):
-            if self.path == "/estadisticas":
-                with simulator.lock:
-                    self._send(200, {"modo": simulator.mode, "llamadas": dict(simulator.calls)})
-                return
-            if not self.path.startswith("/customers/"):
-                self._send(404, {"detail": "Ruta desconocida"})
-                return
-            mode = simulator.record()
-            if mode == "caido":
-                self._send(503, {"detail": "Open Finance no disponible"})
-                return
-            if mode == "lento":
-                time.sleep(simulator.delay_s)
-            self._send(200, {"score_riesgo": score_for(self.path.split("/")[2])})
+    @app.get("/customers/{customer_id}/profile")
+    async def profile(customer_id: str) -> dict:
+        mode = simulator.record()
+        if mode == "caido":
+            raise HTTPException(503, "Open Finance no disponible")
+        if mode == "lento":
+            await asyncio.sleep(simulator.delay_s)
+        return {"score_riesgo": score_for(customer_id)}
 
-        def do_POST(self):
-            mode = self.path.removeprefix("/modo/")
-            if mode not in MODES:
-                self._send(400, {"detail": f"Modo inválido. Use {', '.join(MODES)}"})
-                return
-            with simulator.lock:
-                simulator.mode = mode
-            print(f"{time.strftime('%H:%M:%S')} modo {mode}", flush=True)
-            self._send(200, {"modo": mode})
+    @app.post("/modo/{mode}")
+    async def change_mode(mode: str) -> dict:
+        if mode not in MODES:
+            raise HTTPException(400, f"Modo inválido. Use {', '.join(MODES)}")
+        simulator.mode = mode
+        print(f"{time.strftime('%H:%M:%S')} modo {mode}", flush=True)
+        return {"modo": mode}
 
-        def log_message(self, format, *args):
-            logger.debug(format, *args)
+    @app.get("/estadisticas")
+    async def stats() -> dict:
+        return {"modo": simulator.mode, "llamadas": dict(simulator.calls)}
 
-    return Handler
+    return app
 
 
 def main() -> None:
@@ -88,9 +67,8 @@ def main() -> None:
     parser.add_argument("--puerto", type=int, default=9090)
     parser.add_argument("--demora", type=float, default=2.0, help="Segundos que tarda en modo lento")
     args = parser.parse_args()
-    server = ThreadingHTTPServer(("127.0.0.1", args.puerto), build_handler(Simulator(args.demora)))
     print(f"Open Finance simulado en el puerto {args.puerto}", flush=True)
-    server.serve_forever()
+    uvicorn.run(build_app(Simulator(args.demora)), host="127.0.0.1", port=args.puerto, log_level="warning")
 
 
 if __name__ == "__main__":
