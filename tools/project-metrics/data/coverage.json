@@ -849,6 +849,102 @@
       "linesCovered": 4021,
       "linesValid": 4388,
       "runId": 40233791036
+    },
+    {
+      "date": "2026-10-26T17:09:13Z",
+      "app": "Mobile",
+      "coverage": 91.9,
+      "linesCovered": 1661,
+      "linesValid": 1807,
+      "runId": 40365475208
+    },
+    {
+      "date": "2026-10-26T17:09:52Z",
+      "app": "Backend",
+      "coverage": 91.7,
+      "linesCovered": 4057,
+      "linesValid": 4426,
+      "runId": 40365475208
+    },
+    {
+      "date": "2026-10-26T18:26:56Z",
+      "app": "Mobile",
+      "coverage": 91.9,
+      "linesCovered": 1672,
+      "linesValid": 1819,
+      "runId": 40377374816
+    },
+    {
+      "date": "2026-10-26T18:27:02Z",
+      "app": "Backend",
+      "coverage": 91.7,
+      "linesCovered": 4057,
+      "linesValid": 4426,
+      "runId": 40377374816
+    },
+    {
+      "date": "2026-10-26T19:25:08Z",
+      "app": "Mobile",
+      "coverage": 91.9,
+      "linesCovered": 1674,
+      "linesValid": 1821,
+      "runId": 40386212225
+    },
+    {
+      "date": "2026-10-26T19:25:22Z",
+      "app": "Web",
+      "coverage": 96.4,
+      "linesCovered": 1147,
+      "linesValid": 1190,
+      "runId": 40386212225
+    },
+    {
+      "date": "2026-10-26T19:25:53Z",
+      "app": "Backend",
+      "coverage": 91.7,
+      "linesCovered": 4057,
+      "linesValid": 4426,
+      "runId": 40386212225
+    },
+    {
+      "date": "2026-10-28T03:26:22Z",
+      "app": "Mobile",
+      "coverage": 91.9,
+      "linesCovered": 1677,
+      "linesValid": 1824,
+      "runId": 40626426353
+    },
+    {
+      "date": "2026-10-28T15:44:39Z",
+      "app": "Mobile",
+      "coverage": 91.9,
+      "linesCovered": 1675,
+      "linesValid": 1822,
+      "runId": 40718592241
+    },
+    {
+      "date": "2026-10-29T00:31:02Z",
+      "app": "Web",
+      "coverage": 96.4,
+      "linesCovered": 1209,
+      "linesValid": 1254,
+      "runId": 40794318663
+    },
+    {
+      "date": "2026-10-29T00:32:08Z",
+      "app": "Backend",
+      "coverage": 91.9,
+      "linesCovered": 4265,
+      "linesValid": 4641,
+      "runId": 40794318663
+    },
+    {
+      "date": "2026-10-31T01:03:33Z",
+      "app": "Backend",
+      "coverage": 91.9,
+      "linesCovered": 4302,
+      "linesValid": 4679,
+      "runId": 41153067813
     }
   ]
 }

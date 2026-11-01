@@ -29,7 +29,35 @@
       },
       {
         "day": 7,
+        "completedStoryPoints": 5
+      },
+      {
+        "day": 8,
+        "completedStoryPoints": 5
+      },
+      {
+        "day": 9,
         "completedStoryPoints": 0
+      },
+      {
+        "day": 10,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 11,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 12,
+        "completedStoryPoints": 8
+      },
+      {
+        "day": 13,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 14,
+        "completedStoryPoints": 10
       }
     ]
   },
@@ -47,12 +75,12 @@
     {
       "week": 3,
       "planned": 23,
-      "actual": 26
+      "actual": 31
     },
     {
       "week": 4,
       "planned": 31,
-      "actual": 0
+      "actual": 23
     },
     {
       "week": 5,
@@ -161,7 +189,35 @@
       },
       {
         "day": 21,
+        "valueDelivered": 4
+      },
+      {
+        "day": 22,
+        "valueDelivered": 4
+      },
+      {
+        "day": 23,
         "valueDelivered": 0
+      },
+      {
+        "day": 24,
+        "valueDelivered": 0
+      },
+      {
+        "day": 25,
+        "valueDelivered": 0
+      },
+      {
+        "day": 26,
+        "valueDelivered": 4
+      },
+      {
+        "day": 27,
+        "valueDelivered": 0
+      },
+      {
+        "day": 28,
+        "valueDelivered": 2
       }
     ]
   },
@@ -176,8 +232,8 @@
       {
         "sprint": 2,
         "plannedStoryPoints": 54,
-        "completedStoryPoints": 26,
-        "closed": false
+        "completedStoryPoints": 54,
+        "closed": true
       },
       {
         "sprint": 3,
