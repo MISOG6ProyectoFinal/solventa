@@ -4,12 +4,12 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="md:col-span-2">
         <slv-field label="Buscar por número de póliza o identificación" hint="Ej: SLV-2024-00391 o 1020304050">
-          <input slvInput type="text" placeholder="Buscar..." [(ngModel)]="query" />
+          <input slvInput type="text" placeholder="Buscar..." data-testid="policy-search" [(ngModel)]="query" />
         </slv-field>
       </div>
 
       <slv-field label="Estado">
-        <select slvInput [(ngModel)]="statusFilter">
+        <select slvInput data-testid="policy-filter-estado" [(ngModel)]="statusFilter">
           <option [value]="allFilter">Todos</option>
           @for (status of statusOptions; track status) {
             <option [value]="status">{{ status }}</option>
@@ -18,7 +18,7 @@
       </slv-field>
 
       <slv-field label="Socio origen">
-        <select slvInput [(ngModel)]="partnerFilter">
+        <select slvInput data-testid="policy-filter-socio" [(ngModel)]="partnerFilter">
           <option [value]="allFilter">Todos</option>
           @for (partner of partners(); track partner) {
             <option [value]="partner">{{ partner }}</option>
@@ -28,6 +28,7 @@
     </div>
   </slv-card>
 
+  <div data-testid="hu005-policy-results">
   <slv-card [padding]="false">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -54,7 +55,7 @@
                 <slv-badge [tone]="statusTone[policy.status]">{{ policy.status.toUpperCase() }}</slv-badge>
               </td>
               <td class="px-5 py-3 text-right">
-                <button slv-button type="button" variant="ghost" (click)="opened.emit(policy.id)">Abrir</button>
+                <button slv-button type="button" variant="ghost" [attr.data-testid]="'btn-abrir-poliza-' + policy.number" (click)="opened.emit(policy.id)">Abrir</button>
               </td>
             </tr>
           } @empty {
@@ -68,4 +69,5 @@
       </table>
     </div>
   </slv-card>
+  </div>
 </div>

@@ -69,4 +69,35 @@ describe('PolicyDetailComponent', () => {
     expect(el.querySelector('table')).not.toBeNull();
     expect(el.textContent).toContain('Fallecimiento (saldo del crédito)');
   });
+
+  it.each([
+    ['p1', 'ACTIVA'],
+    ['p4', 'CANCELADA'],
+    ['p3', 'VENCIDA'],
+  ])('shows the status badge of %s in uppercase', async (id, label) => {
+    await render(id);
+
+    expect(el.querySelector('[data-testid="policy-status-badge"]')!.textContent).toContain(label);
+  });
+
+  it('renders the HU005 data-testid hooks', async () => {
+    await render('p1');
+
+    ['btn-volver-listado', 'hu005-policy-detail', 'hu005-policy-tabs-content', 'hu005-beneficiarios'].forEach((id) =>
+      expect(el.querySelector(`[data-testid="${id}"]`), id).not.toBeNull(),
+    );
+    expect(el.querySelector('[data-testid="hu005-beneficiarios"]')!.textContent).toContain('Banco Aurora');
+  });
+
+  it('shows payments and claims through the policy-tab-* hooks', async () => {
+    await render('p1');
+    el.querySelector<HTMLButtonElement>('[data-testid="policy-tab-pagos"]')!.click();
+    await fixture.whenStable();
+    expect(el.textContent).toContain('PAY-10231');
+
+    await render('p2');
+    el.querySelector<HTMLButtonElement>('[data-testid="policy-tab-siniestros"]')!.click();
+    await fixture.whenStable();
+    expect(el.textContent).toContain('SIN-4412');
+  });
 });

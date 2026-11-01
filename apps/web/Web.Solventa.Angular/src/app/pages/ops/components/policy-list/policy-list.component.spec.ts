@@ -52,4 +52,26 @@ describe('PolicyListComponent', () => {
 
     expect(emitted).toHaveBeenCalledWith('p2');
   });
+
+  it('renders the HU005 data-testid hooks', () => {
+    ['policy-search', 'policy-filter-estado', 'policy-filter-socio', 'hu005-policy-results', 'btn-abrir-poliza-SLV-2024-00391'].forEach(
+      (id) => expect(el.querySelector(`[data-testid="${id}"]`), id).not.toBeNull(),
+    );
+  });
+
+  it('filters by customer identification number', async () => {
+    await type('1020304050');
+
+    expect(rows().length).toBe(2);
+  });
+
+  it('filters by status Vencida and shows only the VENCIDA badge', async () => {
+    const select = el.querySelector<HTMLSelectElement>('[data-testid="policy-filter-estado"]')!;
+    select.value = 'Vencida';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(rows().length).toBeGreaterThan(0);
+    rows().forEach((row) => expect(row.querySelector('slv-badge')!.textContent).toContain('VENCIDA'));
+  });
 });

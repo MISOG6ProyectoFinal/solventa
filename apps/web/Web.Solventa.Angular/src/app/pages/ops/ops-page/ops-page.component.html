@@ -9,7 +9,7 @@
     </div>
   </div>
 
-  <slv-tabs [items]="tabs()" [(active)]="activeTab"></slv-tabs>
+  <slv-tabs [items]="tabs()" [(active)]="activeTab" testIdPrefix="ops-tab"></slv-tabs>
 
   @if (activeTab() === 'cotizar') {
     <slv-quote-tab />
