@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+_REFERENCIA_COBRO_OBLIGATORIA = "La referencia del cobro es obligatoria"
+
 
 class EstadoCobro(StrEnum):
     PROCESANDO = "procesando"
@@ -70,12 +72,12 @@ class SolicitudCobro(BaseModel):
     def _completar_referencia(self) -> "SolicitudCobro":
         if self.tipo_referencia is None:
             if not self.cotizacion_id:
-                raise ValueError("La referencia del cobro es obligatoria")
+                raise ValueError(_REFERENCIA_COBRO_OBLIGATORIA)
             self.tipo_referencia = TipoReferencia.COTIZACION
             self.referencia_id = self.cotizacion_id
             return self
         if not self.referencia_id:
-            raise ValueError("La referencia del cobro es obligatoria")
+            raise ValueError(_REFERENCIA_COBRO_OBLIGATORIA)
         if self.tipo_referencia == TipoReferencia.COTIZACION:
             self.cotizacion_id = self.cotizacion_id or self.referencia_id
             return self
@@ -84,7 +86,7 @@ class SolicitudCobro(BaseModel):
 
     def origen(self) -> tuple[TipoReferencia, str]:
         if self.tipo_referencia is None or not self.referencia_id:
-            raise ValueError("La referencia del cobro es obligatoria")
+            raise ValueError(_REFERENCIA_COBRO_OBLIGATORIA)
         return self.tipo_referencia, self.referencia_id
 
 
