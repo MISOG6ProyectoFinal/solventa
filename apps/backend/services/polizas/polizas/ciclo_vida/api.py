@@ -1,21 +1,25 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from solventa_common.db import build_engine
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
-from polizas.ciclo_vida.domain.models import IssuePolicyRequest, Policy
+from polizas.ciclo_vida.domain.models import ClientPolicy, IssuePolicyRequest, Policy, RenewalOffer
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotFound,
+    PolicyNotRenewable,
     PolicyRepository,
     QuoteExpired,
     QuoteNotFound,
     QuoteSource,
 )
-from polizas.ciclo_vida.domain.use_cases import IssuePolicyUseCase, ListClientPoliciesUseCase
+from polizas.ciclo_vida.domain.use_cases import GetRenewalOfferUseCase, IssuePolicyUseCase, ListClientPoliciesUseCase
 from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
@@ -28,6 +32,7 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
         policies.create_schema()
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
+    use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
 
 
 def _default_wire() -> None:
@@ -52,13 +57,27 @@ def info() -> dict:
     return {"component": "Pólizas y Ciclo de Vida"}
 
 
-@router.get("/clientes/{cliente_id}", response_model=list[Policy])
-def list_client_policies(cliente_id: str) -> list[Policy]:
+@router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])
+def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     """Pólizas activas del cliente. El BFF envía el id de la sesión, no uno elegido en el teléfono."""
     token = cliente_id.strip()
     if not token:
         raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
     return use_cases["list"].execute(token)
+
+
+@router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)
+def renewal_offer(poliza_id: str, x_cliente_id: Annotated[str, Header()]) -> RenewalOffer:
+    """Oferta de solo lectura. El cliente llega en X-Cliente-Id, no en el cuerpo ni en la query."""
+    cliente = x_cliente_id.strip()
+    if not cliente:
+        raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
+    try:
+        return use_cases["renewal_offer"].execute(poliza_id, cliente)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+    except PolicyNotRenewable as exc:
+        raise _error(409, "poliza_no_renovable", "La póliza no está habilitada para renovar.") from exc
 
 
 @router.post("/emisiones", response_model=Policy, status_code=status.HTTP_201_CREATED)

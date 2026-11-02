@@ -58,3 +58,22 @@ class Policy(BaseModel):
     cliente_id: str | None = None
     idempotency_key: str
     emitida_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class RenewalOffer(BaseModel):
+    """Consulta de la próxima vigencia. No es una póliza y no se persiste."""
+
+    poliza_id: str
+    numero_poliza: str
+    producto_id: str
+    prima_actual: Decimal
+    prima_propuesta: Decimal
+    vigencia_actual: Validity
+    vigencia_propuesta: Validity
+    coberturas_propuestas: list[Coverage]
+
+
+class ClientPolicy(Policy):
+    """Listado del cliente. `renovable` se calcula; no forma parte de la póliza guardada."""
+
+    renovable: bool

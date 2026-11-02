@@ -448,11 +448,16 @@ describe('sesión del cliente', () => {
 
   it('returns to login and forgets the token when a later request is rejected with 401', async () => {
     saved = 'token-guardado';
-    global.fetch = jest.fn(async (input: RequestInfo | URL) =>
-      String(input).endsWith('/movil/sesion')
-        ? profileResponse()
-        : jsonResponse({ detail: 'La sesión no es válida' }, 401),
-    ) as typeof fetch;
+    global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/movil/sesion')) {
+        return profileResponse();
+      }
+      if (url.includes('/movil/polizas') || url.includes('/movil/productos')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({ detail: 'La sesión no es válida' }, 401);
+    }) as typeof fetch;
     const view = await render(<Shell />);
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
 

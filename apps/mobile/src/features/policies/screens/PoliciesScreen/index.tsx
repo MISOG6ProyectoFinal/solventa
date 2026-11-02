@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
 import { theme } from '../../../../shared/theme';
@@ -15,6 +15,7 @@ import styles from './styles';
 
 export default function PoliciesScreen() {
   const texts = useTexts();
+  const navigation = useNavigation();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [productNames, setProductNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -98,7 +99,19 @@ export default function PoliciesScreen() {
             </Card>
           ) : (
             policies.map((policy) => (
-              <PolicyCard key={policy.id} policy={policy} productName={productNames[policy.producto_id]} />
+              <PolicyCard
+                key={policy.id}
+                policy={policy}
+                productName={productNames[policy.producto_id]}
+                showRenewalHint
+                testID={`policy-card-${policy.id}`}
+                onPress={() =>
+                  navigation.navigate('PolicyDetail', {
+                    policy,
+                    productName: productNames[policy.producto_id],
+                  })
+                }
+              />
             ))
           )}
         </ScrollView>

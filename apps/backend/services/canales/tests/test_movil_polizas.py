@@ -124,6 +124,48 @@ def test_listar_polizas_exige_sesion_y_usa_el_cliente_de_la_sesion(monkeypatch):
     assert "intruso" not in str(emisiones.calls)
 
 
+OFERTA = {
+    "poliza_id": "poliza-1",
+    "numero_poliza": "POL-75885ABCDE",
+    "producto_id": "viaje-internacional",
+    "prima_actual": "149940.00",
+    "prima_propuesta": "149940.00",
+    "vigencia_actual": {"desde": "2026-10-10", "hasta": "2026-10-24"},
+    "vigencia_propuesta": {"desde": "2026-10-25", "hasta": "2026-11-08"},
+    "coberturas_propuestas": [{"id": "medicos", "nombre": "Gastos médicos en el exterior"}],
+}
+
+
+def test_oferta_de_renovacion_exige_sesion_y_usa_el_cliente_de_la_sesion(monkeypatch):
+    assert client.get("/movil/polizas/poliza-1/renovacion/oferta").status_code == 401
+    emisiones = _Servicio(respuesta=OFERTA)
+    monkeypatch.setattr("canales.movil.api.polizas", emisiones)
+
+    response = client.get(
+        "/movil/polizas/poliza-1/renovacion/oferta",
+        params={"cliente_id": "intruso"},
+        headers=authorization(),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == OFERTA
+    assert emisiones.calls[0][0] == "/polizas/poliza-1/renovacion/oferta"
+    assert emisiones.calls[0][1]["headers"] == {"X-Cliente-Id": "cliente-demo"}
+    assert "intruso" not in str(emisiones.calls)
+    assert "json" not in emisiones.calls[0][1]
+
+
+def test_oferta_de_renovacion_propaga_errores_de_polizas(monkeypatch):
+    for status, codigo in ((404, "poliza_no_encontrada"), (409, "poliza_no_renovable")):
+        detalle = {"codigo": codigo, "mensaje": "No se consultó la oferta."}
+        monkeypatch.setattr("canales.movil.api.polizas", _Servicio(error=_error(status, detalle)))
+
+        response = client.get("/movil/polizas/poliza-1/renovacion/oferta", headers=authorization())
+
+        assert response.status_code == status
+        assert response.json()["detail"] == detalle
+
+
 def test_conserva_el_error_estructurado_de_polizas(monkeypatch):
     detalle = {
         "codigo": "pago_no_aprobado",

@@ -250,6 +250,16 @@ def listar_polizas(session: Session) -> list:
     return call_upstream(polizas.get, f"/polizas/clientes/{session.client_id}")
 
 
+@authenticated.get("/polizas/{poliza_id}/renovacion/oferta")
+def oferta_renovacion(poliza_id: str, session: Session) -> dict:
+    """Delega la consulta en Pólizas. El teléfono no elige el cliente ni calcula la oferta."""
+    return call_upstream(
+        polizas.get,
+        f"/polizas/{poliza_id}/renovacion/oferta",
+        headers=_cliente(session),
+    )
+
+
 @authenticated.get("/siniestros")
 def listar_siniestros(session: Session) -> list:
     return call_upstream(siniestros.get, "/siniestros/avisos", headers=_cliente(session))
