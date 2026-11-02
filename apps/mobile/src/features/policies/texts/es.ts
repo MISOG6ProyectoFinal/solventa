@@ -12,6 +12,22 @@ export const es = {
     end: (fecha: string) => `Fin ${fecha}`,
     prima: (amount: string) => `Prima ${amount}`,
     viewPolicy: 'Ver mi póliza',
+    detailTitle: 'Mi póliza',
+    renewalOfferAvailable: 'Oferta de renovación disponible',
+    renewalOfferTitle: 'Oferta de renovación',
+    renewalOfferBody: (days: number) =>
+      `Tu póliza vence en ${days} días. Consultar la oferta no modifica tu póliza actual.`,
+    seeRenewalOffer: 'Ver oferta de renovación',
+  },
+  renewal: {
+    screenTitle: 'Oferta de renovación',
+    loading: 'Cargando',
+    loadFailed: 'No se pudo consultar la oferta de renovación.',
+    retryButton: 'Reintentar',
+    disclaimer: 'Consultar esta oferta no modifica tu póliza actual.',
+    currentPremium: 'Prima actual',
+    newPremium: 'Nueva prima',
+    newValidityPrefix: 'Nueva vigencia:',
   },
 };
 

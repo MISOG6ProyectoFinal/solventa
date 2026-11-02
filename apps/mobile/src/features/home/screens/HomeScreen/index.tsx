@@ -1,7 +1,13 @@
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
+import { listPolicies } from '../../../policies/api/listPolicies';
+import { Policy } from '../../../policies/types';
+import { policyDate } from '../../../policies/utils';
+import { getProducts } from '../../../quote/api/getProducts';
+import { ProductoMovil } from '../../../quote/types';
 import { useSessionStore } from '../../../session/store/useSessionStore';
 import { homeSummary, type HomeShortcutDestination } from '../../homeSummary';
 import { useTexts } from '../../texts';
@@ -11,7 +17,32 @@ export default function HomeScreen() {
   const texts = useTexts();
   const navigation = useNavigation();
   const firstName = useSessionStore((state) => state.firstName);
-  const { renewal } = homeSummary;
+  const [renewablePolicy, setRenewablePolicy] = useState<Policy | null>(null);
+  const [productName, setProductName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([listPolicies(), getProducts().catch(() => [] as ProductoMovil[])])
+      .then(([policies, products]) => {
+        if (cancelled) {
+          return;
+        }
+        const policy = policies.find((item) => item.estado === 'activa' && item.renovable === true) ?? null;
+        const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
+        setRenewablePolicy(policy);
+        setProductName(policy ? names[policy.producto_id] : undefined);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRenewablePolicy(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const openDestination = (destination: HomeShortcutDestination) => {
     if (destination === 'NearbyProviders') {
@@ -75,14 +106,26 @@ export default function HomeScreen() {
             );
           })}
         </View>
-        <Card>
-          <StatusChip variant="pending">{texts.home.renewalBadge}</StatusChip>
-          <AppText variant="subtitle">{renewal.productName}</AppText>
-          <AppText variant="bodySmall">
-            {renewal.policyNumber} · {texts.home.expiresLabel} {renewal.validUntil}
-          </AppText>
-          <Button title={texts.home.renewalButton} variant="secondary" />
-        </Card>
+        {renewablePolicy ? (
+          <Card>
+            <StatusChip variant="pending">{texts.home.renewalBadge}</StatusChip>
+            <AppText variant="subtitle">{productName ?? renewablePolicy.producto_id}</AppText>
+            <AppText variant="bodySmall">
+              {renewablePolicy.numero} · {texts.home.expiresLabel} {policyDate(renewablePolicy.vigencia.hasta)}
+            </AppText>
+            <Button
+              testID="home-renewal-offer"
+              title={texts.home.renewalButton}
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate('PolicyDetail', {
+                  policy: renewablePolicy,
+                  productName,
+                })
+              }
+            />
+          </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );

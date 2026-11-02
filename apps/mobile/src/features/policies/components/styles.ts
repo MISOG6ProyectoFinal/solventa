@@ -20,4 +20,9 @@ export default StyleSheet.create({
   premium: {
     color: theme.colors.navy,
   },
+  renewalHint: {
+    color: theme.colors.warning.text,
+    fontFamily: theme.type.subtitle.fontFamily,
+    fontWeight: theme.type.subtitle.fontWeight,
+  },
 });

@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import { useQuoteStore } from '../../../quote/store/useQuoteStore';
 import { es as texts } from '../../texts/es';
@@ -6,9 +7,10 @@ import PoliciesScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
+  const navigate = jest.fn();
   return {
     useNavigation: () => ({
-      navigate: jest.fn(),
+      navigate,
       goBack: jest.fn(),
       canGoBack: () => false,
     }),
@@ -42,6 +44,7 @@ const POLIZA = {
     { id: 'equipaje', nombre: 'Pérdida de equipaje' },
     { id: 'asistencia', nombre: 'Asistencia en viaje' },
   ],
+  renovable: true,
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -63,6 +66,7 @@ function mockBackend(policies: unknown[]) {
 
 describe('PoliciesScreen', () => {
   beforeEach(() => {
+    useNavigation().navigate.mockClear();
     useQuoteStore.getState().clear();
     mockBackend([]);
   });
@@ -109,6 +113,7 @@ describe('PoliciesScreen', () => {
     expect(getByText('Cancelación de viaje')).toBeTruthy();
     expect(getByText('Pérdida de equipaje')).toBeTruthy();
     expect(getByText('Asistencia en viaje')).toBeTruthy();
+    expect(getByText(texts.policies.renewalOfferAvailable)).toBeTruthy();
     expect(queryByText('Producto del store')).toBeNull();
     expect(queryByText('Cobertura del store')).toBeNull();
     expect(queryByText('Inicio 2020-01-01')).toBeNull();
@@ -145,5 +150,17 @@ describe('PoliciesScreen', () => {
     expect(await findByText('POL-75885ABCDE')).toBeTruthy();
     const policyCalls = jest.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/polizas'));
     expect(policyCalls).toHaveLength(2);
+  });
+
+  it('opens the policy detail when the card is pressed', async () => {
+    mockBackend([POLIZA]);
+    const { findByTestId } = await render(<PoliciesScreen />);
+
+    fireEvent.press(await findByTestId('policy-card-poliza-1'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('PolicyDetail', {
+      policy: expect.objectContaining({ id: 'poliza-1', numero: 'POL-75885ABCDE', renovable: true }),
+      productName: 'Viaje Internacional',
+    });
   });
 });

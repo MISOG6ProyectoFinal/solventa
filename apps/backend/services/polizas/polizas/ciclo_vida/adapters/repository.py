@@ -82,6 +82,9 @@ class PostgresPolicyRepository:
     def get_by_quote(self, quote_id: str) -> Policy | None:
         return self._first(policies.c.cotizacion_id == quote_id)
 
+    def get_by_id(self, policy_id: str) -> Policy | None:
+        return self._first(policies.c.id == policy_id)
+
     def list_by_client(self, cliente_id: str) -> list[Policy]:
         with self.engine.connect() as conn:
             rows = (
@@ -122,6 +125,10 @@ class InMemoryPolicyRepository:
     def get_by_quote(self, quote_id: str) -> Policy | None:
         with self._lock:
             return next((p for p in self.items if p.cotizacion_id == quote_id), None)
+
+    def get_by_id(self, policy_id: str) -> Policy | None:
+        with self._lock:
+            return next((p for p in self.items if p.id == policy_id), None)
 
     def list_by_client(self, cliente_id: str) -> list[Policy]:
         with self._lock:

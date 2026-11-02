@@ -14,5 +14,21 @@ export const en: Texts = {
     end: (fecha) => `End ${fecha}`,
     prima: (amount) => `Premium ${amount}`,
     viewPolicy: 'View my policy',
+    detailTitle: 'My policy',
+    renewalOfferAvailable: 'Renewal offer available',
+    renewalOfferTitle: 'Renewal offer',
+    renewalOfferBody: (days) =>
+      `Your policy expires in ${days} days. Viewing the offer does not change your current policy.`,
+    seeRenewalOffer: 'See renewal offer',
+  },
+  renewal: {
+    screenTitle: 'Renewal offer',
+    loading: 'Loading',
+    loadFailed: 'Could not load the renewal offer.',
+    retryButton: 'Retry',
+    disclaimer: 'Viewing this offer does not change your current policy.',
+    currentPremium: 'Current premium',
+    newPremium: 'New premium',
+    newValidityPrefix: 'New term:',
   },
 };
