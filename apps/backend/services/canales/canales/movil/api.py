@@ -1,10 +1,12 @@
 from datetime import date
 from typing import Annotated, Literal
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
+
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.referencia_renovacion import referencia_ciclo_renovacion

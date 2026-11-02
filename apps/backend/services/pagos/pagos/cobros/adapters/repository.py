@@ -5,6 +5,7 @@ import threading
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
+
 from pagos.cobros.adapters.schema import cobros, ensure_schema
 from pagos.cobros.domain.models import Cobro, EstadoCobro, TipoReferencia
 from pagos.cobros.domain.ports import CobroDuplicado

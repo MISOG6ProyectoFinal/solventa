@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 from uuid import uuid4
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 

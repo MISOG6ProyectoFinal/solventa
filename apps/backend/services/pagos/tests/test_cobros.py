@@ -3,6 +3,7 @@
 import threading
 from datetime import UTC, datetime
 from decimal import Decimal
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient

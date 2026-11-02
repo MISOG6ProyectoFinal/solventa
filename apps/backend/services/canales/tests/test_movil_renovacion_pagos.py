@@ -3,6 +3,7 @@
 import httpx
 from canales.main import app
 from fastapi.testclient import TestClient
+
 from tests.movil_auth import authorization
 
 client = TestClient(app)
