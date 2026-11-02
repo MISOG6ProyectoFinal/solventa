@@ -1,14 +1,13 @@
 from datetime import date
 from typing import Annotated, Literal
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
-
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
+from canales.movil.referencia_renovacion import referencia_ciclo_renovacion
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
 INVALID_SESSION = "La sesión no es válida"
@@ -125,6 +124,22 @@ def _cotizacion_vencida() -> HTTPException:
         status.HTTP_409_CONFLICT,
         {"codigo": "cotizacion_vencida", "mensaje": MENSAJE_COTIZACION_VENCIDA},
     )
+
+
+class SolicitudPagoRenovacion(BaseModel):
+    """El monto sale de la oferta vigente. El teléfono solo identifica el intento."""
+
+    model_config = ConfigDict(extra="ignore")
+    intento_id: str
+    simulacion: Literal["rechazado"] | None = None
+
+    @field_validator("intento_id")
+    @classmethod
+    def _intento(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El intento de pago no es válido")
+        return token
 
 
 class SolicitudEmisionMovil(BaseModel):
@@ -258,6 +273,39 @@ def oferta_renovacion(poliza_id: str, session: Session) -> dict:
         f"/polizas/{poliza_id}/renovacion/oferta",
         headers=_cliente(session),
     )
+
+
+@authenticated.post("/polizas/{poliza_id}/renovacion/pagos")
+def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoRenovacion) -> dict:
+    """Cobra la prima propuesta del ciclo vigente. No aplica la renovación sobre la póliza."""
+    oferta = call_upstream(
+        polizas.get,
+        f"/polizas/{poliza_id}/renovacion/oferta",
+        headers=_cliente(session),
+    )
+    if not isinstance(oferta, dict) or oferta.get("prima_propuesta") is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La oferta de renovación no tiene un valor a cobrar")
+    referencia = referencia_ciclo_renovacion(poliza_id, oferta["vigencia_propuesta"])
+    resultado = call_upstream(
+        pagos.post,
+        "/pagos/cobros",
+        json={
+            "tipo_referencia": "renovacion",
+            "referencia_id": referencia,
+            "cliente_id": session.client_id,
+            "monto": str(oferta["prima_propuesta"]),
+            "moneda": "COP",
+            "idempotency_key": f"movil:renovacion:{referencia}:{solicitud.intento_id}",
+            "medio_token": token_prototipo(solicitud.simulacion),
+        },
+    )
+    return {
+        "id": resultado["id"],
+        "poliza_id": poliza_id,
+        "estado": resultado["estado"],
+        "monto": resultado["monto"],
+        "moneda": resultado["moneda"],
+    }
 
 
 @authenticated.get("/siniestros")

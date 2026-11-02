@@ -1,4 +1,4 @@
-import { crearIntentoId } from './payQuote';
+import { crearIntentoId } from '../../../shared/payments/crearIntentoId';
 
 describe('crearIntentoId', () => {
   it('builds a short idempotency id without Math.random', () => {

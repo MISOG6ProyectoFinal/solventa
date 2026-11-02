@@ -28,6 +28,18 @@ export const es = {
     currentPremium: 'Prima actual',
     newPremium: 'Nueva prima',
     newValidityPrefix: 'Nueva vigencia:',
+    renewNow: 'Renovar ahora',
+    payTitle: 'Pago de renovación',
+    paySummary: 'Resumen de renovación',
+    payValidity: (start: string, end: string) => `Nueva vigencia ${start} - ${end}`,
+    method: 'Tarjeta terminada en 4242',
+    simulateRejected: 'Simular pago rechazado',
+    pay: (amount: string) => `Pagar ${amount}`,
+    processing: 'Pago procesándose...',
+    processingButton: 'Procesando...',
+    rejected: 'El pago de renovación fue rechazado. Tu póliza actual no cambió y mantiene su vigencia.',
+    approved: 'Pago aprobado',
+    paymentFailed: 'No se pudo procesar el pago.',
   },
 };
 

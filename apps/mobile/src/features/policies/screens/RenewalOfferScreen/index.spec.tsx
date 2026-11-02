@@ -1,15 +1,19 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import { es as texts } from '../../texts/es';
 import RenewalOfferScreen from './index';
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-    canGoBack: () => true,
-  }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const navigate = jest.fn();
+  return {
+    useNavigation: () => ({
+      navigate,
+      goBack: jest.fn(),
+      canGoBack: () => true,
+    }),
+  };
+});
 
 const OFERTA = {
   poliza_id: 'poliza-1',
@@ -38,6 +42,9 @@ function renderOffer(productName?: string) {
 }
 
 describe('RenewalOfferScreen', () => {
+  beforeEach(() => {
+    useNavigation().navigate.mockClear();
+  });
   it('shows a loading state until the offer arrives', async () => {
     let release: (value: ReturnType<typeof jsonResponse>) => void = () => undefined;
     global.fetch = jest.fn(
@@ -60,7 +67,7 @@ describe('RenewalOfferScreen', () => {
 
   it('shows the current premium, the proposed term and the coverages', async () => {
     global.fetch = jest.fn(async () => jsonResponse(OFERTA)) as typeof fetch;
-    const { findByText, getByTestId, getByText, queryByText } = await renderOffer('Viaje Internacional');
+    const { findByText, getByTestId, getByText } = await renderOffer('Viaje Internacional');
 
     expect(await findByText(texts.renewal.disclaimer)).toBeTruthy();
     expect(getByTestId('renewal-offer-screen')).toBeTruthy();
@@ -76,7 +83,7 @@ describe('RenewalOfferScreen', () => {
     expect(getByTestId('renewal-coverages')).toBeTruthy();
     expect(getByText('Gastos médicos en el exterior')).toBeTruthy();
     expect(getByText('Pérdida de equipaje')).toBeTruthy();
-    expect(queryByText('Renovar ahora')).toBeNull();
+    expect(getByText(texts.renewal.renewNow)).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/movil\/polizas\/poliza-1\/renovacion\/oferta$/),
       expect.objectContaining({ method: 'GET' }),
@@ -88,6 +95,18 @@ describe('RenewalOfferScreen', () => {
     const { findByText } = await renderOffer();
 
     expect(await findByText('viaje-internacional')).toBeTruthy();
+  });
+
+  it('opens the renewal payment with the policy and the product name', async () => {
+    global.fetch = jest.fn(async () => jsonResponse(OFERTA)) as typeof fetch;
+    const { findByTestId } = await renderOffer('Viaje Internacional');
+
+    fireEvent.press(await findByTestId('renewal-now'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('RenewalPayment', {
+      policyId: 'poliza-1',
+      productName: 'Viaje Internacional',
+    });
   });
 
   it('shows the backend error and retries the consultation', async () => {

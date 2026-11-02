@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { StaticScreenProps } from '@react-navigation/native';
+import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
-import { AppText, Banner, Card, CoverageList, ErrorState, LoadingState, Screen } from '../../../../shared/ui';
+import { AppText, Banner, Button, Card, CoverageList, ErrorState, LoadingState, Screen } from '../../../../shared/ui';
 import { formatMoney } from '../../../quote/utils';
 import { getRenewalOffer } from '../../api/getRenewalOffer';
 import { getTexts, useTexts } from '../../texts';
@@ -64,7 +64,7 @@ export default function RenewalOfferScreen({ route }: Readonly<Props>) {
               retry={{ label: texts.renewal.retryButton, onPress: () => setAttempt((count) => count + 1) }}
             />
           ) : (
-            <OfferBody offer={offer} productName={productName} />
+            <OfferBody offer={offer} policyId={policyId} productName={productName} />
           )}
         </ScrollView>
       )}
@@ -72,10 +72,16 @@ export default function RenewalOfferScreen({ route }: Readonly<Props>) {
   );
 }
 
-function OfferBody({ offer, productName }: Readonly<{ offer: RenewalOffer; productName?: string }>) {
+function OfferBody({
+  offer,
+  policyId,
+  productName,
+}: Readonly<{ offer: RenewalOffer; policyId: string; productName?: string }>) {
   const texts = useTexts();
+  const navigation = useNavigation();
   const inicio = policyDate(offer.vigencia_propuesta.desde);
   const fin = policyDate(offer.vigencia_propuesta.hasta);
+  const nombre = productName ?? offer.producto_id;
 
   return (
     <>
@@ -84,7 +90,7 @@ function OfferBody({ offer, productName }: Readonly<{ offer: RenewalOffer; produ
       </Banner>
       <Card>
         <AppText variant="body" style={styles.title}>
-          {productName ?? offer.producto_id}
+          {nombre}
         </AppText>
         <View style={styles.compare}>
           <View style={styles.column}>
@@ -114,6 +120,12 @@ function OfferBody({ offer, productName }: Readonly<{ offer: RenewalOffer; produ
           <CoverageList items={offer.coberturas_propuestas.map((cobertura) => cobertura.nombre)} />
         </View>
       </Card>
+      <Button
+        testID="renewal-now"
+        title={texts.renewal.renewNow}
+        variant="accent"
+        onPress={() => navigation.navigate('RenewalPayment', { policyId, productName: nombre })}
+      />
     </>
   );
 }

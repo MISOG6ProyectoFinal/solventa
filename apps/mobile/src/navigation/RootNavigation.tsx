@@ -11,6 +11,7 @@ import HomeDrawer from '../features/home/HomeStack';
 import PoliciesScreen from '../features/policies/screens/PoliciesScreen';
 import PolicyDetailScreen from '../features/policies/screens/PolicyDetailScreen';
 import RenewalOfferScreen from '../features/policies/screens/RenewalOfferScreen';
+import RenewalPaymentScreen from '../features/policies/screens/RenewalPaymentScreen';
 import NearbyProvidersScreen from '../features/providers/screens/NearbyProvidersScreen';
 import SettingsScreen from '../features/settings/screens/SettingsScreen';
 import { QuoteStack } from '../features/quote/QuoteStack';
@@ -91,6 +92,7 @@ export const RootStack = createNativeStackNavigator({
         Main: Tabs,
         PolicyDetail: PolicyDetailScreen,
         RenewalOffer: RenewalOfferScreen,
+        RenewalPayment: RenewalPaymentScreen,
         ClaimReport: ClaimReportStack,
         AvisoDetail: AvisoDetailScreen,
         AssistanceService: AssistanceServiceScreen,

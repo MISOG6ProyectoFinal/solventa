@@ -1,6 +1,5 @@
 from typing import Protocol
-
-from pagos.cobros.domain.models import Cobro
+from pagos.cobros.domain.models import Cobro, TipoReferencia
 
 
 class CobroDuplicado(Exception):
@@ -22,7 +21,7 @@ class CobroRepository(Protocol):
 
     def get_by_idempotency_key(self, idempotency_key: str) -> Cobro | None: ...
 
-    def get_by_cotizacion_id(self, cotizacion_id: str) -> Cobro | None: ...
+    def get_by_reference(self, tipo_referencia: TipoReferencia, referencia_id: str) -> Cobro | None: ...
 
     def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None: ...
 
