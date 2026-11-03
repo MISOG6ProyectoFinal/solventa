@@ -1,6 +1,7 @@
 """Cobro de prima: resultado, persistencia, idempotencia y reconciliación del intento."""
 
 import threading
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import httpx
@@ -14,15 +15,15 @@ from pagos.cobros.adapters.pasarela import (
     construir_pasarela,
 )
 from pagos.cobros.adapters.repository import InMemoryCobroRepository, PostgresCobroRepository
-from pagos.cobros.adapters.repository import cobros as cobros_table
+from pagos.cobros.adapters.schema import cobros as cobros_table
 from pagos.cobros.api import casos, router, wire
-from pagos.cobros.domain.models import EstadoCobro, SolicitudCobro
+from pagos.cobros.domain.models import EstadoCobro, SolicitudCobro, TipoReferencia
 from pagos.cobros.domain.ports import PasarelaNoDisponible
 from pagos.cobros.domain.use_cases import CobrarPrimaUseCase
 from pagos.config import settings
 from pagos.main import app
 from solventa_common.integration import PasarelaPagosAdapter
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.pool import StaticPool
 
 client = TestClient(app)
@@ -351,3 +352,196 @@ def test_unknown_payment_returns_404():
 
     assert response.status_code == 404
     assert response.json()["detail"]["codigo"] == "cobro_no_encontrado"
+
+
+def _solicitud_renovacion(**cambios) -> dict:
+    base = {
+        "tipo_referencia": "renovacion",
+        "referencia_id": "poliza-1:2026-10-25:2026-11-08",
+        "cliente_id": "cliente-demo",
+        "monto": "149940.00",
+        "moneda": "COP",
+        "idempotency_key": "movil:renovacion:poliza-1:2026-10-25:2026-11-08:intento-1",
+        "medio_token": TOKEN_APROBADO,
+    }
+    return base | cambios
+
+
+def test_el_cobro_de_cotizacion_conserva_su_referencia():
+    wire(InMemoryCobroRepository(), PasarelaSimulada())
+
+    data = client.post("/pagos/cobros", json=_solicitud()).json()
+
+    assert data["estado"] == "aprobado"
+    assert data["tipo_referencia"] == "cotizacion"
+    assert data["referencia_id"] == "oferta-1"
+    assert data["cotizacion_id"] == "oferta-1"
+
+
+def test_una_cotizacion_solo_tiene_un_cobro_aprobado():
+    pasarela = _Pasarela("aprobado")
+    wire(InMemoryCobroRepository(), pasarela)
+
+    primero = client.post("/pagos/cobros", json=_solicitud(idempotency_key="movil:oferta-1:a"))
+    segundo = client.post("/pagos/cobros", json=_solicitud(idempotency_key="movil:oferta-1:b"))
+
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert segundo.json()["estado"] == "aprobado"
+    assert segundo.json()["tipo_referencia"] == "cotizacion"
+    assert len(pasarela.calls) == 1
+
+
+def test_renovacion_aprobada_queda_asociada_al_ciclo():
+    pasarela = _Pasarela("aprobado")
+    wire(InMemoryCobroRepository(), pasarela)
+
+    response = client.post("/pagos/cobros", json=_solicitud_renovacion())
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["estado"] == "aprobado"
+    assert data["tipo_referencia"] == "renovacion"
+    assert data["referencia_id"] == "poliza-1:2026-10-25:2026-11-08"
+    assert data["cotizacion_id"] is None
+    assert len(pasarela.calls) == 1
+
+
+def test_la_misma_clave_de_renovacion_repite_el_mismo_cobro():
+    pasarela = _Pasarela("aprobado")
+    wire(InMemoryCobroRepository(), pasarela)
+    body = _solicitud_renovacion()
+
+    primero = client.post("/pagos/cobros", json=body)
+    segundo = client.post("/pagos/cobros", json=body)
+
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert len(pasarela.calls) == 1
+
+
+def test_otro_intento_no_vuelve_a_cobrar_una_renovacion_aprobada():
+    pasarela = _Pasarela("aprobado")
+    wire(InMemoryCobroRepository(), pasarela)
+
+    primero = client.post("/pagos/cobros", json=_solicitud_renovacion())
+    segundo = client.post(
+        "/pagos/cobros",
+        json=_solicitud_renovacion(idempotency_key="movil:renovacion:poliza-1:2026-10-25:2026-11-08:intento-2"),
+    )
+
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert segundo.json()["estado"] == "aprobado"
+    assert len(pasarela.calls) == 1
+
+
+def test_un_rechazo_de_renovacion_permite_un_intento_nuevo():
+    pasarela = _Pasarela("rechazado")
+    repositorio = InMemoryCobroRepository()
+    wire(repositorio, pasarela)
+    ciclo = "poliza-1:2026-10-25:2026-11-08"
+
+    primero = client.post("/pagos/cobros", json=_solicitud_renovacion())
+    pasarela.estado = "aprobado"
+    segundo = client.post(
+        "/pagos/cobros",
+        json=_solicitud_renovacion(idempotency_key=f"movil:renovacion:{ciclo}:intento-2"),
+    )
+
+    assert primero.json()["estado"] == "rechazado"
+    assert segundo.json()["estado"] == "aprobado"
+    assert segundo.json()["id"] == primero.json()["id"]
+    assert len(repositorio.items) == 1
+    assert [llamada[3] for llamada in pasarela.calls] == [
+        f"movil:renovacion:{ciclo}:intento-1",
+        f"movil:renovacion:{ciclo}:intento-2",
+    ]
+
+
+def test_dos_ciclos_de_la_misma_poliza_son_cobros_independientes():
+    pasarela = _Pasarela("aprobado")
+    repositorio = InMemoryCobroRepository()
+    wire(repositorio, pasarela)
+
+    primero = client.post("/pagos/cobros", json=_solicitud_renovacion(referencia_id="poliza-1:period-A"))
+    segundo = client.post(
+        "/pagos/cobros",
+        json=_solicitud_renovacion(
+            referencia_id="poliza-1:period-B",
+            idempotency_key="movil:renovacion:poliza-1:period-B:intento-1",
+        ),
+    )
+
+    assert primero.status_code == 200
+    assert segundo.status_code == 200
+    assert primero.json()["id"] != segundo.json()["id"]
+    assert primero.json()["estado"] == "aprobado"
+    assert segundo.json()["estado"] == "aprobado"
+    assert len(repositorio.items) == 2
+    assert len(pasarela.calls) == 2
+
+
+def test_la_migracion_conserva_cotizaciones_y_acepta_renovaciones():
+    engine = _engine()
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE cobros (
+                    id VARCHAR(36) PRIMARY KEY,
+                    cotizacion_id VARCHAR(64) NOT NULL,
+                    cliente_id VARCHAR(64) NOT NULL,
+                    monto NUMERIC(18, 2) NOT NULL,
+                    moneda VARCHAR(3) NOT NULL,
+                    estado VARCHAR(16) NOT NULL,
+                    idempotency_key VARCHAR(255) NOT NULL UNIQUE,
+                    creado_en DATETIME NOT NULL
+                )
+                """
+            )
+        )
+        conn.execute(text("CREATE UNIQUE INDEX uq_cobros_cotizacion_id ON cobros (cotizacion_id)"))
+        conn.execute(
+            text(
+                """
+                INSERT INTO cobros (
+                    id, cotizacion_id, cliente_id, monto, moneda, estado, idempotency_key, creado_en
+                ) VALUES (
+                    :id, :cotizacion_id, :cliente_id, :monto, :moneda, :estado, :idempotency_key, :creado_en
+                )
+                """
+            ),
+            {
+                "id": "cobro-viejo",
+                "cotizacion_id": "oferta-1",
+                "cliente_id": "cliente-demo",
+                "monto": "149940.00",
+                "moneda": "COP",
+                "estado": "aprobado",
+                "idempotency_key": "movil:oferta-1:viejo",
+                "creado_en": datetime(2026, 1, 1, tzinfo=UTC),
+            },
+        )
+
+    repositorio = PostgresCobroRepository(engine)
+    repositorio.create_schema()
+    repositorio.create_schema()
+    legado = repositorio.get("cobro-viejo")
+
+    assert legado is not None
+    assert legado.tipo_referencia is TipoReferencia.COTIZACION
+    assert legado.referencia_id == "oferta-1"
+    assert legado.cotizacion_id == "oferta-1"
+    assert legado.estado is EstadoCobro.APROBADO
+
+    pasarela = _Pasarela("aprobado")
+    wire(repositorio, pasarela)
+    response = client.post("/pagos/cobros", json=_solicitud_renovacion())
+
+    assert response.status_code == 200
+    renovacion = repositorio.get(response.json()["id"])
+    assert renovacion is not None
+    assert renovacion.tipo_referencia is TipoReferencia.RENOVACION
+    assert renovacion.cotizacion_id is None
+    assert repositorio.get("cobro-viejo").referencia_id == "oferta-1"
+    with engine.connect() as conn:
+        total = conn.execute(select(func.count()).select_from(cobros_table)).scalar_one()
+    assert total == 2

@@ -1,4 +1,4 @@
-"""Cobra una prima. La misma clave reconcilia; una cotización solo puede aprobarse una vez."""
+"""Cobra una prima. La misma clave reconcilia; una referencia solo puede aprobarse una vez."""
 
 from pagos.cobros.domain.models import Cobro, EstadoCobro, SolicitudCobro
 from pagos.cobros.domain.ports import CobroDuplicado, CobroRepository, PasarelaNoDisponible, PasarelaPort
@@ -23,20 +23,24 @@ class CobrarPrimaUseCase:
                 return por_clave
             return self._cerrar(por_clave, solicitud.medio_token)
 
-        por_cotizacion = self.cobros.get_by_cotizacion_id(solicitud.cotizacion_id)
-        if por_cotizacion is None:
+        tipo, referencia = solicitud.origen()
+        por_referencia = self.cobros.get_by_reference(tipo, referencia)
+        if por_referencia is None:
             return self._iniciar(solicitud)
-        if por_cotizacion.estado == EstadoCobro.APROBADO:
-            return por_cotizacion
-        if por_cotizacion.estado == EstadoCobro.PROCESANDO:
-            cerrado = self._cerrar(por_cotizacion, solicitud.medio_token)
+        if por_referencia.estado == EstadoCobro.APROBADO:
+            return por_referencia
+        if por_referencia.estado == EstadoCobro.PROCESANDO:
+            cerrado = self._cerrar(por_referencia, solicitud.medio_token)
             if cerrado.estado != EstadoCobro.RECHAZADO or cerrado.idempotency_key == solicitud.idempotency_key:
                 return cerrado
-            por_cotizacion = cerrado
-        return self._reclamar(por_cotizacion, solicitud)
+            por_referencia = cerrado
+        return self._reclamar(por_referencia, solicitud)
 
     def _iniciar(self, solicitud: SolicitudCobro) -> Cobro | None:
+        tipo, referencia = solicitud.origen()
         cobro = Cobro(
+            tipo_referencia=tipo,
+            referencia_id=referencia,
             cotizacion_id=solicitud.cotizacion_id,
             cliente_id=solicitud.cliente_id,
             monto=solicitud.monto,

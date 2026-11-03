@@ -31,3 +31,15 @@ export type RenewalOffer = {
   vigencia_propuesta: PolicyTerm;
   coberturas_propuestas: PolicyCoverage[];
 };
+
+export type RenewalPaymentStatus = 'aprobado' | 'rechazado' | 'procesando';
+
+export type RenewalPaymentResult = {
+  id: string;
+  poliza_id: string;
+  estado: RenewalPaymentStatus;
+  monto: string;
+  moneda: string;
+};
+
+export type RenewalPaymentSimulation = 'rechazado';

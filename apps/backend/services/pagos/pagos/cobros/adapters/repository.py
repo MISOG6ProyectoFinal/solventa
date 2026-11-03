@@ -1,41 +1,14 @@
-"""Persistencia del cobro. Una fila por cotización y una clave de idempotencia única."""
+"""Persistencia del cobro. Una fila por referencia de origen y una clave de idempotencia única."""
 
 import threading
 
-from sqlalchemy import Column, DateTime, MetaData, Numeric, String, Table, func, insert, select, text, update
+from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from pagos.cobros.domain.models import Cobro, EstadoCobro
+from pagos.cobros.adapters.schema import cobros, ensure_schema
+from pagos.cobros.domain.models import Cobro, EstadoCobro, TipoReferencia
 from pagos.cobros.domain.ports import CobroDuplicado
-
-metadata = MetaData()
-
-cobros = Table(
-    "cobros",
-    metadata,
-    Column("id", String(36), primary_key=True),
-    Column("cotizacion_id", String(64), nullable=False),
-    Column("cliente_id", String(64), nullable=False),
-    Column("monto", Numeric(18, 2), nullable=False),
-    Column("moneda", String(3), nullable=False),
-    Column("estado", String(16), nullable=False),
-    Column("idempotency_key", String(255), nullable=False, unique=True),
-    Column("creado_en", DateTime(timezone=True), server_default=func.now(), nullable=False),
-)
-
-
-def _cobro(row) -> Cobro:
-    return Cobro(
-        id=row["id"],
-        cotizacion_id=row["cotizacion_id"],
-        cliente_id=row["cliente_id"],
-        monto=row["monto"],
-        moneda=row["moneda"],
-        estado=EstadoCobro(row["estado"]),
-        idempotency_key=row["idempotency_key"],
-        creado_en=row["creado_en"],
-    )
 
 
 class PostgresCobroRepository:
@@ -43,9 +16,7 @@ class PostgresCobroRepository:
         self.engine = engine
 
     def create_schema(self) -> None:
-        metadata.create_all(self.engine)
-        with self.engine.begin() as conn:
-            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_cobros_cotizacion_id ON cobros (cotizacion_id)"))
+        ensure_schema(self.engine)
 
     def add(self, cobro: Cobro) -> None:
         try:
@@ -68,9 +39,18 @@ class PostgresCobroRepository:
             row = conn.execute(select(cobros).where(cobros.c.idempotency_key == idempotency_key)).mappings().first()
         return _cobro(row) if row else None
 
-    def get_by_cotizacion_id(self, cotizacion_id: str) -> Cobro | None:
+    def get_by_reference(self, tipo_referencia: TipoReferencia, referencia_id: str) -> Cobro | None:
         with self.engine.connect() as conn:
-            rows = conn.execute(select(cobros).where(cobros.c.cotizacion_id == cotizacion_id)).mappings().all()
+            rows = (
+                conn.execute(
+                    select(cobros).where(
+                        cobros.c.tipo_referencia == tipo_referencia.value,
+                        cobros.c.referencia_id == referencia_id,
+                    )
+                )
+                .mappings()
+                .all()
+            )
         return _preferido([_cobro(row) for row in rows])
 
     def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None:
@@ -106,7 +86,7 @@ class InMemoryCobroRepository:
 
     def add(self, cobro: Cobro) -> None:
         with self._lock:
-            if cobro.idempotency_key in self.items or _preferido(list(self.items.values()), cobro.cotizacion_id):
+            if cobro.idempotency_key in self.items or _preferido(_de_referencia(self.items.values(), cobro)):
                 raise CobroDuplicado(cobro.idempotency_key)
             self.items[cobro.idempotency_key] = cobro
 
@@ -122,9 +102,13 @@ class InMemoryCobroRepository:
         with self._lock:
             return self.items.get(idempotency_key)
 
-    def get_by_cotizacion_id(self, cotizacion_id: str) -> Cobro | None:
+    def get_by_reference(self, tipo_referencia: TipoReferencia, referencia_id: str) -> Cobro | None:
         with self._lock:
-            return _preferido(list(self.items.values()), cotizacion_id)
+            return _preferido(
+                cobro
+                for cobro in self.items.values()
+                if cobro.tipo_referencia == tipo_referencia and cobro.referencia_id == referencia_id
+            )
 
     def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None:
         with self._lock:
@@ -138,8 +122,34 @@ class InMemoryCobroRepository:
             return reemplazo
 
 
-def _preferido(encontrados: list[Cobro], cotizacion_id: str | None = None) -> Cobro | None:
-    candidatos = [cobro for cobro in encontrados if cotizacion_id is None or cobro.cotizacion_id == cotizacion_id]
+def _cobro(row) -> Cobro:
+    cotizacion_id = row["cotizacion_id"]
+    tipo = row["tipo_referencia"] or TipoReferencia.COTIZACION
+    referencia = row["referencia_id"] or cotizacion_id
+    return Cobro(
+        id=row["id"],
+        tipo_referencia=TipoReferencia(tipo),
+        referencia_id=referencia,
+        cotizacion_id=cotizacion_id,
+        cliente_id=row["cliente_id"],
+        monto=row["monto"],
+        moneda=row["moneda"],
+        estado=EstadoCobro(row["estado"]),
+        idempotency_key=row["idempotency_key"],
+        creado_en=row["creado_en"],
+    )
+
+
+def _de_referencia(cobros_guardados, cobro: Cobro) -> list[Cobro]:
+    return [
+        actual
+        for actual in cobros_guardados
+        if actual.tipo_referencia == cobro.tipo_referencia and actual.referencia_id == cobro.referencia_id
+    ]
+
+
+def _preferido(encontrados) -> Cobro | None:
+    candidatos = list(encontrados)
     for estado in (EstadoCobro.APROBADO, EstadoCobro.PROCESANDO, EstadoCobro.RECHAZADO):
         for cobro in candidatos:
             if cobro.estado == estado:
@@ -150,4 +160,5 @@ def _preferido(encontrados: list[Cobro], cotizacion_id: str | None = None) -> Co
 def _values(cobro: Cobro) -> dict:
     values = cobro.model_dump()
     values["estado"] = cobro.estado.value
+    values["tipo_referencia"] = cobro.tipo_referencia.value
     return values
