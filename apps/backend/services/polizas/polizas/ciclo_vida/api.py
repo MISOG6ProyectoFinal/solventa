@@ -19,7 +19,12 @@ from polizas.ciclo_vida.domain.ports import (
     QuoteNotFound,
     QuoteSource,
 )
-from polizas.ciclo_vida.domain.use_cases import GetRenewalOfferUseCase, IssuePolicyUseCase, ListClientPoliciesUseCase
+from polizas.ciclo_vida.domain.use_cases import (
+    GetPolicyUseCase,
+    GetRenewalOfferUseCase,
+    IssuePolicyUseCase,
+    ListClientPoliciesUseCase,
+)
 from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
@@ -33,6 +38,7 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
     use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
+    use_cases["get"] = GetPolicyUseCase(policies)
 
 
 def _default_wire() -> None:
@@ -64,6 +70,15 @@ def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     if not token:
         raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
     return use_cases["list"].execute(token)
+
+
+@router.get("/{poliza_id}", response_model=Policy)
+def get_policy(poliza_id: str) -> Policy:
+    """Lectura interna. El canal decide si quien pregunta es dueño de la póliza."""
+    try:
+        return use_cases["get"].execute(poliza_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
 
 
 @router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)

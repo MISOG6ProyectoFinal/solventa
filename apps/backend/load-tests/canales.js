@@ -198,7 +198,7 @@ export function setup() {
       identificador,
       tipo: 'Retailer',
       correo_contacto: 'carga@solventa.test',
-      alcances: ['cotizacion', 'emision'],
+      alcances: ['cotizacion', 'emision', 'consulta'],
       autorizado_por: 'Prueba de carga',
     }),
     { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
@@ -358,7 +358,12 @@ export function ventaSocio(datos) {
     'Emitir póliza como socio',
     (p) => p.estado === 'activa' && /^POL-/.test(p.numero) && p.cotizacion_id === oferta.id,
   );
-  if (poliza) emitir('Reintentar la emisión', (p) => p.id === poliza.id);
+  if (!poliza) return;
+  emitir('Reintentar la emisión', (p) => p.id === poliza.id);
+  pedir('Consultar póliza como socio', 'GET', `${BASE_URL}/socios/v1/polizas/${poliza.id}`, null, {
+    headers: credenciales,
+    validar: (p) => p.id === poliza.id && p.estado === 'activa',
+  });
 }
 
 function faseDelProveedor() {

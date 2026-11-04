@@ -254,10 +254,10 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 - **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** cotización asistida, listado, detalle y configuración de socios.
-- **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza y reintentar la emisión con la misma `Idempotency-Key` (HU015).
+- **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización y emisión. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
 PERFIL=humo ./load-tests/run.sh
@@ -278,7 +278,7 @@ docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_
 | `humo` | Una iteración por canal, para validar el ambiente |
 | `carga` | Usuarios constantes en móvil y portal web, más cotizaciones y ventas de socios a tasa fija |
 | `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
-| `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir y reintentar la emisión |
+| `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir, reintentar la emisión y consultar la póliza |
 | `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone el simulador en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
 
 | Variable | Por defecto | Uso |

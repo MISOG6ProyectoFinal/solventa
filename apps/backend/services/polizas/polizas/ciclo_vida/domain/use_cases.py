@@ -95,6 +95,22 @@ class ListClientPoliciesUseCase:
         ]
 
 
+class GetPolicyUseCase:
+    """La póliza con su estado de hoy: una activa cuya vigencia ya terminó se informa como vencida."""
+
+    def __init__(self, policies: PolicyRepository, today: Callable[[], date] | None = None) -> None:
+        self.policies = policies
+        self.today = today or _today
+
+    def execute(self, policy_id: str) -> Policy:
+        policy = self.policies.get_by_id(policy_id)
+        if policy is None:
+            raise PolicyNotFound
+        if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < self.today():
+            return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
+        return policy
+
+
 class GetRenewalOfferUseCase:
     """Arma la oferta de la próxima vigencia. No guarda, no emite y no cobra."""
 
