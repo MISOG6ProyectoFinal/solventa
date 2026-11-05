@@ -111,6 +111,15 @@ def listar_avisos(x_cliente_id: Annotated[str, Header()]) -> list[Aviso]:
     return casos["listar_avisos"].execute(cliente_id=x_cliente_id)
 
 
+@router.get("/avisos/{aviso_id}")
+def get_notice(aviso_id: str) -> Aviso:
+    """Lectura interna. El canal decide si quien pregunta es dueño del aviso."""
+    notice = repository.get_aviso(aviso_id)
+    if notice is None:
+        raise HTTPException(404, {"codigo": "siniestro_no_encontrado", "mensaje": "El siniestro no existe."})
+    return notice
+
+
 @router.post("/avisos/{aviso_id}/evidencias/cargas", status_code=201)
 def solicitar_carga(aviso_id: str, body: NuevaCarga, x_cliente_id: Annotated[str, Header()]) -> dict:
     try:

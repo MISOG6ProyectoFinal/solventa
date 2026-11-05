@@ -22,6 +22,7 @@ export const PETICIONES = [
   { canal: 'API de socios', nombre: 'Pagar como socio' },
   { canal: 'API de socios', nombre: 'Emitir póliza como socio' },
   { canal: 'API de socios', nombre: 'Reintentar la emisión' },
+  { canal: 'API de socios', nombre: 'Consultar póliza como socio' },
   { canal: 'API de socios', nombre: 'Cotizar con Open Finance', cotizacion: true },
 ];
 
