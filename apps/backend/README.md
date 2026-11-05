@@ -59,6 +59,7 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 La lógica completa está en los módulos que los experimentos validaron:
 
 - **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Una sola cotización para los tres canales**: móvil, portal y socios entran por el mismo flujo de `consenso` (`quote_request`). El `producto_id` decide el contrato del cuerpo (`consenso/domain/quote_contract.py`) y Rating tarifa con el modelo de ese producto. `score_riesgo` y `cliente_id` los resuelve Solventa: el score sale de Open Finance cuando la solicitud trae `consentimiento_open_finance` y el cliente llega en `X-Cliente-Id` desde el BFF. Un dato faltante responde 422 `datos_invalidos` con cada campo y su motivo, y un problema del producto responde `{codigo, mensaje}`. Cada canal conserva solo lo suyo: la sesión y el titular en el móvil, el cliente y el consentimiento digital en el portal, la credencial, el ramo y las coberturas del socio.
 - **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, para que actuaría reconstruya la decisión con `GET /consenso/cotizaciones/{id}`.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
@@ -75,6 +76,7 @@ Los demás módulos arrancan con su router y el dominio documentado en su `__ini
 | `events` | Publicación en SNS, consumo en SQS (Competing Consumers) |
 | `idempotency` | Idempotency Key Validator sobre restricción de unicidad en PostgreSQL |
 | `resilience` | Circuit Breaker y Cache-Aside last-known-good sobre Redis |
+| `validation` | Error 422 `datos_invalidos` con los campos y su motivo, igual en todos los canales |
 | `integration` | Adaptadores Open Finance (700 ms), Open Data, KYC/AML, Pasarela de Pagos, ACORD, Firma y Notificación |
 
 ## Del modelo de despliegue a AWS

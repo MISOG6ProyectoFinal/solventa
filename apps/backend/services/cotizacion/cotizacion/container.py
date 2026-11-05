@@ -3,13 +3,12 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from pydantic import TypeAdapter
 from solventa_common.resilience import CircuitBreaker, InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
 from cotizacion.catalogo.adapters.seed import seed_catalogo
-from cotizacion.catalogo.domain.use_cases import ListarProductosMobileUseCase
+from cotizacion.catalogo.domain.use_cases import ListarProductosMobileUseCase, ValidarProductoParaCanalUseCase
 from cotizacion.config import settings
 from cotizacion.consenso.adapters.cotizacion_repository import (
     InMemoryCotizacionRepository,
@@ -33,7 +32,7 @@ from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
     ConsultarConfiguracionUseCase,
     PartnerCatalogUseCase,
 )
-from cotizacion.rating.domain.models import SolicitudRating
+from cotizacion.rating.domain.models import parse_rating_request
 from cotizacion.rating.domain.rating import REGLAS_VIGENTES
 from cotizacion.rating.domain.use_cases import CotizarUseCase
 from cotizacion.signals.adapters.open_finance import build_provider
@@ -54,13 +53,10 @@ async def _fanout_produccion(body: dict) -> list[dict]:
     return await fanout_local(body)
 
 
-_solicitud_rating = TypeAdapter(SolicitudRating)
-
-
 async def fanout_local(body: dict) -> list[dict]:
     """Simula tres réplicas locales (tests / entorno sin DNS headless)."""
     uc = CotizarUseCase(REGLAS_VIGENTES, instancia="local")
-    resultado = uc.execute(_solicitud_rating.validate_python(body))
+    resultado = uc.execute(parse_rating_request(body))
     payload = resultado.model_dump(mode="json")
     return [payload, payload, payload]
 
@@ -100,6 +96,7 @@ class Container:
 
     def _wire(self) -> None:
         self.listar_productos_mobile = ListarProductosMobileUseCase(self.catalogo)
+        self.validar_producto_canal = ValidarProductoParaCanalUseCase(self.catalogo)
         self.cotizar_con_consenso = CotizarConConsensoUseCase(
             catalogo=self.catalogo,
             cotizaciones=self.cotizaciones,

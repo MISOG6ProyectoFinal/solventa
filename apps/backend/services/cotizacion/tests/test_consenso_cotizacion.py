@@ -40,20 +40,26 @@ def post_viaje(canal: str = "mobile", **overrides):
 def test_mobile_rechaza_producto_fuera_del_catalogo_mobile():
     response = post_cotizacion("vida-temporal", "mobile")
     assert response.status_code == 422
-    assert response.json()["detail"] == "Producto fuera del catálogo móvil: vida-temporal"
+    assert response.json()["detail"] == {
+        "codigo": "producto_fuera_del_canal",
+        "mensaje": "Producto fuera del catálogo móvil: vida-temporal",
+    }
 
 
 def test_mobile_rechaza_hogar_fuera_del_catalogo_mobile():
     response = post_cotizacion("hogar", "mobile")
     assert response.status_code == 422
-    assert response.json()["detail"] == "Producto fuera del catálogo móvil: hogar"
+    assert response.json()["detail"]["mensaje"] == "Producto fuera del catálogo móvil: hogar"
 
 
 def test_mobile_rechaza_productos_del_catalogo_no_disponibles():
     for producto_id in ("proteccion-celular", "vida-esencial"):
         response = post_viaje(producto_id=producto_id)
         assert response.status_code == 422
-        assert response.json()["detail"] == f"Producto no disponible para cotización móvil: {producto_id}"
+        assert response.json()["detail"] == {
+            "codigo": "producto_no_disponible",
+            "mensaje": f"Producto no disponible para cotización móvil: {producto_id}",
+        }
 
 
 def test_mobile_cotiza_viaje_con_prima_y_vigencia_del_viaje():
@@ -159,8 +165,8 @@ def test_todos_los_canales_rechazan_producto_inactivo():
             response = post_cotizacion(PRODUCTO_INACTIVO, canal)
             assert response.status_code == 422
             detail = response.json()["detail"]
-            assert detail == f"Producto inactivo: {PRODUCTO_INACTIVO}"
-            assert "móvil" not in detail
+            assert detail == {"codigo": "producto_inactivo", "mensaje": f"Producto inactivo: {PRODUCTO_INACTIVO}"}
+            assert "móvil" not in detail["mensaje"]
     finally:
         container.catalogo.productos.pop(PRODUCTO_INACTIVO, None)
 
@@ -169,7 +175,10 @@ def test_todos_los_canales_rechazan_producto_inexistente():
     for canal in CANALES:
         response = post_cotizacion("no-existe", canal)
         assert response.status_code == 404
-        assert response.json()["detail"] == "Producto no encontrado: no-existe"
+        assert response.json()["detail"] == {
+            "codigo": "producto_no_encontrado",
+            "mensaje": "Producto no encontrado: no-existe",
+        }
 
 
 def test_consenso_exige_canal():
@@ -282,11 +291,23 @@ def test_movil_persiste_el_cliente_sin_enviarlo_al_rating():
     assert leida.json()["cliente_id"] == "cliente-1"
 
 
-def test_otro_canal_no_guarda_cliente_id():
+def test_web_guarda_el_cliente_que_resolvio_el_portal():
     response = client.post(
         "/consenso/cotizaciones",
         json={"producto_id": "hogar", "suma_asegurada": "1000000", "edad": 40},
         headers={"X-Canal": "web", "X-Cliente-Id": "cliente-1"},
+    )
+    assert response.status_code == 200
+    guardada = container.cotizaciones.get(response.json()["id"])
+    assert guardada is not None
+    assert guardada.cliente_id == "cliente-1"
+
+
+def test_socios_no_guarda_cliente_id():
+    response = client.post(
+        "/consenso/cotizaciones",
+        json={"producto_id": "hogar", "suma_asegurada": "1000000", "edad": 40},
+        headers={"X-Canal": "socios", "X-Cliente-Id": "cliente-1"},
     )
     assert response.status_code == 200
     assert "cliente_id" not in response.json()

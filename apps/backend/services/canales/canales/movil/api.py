@@ -1,10 +1,11 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
+from solventa_common.validation import invalid_data_detail, invalid_fields
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
@@ -18,14 +19,11 @@ MENSAJE_COTIZACION_VENCIDA = "Esta cotización ya no está vigente. No se realiz
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
 
-class SolicitudCotizacionMovil(BaseModel):
-    producto_id: str
+class MobileQuoteHolder(BaseModel):
+    """Titular que captura el formulario. No viaja a Cotización, que valida y tarifa el resto."""
+
     nombre: str
     cedula: str
-    destino: Literal["Estados Unidos", "España", "México", "Otro país"]
-    fecha_salida: date
-    fecha_regreso: date
-    viajeros: int = Field(ge=1)
 
     @field_validator("nombre")
     @classmethod
@@ -42,14 +40,6 @@ class SolicitudCotizacionMovil(BaseModel):
         if not value.isdigit():
             raise ValueError("La cédula debe contener solo dígitos")
         return value
-
-    @model_validator(mode="after")
-    def _fechas_validas(self) -> "SolicitudCotizacionMovil":
-        if self.fecha_salida < date.today():
-            raise ValueError("La fecha de salida no puede ser anterior a hoy")
-        if self.fecha_regreso <= self.fecha_salida:
-            raise ValueError("La fecha de regreso debe ser posterior a la salida")
-        return self
 
 
 class SolicitudSesion(BaseModel):
@@ -233,12 +223,16 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
 
 
 @authenticated.post("/cotizaciones")
-def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
-    """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
+def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
+    """Valida el titular, delega la cotización sin PII y devuelve la oferta completa."""
+    try:
+        MobileQuoteHolder.model_validate(solicitud)
+    except ValidationError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, invalid_data_detail(invalid_fields(exc))) from exc
     oferta = call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json=solicitud.model_dump(mode="json", exclude={"nombre", "cedula"}),
+        json={key: value for key, value in solicitud.items() if key not in MobileQuoteHolder.model_fields},
         headers={"X-Canal": "mobile", "X-Cliente-Id": session.client_id},
     )
     if isinstance(oferta, dict):

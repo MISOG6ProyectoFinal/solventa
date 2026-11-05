@@ -21,6 +21,20 @@ RAMOS_COTIZABLES_WEB = {
 
 RAMOS_CON_CONSENTIMIENTO = {"vida-hipotecario", "ramo-vida-hipotecario"}
 
+CUSTOMER_FIELDS = frozenset(
+    {
+        "cliente_id",
+        "tipo_documento",
+        "tipoDocumento",
+        "numero_documento",
+        "numeroDocumento",
+        "nombre",
+        "apellido",
+        "email",
+        "telefono",
+    }
+)
+
 
 @router.get("/ramos")
 def listar_ramos() -> list:
@@ -105,17 +119,19 @@ def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
 
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
+    """El portal resuelve el cliente y el consentimiento; la cotización es la de todos los canales."""
     _validar_consentimiento_si_aplica(solicitud)
 
+    headers = {"X-Canal": "web"}
     cliente_id = _resolver_cliente_id(solicitud)
     if cliente_id:
-        solicitud["cliente_id"] = cliente_id
+        headers["X-Cliente-Id"] = cliente_id
 
     return call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json=solicitud,
-        headers={"X-Canal": "web"},
+        json={key: value for key, value in solicitud.items() if key not in CUSTOMER_FIELDS},
+        headers=headers,
     )
 
 
