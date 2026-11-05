@@ -828,11 +828,46 @@
                 "type": "text/javascript",
                 "exec": [
                   "const poliza = pm.response.json();",
+                  "pm.collectionVariables.set('polizaSocioId', poliza.id);",
                   "pm.test('La póliza queda activa con su vigencia', function () {",
                   "  pm.response.to.have.status(201);",
                   "  pm.expect(poliza.numero).to.match(/^POL-/);",
                   "  pm.expect(poliza.estado).to.equal('activa');",
                   "  pm.expect(poliza.vigencia).to.have.keys('desde', 'hasta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar póliza como socio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/polizas/{{polizaSocioId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.test('La póliza responde su estado y no expone datos internos', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(poliza.id).to.equal(pm.collectionVariables.get('polizaSocioId'));",
+                  "  pm.expect(poliza.estado).to.equal('activa');",
+                  "  pm.expect(poliza).to.not.have.property('socio_id');",
                   "});"
                 ]
               }

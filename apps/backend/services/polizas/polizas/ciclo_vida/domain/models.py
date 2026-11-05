@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class PolicyStatus(StrEnum):
     ACTIVE = "activa"
+    EXPIRED = "vencida"
 
 
 class Coverage(BaseModel):
