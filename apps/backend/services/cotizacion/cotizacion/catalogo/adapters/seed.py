@@ -69,6 +69,7 @@ SEED_PRODUCTOS = (
         nombre="Protección de Pagos",
         ramo_id="ramo-proteccion-pagos",
         canales=[Canal.SOCIOS],
+        requiere_consentimiento=True,
     ),
     Producto(
         id="vida-hipotecario",

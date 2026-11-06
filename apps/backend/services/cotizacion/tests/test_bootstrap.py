@@ -112,7 +112,7 @@ def test_dataset_inicial_marca_que_producto_exige_consentimiento():
     catalogo = _Catalogo()
     inicializar_almacen(catalogo, _Rules(), _Cotizaciones())
     exigen = {p.id for p in catalogo.list_productos() if p.requiere_consentimiento}
-    assert exigen == {"vida-hipotecario"}
+    assert exigen == {"vida-hipotecario", "proteccion-pagos"}
 
 
 def test_el_bootstrap_publica_las_reglas_iniciales_una_sola_vez():

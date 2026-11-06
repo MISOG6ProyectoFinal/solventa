@@ -1,4 +1,4 @@
-import { ClaimStatus, Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
+import { Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
 
 export interface PolicyCustomerDto {
   readonly tipo_documento: string;
@@ -43,8 +43,6 @@ export interface PolicyDto {
   readonly siniestros?: readonly PolicyClaimDto[];
 }
 
-const PAYMENT_STATUS: Record<string, PolicyPayment['status']> = { aprobado: 'Aprobado', rechazado: 'Rechazado' };
-const CLAIM_STATUS: Record<string, ClaimStatus> = { borrador: 'Reportado', radicado: 'En revisión' };
 const NONE = '-';
 
 function toPayment(dto: PolicyPaymentDto): PolicyPayment {
@@ -54,7 +52,7 @@ function toPayment(dto: PolicyPaymentDto): PolicyPayment {
     tipo: 'Prima',
     medio: NONE,
     amount: Number(dto.monto),
-    status: PAYMENT_STATUS[dto.estado] ?? 'Pendiente',
+    status: dto.estado,
   };
 }
 
@@ -64,7 +62,7 @@ function toClaim(dto: PolicyClaimDto): PolicyClaim {
     tipo: dto.tipo,
     fechaOcurrencia: dto.ocurrido_en.slice(0, 10),
     fechaAviso: (dto.creado_en ?? '').slice(0, 10),
-    status: CLAIM_STATUS[dto.estado] ?? 'Reportado',
+    status: dto.estado,
   };
 }
 

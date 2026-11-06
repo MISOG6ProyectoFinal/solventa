@@ -3,7 +3,9 @@ export type PolicyStatus = string;
 export const ACTIVE_STATUS: PolicyStatus = 'activa';
 export const CANCELLED_STATUS: PolicyStatus = 'cancelada';
 
-export type ClaimStatus = 'Reportado' | 'En revisión' | 'Aprobado' | 'Pagado' | 'Rechazado' | 'Cerrado';
+export type ClaimStatus = string;
+
+export type PaymentStatus = string;
 
 export interface PolicyCoverage {
   name: string;
@@ -25,7 +27,7 @@ export interface PolicyPayment {
   tipo: 'Prima' | 'Indemnización' | 'Devolución';
   medio: string;
   amount: number;
-  status: 'Aprobado' | 'Pendiente' | 'Rechazado';
+  status: PaymentStatus;
 }
 
 export interface PolicyClaim {

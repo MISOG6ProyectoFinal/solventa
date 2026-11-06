@@ -23,10 +23,10 @@ describe('ops policies mapper', () => {
       { name: 'Fallecimiento (saldo del crédito)', sumaAsegurada: '-', deducible: '-', included: true },
     ]);
     expect(policy.payments).toEqual([
-      { ref: 'cobro-1', date: '2026-11-05', tipo: 'Prima', medio: '-', amount: 3927000, status: 'Aprobado' },
+      { ref: 'cobro-1', date: '2026-11-05', tipo: 'Prima', medio: '-', amount: 3927000, status: 'aprobado' },
     ]);
     expect(policy.claims).toEqual([
-      { id: 'SIN-1001', tipo: 'Incapacidad', fechaOcurrencia: '2026-11-04', fechaAviso: '2026-11-05', status: 'En revisión' },
+      { id: 'SIN-1001', tipo: 'Incapacidad', fechaOcurrencia: '2026-11-04', fechaAviso: '2026-11-05', status: 'radicado' },
     ]);
   });
 
@@ -49,7 +49,7 @@ describe('ops policies mapper', () => {
     expect(policy.producto).toBe('vida-hipotecario');
     expect(policy.ramo).toBe('');
     expect(policy.status).toBe('vencida');
-    expect(policy.payments[0].status).toBe('Pendiente');
-    expect(policy.claims[0]).toMatchObject({ id: 'aviso-2', status: 'Reportado', fechaAviso: '' });
+    expect(policy.payments[0].status).toBe('procesando');
+    expect(policy.claims[0]).toMatchObject({ id: 'aviso-2', status: 'borrador', fechaAviso: '' });
   });
 });

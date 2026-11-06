@@ -45,7 +45,7 @@ export const OPS_POLICIES: readonly Policy[] = [
       { name: 'Andrés Rodríguez', parentesco: 'Cónyuge', porcentaje: 20 },
     ],
     payments: [
-      { ref: 'PAY-10231', date: '2025-12-01', tipo: 'Prima', medio: 'Débito automático', amount: 1280000, status: 'Aprobado' },
+      { ref: 'PAY-10231', date: '2025-12-01', tipo: 'Prima', medio: 'Débito automático', amount: 1280000, status: 'aprobado' },
     ],
     claims: NO_CLAIMS,
     endorsements: NO_ENDORSEMENTS,
@@ -70,7 +70,7 @@ export const OPS_POLICIES: readonly Policy[] = [
     coverages: deviceCoverages,
     beneficiaries: [],
     payments: [
-      { ref: 'PAY-09877', date: '2025-10-06', tipo: 'Prima', medio: 'Tarjeta de crédito', amount: 420000, status: 'Aprobado' },
+      { ref: 'PAY-09877', date: '2025-10-06', tipo: 'Prima', medio: 'Tarjeta de crédito', amount: 420000, status: 'aprobado' },
     ],
     claims: [
       {
@@ -78,7 +78,7 @@ export const OPS_POLICIES: readonly Policy[] = [
         tipo: 'Daño accidental',
         fechaOcurrencia: '2026-03-02',
         fechaAviso: '2026-03-03',
-        status: 'En revisión',
+        status: 'radicado',
         montoEstimado: 650000,
       },
     ],

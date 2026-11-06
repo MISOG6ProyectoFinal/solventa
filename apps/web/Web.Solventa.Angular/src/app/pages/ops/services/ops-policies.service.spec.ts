@@ -55,7 +55,7 @@ describe('OpsPoliciesService', () => {
     http.expectOne(API_ENDPOINTS.policy('pol-1')).flush(POLICY_DTO);
 
     expect(service.detailLoading()).toBe(false);
-    expect(service.selected()?.payments.map((payment) => payment.status)).toEqual(['Aprobado']);
+    expect(service.selected()?.payments.map((payment) => payment.status)).toEqual(['aprobado']);
     expect(service.selected()?.claims.map((claim) => claim.id)).toEqual(['SIN-1001']);
   });
 

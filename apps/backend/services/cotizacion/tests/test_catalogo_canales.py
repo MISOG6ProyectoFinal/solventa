@@ -42,9 +42,9 @@ def test_mobile_solo_ofrece_viaje():
     assert [line["id"] for line in lines_of("mobile")] == ["ramo-viaje"]
 
 
-def test_solo_vida_hipotecario_exige_consentimiento():
+def test_vida_hipotecario_y_proteccion_de_pagos_exigen_consentimiento():
     exigen = {line["id"] for line in lines_of("socios") if line["requiere_consentimiento"]}
-    assert exigen == {"ramo-vida-hipotecario"}
+    assert exigen == {"ramo-vida-hipotecario", "ramo-proteccion-pagos"}
     hipotecario = next(line for line in lines_of("web") if line["id"] == "ramo-vida-hipotecario")
     assert hipotecario["productos"] == [
         {"id": "vida-hipotecario", "nombre": "Vida Hipotecario", "requiere_consentimiento": True}
