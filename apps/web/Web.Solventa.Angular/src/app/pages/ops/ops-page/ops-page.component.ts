@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LocaleService } from '../../../core/services/locale.service';
+import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
 import { OpsPoliciesService } from '../services/ops-policies.service';
 import { QuoteTabComponent } from '../components/quote-tab/quote-tab.component';
@@ -15,6 +16,7 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
   imports: [
     CommonModule,
     TabsComponent,
+    AlertComponent,
     QuoteTabComponent,
     PolicyListComponent,
     PolicyDetailComponent,
@@ -35,20 +37,32 @@ export class OpsPageComponent {
   ]);
 
   selectedPolicyId = signal<string | null>(null);
-  selectedPolicy = computed(() => this.opsService.findById(this.selectedPolicyId()));
-  
+  selectedPolicy = this.opsService.selected;
+
   policies = this.opsService.policies;
   partners = this.opsService.partners;
+  loading = this.opsService.loading;
+  loadError = this.opsService.loadError;
+
+  constructor() {
+    this.opsService.load();
+  }
+
+  reload(): void {
+    this.opsService.load();
+  }
 
   showEndosoModal = signal(false);
   showCancelModal = signal(false);
 
   openPolicy(id: string): void {
     this.selectedPolicyId.set(id);
+    this.opsService.open(id);
   }
 
   closePolicy(): void {
     this.selectedPolicyId.set(null);
+    this.opsService.open(null);
   }
 
   onEndorsementContinued(draft: any): void {

@@ -6,7 +6,8 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
-import { ENDORSEMENT_TYPES, OPS_TODAY } from '../../constants/ops.constants';
+import { ENDORSEMENT_TYPES } from '../../constants/ops.constants';
+import { todayIso } from '../../utils/today.utils';
 import { EndorsementDraft } from '../../interfaces/endorsement-draft.interface';
 import { LocaleService } from '../../../../core/services/locale.service';
 
@@ -26,7 +27,7 @@ export class EndorsementModalComponent {
 
   protected readonly types = ENDORSEMENT_TYPES;
   protected readonly type = signal(ENDORSEMENT_TYPES[0].id);
-  protected readonly effectiveDate = signal(OPS_TODAY);
+  protected readonly effectiveDate = signal(todayIso());
   protected readonly phone = linkedSignal(() => this.policy().phone);
   protected readonly email = linkedSignal(() => this.policy().email);
   protected readonly address = linkedSignal(() => this.policy().address ?? '');

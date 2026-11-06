@@ -2,7 +2,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, status
 from solventa_common.integration.base import call_upstream
 
-from canales.clients import cotizacion, identidad, polizas
+from canales.clients import cotizacion, identidad
+from canales.web.policies import policy_detail, recent_policies
 
 router = APIRouter(prefix="/web", tags=["BFF Web"])
 
@@ -20,6 +21,7 @@ RAMOS_COTIZABLES_WEB = {
 }
 
 RAMOS_CON_CONSENTIMIENTO = {"vida-hipotecario", "ramo-vida-hipotecario"}
+OPEN_FINANCE_SCOPE = "Open Finance"
 
 CUSTOMER_FIELDS = frozenset(
     {
@@ -99,10 +101,10 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
     return _asegurar_nuevo_cliente(solicitud, tipo_doc, num_doc)
 
 
-def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
+def _validar_consentimiento_si_aplica(solicitud: dict) -> dict | None:
     producto_id = solicitud.get("producto_id", "")
     if producto_id not in RAMOS_CON_CONSENTIMIENTO:
-        return
+        return None
     consentimiento_id = solicitud.get("consentimiento_id")
     if not consentimiento_id:
         raise HTTPException(
@@ -115,12 +117,23 @@ def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El consentimiento digital no se encuentra otorgado o no es válido",
         )
+    return consentimiento
+
+
+def _open_finance_consent(consentimiento: dict | None) -> dict | None:
+    """El cliente que autorizó Open Finance en el consentimiento digital lo autoriza también para la cotización."""
+    if not consentimiento or OPEN_FINANCE_SCOPE not in consentimiento.get("alcance_lista", []):
+        return None
+    return {
+        "referencia_cliente": consentimiento["cliente_id"],
+        "consentimiento_id": consentimiento["consentimiento_id"],
+    }
 
 
 @router.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
     """El portal resuelve el cliente y el consentimiento; la cotización es la de todos los canales."""
-    _validar_consentimiento_si_aplica(solicitud)
+    open_finance = _open_finance_consent(_validar_consentimiento_si_aplica(solicitud))
 
     headers = {"X-Canal": "web"}
     cliente_id = _resolver_cliente_id(solicitud)
@@ -130,7 +143,8 @@ def cotizar(solicitud: dict) -> dict:
     return call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json={key: value for key, value in solicitud.items() if key not in CUSTOMER_FIELDS},
+        json={key: value for key, value in solicitud.items() if key not in CUSTOMER_FIELDS}
+        | ({"consentimiento_open_finance": open_finance} if open_finance else {}),
         headers=headers,
     )
 
@@ -165,9 +179,16 @@ def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
     return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
 
 
+@router.get("/polizas")
+def listar_polizas() -> list[dict]:
+    """Últimas pólizas de todos los canales con el asegurado, el socio y el ramo."""
+    return recent_policies()
+
+
 @router.get("/polizas/{poliza_id}")
 def obtener_poliza(poliza_id: str) -> dict:
-    return call_upstream(polizas.get, f"/polizas/{poliza_id}")
+    """La póliza con el asegurado, el socio, el ramo, sus cobros y sus siniestros."""
+    return policy_detail(poliza_id)
 
 
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---

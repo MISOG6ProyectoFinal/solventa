@@ -106,9 +106,25 @@ class GetPolicyUseCase:
         policy = self.policies.get_by_id(policy_id)
         if policy is None:
             raise PolicyNotFound
-        if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < self.today():
-            return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
-        return policy
+        return status_as_of(policy, self.today())
+
+
+class ListRecentPoliciesUseCase:
+    """Las últimas pólizas emitidas en cualquier canal, con su estado de hoy. Para la consulta del back-office."""
+
+    def __init__(self, policies: PolicyRepository, today: Callable[[], date] | None = None) -> None:
+        self.policies = policies
+        self.today = today or _today
+
+    def execute(self, limit: int) -> list[Policy]:
+        today = self.today()
+        return [status_as_of(policy, today) for policy in self.policies.list_recent(limit)]
+
+
+def status_as_of(policy: Policy, today: date) -> Policy:
+    if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < today:
+        return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
+    return policy
 
 
 class GetRenewalOfferUseCase:

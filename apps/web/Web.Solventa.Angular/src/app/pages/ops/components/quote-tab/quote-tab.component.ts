@@ -16,6 +16,7 @@ import { PROVIDER_SCENARIOS } from '../../constants/ops.constants';
 import { OfertaCotizacionResponse } from '../../interfaces/quote-payload.interface';
 import { mapFormValuesToQuotePayload } from '../../services/quote-payload.mapper';
 import { QuotesService } from '../../services/quotes.service';
+import { SimulatorService } from '../../services/simulator.service';
 import { ConsentPanelComponent } from '../consent-panel/consent-panel.component';
 import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
@@ -62,8 +63,11 @@ export class QuoteTabComponent {
   protected readonly locale = inject(LocaleService);
   private readonly quotesService = inject(QuotesService);
 
+  private readonly simulator = inject(SimulatorService);
+
   protected readonly scenarios = PROVIDER_SCENARIOS;
   protected readonly scenario = signal(PROVIDER_SCENARIOS[0].id);
+  protected readonly simulatorError = signal(false);
   protected readonly ramo = signal<RamoId>('VIDA_HIPOTECARIO');
 
   protected readonly isCalculating = signal(false);
@@ -79,6 +83,21 @@ export class QuoteTabComponent {
   protected readonly puedeCalcular = computed(
     () => !this.requiresConsent() || this.consentValidated(),
   );
+
+  constructor() {
+    this.simulator.openFinance().subscribe({
+      next: ({ modo }) => this.scenario.set(PROVIDER_SCENARIOS.find((s) => s.mode === modo)?.id ?? PROVIDER_SCENARIOS[0].id),
+      error: () => this.simulatorError.set(true),
+    });
+  }
+
+  protected changeScenario(id: string): void {
+    const scenario = PROVIDER_SCENARIOS.find((s) => s.id === id);
+    if (!scenario) return;
+    this.scenario.set(id);
+    this.simulatorError.set(false);
+    this.simulator.setOpenFinance(scenario.mode).subscribe({ error: () => this.simulatorError.set(true) });
+  }
 
   protected onConsentValidated(consentimientoId: string): void {
     this.consentimientoId.set(consentimientoId);

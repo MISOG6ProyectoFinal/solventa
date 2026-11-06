@@ -32,8 +32,8 @@
     />
 
     <slv-card>
-      <slv-field [label]="locale.t('quote.simulation')">
-        <select slvInput [(ngModel)]="scenario">
+      <slv-field [label]="locale.t('quote.simulation')" [hint]="locale.t('quote.simulationHint')" [error]="simulatorError() ? locale.t('quote.simulationError') : ''">
+        <select slvInput [ngModel]="scenario()" (ngModelChange)="changeScenario($event)">
           @for (option of scenarios; track option.id) {
             <option [value]="option.id">{{ locale.t(option.labelKey) }}</option>
           }

@@ -1,5 +1,3 @@
-import { RamoId } from './ramo.model';
-
 export type PolicyStatus = 'Activa' | 'Cancelada' | 'Vencida';
 
 export type ClaimStatus = 'Reportado' | 'En revisión' | 'Aprobado' | 'Pagado' | 'Rechazado' | 'Cerrado';
@@ -33,7 +31,7 @@ export interface PolicyClaim {
   fechaOcurrencia: string;
   fechaAviso: string;
   status: ClaimStatus;
-  montoEstimado: number;
+  montoEstimado?: number;
   montoAprobado?: number;
   parametrico?: { fuente: string; valorObservado: string; umbral: string };
 }
@@ -56,7 +54,8 @@ export interface Policy {
   tipoDocumento: string;
   identification: string;
   insuredName: string;
-  ramo: RamoId;
+  /** Clave del ramo en el portal (`VIDA_HIPOTECARIO`); vacía si el producto no tiene ramo conocido. */
+  ramo: string;
   producto: string;
   socioOrigen: string;
   status: PolicyStatus;

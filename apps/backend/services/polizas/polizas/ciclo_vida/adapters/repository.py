@@ -98,6 +98,11 @@ class PostgresPolicyRepository:
             )
         return [_policy(row) for row in rows]
 
+    def list_recent(self, limit: int) -> list[Policy]:
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(policies).order_by(policies.c.emitida_en.desc()).limit(limit)).mappings().all()
+        return [_policy(row) for row in rows]
+
     def _first(self, condition) -> Policy | None:
         with self.engine.connect() as conn:
             row = conn.execute(select(policies).where(condition)).mappings().first()
@@ -138,3 +143,7 @@ class InMemoryPolicyRepository:
                 if policy.cliente_id == cliente_id and policy.estado is PolicyStatus.ACTIVE
             ]
             return sorted(found, key=lambda policy: policy.emitida_en)
+
+    def list_recent(self, limit: int) -> list[Policy]:
+        with self._lock:
+            return sorted(self.items, key=lambda policy: policy.emitida_en, reverse=True)[:limit]

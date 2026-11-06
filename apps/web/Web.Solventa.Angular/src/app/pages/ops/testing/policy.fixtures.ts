@@ -1,4 +1,8 @@
 import { Policy, PolicyCoverage } from '../../../core/models/policy.model';
+import { PolicyDto } from '../services/ops-policies-api.mapper';
+
+/** Fecha de referencia de las pruebas (equivale a `TODAY` de los mockups). */
+export const FIXTURE_TODAY = '2026-09-12';
 
 const NO_PAYMENTS: Policy['payments'] = [];
 const NO_CLAIMS: Policy['claims'] = [];
@@ -16,7 +20,7 @@ const deviceCoverages: PolicyCoverage[] = [
   { name: 'Garantía extendida', sumaAsegurada: '$ 4.200.000', deducible: 'N/A', included: false },
 ];
 
-/** Pólizas de demostración (espejo de `INITIAL_POLICIES` en los mockups). */
+/** Pólizas para las pruebas (espejo de `INITIAL_POLICIES` en los mockups). */
 export const OPS_POLICIES: readonly Policy[] = [
   {
     id: 'p1',
@@ -168,3 +172,30 @@ export const OPS_POLICIES: readonly Policy[] = [
     endorsements: NO_ENDORSEMENTS,
   },
 ];
+
+/** Póliza como la devuelve `GET /web/polizas/{id}` del BFF Web. */
+export const POLICY_DTO: PolicyDto = {
+  id: 'pol-1',
+  numero: 'POL-ABC123',
+  estado: 'activa',
+  producto_id: 'vida-hipotecario',
+  prima: '3927000.00',
+  coberturas: [{ id: 'hip-1', nombre: 'Fallecimiento (saldo del crédito)' }],
+  vigencia: { desde: '2026-11-05', hasta: '2041-11-05' },
+  canal: 'mobile',
+  cliente: {
+    tipo_documento: 'CC',
+    numero_documento: '1020304050',
+    nombre: 'Lina',
+    apellido: 'Díaz',
+    email: 'lina@solventa.test',
+    telefono: '3001234567',
+  },
+  socio: null,
+  producto: { id: 'vida-hipotecario', nombre: 'Vida Hipotecario' },
+  ramo_id: 'ramo-vida-hipotecario',
+  pagos: [{ id: 'cobro-1', estado: 'aprobado', monto: '3927000.00', creado_en: '2026-11-05T10:00:00Z' }],
+  siniestros: [
+    { id: 'aviso-1', radicado: 'SIN-1001', estado: 'radicado', tipo: 'Incapacidad', ocurrido_en: '2026-11-04T09:00:00Z', creado_en: '2026-11-05T11:00:00Z' },
+  ],
+};

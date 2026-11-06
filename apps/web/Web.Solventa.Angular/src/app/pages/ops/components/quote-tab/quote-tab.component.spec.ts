@@ -20,15 +20,9 @@ describe('QuoteTabComponent', () => {
     fixture = TestBed.createComponent(QuoteTabComponent);
     await fixture.whenStable();
 
-    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
-    for (const req of ramosReq) {
-      req.flush([
-        { id: 'ramo-viaje', nombre: 'Viaje' },
-        { id: 'ramo-vida-hipotecario', nombre: 'Vida hipotecario' },
-        { id: 'ramo-microseguro-vida', nombre: 'Microseguro de vida' },
-        { id: 'ramo-parametrico', nombre: 'Paramétrico (clima / vuelo)' },
-      ]);
-    }
+    httpTesting
+      .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
+      .flush({ proveedor: 'open-finance', modo: 'normal' });
     await fixture.whenStable();
     el = fixture.nativeElement;
   });
@@ -41,7 +35,7 @@ describe('QuoteTabComponent', () => {
   it('composes the form, the consent panel, the simulation and the breakdown', () => {
     expect(el.querySelector('slv-quote-form')).not.toBeNull();
     expect(el.querySelector('slv-consent-panel')).not.toBeNull();
-    expect(el.textContent).toContain('Simulación de proveedores externos (demo)');
+    expect(el.textContent).toContain('Simulación de Open Finance (demo)');
     expect(el.textContent).toContain('Desglose de cotización');
   });
 
@@ -204,6 +198,36 @@ describe('QuoteTabComponent', () => {
     expect(el.textContent).not.toContain(
       'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.',
     );
+  });
+
+  it('changes the Open Finance simulator when another scenario is chosen', async () => {
+    const select = Array.from(el.querySelectorAll('select')).find((item) =>
+      Array.from(item.options).some((option) => option.value === 'caida'),
+    )!;
+    select.value = 'caida';
+    select.dispatchEvent(new Event('change'));
+
+    const req = httpTesting.expectOne({ method: 'PUT', url: `${API_ENDPOINTS.simulator('open-finance')}/modo` });
+    expect(req.request.body).toEqual({ modo: 'caido' });
+    req.flush({ proveedor: 'open-finance', modo: 'caido' });
+    await fixture.whenStable();
+
+    expect(el.textContent).not.toContain('No fue posible cambiar el simulador de Open Finance.');
+  });
+
+  it('tells the advisor when the simulator cannot be changed', async () => {
+    const select = Array.from(el.querySelectorAll('select')).find((item) =>
+      Array.from(item.options).some((option) => option.value === 'degradado'),
+    )!;
+    select.value = 'degradado';
+    select.dispatchEvent(new Event('change'));
+
+    const req = httpTesting.expectOne(`${API_ENDPOINTS.simulator('open-finance')}/modo`);
+    expect(req.request.body).toEqual({ modo: 'lento' });
+    req.flush(null, { status: 503, statusText: 'Unavailable' });
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('No fue posible cambiar el simulador de Open Finance.');
   });
 });
 

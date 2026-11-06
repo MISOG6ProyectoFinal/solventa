@@ -14,7 +14,15 @@
   @if (activeTab() === 'cotizar') {
     <slv-quote-tab />
   } @else {
-    @if (!selectedPolicyId()) {
+    @if (loadError()) {
+      <slv-alert tone="error">
+        {{ locale.t('policies.loadError') }}
+        <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">{{ locale.t('partners.retry') }}</button>
+      </slv-alert>
+    }
+    @if (loading()) {
+      <p class="text-sm text-muted-foreground" role="status">{{ locale.t('policies.loading') }}</p>
+    } @else if (!selectedPolicyId()) {
       <slv-policy-list 
         [policies]="policies()" 
         [partners]="partners()" 
