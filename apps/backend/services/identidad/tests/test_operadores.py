@@ -1,4 +1,4 @@
-"""Operadores del portal: sesión, alta, listado, cambios y administrador inicial."""
+"""Operadores del portal: sesión, alta, listado y cambios."""
 
 from datetime import UTC, datetime, timedelta
 

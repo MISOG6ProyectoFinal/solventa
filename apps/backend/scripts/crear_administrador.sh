@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Crea un operador administrador del portal en la base de Identidad del clúster.
 #   CONTRASENA=<clave> scripts/crear_administrador.sh <correo> [nombre]
-#   KUBECTL="docker exec -i solventa-k3s kubectl" scripts/crear_administrador.sh <correo>   # modo local
+#   EN_IDENTIDAD="docker compose exec -T identidad" scripts/crear_administrador.sh <correo>   # Compose
 set -euo pipefail
 
 CORREO="${1:?Uso: $0 <correo> [nombre]}"
 NOMBRE="${2:-Administrador}"
-NAMESPACE="${NAMESPACE:-solventa}"
-read -ra KUBECTL <<<"${KUBECTL:-kubectl}"
+read -ra EN_IDENTIDAD <<<"${EN_IDENTIDAD:-kubectl -n solventa exec -i deploy/identidad -c identidad --}"
 
 if [[ -z "${CONTRASENA:-}" ]]; then
   read -rsp "Contraseña de $CORREO: " CONTRASENA
@@ -44,4 +43,4 @@ PY
 
 CORREO="$CORREO" NOMBRE="$NOMBRE" CONTRASENA="$CONTRASENA" python3 -c \
   'import json, os; print(json.dumps({"correo": os.environ["CORREO"], "nombre": os.environ["NOMBRE"], "contrasena": os.environ["CONTRASENA"]}))' |
-  "${KUBECTL[@]}" -n "$NAMESPACE" exec -i deploy/identidad -c identidad -- python -c "$PROGRAMA"
+  "${EN_IDENTIDAD[@]}" python -c "$PROGRAMA"
