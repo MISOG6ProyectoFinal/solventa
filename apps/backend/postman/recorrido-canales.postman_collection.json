@@ -391,6 +391,29 @@
           ]
         },
         {
+          "name": "Tipos de documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/movil/tipos-documento",
+            "description": "Tipos de documento del registro. No pide sesión: se leen antes de crear la cuenta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trae los tipos de documento', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.include.members(['CC', 'CE', 'Pasaporte']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Registrar cliente",
           "request": {
             "method": "POST",
@@ -524,6 +547,34 @@
                   "const viaje = productos.find((p) => p.id === pm.collectionVariables.get('productoId'));",
                   "pm.test('El producto de viaje está disponible', function () {",
                   "  pm.expect(viaje, 'producto ' + pm.collectionVariables.get('productoId')).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contrato del producto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/productos/{{productoId}}/contrato",
+            "description": "JSON Schema del cuerpo con que se cotiza el producto. El móvil toma de ahí las opciones del destino."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El contrato lista los destinos', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().properties.destino.enum).to.include('España');",
                   "});"
                 ]
               }
@@ -1318,7 +1369,7 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/web/ramos",
-            "description": "Ramos que el portal puede cotizar."
+            "description": "Ramos que el catálogo ofrece en el canal web, en su orden, con los productos de cada uno y si exigen consentimiento Open Finance."
           },
           "event": [
             {
@@ -1330,6 +1381,59 @@
                   "pm.test('Incluye viaje y vida hipotecario', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(ramos.map((r) => r.id)).to.include.members(['ramo-viaje', 'ramo-vida-hipotecario']);",
+                  "});",
+                  "pm.test('Cada ramo trae sus productos', function () {",
+                  "  ramos.forEach((r) => pm.expect(r.productos, r.id).to.be.an('array').that.is.not.empty);",
+                  "});",
+                  "pm.test('Solo vida hipotecario exige consentimiento', function () {",
+                  "  pm.expect(ramos.filter((r) => r.requiere_consentimiento).map((r) => r.id)).to.eql(['ramo-vida-hipotecario']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contrato del producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/productos/{{productoId}}/contrato",
+            "description": "JSON Schema del cuerpo con que se cotiza el producto, con las opciones que acepta cada campo. Responde 404 si el producto no tiene contrato."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const contrato = pm.response.json();",
+                  "pm.test('El contrato lista los destinos', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(contrato.properties.destino.enum).to.include('España');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tipos de documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/tipos-documento",
+            "description": "Tipos de documento que acepta Identidad para registrar un cliente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trae los tipos de documento', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.include.members(['CC', 'CE', 'Pasaporte']);",
                   "});"
                 ]
               }
@@ -1615,6 +1719,52 @@
           ]
         },
         {
+          "name": "Estados de póliza",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/estados",
+            "description": "Estados en los que puede estar una póliza."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trae los estados de póliza', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().map((e) => e.id)).to.eql(['activa', 'vencida', 'cancelada']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Causas de cancelación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/causas-cancelacion",
+            "description": "Causas con que se cancela una póliza y si la causa da derecho a devolución de prima."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solo el impago de prima no devuelve la prima', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().filter((c) => !c.reembolsable).map((c) => c.id)).to.eql(['impago-de-prima']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Listar pólizas",
           "request": {
             "method": "GET",
@@ -1661,6 +1811,52 @@
                   "  pm.expect(poliza.cliente).to.be.an('object');",
                   "  pm.expect(poliza.pagos.map((p) => p.estado)).to.include('aprobado');",
                   "  pm.expect(poliza.siniestros).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tipos de socio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/socios/tipos",
+            "description": "Tipos de organización con que se da de alta un socio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trae los tipos de socio', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.include.members(['Banco', 'Fintech']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alcances de socio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/socios/alcances",
+            "description": "Operaciones de la API pública que se pueden autorizar a un socio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trae los alcances', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.eql(['cotizacion', 'emision', 'consulta']);",
                   "});"
                 ]
               }

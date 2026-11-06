@@ -237,6 +237,10 @@ export function setup() {
 export function movil() {
   pedir('BFF móvil disponible', 'GET', `${BASE_URL}/movil/`, null);
 
+  pedir('Tipos de documento', 'GET', `${BASE_URL}/movil/tipos-documento`, null, {
+    validar: (tipos) => tipos.includes('CC'),
+  });
+
   const correo = `carga-${Date.now()}-${__VU}-${__ITER}@solventa.test`;
   const contrasena = `Clave-${aleatorio(12)}`;
   const cuenta = pedir(
@@ -269,6 +273,10 @@ export function movil() {
   pedir('Catálogo de productos', 'GET', `${BASE_URL}/movil/productos`, null, {
     headers: autenticado,
     validar: (productos) => productos.some((p) => p.id === PRODUCTO),
+  });
+  pedir('Contrato del producto (móvil)', 'GET', `${BASE_URL}/movil/productos/${PRODUCTO}/contrato`, null, {
+    headers: autenticado,
+    validar: (contrato) => contrato.properties.destino.enum.includes('España'),
   });
   cotizar(
     'Cotizar desde el móvil',
@@ -326,6 +334,14 @@ export function movil() {
 
 export function web(datos) {
   const headers = datos.portal;
+  pedir('Ramos del portal', 'GET', `${BASE_URL}/web/ramos`, null, {
+    headers,
+    validar: (ramos) => ramos.some((r) => r.id === RAMO && r.productos.some((p) => p.id === PRODUCTO)),
+  });
+  pedir('Contrato del producto (portal)', 'GET', `${BASE_URL}/web/productos/${PRODUCTO}/contrato`, null, {
+    headers,
+    validar: (contrato) => contrato.properties.destino.enum.includes('España'),
+  });
   cotizar('Cotizar desde el portal', `${BASE_URL}/web/cotizaciones`, solicitudViaje(), headers);
   pedir('Listar socios', 'GET', `${BASE_URL}/web/socios`, null, { headers, validar: (socios) => socios.length > 0 });
   pedir('Detalle del socio', 'GET', `${BASE_URL}/web/socios/${datos.socioId}`, null, {

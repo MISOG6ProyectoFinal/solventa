@@ -1,8 +1,9 @@
 """Persistencia de pólizas. La clave de idempotencia y la cotización son únicas."""
 
 import threading
+from datetime import date
 
-from sqlalchemy import JSON, Column, Date, DateTime, MetaData, Numeric, String, Table, insert, select
+from sqlalchemy import JSON, Column, Date, DateTime, MetaData, Numeric, String, Table, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -90,7 +91,10 @@ class PostgresPolicyRepository:
             rows = (
                 conn.execute(
                     select(policies)
-                    .where(policies.c.cliente_id == cliente_id, policies.c.estado == PolicyStatus.ACTIVE.value)
+                    .where(
+                        policies.c.cliente_id == cliente_id,
+                        policies.c.estado.in_([PolicyStatus.ACTIVE.value, PolicyStatus.EXPIRED.value]),
+                    )
                     .order_by(policies.c.emitida_en)
                 )
                 .mappings()
@@ -102,6 +106,15 @@ class PostgresPolicyRepository:
         with self.engine.connect() as conn:
             rows = conn.execute(select(policies).order_by(policies.c.emitida_en.desc()).limit(limit)).mappings().all()
         return [_policy(row) for row in rows]
+
+    def expire_ended(self, today: date) -> int:
+        with self.engine.begin() as conn:
+            result = conn.execute(
+                update(policies)
+                .where(policies.c.estado == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today)
+                .values(estado=PolicyStatus.EXPIRED.value)
+            )
+        return result.rowcount
 
     def _first(self, condition) -> Policy | None:
         with self.engine.connect() as conn:
@@ -140,10 +153,17 @@ class InMemoryPolicyRepository:
             found = [
                 policy
                 for policy in self.items
-                if policy.cliente_id == cliente_id and policy.estado is PolicyStatus.ACTIVE
+                if policy.cliente_id == cliente_id and policy.estado in (PolicyStatus.ACTIVE, PolicyStatus.EXPIRED)
             ]
             return sorted(found, key=lambda policy: policy.emitida_en)
 
     def list_recent(self, limit: int) -> list[Policy]:
         with self._lock:
             return sorted(self.items, key=lambda policy: policy.emitida_en, reverse=True)[:limit]
+
+    def expire_ended(self, today: date) -> int:
+        with self._lock:
+            ended = [p for p in self.items if p.estado is PolicyStatus.ACTIVE and p.vigencia.hasta < today]
+            for policy in ended:
+                policy.estado = PolicyStatus.EXPIRED
+            return len(ended)

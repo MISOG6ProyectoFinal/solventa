@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from cotizacion.rating.adapters.seed import INITIAL_RULES
 from cotizacion.rating.domain.models import (
     SolicitudCotizacionMicroseguroVida,
     SolicitudCotizacionParametrico,
@@ -9,7 +10,6 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
 )
 from cotizacion.rating.domain.rating import (
-    REGLAS_VIGENTES,
     ProductoNoTarifado,
     calcular_desglose_microseguro_vida,
     calcular_desglose_parametrico,
@@ -37,35 +37,35 @@ def solicitud_viaje(**overrides) -> SolicitudCotizacionViaje:
 
 def test_prima_neutral_score():
     # 100M * 1.8/1000 * factor edad 1.0 * factor score 1.0 = 180000.00 + IVA = 214200.00
-    assert calcular_prima(REGLAS_VIGENTES, "vida-temporal", Decimal(100_000_000), 40, Decimal("0.5")) == Decimal(
+    assert calcular_prima(INITIAL_RULES, "vida-temporal", Decimal(100_000_000), 40, Decimal("0.5")) == Decimal(
         "214200.00"
     )
 
 
 def test_mayor_riesgo_sube_prima():
-    base = calcular_prima(REGLAS_VIGENTES, "hogar", Decimal(1_000_000), 40, Decimal("0.5"))
-    riesgosa = calcular_prima(REGLAS_VIGENTES, "hogar", Decimal(1_000_000), 40, Decimal("0.9"))
+    base = calcular_prima(INITIAL_RULES, "hogar", Decimal(1_000_000), 40, Decimal("0.5"))
+    riesgosa = calcular_prima(INITIAL_RULES, "hogar", Decimal(1_000_000), 40, Decimal("0.9"))
     assert riesgosa > base
 
 
 def test_producto_sin_tarifa():
     with pytest.raises(ProductoNoTarifado):
-        calcular_prima(REGLAS_VIGENTES, "mascotas", Decimal(1), 30, Decimal("0.5"))
+        calcular_prima(INITIAL_RULES, "mascotas", Decimal(1), 30, Decimal("0.5"))
 
 
 def test_prima_viaje_catorce_dias_un_viajero():
     # 9000 × 14 días × 1 viajero × 1.19
-    assert calcular_prima_viaje(REGLAS_VIGENTES, solicitud_viaje()) == Decimal("149940.00")
+    assert calcular_prima_viaje(INITIAL_RULES, solicitud_viaje()) == Decimal("149940.00")
 
 
 def test_prima_viaje_catorce_dias_dos_viajeros():
     # 9000 × 14 días × 2 viajeros × 1.19
-    assert calcular_prima_viaje(REGLAS_VIGENTES, solicitud_viaje(viajeros=2)) == Decimal("299880.00")
+    assert calcular_prima_viaje(INITIAL_RULES, solicitud_viaje(viajeros=2)) == Decimal("299880.00")
 
 
 def test_viaje_sin_tarifa():
     with pytest.raises(ProductoNoTarifado):
-        calcular_prima_viaje(REGLAS_VIGENTES, solicitud_viaje(producto_id="viaje-nacional"))
+        calcular_prima_viaje(INITIAL_RULES, solicitud_viaje(producto_id="viaje-nacional"))
 
 
 def test_solicitud_viaje_exige_regreso_posterior():
@@ -82,7 +82,7 @@ def test_prima_microseguro_vida():
         parentesco="Hijo(a)",
     )
     # 15M / 1000 * 1.2 * factor_edad 0.9 = 16200.00 + recargo + adicionales + IVA = 24097.50
-    prima = calcular_prima_microseguro_vida(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    prima = calcular_prima_microseguro_vida(INITIAL_RULES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert prima == Decimal("24097.50")
 
 
@@ -95,7 +95,7 @@ def test_prima_vida_hipotecario():
         plazo_anios=15,
     )
     # 250M / 1000 * 0.8 * factor_edad 1.0 * 15 = 3000000.00 + recargo(0) + adicionales(300k) + IVA = 3927000.00
-    prima = calcular_prima_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    prima = calcular_prima_vida_hipotecario(INITIAL_RULES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert prima == Decimal("3927000.00")
 
 
@@ -109,7 +109,7 @@ def test_mortgage_life_premium_applies_open_finance_score():
         score_riesgo=Decimal("0.7"),
     )
     # 3000000 básica + 360000 recargo score + 300000 adicionales + 695400 IVA = 4355400.00
-    prima = calcular_prima_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    prima = calcular_prima_vida_hipotecario(INITIAL_RULES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert prima == Decimal("4355400.00")
 
 
@@ -121,7 +121,7 @@ def test_prima_parametrico():
         fecha_evento=date(2026, 11, 15),
         valor_indemnizar=Decimal("500000"),
     )
-    prima = calcular_prima_parametrico(REGLAS_VIGENTES, solicitud)
+    prima = calcular_prima_parametrico(INITIAL_RULES, solicitud)
     assert prima == Decimal("62653.50")
 
 
@@ -133,7 +133,7 @@ def test_desglose_viaje_mockup_estados_unidos():
         fecha_regreso=date(2026, 10, 12),
         viajeros=1,
     )
-    desglose = calcular_desglose_viaje(REGLAS_VIGENTES, solicitud)
+    desglose = calcular_desglose_viaje(INITIAL_RULES, solicitud)
     assert desglose.prima_basica == Decimal("90000.00")
     assert desglose.recargo_riesgo == Decimal("2700.00")
     assert desglose.coberturas_adicionales == Decimal("9000.00")
@@ -150,7 +150,7 @@ def test_desglose_vida_hipotecario():
         plazo_anios=15,
         score_riesgo=Decimal("0.7"),
     )
-    desglose = calcular_desglose_vida_hipotecario(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    desglose = calcular_desglose_vida_hipotecario(INITIAL_RULES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert desglose.prima_basica == Decimal("3000000.00")
     assert desglose.recargo_riesgo == Decimal("360000.00")
     assert desglose.coberturas_adicionales == Decimal("300000.00")
@@ -166,7 +166,7 @@ def test_desglose_microseguro_vida():
         beneficiario="Carlos Pérez",
         parentesco="Hijo(a)",
     )
-    desglose = calcular_desglose_microseguro_vida(REGLAS_VIGENTES, solicitud, fecha_referencia=date(2026, 10, 1))
+    desglose = calcular_desglose_microseguro_vida(INITIAL_RULES, solicitud, fecha_referencia=date(2026, 10, 1))
     assert desglose.prima_basica == Decimal("16200.00")
     assert desglose.recargo_riesgo == Decimal("1620.00")
     assert desglose.coberturas_adicionales == Decimal("2430.00")
@@ -182,7 +182,7 @@ def test_desglose_parametrico():
         fecha_evento=date(2026, 11, 15),
         valor_indemnizar=Decimal("500000"),
     )
-    desglose = calcular_desglose_parametrico(REGLAS_VIGENTES, solicitud)
+    desglose = calcular_desglose_parametrico(INITIAL_RULES, solicitud)
     assert desglose.prima_basica == Decimal("45000.00")
     assert desglose.recargo_riesgo == Decimal("4500.00")
     assert desglose.coberturas_adicionales == Decimal("3150.00")

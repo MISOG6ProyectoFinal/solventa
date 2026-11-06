@@ -28,7 +28,7 @@ describe('ConsentService', () => {
   it('solicitar sends POST to request endpoint with request body', () => {
     const solicitud: SolicitudConsentimiento = {
       cliente_id: 'CLI-001',
-      ramo: 'VIDA_HIPOTECARIO',
+      ramo: 'ramo-vida-hipotecario',
       canal: 'sms',
       contacto_mask: '***4567',
       open_finance: true,

@@ -89,6 +89,7 @@ class ListClientPoliciesUseCase:
 
     def execute(self, cliente_id: str) -> list[ClientPolicy]:
         hoy = self.today()
+        self.policies.expire_ended(hoy)
         return [
             ClientPolicy(**policy.model_dump(), renovable=es_renovable(policy, hoy))
             for policy in self.policies.list_by_client(cliente_id)
@@ -96,17 +97,18 @@ class ListClientPoliciesUseCase:
 
 
 class GetPolicyUseCase:
-    """La póliza con su estado de hoy: una activa cuya vigencia ya terminó se informa como vencida."""
+    """La póliza con su estado de hoy: una activa cuya vigencia ya terminó se guarda como vencida."""
 
     def __init__(self, policies: PolicyRepository, today: Callable[[], date] | None = None) -> None:
         self.policies = policies
         self.today = today or _today
 
     def execute(self, policy_id: str) -> Policy:
+        self.policies.expire_ended(self.today())
         policy = self.policies.get_by_id(policy_id)
         if policy is None:
             raise PolicyNotFound
-        return status_as_of(policy, self.today())
+        return policy
 
 
 class ListRecentPoliciesUseCase:
@@ -117,14 +119,8 @@ class ListRecentPoliciesUseCase:
         self.today = today or _today
 
     def execute(self, limit: int) -> list[Policy]:
-        today = self.today()
-        return [status_as_of(policy, today) for policy in self.policies.list_recent(limit)]
-
-
-def status_as_of(policy: Policy, today: date) -> Policy:
-    if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < today:
-        return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
-    return policy
+        self.policies.expire_ended(self.today())
+        return self.policies.list_recent(limit)
 
 
 class GetRenewalOfferUseCase:

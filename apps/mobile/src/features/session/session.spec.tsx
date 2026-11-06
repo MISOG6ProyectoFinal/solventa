@@ -73,14 +73,23 @@ function profileResponse() {
   });
 }
 
-function installFetch() {
+const DOCUMENT_TYPES = ['CC', 'CE', 'Pasaporte'];
+
+function installFetch(register: () => ReturnType<typeof jsonResponse> = sessionResponse) {
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith('/movil/tipos-documento')) {
+      return jsonResponse(DOCUMENT_TYPES);
+    }
     if (url.endsWith('/movil/sesion') && (init?.method === undefined || init.method === 'GET')) {
       return profileResponse();
     }
-    return sessionResponse();
+    return register();
   }) as typeof fetch;
+}
+
+function registerCalls() {
+  return jest.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/movil/registros'));
 }
 
 function Shell() {
@@ -275,13 +284,13 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Crear cuenta');
     await pressLabel(view, 'Crear cuenta');
     expect(view.getAllByText('Obligatorio')).toHaveLength(7);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(registerCalls()).toHaveLength(0);
 
     await fillRegistration(view);
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
-    const [url, init] = jest.mocked(fetch).mock.calls[0];
+    const [url, init] = registerCalls()[0];
     expect(String(url)).toMatch(/\/movil\/registros$/);
     expect(init).toEqual({
       method: 'POST',
@@ -308,7 +317,7 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Crear cuenta');
 
     expect(view.getByText('Ingresa un correo válido.')).toBeTruthy();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(registerCalls()).toHaveLength(0);
 
     await fireEvent.changeText(view.getByLabelText('Correo'), CORREO);
     await pressLabel(view, 'Crear cuenta');
@@ -325,7 +334,7 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Crear cuenta');
 
     expect(view.getByText('La contraseña debe tener al menos 8 caracteres.')).toBeTruthy();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(registerCalls()).toHaveLength(0);
 
     await fireEvent.changeText(view.getByLabelText('Contraseña'), '12345678');
     await pressLabel(view, 'Crear cuenta');
@@ -338,20 +347,18 @@ describe('sesión del cliente', () => {
 
     await pressLabel(view, 'Crear cuenta');
     await fillRegistration(view);
-    expect(view.getByText('Cédula de ciudadanía')).toBeTruthy();
+    expect(await view.findByText('Cédula de ciudadanía')).toBeTruthy();
     await fireEvent.press(view.getByText('Cédula de ciudadanía'));
     await fireEvent.press(view.getByLabelText('Pasaporte'));
     await pressLabel(view, 'Crear cuenta');
 
     await waitFor(() => expect(view.getByText(GREETING)).toBeTruthy());
-    const [, init] = jest.mocked(fetch).mock.calls[0];
+    const [, init] = registerCalls()[0];
     expect(JSON.parse(String(init?.body))).toMatchObject({ tipo_documento: 'Pasaporte' });
   });
 
   it('shows the duplicate document error', async () => {
-    global.fetch = jest.fn(async () =>
-      jsonResponse({ detail: 'Ya existe una cuenta con este documento.' }, 409),
-    ) as typeof fetch;
+    installFetch(() => jsonResponse({ detail: 'Ya existe una cuenta con este documento.' }, 409));
     const view = await openLogin();
 
     await pressLabel(view, 'Crear cuenta');
@@ -363,9 +370,7 @@ describe('sesión del cliente', () => {
   });
 
   it('shows the duplicate email error and stays on Crear cuenta', async () => {
-    global.fetch = jest.fn(async () =>
-      jsonResponse({ detail: 'Ya existe una cuenta con este correo.' }, 409),
-    ) as typeof fetch;
+    installFetch(() => jsonResponse({ detail: 'Ya existe una cuenta con este correo.' }, 409));
     const view = await openLogin();
 
     await pressLabel(view, 'Crear cuenta');
@@ -378,6 +383,24 @@ describe('sesión del cliente', () => {
     await pressLabel(view, 'Ya tengo cuenta');
     expect(view.getAllByText('Iniciar sesión').length).toBeGreaterThan(0);
     expect(view.queryByText('Ya existe una cuenta con este correo.')).toBeNull();
+  });
+
+  it('tells the person when the document types cannot be loaded', async () => {
+    global.fetch = jest.fn(async () => jsonResponse({}, 503)) as typeof fetch;
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(await view.findByText('No se pudieron cargar los tipos de documento.')).toBeTruthy();
+  });
+
+  it('shows a document type it has no translation for with its own name', async () => {
+    global.fetch = jest.fn(async () => jsonResponse(['NIT'])) as typeof fetch;
+    const view = await openLogin();
+
+    await pressLabel(view, 'Crear cuenta');
+
+    expect(await view.findByText('NIT')).toBeTruthy();
   });
 
   it('reads the stored token without waiting for the saved API address', async () => {

@@ -438,3 +438,28 @@ def test_solicitar_consentimiento_ignora_cliente_id_enviado_con_documento():
     response = client.post("/identidad/solicitar", json=payload)
     assert response.json()["cliente_id"] == "CLI-CC-7770006"
     assert container.clients.get("CLI-7770006") is None
+
+
+def test_la_consulta_dice_si_el_consentimiento_incluye_open_finance():
+    def consent_with(scope: list[str]) -> dict:
+        solicitud = client.post(
+            "/identidad/solicitar",
+            json={
+                "tipo_documento": "CC",
+                "numero_documento": "1098700941",
+                "nombre": "Pedro Perez",
+                "email": "pperez@notmail.com",
+                "telefono": "3176663766",
+                "canal": "sms",
+                "contacto": "3176663766",
+                "alcance": scope,
+            },
+        ).json()
+        client.post(
+            "/identidad/validar",
+            json={"consentimiento_id": solicitud["consentimiento_id"], "codigo": solicitud["codigo_demo"]},
+        )
+        return client.get(f"/identidad/{solicitud['consentimiento_id']}").json()
+
+    assert consent_with(["Open Finance", "Open Data"])["open_finance"] is True
+    assert consent_with(["Open Data"])["open_finance"] is False

@@ -46,14 +46,14 @@ def test_policy_within_its_validity_is_active():
     assert found.estado is PolicyStatus.ACTIVE
 
 
-def test_policy_after_its_validity_is_reported_as_expired_without_changing_what_is_stored():
+def test_policy_after_its_validity_is_stored_as_expired():
     policy = _policy()
     use_case = _use_case(policy, date(2027, 1, 1))
 
     found = use_case.execute(policy.id)
 
     assert found.estado is PolicyStatus.EXPIRED
-    assert use_case.policies.get_by_id(policy.id).estado is PolicyStatus.ACTIVE
+    assert use_case.policies.get_by_id(policy.id).estado is PolicyStatus.EXPIRED
 
 
 def test_unknown_policy_raises_not_found():

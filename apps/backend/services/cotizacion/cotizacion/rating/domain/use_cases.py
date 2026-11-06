@@ -6,8 +6,8 @@ from cotizacion.rating.domain.models import (
     SolicitudCotizacionVidaHipotecario,
     SolicitudRating,
 )
+from cotizacion.rating.domain.ports import RulesRepository
 from cotizacion.rating.domain.rating import (
-    ReglasRating,
     calcular_desglose_generico,
     calcular_desglose_microseguro_vida,
     calcular_desglose_parametrico,
@@ -17,22 +17,23 @@ from cotizacion.rating.domain.rating import (
 
 
 class CotizarUseCase:
-    def __init__(self, reglas: ReglasRating, instancia: str) -> None:
-        self.reglas = reglas
+    def __init__(self, rules: RulesRepository, instancia: str) -> None:
+        self.rules = rules
         self.instancia = instancia
 
     def execute(self, solicitud: SolicitudRating) -> Cotizacion:
+        reglas = self.rules.current()
         if isinstance(solicitud, SolicitudCotizacionViaje):
-            desglose = calcular_desglose_viaje(self.reglas, solicitud)
+            desglose = calcular_desglose_viaje(reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionMicroseguroVida):
-            desglose = calcular_desglose_microseguro_vida(self.reglas, solicitud)
+            desglose = calcular_desglose_microseguro_vida(reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionVidaHipotecario):
-            desglose = calcular_desglose_vida_hipotecario(self.reglas, solicitud)
+            desglose = calcular_desglose_vida_hipotecario(reglas, solicitud)
         elif isinstance(solicitud, SolicitudCotizacionParametrico):
-            desglose = calcular_desglose_parametrico(self.reglas, solicitud)
+            desglose = calcular_desglose_parametrico(reglas, solicitud)
         else:
             desglose = calcular_desglose_generico(
-                self.reglas,
+                reglas,
                 solicitud.producto_id,
                 solicitud.suma_asegurada,
                 solicitud.edad,
@@ -41,7 +42,7 @@ class CotizarUseCase:
         return Cotizacion(
             producto_id=solicitud.producto_id,
             prima=desglose.total,
-            version_reglas=self.reglas.version,
+            version_reglas=reglas.version,
             instancia=self.instancia,
             desglose=desglose,
         )

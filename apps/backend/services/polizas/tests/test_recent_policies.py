@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.api import wire
 from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Validity
-from polizas.ciclo_vida.domain.use_cases import ListRecentPoliciesUseCase
+from polizas.ciclo_vida.domain.use_cases import ListClientPoliciesUseCase, ListRecentPoliciesUseCase
 from polizas.main import app
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
@@ -45,13 +45,14 @@ def test_newest_first_and_limited():
     assert [policy.cotizacion_id for policy in recent] == ["cot-2", "cot-1"]
 
 
-def test_expired_policies_are_reported_as_expired():
+def test_expired_policies_are_stored_as_expired():
     policies = InMemoryPolicyRepository()
     policies.add(_policy(1, hasta=date(2026, 11, 1)))
 
     [policy] = ListRecentPoliciesUseCase(policies, today=lambda: date(2026, 11, 5)).execute(10)
 
     assert policy.estado is PolicyStatus.EXPIRED
+    assert policies.get_by_id(policy.id).estado is PolicyStatus.EXPIRED
 
 
 def test_postgres_lists_the_newest_first():
@@ -74,3 +75,29 @@ def test_api_lists_recent_policies_and_validates_the_limit():
     assert response.status_code == 200
     assert [policy["cotizacion_id"] for policy in response.json()] == ["cot-1"]
     assert client.get("/polizas/recientes", params={"limite": 0}).status_code == 422
+
+
+def test_postgres_stores_only_ended_active_policies_as_expired():
+    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+    policies = PostgresPolicyRepository(engine)
+    policies.create_schema()
+    ended = _policy(1, hasta=date(2026, 11, 1))
+    running = _policy(2, hasta=date(2026, 12, 31))
+    policies.add(ended)
+    policies.add(running)
+
+    assert policies.expire_ended(date(2026, 11, 5)) == 1
+    assert policies.expire_ended(date(2026, 11, 5)) == 0
+
+    assert policies.get_by_id(ended.id).estado is PolicyStatus.EXPIRED
+    assert policies.get_by_id(running.id).estado is PolicyStatus.ACTIVE
+
+
+def test_the_client_still_sees_an_expired_policy_and_cannot_renew_it():
+    policies = InMemoryPolicyRepository()
+    policies.add(_policy(1, hasta=date(2026, 11, 1)))
+
+    [policy] = ListClientPoliciesUseCase(policies, today=lambda: date(2026, 11, 5)).execute("cliente-1")
+
+    assert policy.estado is PolicyStatus.EXPIRED
+    assert policy.renovable is False

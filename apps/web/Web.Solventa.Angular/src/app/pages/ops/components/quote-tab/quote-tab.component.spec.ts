@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
+import { provideCatalogFixture } from '../../../../core/testing/catalog.fixtures';
+import { CONTRACTS, RAMOS_DTO } from '../../../../core/testing/ramos.fixtures';
 import { QuoteTabComponent, quoteErrorMessage } from './quote-tab.component';
 import { signInAs, signOut } from '../../../../core/testing/auth.testing';
 
@@ -15,7 +17,7 @@ describe('QuoteTabComponent', () => {
     signInAs();
     await TestBed.configureTestingModule({
       imports: [QuoteTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideCatalogFixture()],
     }).compileComponents();
 
     httpTesting = TestBed.inject(HttpTestingController);
@@ -25,9 +27,25 @@ describe('QuoteTabComponent', () => {
     httpTesting
       .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
       .flush({ proveedor: 'open-finance', modo: 'normal' });
+    httpTesting.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
+    await fixture.whenStable();
+    flushContract('viaje-internacional');
     await fixture.whenStable();
     el = fixture.nativeElement;
   });
+
+  const flushContract = (productId: string): void => {
+    httpTesting.expectOne(API_ENDPOINTS.productContract(productId)).flush(CONTRACTS[productId]);
+  };
+
+  const selectRamo = async (ramoId: string, productId: string): Promise<void> => {
+    const ramoSelect = el.querySelector<HTMLSelectElement>('slv-quote-form select')!;
+    ramoSelect.value = ramoId;
+    ramoSelect.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    flushContract(productId);
+    await fixture.whenStable();
+  };
 
   afterEach(() => {
     httpTesting.verify();
@@ -42,23 +60,70 @@ describe('QuoteTabComponent', () => {
     expect(el.textContent).toContain('Desglose de cotización');
   });
 
-  it('starts on Vida hipotecario, which requires consent', () => {
-    expect(el.textContent).toContain(
-      'Debe solicitar y validar el consentimiento antes de cotizar.',
-    );
+  it('starts on the first ramo the catalog offers, which here needs no consent', () => {
+    expect(el.querySelector<HTMLSelectElement>('slv-quote-form select')!.value).toBe('ramo-viaje');
+    expect(el.textContent).not.toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
+  });
+
+  it('asks for the consent when the selected ramo requires it', async () => {
+    await selectRamo('ramo-vida-hipotecario', 'vida-hipotecario');
+
+    expect(el.textContent).toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
   });
 
   it('drops the consent requirement when a ramo without consent is selected', async () => {
-    const ramoSelect = el.querySelector<HTMLSelectElement>('slv-quote-form select')!;
+    await selectRamo('ramo-vida-hipotecario', 'vida-hipotecario');
+    await selectRamo('ramo-viaje', 'viaje-internacional');
 
-    ramoSelect.value = 'VIAJE';
+    expect(el.textContent).not.toContain('Debe solicitar y validar el consentimiento antes de cotizar.');
+    expect(el.textContent).toContain('no requiere consentimiento');
+  });
+
+  it('sends the product of the selected ramo with the numbers its contract declares', async () => {
+    (fixture.componentInstance as any).onQuoteReady({
+      tipoDocumento: 'CC',
+      destino: 'España',
+      fechaSalida: '2026-12-01',
+      viajeros: '2',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    expect(req.request.body).toEqual({
+      producto_id: 'viaje-internacional',
+      tipo_documento: 'CC',
+      destino: 'España',
+      fecha_salida: '2026-12-01',
+      viajeros: 2,
+    });
+    req.flush(null, { status: 500, statusText: 'Server Error' });
+  });
+
+  it('keeps the calculation disabled until the contract of the product arrives', async () => {
+    const calcBtn = (): HTMLButtonElement =>
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Calcular cotización'))!;
+    expect(calcBtn().disabled).toBe(false);
+
+    const ramoSelect = el.querySelector<HTMLSelectElement>('slv-quote-form select')!;
+    ramoSelect.value = 'ramo-parametrico';
     ramoSelect.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
-    expect(el.textContent).not.toContain(
-      'Debe solicitar y validar el consentimiento antes de cotizar.',
-    );
-    expect(el.textContent).toContain('no requiere consentimiento');
+    expect(calcBtn().disabled).toBe(true);
+    (fixture.componentInstance as any).onQuoteReady({ evento: 'Lluvia excesiva' });
+    httpTesting.expectNone(API_ENDPOINTS.quotes);
+    flushContract('parametrico-clima-vuelo');
+    await fixture.whenStable();
+    expect(calcBtn().disabled).toBe(false);
+  });
+
+  it('warns when the catalog cannot be loaded', async () => {
+    const failing = TestBed.createComponent(QuoteTabComponent);
+    await failing.whenStable();
+    httpTesting.expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') }).flush({ modo: 'normal' });
+    httpTesting.expectOne(API_ENDPOINTS.ramos).flush(null, { status: 503, statusText: 'Unavailable' });
+    await failing.whenStable();
+
+    expect(failing.nativeElement.textContent).toContain('No fue posible cargar el catálogo de ramos');
   });
 
   it('renders the calculated quote breakdown when calculation succeeds', async () => {
@@ -173,8 +238,7 @@ describe('QuoteTabComponent', () => {
   });
 
   it('blocks quote calculation and shows alert when consent is required but not validated', async () => {
-    // Starts on VIDA_HIPOTECARIO
-    await fixture.whenStable();
+    await selectRamo('ramo-vida-hipotecario', 'vida-hipotecario');
 
     const calcBtn =
       el.querySelector<HTMLButtonElement>('button[type="button"]:not([variant])') ||
@@ -189,6 +253,7 @@ describe('QuoteTabComponent', () => {
   });
 
   it('unblocks quote calculation when consent is validated', async () => {
+    await selectRamo('ramo-vida-hipotecario', 'vida-hipotecario');
     const comp = fixture.componentInstance;
     (comp as any).consentValidated.set(true);
     await fixture.whenStable();
@@ -242,11 +307,12 @@ describe('QuoteTabComponent as a read-only operator', () => {
   const button = (text: string): HTMLButtonElement =>
     Array.from(el.querySelectorAll('button')).find((item) => item.textContent?.includes(text))!;
 
-  beforeEach(async () => {
-    signInAs(['consulta']);
+  const open = async (roles: Parameters<typeof signInAs>[0]): Promise<void> => {
+    TestBed.resetTestingModule();
+    signInAs(roles);
     await TestBed.configureTestingModule({
       imports: [QuoteTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideCatalogFixture()],
     }).compileComponents();
     httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(QuoteTabComponent);
@@ -254,42 +320,45 @@ describe('QuoteTabComponent as a read-only operator', () => {
     httpTesting
       .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
       .flush({ proveedor: 'open-finance', modo: 'normal' });
+    httpTesting.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
+    await fixture.whenStable();
+    httpTesting.expectOne(API_ENDPOINTS.productContract('viaje-internacional')).flush(CONTRACTS['viaje-internacional']);
     await fixture.whenStable();
     el = fixture.nativeElement;
-  });
+    const ramoSelect = el.querySelector<HTMLSelectElement>('slv-quote-form select')!;
+    ramoSelect.value = 'ramo-vida-hipotecario';
+    ramoSelect.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    httpTesting.expectOne(API_ENDPOINTS.productContract('vida-hipotecario')).flush(CONTRACTS['vida-hipotecario']);
+    await fixture.whenStable();
+  };
 
   afterEach(() => {
     httpTesting.verify();
     signOut();
   });
 
-  it('shows the form with an explanation but blocks the quote and the consent request', () => {
+  it('shows the form with an explanation but blocks the quote and the consent request', async () => {
+    await open(['consulta']);
+
     expect(el.querySelector('slv-quote-form')).not.toBeNull();
     expect(el.textContent).toContain('Su rol es de consulta');
     expect(button('Calcular cotización').disabled).toBe(true);
     expect(button('Solicitar consentimiento').disabled).toBe(true);
   });
 
-  it('does not calculate even when the calculation is forced', () => {
+  it('does not calculate even when the calculation is forced', async () => {
+    await open(['consulta']);
+
     (fixture.componentInstance as any).onQuoteReady({ tipoDocumento: 'CC' });
 
     httpTesting.expectNone(API_ENDPOINTS.quotes);
   });
 
   it('lets an advisor calculate once the consent is validated', async () => {
-    TestBed.resetTestingModule();
-    signInAs(['asesor']);
-    await TestBed.configureTestingModule({
-      imports: [QuoteTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
-    }).compileComponents();
-    httpTesting = TestBed.inject(HttpTestingController);
-    fixture = TestBed.createComponent(QuoteTabComponent);
-    await fixture.whenStable();
-    httpTesting.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
+    await open(['asesor']);
     (fixture.componentInstance as any).onConsentValidated('CNS-1');
     await fixture.whenStable();
-    el = fixture.nativeElement;
 
     expect(el.textContent).not.toContain('Su rol es de consulta');
     expect(button('Calcular cotización').disabled).toBe(false);

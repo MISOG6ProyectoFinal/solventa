@@ -1,6 +1,5 @@
-export type PolicyStatus = 'Activa' | 'Cancelada' | 'Vencida';
-
-export type ClaimStatus = 'Reportado' | 'En revisión' | 'Aprobado' | 'Pagado' | 'Rechazado' | 'Cerrado';
+export const ACTIVE_STATUS = 'activa';
+export const CANCELLED_STATUS = 'cancelada';
 
 export interface PolicyCoverage {
   name: string;
@@ -22,7 +21,7 @@ export interface PolicyPayment {
   tipo: 'Prima' | 'Indemnización' | 'Devolución';
   medio: string;
   amount: number;
-  status: 'Aprobado' | 'Pendiente' | 'Rechazado';
+  status: string;
 }
 
 export interface PolicyClaim {
@@ -30,7 +29,7 @@ export interface PolicyClaim {
   tipo: string;
   fechaOcurrencia: string;
   fechaAviso: string;
-  status: ClaimStatus;
+  status: string;
   montoEstimado?: number;
   montoAprobado?: number;
   parametrico?: { fuente: string; valorObservado: string; umbral: string };
@@ -54,11 +53,11 @@ export interface Policy {
   tipoDocumento: string;
   identification: string;
   insuredName: string;
-  /** Clave del ramo en el portal (`VIDA_HIPOTECARIO`); vacía si el producto no tiene ramo conocido. */
+  /** Id del ramo en el catálogo (`ramo-vida-hipotecario`); vacío si el producto no tiene ramo conocido. */
   ramo: string;
   producto: string;
   socioOrigen: string;
-  status: PolicyStatus;
+  status: string;
   startDate: string;
   endDate: string;
   premium: number;

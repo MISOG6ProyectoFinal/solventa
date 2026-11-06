@@ -15,7 +15,7 @@ from cotizacion.rating.domain.models import (
     parse_rating_request,
     rating_request_type,
 )
-from cotizacion.rating.domain.rating import REGLAS_VIGENTES
+from cotizacion.rating.domain.rating import ReglasRating
 from cotizacion.signals.domain.models import OpenFinanceConsent
 
 SERVER_OWNED_FIELDS = ("score_riesgo", "cliente_id")
@@ -50,9 +50,9 @@ def _contract(product_id: str) -> type[BaseModel]:
     return CONTRACTS.get(product_id) or rating_request_type(product_id)
 
 
-def published_contract(product_id: str) -> dict | None:
+def published_contract(product_id: str, reglas: ReglasRating) -> dict | None:
     """JSON Schema del cuerpo de la cotización. None si Rating aún no tarifa el producto."""
-    if product_id not in CONTRACTS and product_id not in REGLAS_VIGENTES.tasa_base_por_mil:
+    if product_id not in CONTRACTS and product_id not in reglas.tasa_base_por_mil:
         return None
     schema = _contract(product_id).model_json_schema()
     for field in SERVER_OWNED_FIELDS:

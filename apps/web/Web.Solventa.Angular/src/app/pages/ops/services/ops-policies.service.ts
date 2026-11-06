@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
-import { Policy } from '../../../core/models/policy.model';
+import { CANCELLED_STATUS, Policy } from '../../../core/models/policy.model';
 import { todayIso } from '../utils/today.utils';
 import { PolicyDto, toPolicy } from './ops-policies-api.mapper';
 
@@ -52,7 +52,7 @@ export class OpsPoliciesService {
   /** Pólizas no expone la cancelación: el cambio se refleja solo en esta vista. */
   cancel(id: string, cause: string): void {
     const cancelled = (policy: Policy): Policy =>
-      policy.id === id ? { ...policy, status: 'Cancelada', cancelReason: cause, cancelDate: todayIso() } : policy;
+      policy.id === id ? { ...policy, status: CANCELLED_STATUS, cancelReason: cause, cancelDate: todayIso() } : policy;
     this.state.update((policies) => policies.map(cancelled));
     this.detail.update((policy) => (policy ? cancelled(policy) : policy));
   }

@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from cotizacion.rating.domain.rating import ReglasRating
+
+
+class RulesRepository(Protocol):
+    def current(self) -> ReglasRating: ...
+
+    def publish(self, reglas: ReglasRating) -> None: ...
+
+    def versions(self) -> list[str]: ...
+
+    def create_schema(self) -> None: ...

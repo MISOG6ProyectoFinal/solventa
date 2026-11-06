@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
-import { Policy } from '../../../../core/models/policy.model';
+import { ACTIVE_STATUS, CANCELLED_STATUS, Policy } from '../../../../core/models/policy.model';
 import { CLAIM_STATUS_TONE, PAYMENT_STATUS_TONE, POLICY_STATUS_TONE } from '../../../../shared/constants/status-tone.constants';
 import { CopCurrencyPipe } from '../../../../shared/pipes/cop-currency.pipe';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
@@ -31,13 +31,14 @@ export class PolicyDetailComponent {
   readonly cancellationRequested = output<void>();
 
   protected readonly tabs = computed(() => DETAIL_TABS.map((tab) => ({ id: tab.id, label: this.locale.t(tab.labelKey) })));
+  protected readonly cancelledStatus = CANCELLED_STATUS;
   protected readonly statusTone = POLICY_STATUS_TONE;
   protected readonly paymentTone = PAYMENT_STATUS_TONE;
   protected readonly claimTone = CLAIM_STATUS_TONE;
 
   protected readonly activeTab = signal<string>(DETAIL_TABS[0].id);
 
-  protected readonly isActive = computed(() => this.policy().status === 'Activa');
+  protected readonly isActive = computed(() => this.policy().status === ACTIVE_STATUS);
 
   private readonly currency = new CopCurrencyPipe();
 

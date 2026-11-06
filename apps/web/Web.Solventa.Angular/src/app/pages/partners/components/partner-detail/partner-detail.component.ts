@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Partner, Alcance } from '../../../../core/models/partner.model';
+import { Partner } from '../../../../core/models/partner.model';
 import { PARTNER_TABS } from '../../constants/partners.constants';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { TabsComponent } from '../../../../ui/components/tabs/tabs.component';
@@ -36,7 +36,7 @@ export class PartnerDetailComponent {
   readonly tabs = computed(() => PARTNER_TABS.map((tab) => ({ id: tab.id, label: this.locale.t(tab.labelKey) })));
   activeTab = signal('config');
 
-  getAlcancesLabel(alcances: Alcance[]): string {
+  getAlcancesLabel(alcances: string[]): string {
     return alcances.map(a => this.locale.label('scope', a)).join(', ');
   }
 

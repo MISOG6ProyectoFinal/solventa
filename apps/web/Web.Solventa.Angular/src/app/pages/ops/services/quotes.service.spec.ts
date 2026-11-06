@@ -2,8 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
+import { Ramo } from '../../../core/models/ramo.model';
 import { OfertaCotizacionResponse } from '../interfaces/quote-payload.interface';
-import { QuotesService, RamoCatalogDto } from './quotes.service';
+import { RAMOS_DTO } from '../../../core/testing/ramos.fixtures';
+import { QuotesService } from './quotes.service';
 
 describe('QuotesService', () => {
   let service: QuotesService;
@@ -19,25 +21,42 @@ describe('QuotesService', () => {
 
   afterEach(() => http.verify());
 
-  it('obtains the catalog of cotizable ramos from the BFF Web', () => {
-    const mockRamos: readonly RamoCatalogDto[] = [
-      { id: 'ramo-viaje', nombre: 'Viaje' },
-      { id: 'ramo-vida-hipotecario', nombre: 'Vida hipotecario' },
-      { id: 'ramo-microseguro-vida', nombre: 'Microseguro de vida' },
-      { id: 'ramo-parametrico', nombre: 'Paramétrico (clima / vuelo)' },
-    ];
-
-    let result: readonly RamoCatalogDto[] | undefined;
+  it('reads the ramos of the web channel with their products and the consent they require', () => {
+    let result: readonly Ramo[] | undefined;
     service.getRamos().subscribe((ramos) => {
       result = ramos;
     });
 
     const req = http.expectOne(API_ENDPOINTS.ramos);
     expect(req.request.method).toBe('GET');
-    req.flush(mockRamos);
+    req.flush(RAMOS_DTO);
 
-    expect(result).toEqual(mockRamos);
-    expect(result?.length).toBe(4);
+    expect(result?.map((ramo) => ramo.id)).toEqual([
+      'ramo-viaje',
+      'ramo-microseguro-vida',
+      'ramo-parametrico',
+      'ramo-vida-hipotecario',
+    ]);
+    expect(result?.[3]).toEqual({
+      id: 'ramo-vida-hipotecario',
+      name: 'Vida hipotecario',
+      requiresConsent: true,
+      products: [{ id: 'vida-hipotecario', name: 'Vida Hipotecario', requiresConsent: true }],
+    });
+    expect(result?.[0].requiresConsent).toBe(false);
+  });
+
+  it('reads the contract of a product', () => {
+    let result: unknown;
+    service.getContract('viaje-internacional').subscribe((contract) => {
+      result = contract;
+    });
+
+    const req = http.expectOne(API_ENDPOINTS.productContract('viaje-internacional'));
+    expect(req.request.method).toBe('GET');
+    req.flush({ properties: { destino: { enum: ['España'] } } });
+
+    expect(result).toEqual({ properties: { destino: { enum: ['España'] } } });
   });
 
   it('posts quote request payload to the consensus endpoint and returns the offer', () => {

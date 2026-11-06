@@ -1,4 +1,4 @@
-import { ClaimStatus, Policy, PolicyClaim, PolicyPayment, PolicyStatus } from '../../../core/models/policy.model';
+import { Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
 
 export interface PolicyCustomerDto {
   readonly tipo_documento: string;
@@ -43,15 +43,7 @@ export interface PolicyDto {
   readonly siniestros?: readonly PolicyClaimDto[];
 }
 
-const POLICY_STATUS: Record<string, PolicyStatus> = { activa: 'Activa', vencida: 'Vencida', cancelada: 'Cancelada' };
-const PAYMENT_STATUS: Record<string, PolicyPayment['status']> = { aprobado: 'Aprobado', rechazado: 'Rechazado' };
-const CLAIM_STATUS: Record<string, ClaimStatus> = { borrador: 'Reportado', radicado: 'En revisión' };
 const NONE = '-';
-
-/** `ramo-vida-hipotecario` → `VIDA_HIPOTECARIO`, la clave del ramo en el portal. */
-export function toRamoId(ramoId: string | null): string {
-  return ramoId ? ramoId.replace(/^ramo-/, '').toUpperCase().replace(/-/g, '_') : '';
-}
 
 function toPayment(dto: PolicyPaymentDto): PolicyPayment {
   return {
@@ -60,7 +52,7 @@ function toPayment(dto: PolicyPaymentDto): PolicyPayment {
     tipo: 'Prima',
     medio: NONE,
     amount: Number(dto.monto),
-    status: PAYMENT_STATUS[dto.estado] ?? 'Pendiente',
+    status: dto.estado,
   };
 }
 
@@ -70,7 +62,7 @@ function toClaim(dto: PolicyClaimDto): PolicyClaim {
     tipo: dto.tipo,
     fechaOcurrencia: dto.ocurrido_en.slice(0, 10),
     fechaAviso: (dto.creado_en ?? '').slice(0, 10),
-    status: CLAIM_STATUS[dto.estado] ?? 'Reportado',
+    status: dto.estado,
   };
 }
 
@@ -82,10 +74,10 @@ export function toPolicy(dto: PolicyDto): Policy {
     tipoDocumento: customer?.tipo_documento ?? '',
     identification: customer?.numero_documento ?? '',
     insuredName: customer ? [customer.nombre, customer.apellido].filter(Boolean).join(' ') : NONE,
-    ramo: toRamoId(dto.ramo_id),
+    ramo: dto.ramo_id ?? '',
     producto: dto.producto?.nombre ?? dto.producto_id,
     socioOrigen: dto.socio?.nombre ?? dto.canal,
-    status: POLICY_STATUS[dto.estado] ?? 'Activa',
+    status: dto.estado,
     startDate: dto.vigencia.desde,
     endDate: dto.vigencia.hasta,
     premium: Number(dto.prima),

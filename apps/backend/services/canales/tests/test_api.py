@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import httpx
+import pytest
 from canales.main import app
 from fastapi.testclient import TestClient
 
@@ -50,7 +51,11 @@ class _Upstream:
             raise self.error
         return self.response
 
-    get = post
+    def get(self, path: str, **kwargs):
+        if path.startswith("/catalogo/productos/") and not path.endswith("/contrato"):
+            return {"requiere_consentimiento": path.endswith("/vida-hipotecario")}
+        return self.post(path, **kwargs)
+
     put = post
 
 
@@ -164,6 +169,7 @@ def test_siniestros_no_disponible_responde_503():
 
 @patch("canales.web.api.cotizacion")
 def test_bff_web_indica_canal_al_consenso(mock_client: MagicMock):
+    mock_client.get.return_value = {"requiere_consentimiento": False}
     mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
     response = client.post("/web/cotizaciones", json=SOLICITUD, headers=web_auth.advisor())
     assert response.status_code == 200
@@ -395,7 +401,8 @@ def test_movil_asistencia_exige_sesion():
     assert client.get("/movil/siniestros/aviso-1/asistencias").status_code == 401
 
 
-def test_web_cotizacion_hipotecario_sin_consentimiento_responde_422():
+def test_web_cotizacion_hipotecario_sin_consentimiento_responde_422(monkeypatch):
+    monkeypatch.setattr("canales.web.api.cotizacion", _Upstream())
     response = client.post(
         "/web/cotizaciones",
         json={"producto_id": "vida-hipotecario", "valor_credito": 200000000},
@@ -408,6 +415,7 @@ def test_web_cotizacion_hipotecario_sin_consentimiento_responde_422():
 def test_web_cotizacion_hipotecario_consentimiento_no_otorgado_responde_422(monkeypatch):
     identidad_mock = _Upstream(response={"id": "cons-1", "estado": "SOLICITADO"})
     monkeypatch.setattr("canales.web.api.identidad", identidad_mock)
+    monkeypatch.setattr("canales.web.api.cotizacion", _Upstream())
 
     response = client.post(
         "/web/cotizaciones",
@@ -572,3 +580,72 @@ def test_movil_reenvia_422_de_prestadores_cercanos(monkeypatch):
 
 def test_movil_prestadores_cercanos_exige_sesion():
     assert client.get("/movil/prestadores/cercanos?lat=4.7&lon=-74").status_code == 401
+
+
+def test_a_product_that_does_not_require_consent_is_quoted_without_one(monkeypatch):
+    cotizacion = _Upstream(response={"id": "COT-3", "prima": "100.00"})
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
+
+    response = client.post("/web/cotizaciones", json={"producto_id": "viaje-internacional"}, headers=web_auth.advisor())
+
+    assert response.status_code == 200
+    assert cotizacion.calls[0][0] == "/consenso/cotizaciones"
+
+
+def test_an_unknown_product_is_left_for_cotizacion_to_reject(monkeypatch):
+    class Unknown(_Upstream):
+        def get(self, path: str, **kwargs):
+            raise _status_error(404, "Producto no encontrado")
+
+    cotizacion = Unknown(response={"id": "COT-4"})
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
+
+    response = client.post("/web/cotizaciones", json={"producto_id": "no-existe"}, headers=web_auth.advisor())
+
+    assert response.status_code == 200
+    assert cotizacion.calls[0][0] == "/consenso/cotizaciones"
+
+
+@pytest.mark.parametrize(
+    ("path", "upstream_path", "service"),
+    [
+        ("/web/ramos", "/catalogo/canales/web/ramos", "canales.web.api.cotizacion"),
+        ("/web/socios/tipos", "/gobierno-socios/tipos", "canales.web.api.cotizacion"),
+        ("/web/socios/alcances", "/gobierno-socios/alcances", "canales.web.api.cotizacion"),
+        ("/web/tipos-documento", "/identidad/tipos-documento", "canales.web.api.identidad"),
+        ("/web/polizas/estados", "/polizas/catalogos/estados", "canales.web.api.polizas"),
+        ("/web/polizas/causas-cancelacion", "/polizas/catalogos/causas-cancelacion", "canales.web.api.polizas"),
+        ("/movil/tipos-documento", "/identidad/tipos-documento", "canales.movil.api.identidad"),
+    ],
+)
+def test_the_bff_serves_what_the_owner_service_publishes(monkeypatch, path, upstream_path, service):
+    upstream = _Upstream(response=[{"id": "x"}])
+    monkeypatch.setattr(service, upstream)
+
+    headers = {} if path.startswith("/movil") else web_auth.viewer()
+    response = client.get(path, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == [{"id": "x"}]
+    assert upstream.calls[0][0] == upstream_path
+
+
+def test_mobile_reads_the_product_contract_with_its_session(monkeypatch):
+    upstream = _Upstream(response={"properties": {}})
+    monkeypatch.setattr("canales.movil.api.cotizacion", upstream)
+
+    response = client.get("/movil/productos/viaje-internacional/contrato", headers=authorization())
+
+    assert response.status_code == 200
+    assert upstream.calls[0][0] == "/catalogo/productos/viaje-internacional/contrato"
+    assert client.get("/movil/productos/viaje-internacional/contrato").status_code == 401
+
+
+def test_the_bff_serves_the_product_contract_to_the_portal(monkeypatch):
+    upstream = _Upstream(response={"properties": {}})
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+
+    response = client.get("/web/productos/viaje-internacional/contrato", headers=web_auth.viewer())
+
+    assert response.status_code == 200
+    assert upstream.calls[0][0] == "/catalogo/productos/viaje-internacional/contrato"

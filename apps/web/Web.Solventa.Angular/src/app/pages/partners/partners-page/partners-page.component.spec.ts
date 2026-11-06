@@ -5,6 +5,7 @@ import { Partner } from '../../../core/models/partner.model';
 import { LocaleService } from '../../../core/services/locale.service';
 import { toPartner, toPartnerConfig } from '../services/partners-api.mapper';
 import { PartnersService } from '../services/partners.service';
+import { provideCatalogFixture } from '../../../core/testing/catalog.fixtures';
 import { PARTNER_CONFIG_DTO, PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
 import { PartnersPageComponent } from './partners-page.component';
 import { signInAs, signOut } from '../../../core/testing/auth.testing';
@@ -41,7 +42,7 @@ describe('PartnersPageComponent', () => {
     load.mockClear();
     await TestBed.configureTestingModule({
       imports: [PartnersPageComponent],
-      providers: [{ provide: PartnersService, useValue: service }],
+      providers: [{ provide: PartnersService, useValue: service }, provideCatalogFixture()],
     }).compileComponents();
     fixture = TestBed.createComponent(PartnersPageComponent);
     await fixture.whenStable();
@@ -138,6 +139,7 @@ describe('PartnersPageComponent', () => {
       inputs[index].value = value;
       inputs[index].dispatchEvent(new Event('input'));
     });
+    el.querySelector<HTMLInputElement>('input[type=checkbox]')!.click();
     await fixture.whenStable();
     button('Crear y aprovisionar').click();
     await fixture.whenStable();

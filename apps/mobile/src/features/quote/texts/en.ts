@@ -24,6 +24,7 @@ export const en: Texts = {
     returnBeforeDeparture: 'Must be after the departure',
     travelersAtLeastOne: 'Must be greater than 0',
     quoteFailed: 'Could not calculate the quote.',
+    contractFailed: 'The form options could not be loaded.',
   },
   result: {
     screenTitle: 'Your quote',

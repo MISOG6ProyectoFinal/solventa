@@ -1,70 +1,27 @@
-import { RamoId } from '../../../core/models/ramo.model';
+import { ContractProperty, ProductContract } from '../interfaces/product-contract.interface';
+
+const NUMERIC_TYPES = ['integer', 'number'];
+
+function isNumeric(property: ContractProperty | undefined): boolean {
+  const types = [property?.type, ...(property?.anyOf ?? []).map((option) => option.type)];
+  return types.some((type) => type !== undefined && NUMERIC_TYPES.includes(type));
+}
+
+function toSnakeCase(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
 
 export function mapFormValuesToQuotePayload(
-  ramo: RamoId,
+  productId: string,
   values: Record<string, string>,
+  contract: ProductContract,
 ): Record<string, unknown> {
-  const fullName = (values['nombre'] || '').trim();
-  const nameParts = fullName ? fullName.split(' ') : [];
-  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-  const clientData = {
-    tipo_documento: values['tipoDocumento'] || 'CC',
-    numero_documento: values['numeroDocumento'] || values['documento'] || '',
-    nombre: values['nombre'] || '',
-    apellido: values['apellido'] || lastName,
-    email: values['email'] || '',
-    telefono: values['telefono'] || '',
-  };
-
-  switch (ramo) {
-    case 'VIAJE':
-      return {
-        producto_id: 'viaje-internacional',
-        ...clientData,
-        destino: values['destino'] ?? 'Estados Unidos',
-        fecha_salida: values['fechaSalida'],
-        fecha_regreso: values['fechaRegreso'],
-        viajeros: Number(values['viajeros']) || 1,
-        fecha_nacimiento: values['fechaNacimiento'] || undefined,
-      };
-
-    case 'MICROSEGURO_VIDA':
-      return {
-        producto_id: 'vida-esencial',
-        ...clientData,
-        fecha_nacimiento: values['fechaNacimiento'],
-        suma_asegurada: Number(values['sumaAsegurada']) || 0,
-        beneficiario: values['beneficiario'] ?? '',
-        parentesco: values['parentesco'] ?? 'Cónyuge',
-      };
-
-    case 'VIDA_HIPOTECARIO':
-      return {
-        producto_id: 'vida-hipotecario',
-        ...clientData,
-        fecha_nacimiento: values['fechaNacimiento'],
-        entidad: values['entidad'] ?? '',
-        valor_credito: Number(values['valorCredito']) || 0,
-        plazo_anios: Number(values['plazoAnios']) || 1,
-        consentimiento_id: values['consentimiento_id'] || undefined,
-      };
-
-    case 'PARAMETRICO':
-      return {
-        producto_id: 'parametrico-clima-vuelo',
-        ...clientData,
-        evento: values['evento'] ?? 'Retraso de vuelo',
-        referencia: values['referencia'] ?? '',
-        fecha_evento: values['fechaEvento'],
-        valor_indemnizar: Number(values['valorIndemnizar']) || 0,
-      };
-
-    default:
-      return {
-        producto_id: ramo.toLowerCase().replace('_', '-'),
-        ...clientData,
-        ...values,
-      };
+  const payload: Record<string, unknown> = { producto_id: productId };
+  for (const [key, raw] of Object.entries(values)) {
+    const value = raw.trim();
+    if (!value) continue;
+    const field = toSnakeCase(key);
+    payload[field] = isNumeric(contract.properties[field]) ? Number(value) : value;
   }
+  return payload;
 }

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
-from cotizacion.catalogo.domain.models import Producto, ProductoMobileResponse, Ramo
+from cotizacion.catalogo.domain.models import Canal, ChannelLineResponse, Producto, ProductoMobileResponse, Ramo
+from cotizacion.consenso.domain.quote_contract import published_contract
 from cotizacion.container import container
 
 router = APIRouter(prefix="/catalogo", tags=["Catálogo de Productos"])
@@ -17,6 +18,12 @@ def listar_ramos() -> list[Ramo]:
     return container.catalogo.list_ramos()
 
 
+@router.get("/canales/{canal}/ramos", response_model=list[ChannelLineResponse])
+def listar_lines_in_channel(canal: Canal) -> list[ChannelLineResponse]:
+    """Ramos con sus productos activos en el canal, y cuáles exigen consentimiento Open Finance."""
+    return container.listar_lines_in_channel.execute(canal)
+
+
 @router.get("/productos", response_model=list[ProductoMobileResponse])
 def listar_productos() -> list[ProductoMobileResponse]:
     """Productos activos habilitados para compra desde Mobile."""
@@ -31,3 +38,16 @@ def get_product(producto_id: str) -> Producto:
         detail = {"codigo": "producto_no_encontrado", "mensaje": f"Producto no encontrado: {producto_id}"}
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
     return product
+
+
+@router.get("/productos/{producto_id}/contrato")
+def get_contract(producto_id: str) -> dict:
+    """JSON Schema del cuerpo con que se cotiza el producto, con las opciones que acepta cada campo."""
+    contract = published_contract(producto_id, container.rules.current())
+    if contract is None:
+        detail = {
+            "codigo": "producto_sin_contrato",
+            "mensaje": f"El producto no tiene contrato de cotización: {producto_id}",
+        }
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
+    return contract

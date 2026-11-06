@@ -1,52 +1,78 @@
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
+import { Ramo } from '../../../../core/models/ramo.model';
+import { CONTRACTS, RAMOS_DTO } from '../../../../core/testing/ramos.fixtures';
 import { QuoteFormComponent } from './quote-form.component';
+
+const RAMOS: readonly Ramo[] = RAMOS_DTO.map((ramo) => ({
+  id: ramo.id,
+  name: ramo.nombre,
+  requiresConsent: ramo.requiere_consentimiento,
+  products: ramo.productos.map((product) => ({
+    id: product.id,
+    name: product.nombre,
+    requiresConsent: product.requiere_consentimiento,
+  })),
+}));
 
 describe('QuoteFormComponent', () => {
   let fixture: ComponentFixture<QuoteFormComponent>;
   let el: HTMLElement;
-  let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [QuoteFormComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
-    }).compileComponents();
-    httpTesting = TestBed.inject(HttpTestingController);
+    await TestBed.configureTestingModule({ imports: [QuoteFormComponent] }).compileComponents();
     fixture = TestBed.createComponent(QuoteFormComponent);
-    fixture.componentRef.setInput('ramo', 'VIDA_HIPOTECARIO');
-    await fixture.whenStable();
-
-    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
-    for (const req of ramosReq) {
-      req.flush([
-        { id: 'ramo-viaje', nombre: 'Viaje Internacional' },
-        { id: 'ramo-vida-hipotecario', nombre: 'Vida hipotecario' },
-        { id: 'ramo-microseguro-vida', nombre: 'Microseguro de vida' },
-        { id: 'ramo-parametrico', nombre: 'Paramétrico (clima / vuelo)' },
-      ]);
-    }
+    fixture.componentRef.setInput('ramos', RAMOS);
+    fixture.componentRef.setInput('ramo', 'ramo-vida-hipotecario');
+    fixture.componentRef.setInput('documentTypes', ['CC', 'CE', 'Pasaporte']);
+    fixture.componentRef.setInput('contract', CONTRACTS['vida-hipotecario']);
     await fixture.whenStable();
     el = fixture.nativeElement;
   });
 
-  afterEach(() => {
-    httpTesting.verify();
-  });
-
-  it('lists exactly the four ramos of HU001 and flags the ones that require consent', () => {
+  it('lists the ramos the catalog gives it and flags the ones that require consent', () => {
     const options = Array.from(el.querySelectorAll('select')[0].querySelectorAll('option'));
 
     expect(options.length).toBe(4);
     expect(options.map((option) => option.textContent)).toContain('Vida hipotecario (requiere consentimiento)');
-    expect(options.map((option) => option.value).sort()).toEqual([
-      'MICROSEGURO_VIDA',
-      'PARAMETRICO',
-      'VIDA_HIPOTECARIO',
-      'VIAJE',
-    ].sort());
+    expect(options.map((option) => option.value)).toEqual([
+      'ramo-viaje',
+      'ramo-microseguro-vida',
+      'ramo-parametrico',
+      'ramo-vida-hipotecario',
+    ]);
+  });
+
+  it('offers the document types the identity service publishes and preselects the first', () => {
+    const select = el.querySelectorAll('slv-quote-field select')[0] as HTMLSelectElement;
+
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['', 'CC', 'CE', 'Pasaporte']);
+    expect((fixture.componentInstance as any).valueOf('tipoDocumento')).toBe('CC');
+  });
+
+  it('offers the options its contract declares for a field', async () => {
+    fixture.componentRef.setInput('ramo', 'ramo-viaje');
+    fixture.componentRef.setInput('contract', CONTRACTS['viaje-internacional']);
+    await fixture.whenStable();
+
+    const destination = Array.from(el.querySelectorAll('slv-quote-field select')).find((select) =>
+      Array.from((select as HTMLSelectElement).options).some((option) => option.value === 'España'),
+    ) as HTMLSelectElement;
+    expect(Array.from(destination.options).map((option) => option.value)).toEqual([
+      '',
+      'Estados Unidos',
+      'España',
+      'México',
+      'Otro país',
+    ]);
+  });
+
+  it('offers no options for a contract field while the contract is loading', async () => {
+    fixture.componentRef.setInput('ramo', 'ramo-viaje');
+    fixture.componentRef.setInput('contract', null);
+    await fixture.whenStable();
+
+    const selects = Array.from(el.querySelectorAll('slv-quote-field select')) as HTMLSelectElement[];
+    expect(selects.every((select) => !Array.from(select.options).some((option) => option.value === 'España'))).toBe(true);
   });
 
   it('renders the 6 client fields plus the risk fields of the selected ramo', () => {
@@ -54,7 +80,7 @@ describe('QuoteFormComponent', () => {
   });
 
   it('swaps the risk fields when the ramo changes', async () => {
-    fixture.componentRef.setInput('ramo', 'VIAJE');
+    fixture.componentRef.setInput('ramo', 'ramo-viaje');
     await fixture.whenStable();
 
     expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
@@ -64,22 +90,22 @@ describe('QuoteFormComponent', () => {
   describe('HU001: Pruebas esperadas del formulario dinámico', () => {
     it('P1: renderiza únicamente los campos correspondientes a los 4 ramos de la HU', async () => {
       // Viaje: 6 cliente + 5 riesgo
-      fixture.componentRef.setInput('ramo', 'VIAJE');
+      fixture.componentRef.setInput('ramo', 'ramo-viaje');
       await fixture.whenStable();
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
 
       // Microseguro: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'MICROSEGURO_VIDA');
+      fixture.componentRef.setInput('ramo', 'ramo-microseguro-vida');
       await fixture.whenStable();
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
       // Vida Hipotecario: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'VIDA_HIPOTECARIO');
+      fixture.componentRef.setInput('ramo', 'ramo-vida-hipotecario');
       await fixture.whenStable();
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
       // Paramétrico: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'PARAMETRICO');
+      fixture.componentRef.setInput('ramo', 'ramo-parametrico');
       await fixture.whenStable();
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
     });
@@ -92,7 +118,7 @@ describe('QuoteFormComponent', () => {
       expect((comp as any).valueOf('valorCredito')).toBe('250000000');
 
       // Cambiar a Viaje
-      (comp as any).changeRamo('VIAJE');
+      (comp as any).changeRamo('ramo-viaje');
       await fixture.whenStable();
 
       // El campo de cliente se preserva, el del riesgo previo se elimina
@@ -161,9 +187,9 @@ describe('QuoteFormComponent', () => {
       (comp as any).setValue('numeroDocumento', '1020304050');
       (comp as any).setValue('valorCredito', '200000000');
 
-      (comp as any).changeRamo('VIAJE');
+      (comp as any).changeRamo('ramo-viaje');
 
-      expect((comp as any).ramo()).toBe('VIAJE');
+      expect((comp as any).ramo()).toBe('ramo-viaje');
       expect((comp as any).valueOf('numeroDocumento')).toBe('1020304050');
       expect((comp as any).valueOf('valorCredito')).toBe('');
     });
@@ -174,19 +200,4 @@ describe('QuoteFormComponent', () => {
       expect((comp as any).errorOf('inexistente')).toBe('');
     });
   });
-
-  it('conserva ramos base si la consulta de catálogo falla con error', async () => {
-    const errorFixture = TestBed.createComponent(QuoteFormComponent);
-    errorFixture.componentRef.setInput('ramo', 'VIAJE');
-    await errorFixture.whenStable();
-
-    const ramosReq = httpTesting.match(API_ENDPOINTS.ramos);
-    for (const req of ramosReq) {
-      req.error(new ProgressEvent('error'));
-    }
-    await errorFixture.whenStable();
-
-    expect((errorFixture.componentInstance as any).ramos().length).toBe(4);
-  });
 });
-

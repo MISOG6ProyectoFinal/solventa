@@ -4,8 +4,8 @@
       <slv-field [label]="locale.t('cancel.cause')" [required]="true">
         <select slvInput [(ngModel)]="cause">
           <option value="">{{ locale.t('common.select') }}</option>
-          @for (option of causes; track option) {
-            <option [value]="option">{{ locale.label('cancel.cause', option) }}</option>
+          @for (option of causes(); track option.id) {
+            <option [value]="option.id">{{ locale.label('cancel.cause', option.id, option.name) }}</option>
           }
         </select>
       </slv-field>
@@ -36,9 +36,9 @@
             <p class="text-2xl font-semibold font-serif text-primary">{{ refundQuote.refund | copCurrency }}</p>
             <p class="text-xs mt-1 text-muted-foreground">
               {{
-                cause() === nonRefundableCause
-                  ? locale.t('cancel.noRefund')
-                  : locale.t('cancel.refundSameMethod')
+                selectedCause()?.refundable
+                  ? locale.t('cancel.refundSameMethod')
+                  : locale.t('cancel.noRefund')
               }}
             </p>
           </div>
@@ -57,7 +57,7 @@
       </div>
       <div>
         <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">{{ locale.t('common.cause') }}</p>
-        <p class="text-foreground">{{ locale.label('cancel.cause', cause()) }}</p>
+        <p class="text-foreground">{{ locale.label('cancel.cause', cause(), selectedCause()?.name) }}</p>
       </div>
       <div>
         <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">{{ locale.t('cancel.refundShort') }}</p>

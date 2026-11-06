@@ -1,7 +1,3 @@
-export type Alcance = 'cotizacion' | 'emision' | 'consulta';
-
-export type PartnerType = 'Banco' | 'Aerolínea' | 'E-commerce' | 'Fintech' | 'Retailer';
-
 /** Ramo del canal embebido, identificado por el catálogo del backend. */
 export interface PartnerRamo {
   id: string;
@@ -30,10 +26,10 @@ export interface Partner {
   id: string;
   name: string;
   identifier: string;
-  tipo: PartnerType;
+  tipo: string;
   pais: string;
   contactEmail: string;
-  alcances: Alcance[];
+  alcances: string[];
   clientId: string;
   secret: string;
   credentialStatus: 'Activa' | 'Revocada';
@@ -49,10 +45,10 @@ export interface Partner {
 export interface NewPartner {
   name: string;
   identifier: string;
-  tipo: PartnerType;
+  tipo: string;
   pais: string;
   contactEmail: string;
-  alcances: Alcance[];
+  alcances: string[];
 }
 
 /** Resultado del alta: única vez que el secreto llega en claro. */

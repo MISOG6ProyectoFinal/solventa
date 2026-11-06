@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Header, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 
-from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
 from cotizacion.catalogo.domain.models import Canal, Producto, ProductoNoEncontrado
 from cotizacion.consenso.api import invalid_request, product_error, quote_request
 from cotizacion.consenso.domain.models import OfertaCotizacion
@@ -32,6 +31,7 @@ from cotizacion.gobierno_socios.domain.models import (
     SocioCreadoResponse,
     SocioNoEncontrado,
     SocioResponse,
+    TipoSocio,
 )
 
 router = APIRouter(prefix="/gobierno-socios", tags=["Socios y Gobierno de API"])
@@ -60,14 +60,14 @@ def _socio_no_encontrado() -> HTTPException:
 
 
 def _vistas(socios: list[Socio]) -> list[SocioResponse]:
-    nombres = {ramo.id: ramo.nombre for ramo in container.catalogo.list_ramos()}
+    ramos = {ramo.id: ramo for ramo in container.catalogo.list_ramos()}
     ramos_por_socio = container.configuraciones.ramos_por_socio()
     return [
         SocioResponse(
             **socio.model_dump(),
             ramos_habilitados=[
-                RamoResumen(id=ramo_id, nombre=nombres.get(ramo_id, ramo_id))
-                for ramo_id in sorted(ramos_por_socio.get(socio.id, []), key=RAMOS_CANAL_SOCIOS.index)
+                RamoResumen(id=ramo_id, nombre=ramos[ramo_id].nombre)
+                for ramo_id in sorted(ramos_por_socio.get(socio.id, []), key=lambda ramo_id: ramos[ramo_id].orden)
             ],
         )
         for socio in socios
@@ -90,6 +90,18 @@ def autorizar_ramo(socio: Socio, producto_id: str) -> RamoHabilitado:
 @router.get("/")
 def info() -> dict:
     return {"component": "Socios y Gobierno de API"}
+
+
+@router.get("/tipos", response_model=list[TipoSocio])
+def list_partner_types() -> list[TipoSocio]:
+    """Tipos de organización con que se da de alta un socio."""
+    return list(TipoSocio)
+
+
+@router.get("/alcances", response_model=list[Alcance])
+def list_scopes() -> list[Alcance]:
+    """Operaciones de la API pública que se pueden autorizar a un socio."""
+    return list(Alcance)
 
 
 @router.post("/socios", response_model=SocioCreadoResponse, status_code=status.HTTP_201_CREATED)

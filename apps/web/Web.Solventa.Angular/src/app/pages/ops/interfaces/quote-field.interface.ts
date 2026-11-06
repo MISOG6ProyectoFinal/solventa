@@ -11,4 +11,5 @@ export interface QuoteFieldDef {
   readonly numeric?: boolean;
   readonly placeholder?: string;
   readonly options?: readonly string[];
+  readonly optionsSource?: 'contract' | 'documentTypes';
 }

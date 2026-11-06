@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { catchError, of } from 'rxjs';
 import { Policy } from '../../../../core/models/policy.model';
 import { CopCurrencyPipe } from '../../../../shared/pipes/cop-currency.pipe';
 import { InputDirective } from '../../../../shared/directives/input.directive';
@@ -7,7 +9,8 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
-import { CANCEL_CAUSES, NON_REFUNDABLE_CAUSE } from '../../constants/ops.constants';
+import { CancellationCause } from '../../../../core/models/catalog.model';
+import { CatalogService } from '../../../../core/services/catalog.service';
 import { todayIso } from '../../utils/today.utils';
 import { calculateCancellation } from '../../utils/policy-cancellation.utils';
 import { LocaleService } from '../../../../core/services/locale.service';
@@ -28,16 +31,19 @@ export class CancelPolicyModalComponent {
   readonly closed = output<void>();
   readonly confirmed = output<string>();
 
-  protected readonly causes = CANCEL_CAUSES;
-  protected readonly nonRefundableCause = NON_REFUNDABLE_CAUSE;
+  protected readonly causes = toSignal(inject(CatalogService).cancellationCauses$.pipe(catchError(() => of([]))), {
+    initialValue: [] as readonly CancellationCause[],
+  });
   protected readonly today = todayIso();
 
   protected readonly step = signal<CancelStep>('form');
   protected readonly cause = signal('');
 
+  protected readonly selectedCause = computed(() => this.causes().find((cause) => cause.id === this.cause()));
+
   protected readonly quote = computed(() => {
-    const cause = this.cause();
-    return cause ? calculateCancellation(this.policy(), cause, this.today) : null;
+    const cause = this.selectedCause();
+    return cause ? calculateCancellation(this.policy(), cause.refundable, this.today) : null;
   });
 
   protected goToConfirmation(): void {

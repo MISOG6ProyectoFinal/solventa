@@ -31,9 +31,9 @@ describe('LocaleService', () => {
   it('translates domain values and keeps the value when there is no translation', () => {
     const svc = TestBed.inject(LocaleService);
     svc.setLocale('en');
-    expect(svc.label('status.policy', 'Activa')).toBe('Active');
+    expect(svc.label('status.policy', 'activa')).toBe('Active');
     expect(svc.label('quote.option', 'CC')).toBe('CC');
-    expect(svc.label('ramoApi', 'ramo-hogar', 'Hogar')).toBe('Hogar');
+    expect(svc.label('ramo', 'ramo-hogar', 'Hogar')).toBe('Hogar');
   });
 
   it('reads the saved language', () => {

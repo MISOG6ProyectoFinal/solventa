@@ -1,5 +1,5 @@
 import { toDisplayDate } from '../../shared/date';
-import { destinos, QuoteFormValues } from './types';
+import { QuoteFormValues } from './types';
 import {
   addDays,
   defaultQuoteForm,
@@ -11,7 +11,7 @@ import {
 } from './utils';
 
 function form(overrides: Partial<QuoteFormValues> = {}): QuoteFormValues {
-  return { ...defaultQuoteForm(), ...overrides };
+  return { ...defaultQuoteForm(), destino: 'España', ...overrides };
 }
 
 describe('quote utils', () => {
@@ -49,11 +49,10 @@ describe('quote utils', () => {
 
     expect(values.nombre).toBe('María Rodríguez');
     expect(values.cedula).toBe('1020304050');
-    expect(values.destino).toBe('España');
+    expect(values.destino).toBe('');
     expect(values.viajeros).toBe('1');
     expect(values.fechaSalida).toBe(toDisplayDate(today));
     expect(values.fechaRegreso).toBe(toDisplayDate(addDays(today, 14)));
-    expect(destinos).toEqual(['Estados Unidos', 'España', 'México', 'Otro país']);
   });
 
   it('validates the viaje form', () => {

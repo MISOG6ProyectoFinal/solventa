@@ -101,7 +101,7 @@ def test_el_listado_devuelve_solo_las_polizas_del_cliente():
 
     assert propias.status_code == 200
     assert [item["cobro_id"] for item in propias.json()] == ["cobro-1"]
-    assert propias.json()[0]["estado"] == "activa"
+    assert propias.json()[0]["estado"] == "vencida"
     assert [item["cobro_id"] for item in ajenas.json()] == ["cobro-2"]
     assert ficha.status_code == 200
     assert ficha.json()["component"] == "Pólizas y Ciclo de Vida"

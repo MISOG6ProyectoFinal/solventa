@@ -25,6 +25,7 @@ export const en: Texts = {
       CE: 'Foreigner ID card',
       Pasaporte: 'Passport',
     },
+    documentTypesFailed: 'Document types could not be loaded.',
     documentNumberLabel: 'Document number',
     phoneLabel: 'Phone',
     birthDateLabel: 'Date of birth',
