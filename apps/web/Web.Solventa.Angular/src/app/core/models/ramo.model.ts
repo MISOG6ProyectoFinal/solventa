@@ -1,5 +1,3 @@
-export type RamoId = string;
-
 export interface RamoProduct {
   readonly id: string;
   readonly name: string;
@@ -7,7 +5,7 @@ export interface RamoProduct {
 }
 
 export interface Ramo {
-  readonly id: RamoId;
+  readonly id: string;
   readonly name: string;
   readonly requiresConsent: boolean;
   readonly products: readonly RamoProduct[];

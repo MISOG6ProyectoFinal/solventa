@@ -1,14 +1,14 @@
-import { Alcance, NewPartner, Partner, PartnerConfig, PartnerType } from '../../../core/models/partner.model';
+import { NewPartner, Partner, PartnerConfig } from '../../../core/models/partner.model';
 
 /** Socio tal como lo entrega el BFF web (`/web/socios`). */
 export interface PartnerDto {
   id: string;
   nombre: string;
   identificador: string;
-  tipo: PartnerType;
+  tipo: string;
   pais: string;
   correo_contacto: string;
-  alcances: Alcance[];
+  alcances: string[];
   client_id: string;
   secreto_enmascarado: string;
   estado_credencial: Partner['credentialStatus'];
@@ -45,10 +45,10 @@ export interface PartnerCreatedDto extends PartnerDto {
 export interface NewPartnerDto {
   nombre: string;
   identificador: string;
-  tipo: PartnerType;
+  tipo: string;
   pais: string;
   correo_contacto: string;
-  alcances: Alcance[];
+  alcances: string[];
   autorizado_por: string;
 }
 

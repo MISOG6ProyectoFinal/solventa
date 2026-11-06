@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 import { ApiError } from '../../../../core/interfaces/api-response.interface';
-import { Alcance, Partner, PartnerCreated, PartnerType } from '../../../../core/models/partner.model';
+import { Partner, PartnerCreated } from '../../../../core/models/partner.model';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
@@ -44,10 +44,10 @@ export class CreatePartnerModalComponent {
 
   name = signal('');
   identifier = signal('');
-  tipo = signal<PartnerType>('');
+  tipo = signal('');
   pais = signal('Colombia');
   email = signal('');
-  alcances = signal<Alcance[]>([]);
+  alcances = signal<string[]>([]);
 
   errors = signal<Record<string, string>>({});
   submitError = signal<string | null>(null);
@@ -65,13 +65,13 @@ export class CreatePartnerModalComponent {
     });
   }
 
-  toggleAlcance(a: Alcance) {
+  toggleAlcance(a: string) {
     this.alcances.update(prev =>
       prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]
     );
   }
 
-  alcancesLabel(alcances: Alcance[]): string {
+  alcancesLabel(alcances: string[]): string {
     return alcances.map(a => this.locale.label('scope', a)).join(', ');
   }
 

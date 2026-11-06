@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InputDirective } from '../../../../shared/directives/input.directive';
-import { Ramo, RamoId } from '../../../../core/models/ramo.model';
+import { Ramo } from '../../../../core/models/ramo.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { QUOTE_CLIENT_FIELDS, QUOTE_RISK_FIELDS } from '../../constants/quote-fields.constants';
@@ -22,7 +22,7 @@ export type FormValues = Record<string, string>;
 export class QuoteFormComponent {
   protected readonly locale = inject(LocaleService);
 
-  readonly ramo = model.required<RamoId>();
+  readonly ramo = model.required<string>();
   readonly ramos = input.required<readonly Ramo[]>();
   readonly contract = input<ProductContract | null>(null);
   readonly documentTypes = input<readonly string[]>([]);
@@ -81,7 +81,7 @@ export class QuoteFormComponent {
   }
 
   /** Al cambiar de ramo se conservan solo los datos del cliente y se resetea la validación. */
-  protected changeRamo(ramo: RamoId): void {
+  protected changeRamo(ramo: string): void {
     const clientKeys = new Set(QUOTE_CLIENT_FIELDS.map((field) => field.key));
     const filtered = Object.fromEntries(Object.entries(this.values()).filter(([key]) => clientKeys.has(key)));
     this.values.set(filtered);

@@ -1,16 +1,7 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { catchError, filter, map, of, switchMap } from 'rxjs';
-import { RamoId } from '../../../../core/models/ramo.model';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
@@ -92,7 +83,7 @@ export class QuoteTabComponent {
   protected readonly documentTypes = toSignal(this.catalog.documentTypes$.pipe(catchError(() => of([]))), {
     initialValue: [],
   });
-  protected readonly ramo = signal<RamoId>('');
+  protected readonly ramo = signal('');
 
   protected readonly isCalculating = signal(false);
   protected readonly quoteResult = signal<OfertaCotizacionResponse | null>(null);
