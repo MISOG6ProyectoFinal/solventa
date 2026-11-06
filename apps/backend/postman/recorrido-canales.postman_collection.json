@@ -152,6 +152,22 @@
     {
       "key": "asesorId",
       "value": ""
+    },
+    {
+      "key": "administradorCorreo",
+      "value": ""
+    },
+    {
+      "key": "administradorContrasena",
+      "value": "Administrador-postman-2026"
+    },
+    {
+      "key": "administradorToken",
+      "value": ""
+    },
+    {
+      "key": "administradorId",
+      "value": ""
     }
   ],
   "item": [
@@ -2157,6 +2173,58 @@
               }
             }
           ]
+        },
+        {
+          "name": "Crear operador administrador",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/web/operadores",
+            "description": "Crea un administrador adicional mediante el administrador autenticado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{administradorCorreo}}\",\n  \"nombre\": \"María Administradora\",\n  \"roles\": [\"administrador\"],\n  \"contrasena\": \"{{administradorContrasena}}\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('administradorCorreo', `administrador.${Date.now()}@solventa.test`);"] }
+          }, {
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "const operador = pm.response.json();",
+              "pm.collectionVariables.set('administradorId', operador.id);",
+              "pm.test('El administrador queda creado', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(operador.roles).to.eql(['administrador']);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Iniciar sesión como administrador creado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/web/sesiones",
+            "description": "Inicia sesión con el administrador creado en la petición anterior.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{administradorCorreo}}\",\n  \"contrasena\": \"{{administradorContrasena}}\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "const sesion = pm.response.json();",
+              "pm.collectionVariables.set('administradorToken', sesion.token);",
+              "pm.test('El administrador creado inicia sesión', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(sesion.operador.roles).to.eql(['administrador']);",
+              "});"
+            ] }
+          }]
         },
         {
           "name": "El asesor consulta pólizas",
