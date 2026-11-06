@@ -1240,7 +1240,7 @@
               }
             ],
             "url": "{{baseUrl}}/web/sesiones",
-            "description": "Inicia sesión del operador con correo y contraseña. Devuelve el token (8 horas) y el operador con sus roles. 401 credenciales_invalidas si no coinciden o el operador está inactivo. El primer administrador sale del secreto operador-admin del clúster.",
+            "description": "Inicia sesión del operador con correo y contraseña. Devuelve el token (8 horas) y el operador con sus roles. 401 credenciales_invalidas si no coinciden o el operador está inactivo. El primer administrador se crea con scripts/crear_administrador.sh.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"correo\": \"{{operadorCorreo}}\",\n  \"contrasena\": \"{{operadorContrasena}}\"\n}"

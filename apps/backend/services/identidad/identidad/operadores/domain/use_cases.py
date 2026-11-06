@@ -2,7 +2,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from solventa_common.operator_session import ADMIN, sign_operator_token
+from solventa_common.operator_session import sign_operator_token
 
 from identidad.kyc.domain.sesion import hash_password, new_salt, password_matches
 from identidad.operadores.domain.models import (
@@ -105,16 +105,3 @@ class UpdateOperator:
             operator.activo = changes.activo
         self.operators.update(operator)
         return operator.to_view()
-
-
-def seed_admin(operators: OperatorRepository, email: str | None, name: str, password: str | None) -> None:
-    """Crea el primer administrador una sola vez; sin correo y contraseña no hace nada."""
-    if not email or not password:
-        return
-    if operators.get_by_email(email.lower()) is not None:
-        return
-    admin = _build_operator(email, name, [ADMIN], password, _utc_now())
-    try:
-        operators.add(admin)
-    except EmailTaken:
-        return

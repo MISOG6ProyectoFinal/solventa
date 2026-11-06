@@ -25,7 +25,6 @@ from identidad.operadores.domain.use_cases import (
     ListOperators,
     StartOperatorSession,
     UpdateOperator,
-    seed_admin,
 )
 
 
@@ -43,7 +42,6 @@ class Container:
         self.consentimientos = InMemoryConsentimientoRepository()
         self.operators = InMemoryOperatorRepository()
         self._wire()
-        self._seed_admin()
 
     def use_postgres(self, engine: Engine) -> None:
         client_repo = PostgresClientRepository(engine)
@@ -63,15 +61,6 @@ class Container:
         self.operators = operator_repo
 
         self._wire()
-        self._seed_admin()
-
-    def _seed_admin(self) -> None:
-        seed_admin(
-            self.operators,
-            settings.operador_admin_correo,
-            settings.operador_admin_nombre,
-            settings.operador_admin_contrasena,
-        )
 
     def _wire(self) -> None:
         self.start_session = StartSession(self.clients, self.accounts, self.secret)
