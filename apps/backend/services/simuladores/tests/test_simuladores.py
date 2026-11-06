@@ -57,7 +57,7 @@ def test_down_answers_503_and_counts_the_call():
 
 
 def test_slow_answers_after_the_configured_delay():
-    assert set_mode("open-finance", "lento", demora_s=0.2).json()["demora_s"] == 0.2
+    assert set_mode("open-finance", "lento", demora_s=0.2).json()["demora_s"] == pytest.approx(0.2)
 
     start = time.perf_counter()
     response = client.get("/open-finance/customers/cliente-77/profile")
