@@ -133,10 +133,13 @@ class _Upstream:
         self.calls: list[tuple[str, dict]] = []
 
     def get(self, path: str, **kwargs):
+        if path.startswith("/catalogo/productos/") and not path.endswith("/contrato"):
+            return {"requiere_consentimiento": path.endswith("/vida-hipotecario")}
+        return self.post(path, **kwargs)
+
+    def post(self, path: str, **kwargs):
         self.calls.append((path, kwargs))
         return self.response
-
-    post = get
 
 
 def test_mortgage_quote_carries_the_open_finance_consent_the_customer_granted(monkeypatch):
@@ -145,6 +148,7 @@ def test_mortgage_quote_carries_the_open_finance_consent_the_customer_granted(mo
         "cliente_id": "CLI-CC-1020",
         "estado": "OTORGADO",
         "alcance_lista": ["Open Finance", "Open Data"],
+        "open_finance": True,
     }
     cotizacion = _Upstream({"id": "COT-1", "prima": "3927000.00"})
     monkeypatch.setattr("canales.web.api.identidad", _Upstream(consent))
@@ -165,6 +169,7 @@ def test_consent_without_open_finance_does_not_send_it(monkeypatch):
         "cliente_id": "CLI-1",
         "estado": "OTORGADO",
         "alcance_lista": ["Open Data"],
+        "open_finance": False,
     }
     cotizacion = _Upstream({"id": "COT-2", "prima": "3927000.00"})
     monkeypatch.setattr("canales.web.api.identidad", _Upstream(consent))

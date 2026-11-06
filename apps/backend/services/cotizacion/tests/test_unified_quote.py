@@ -171,7 +171,7 @@ def test_product_without_tariff_is_a_product_error():
     response = client.post(
         "/consenso/cotizaciones",
         json={"producto_id": "proteccion-pagos", "suma_asegurada": "1000000", "edad": 40},
-        headers={"X-Canal": "web"},
+        headers={"X-Canal": "socios"},
     )
 
     assert response.status_code == 422

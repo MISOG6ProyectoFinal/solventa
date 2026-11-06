@@ -246,3 +246,21 @@ def test_contrato_suspendido_responde_403():
 
     assert response.status_code == 403
     assert response.json()["detail"]["codigo"] == "contrato_suspendido"
+
+
+def test_los_tipos_de_socio_y_los_alcances_se_leen_del_servicio():
+    assert client.get("/gobierno-socios/tipos").json() == ["Banco", "Aerolínea", "E-commerce", "Fintech", "Retailer"]
+    assert client.get("/gobierno-socios/alcances").json() == ["cotizacion", "emision", "consulta"]
+
+
+def test_un_tipo_de_socio_fuera_de_la_lista_se_rechaza():
+    alta = {
+        "nombre": "Socio",
+        "identificador": "SOCIO-TIPO",
+        "tipo": "Aseguradora",
+        "correo_contacto": "socio@ejemplo.test",
+        "alcances": ["cotizacion"],
+        "autorizado_por": "Ana",
+    }
+
+    assert client.post("/gobierno-socios/socios", json=alta).status_code == 422

@@ -102,6 +102,12 @@ def info() -> dict:
     return {"component": "Identidad, Consentimiento y KYC"}
 
 
+@router.get("/tipos-documento", response_model=list[str])
+def list_document_types() -> list[str]:
+    """Tipos de documento con que se registra un cliente."""
+    return list(TIPOS_DOCUMENTO)
+
+
 @router.post("/sesiones")
 def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
     try:

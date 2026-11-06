@@ -7,7 +7,17 @@ from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
-from polizas.ciclo_vida.domain.models import ClientPolicy, IssuePolicyRequest, Policy, RenewalOffer
+from polizas.ciclo_vida.domain.models import (
+    CANCELLATION_CAUSE_NAMES,
+    NON_REFUNDABLE_CAUSES,
+    STATUS_NAMES,
+    CancellationCauseOption,
+    CatalogOption,
+    ClientPolicy,
+    IssuePolicyRequest,
+    Policy,
+    RenewalOffer,
+)
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
     PaymentNotApproved,
@@ -63,6 +73,21 @@ def _error(code: int, codigo: str, mensaje: str) -> HTTPException:
 @router.get("/")
 def info() -> dict:
     return {"component": "Pólizas y Ciclo de Vida"}
+
+
+@router.get("/catalogos/estados", response_model=list[CatalogOption])
+def list_statuses() -> list[CatalogOption]:
+    """Estados en los que puede estar una póliza."""
+    return [CatalogOption(id=status.value, nombre=name) for status, name in STATUS_NAMES.items()]
+
+
+@router.get("/catalogos/causas-cancelacion", response_model=list[CancellationCauseOption])
+def list_cancellation_causes() -> list[CancellationCauseOption]:
+    """Causas con que se cancela una póliza y si la causa da derecho a devolución de prima."""
+    return [
+        CancellationCauseOption(id=cause.value, nombre=name, reembolsable=cause not in NON_REFUNDABLE_CAUSES)
+        for cause, name in CANCELLATION_CAUSE_NAMES.items()
+    ]
 
 
 @router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])

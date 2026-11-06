@@ -104,7 +104,6 @@ def pay_quote(
             "cotizacion_id": cotizacion_id,
             "cliente_id": f"socio:{partner['socio_id']}",
             "monto": str(quote["prima"]),
-            "moneda": "COP",
             "idempotency_key": f"socios:{partner['socio_id']}:{idempotency_key}",
             "medio_token": request.medio_token,
         },

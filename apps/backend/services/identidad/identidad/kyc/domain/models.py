@@ -80,7 +80,7 @@ class Consentimiento(BaseModel):
     expira_en: datetime
 
     # Compatibilidad y auxiliares
-    ramo: str = "VIDA_HIPOTECARIO"
+    ramo: str = ""
     canal: str = "sms"
     contacto: str = ""
     contacto_mask: str = ""
@@ -98,7 +98,7 @@ class SolicitudConsentimiento(BaseModel):
     email: str = ""
     telefono: str = ""
     fecha_nacimiento: str | None = None
-    ramo: str = "VIDA_HIPOTECARIO"
+    ramo: str = ""
     canal: str = "sms"
     contacto: str = ""
     contacto_mask: str = ""
@@ -149,6 +149,7 @@ class RespuestaConsulta(BaseModel):
     contacto: str = ""
     alcance: str
     alcance_lista: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    open_finance: bool
 
 
 class ConsentimientoNoEncontrado(Exception):

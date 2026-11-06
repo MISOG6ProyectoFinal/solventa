@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Annotated, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
@@ -167,6 +168,11 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
     return call_upstream(identidad.post, "/identidad/sesiones", json=solicitud.model_dump())
 
 
+@router.get("/tipos-documento")
+def listar_tipos_documento() -> list:
+    return call_upstream(identidad.get, "/identidad/tipos-documento")
+
+
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
 def registrar(solicitud: SolicitudRegistro) -> dict:
     return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump(mode="json"))
@@ -186,6 +192,11 @@ def sesion_actual(payload: Session) -> dict:
 def listar_productos() -> list:
     """Catálogo de productos del canal Mobile (vía servicio de Cotización)."""
     return call_upstream(cotizacion.get, "/catalogo/productos")
+
+
+@authenticated.get("/productos/{producto_id}/contrato")
+def contrato_producto(producto_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
@@ -208,7 +219,6 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
             "cotizacion_id": cotizacion_id,
             "cliente_id": session.client_id,
             "monto": str(oferta["prima"]),
-            "moneda": "COP",
             "idempotency_key": f"movil:{cotizacion_id}:{solicitud.intento_id}",
             "medio_token": token_prototipo(solicitud.simulacion),
         },
@@ -290,7 +300,6 @@ def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoR
             "referencia_id": referencia,
             "cliente_id": session.client_id,
             "monto": str(oferta["prima_propuesta"]),
-            "moneda": "COP",
             "idempotency_key": f"movil:renovacion:{referencia}:{solicitud.intento_id}",
             "medio_token": token_prototipo(solicitud.simulacion),
         },

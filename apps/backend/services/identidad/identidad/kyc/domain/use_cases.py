@@ -373,6 +373,7 @@ class ConsultarConsentimiento:
             contacto=consentimiento.contacto or consentimiento.contacto_mask,
             alcance=alcance_str,
             alcance_lista=consentimiento.alcance,
+            open_finance=OPEN_FINANCE in consentimiento.alcance,
         )
 
 

@@ -315,3 +315,10 @@ def test_el_ingreso_no_valida_el_formato_del_correo_para_no_bloquear_cuentas_ant
     response = client.post("/identidad/sesiones", json={"correo": "usuario-antiguo", "contrasena": "clave-nueva"})
 
     assert response.status_code == 401
+
+
+def test_los_tipos_de_documento_se_leen_del_servicio():
+    response = client.get("/identidad/tipos-documento")
+
+    assert response.status_code == 200
+    assert response.json() == ["CC", "CE", "Pasaporte"]

@@ -3,7 +3,8 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from cotizacion.catalogo.domain.models import Producto
+import pytest
+from cotizacion.catalogo.domain.models import Canal, Producto
 from cotizacion.container import container
 from cotizacion.main import app
 from fastapi.testclient import TestClient
@@ -16,6 +17,14 @@ PRODUCTO_INACTIVO = "producto-inactivo"
 
 SALIDA = date.today() + timedelta(days=30)
 REGRESO = SALIDA + timedelta(days=14)
+
+
+@pytest.fixture(autouse=True)
+def hogar_en_web_y_socios():
+    original = container.catalogo.productos["hogar"]
+    container.catalogo.productos["hogar"] = original.model_copy(update={"canales": [Canal.WEB, Canal.SOCIOS]})
+    yield
+    container.catalogo.productos["hogar"] = original
 
 
 def post_cotizacion(producto_id: str, canal: str, suma: str = "1000000"):
@@ -37,29 +46,24 @@ def post_viaje(canal: str = "mobile", **overrides):
     return client.post("/consenso/cotizaciones", json=body, headers={"X-Canal": canal})
 
 
-def test_mobile_rechaza_producto_fuera_del_catalogo_mobile():
-    response = post_cotizacion("vida-temporal", "mobile")
-    assert response.status_code == 422
-    assert response.json()["detail"] == {
-        "codigo": "producto_fuera_del_canal",
-        "mensaje": "Producto fuera del catálogo móvil: vida-temporal",
-    }
-
-
-def test_mobile_rechaza_hogar_fuera_del_catalogo_mobile():
-    response = post_cotizacion("hogar", "mobile")
-    assert response.status_code == 422
-    assert response.json()["detail"]["mensaje"] == "Producto fuera del catálogo móvil: hogar"
-
-
-def test_mobile_rechaza_productos_del_catalogo_no_disponibles():
-    for producto_id in ("proteccion-celular", "vida-esencial"):
+def test_mobile_rechaza_producto_que_no_se_ofrece_en_el_canal():
+    for producto_id in ("vida-temporal", "proteccion-celular", "vida-esencial", "hogar"):
         response = post_viaje(producto_id=producto_id)
         assert response.status_code == 422
         assert response.json()["detail"] == {
-            "codigo": "producto_no_disponible",
-            "mensaje": f"Producto no disponible para cotización móvil: {producto_id}",
+            "codigo": "producto_fuera_del_canal",
+            "mensaje": f"Producto no ofrecido en el canal: {producto_id}",
         }
+
+
+def test_cada_canal_rechaza_el_producto_que_no_ofrece():
+    ofrecidos = {"mobile": "viaje-internacional", "web": "viaje-internacional", "socios": "viaje-internacional"}
+    fuera = {"mobile": "vida-esencial", "web": "proteccion-celular", "socios": "vida-temporal"}
+    for canal, producto_id in fuera.items():
+        response = post_viaje(canal=canal, producto_id=producto_id)
+        assert response.status_code == 422
+        assert response.json()["detail"]["codigo"] == "producto_fuera_del_canal"
+        assert post_viaje(canal=canal, producto_id=ofrecidos[canal]).status_code == 200
 
 
 def test_mobile_cotiza_viaje_con_prima_y_vigencia_del_viaje():
@@ -136,20 +140,11 @@ def test_consenso_sin_quorum_en_viaje_responde_503():
     assert response.status_code == 503
 
 
-def test_web_permite_producto_activo_no_disponible_mobile():
-    response = post_cotizacion("vida-temporal", "web")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["producto_id"] == "vida-temporal"
-    assert "prima" in data
-
-
-def test_socios_permite_producto_activo_no_disponible_mobile():
-    response = post_cotizacion("vida-temporal", "socios")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["producto_id"] == "vida-temporal"
-    assert "prima" in data
+def test_web_y_socios_cotizan_el_producto_que_no_esta_en_mobile():
+    for canal in ("web", "socios"):
+        response = post_cotizacion("hogar", canal)
+        assert response.status_code == 200
+        assert response.json()["producto_id"] == "hogar"
 
 
 def test_todos_los_canales_rechazan_producto_inactivo():
@@ -158,7 +153,7 @@ def test_todos_los_canales_rechazan_producto_inactivo():
         nombre="Producto inactivo",
         ramo_id="ramo-hogar",
         activo=False,
-        disponible_mobile=True,
+        canales=list(Canal),
     )
     try:
         for canal in CANALES:

@@ -4,67 +4,79 @@ Lo ejecuta el bootstrap explícito, y solo si el catálogo está vacío.
 No corre en el arranque de las réplicas: PostgreSQL sigue siendo la fuente de verdad.
 """
 
-from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo
+from decimal import Decimal
+
+from cotizacion.catalogo.domain.models import Canal, Cobertura, MobilePresentation, Producto, Ramo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
 
 SEED_RAMOS = (
-    Ramo(id="ramo-hogar", nombre="Hogar"),
-    Ramo(id="ramo-auto", nombre="Automóviles"),
-    Ramo(id="ramo-vida", nombre="Vida"),
-    Ramo(id="ramo-viaje", nombre="Viaje"),
-    Ramo(id="ramo-dispositivos", nombre="Protección de dispositivos"),
-    Ramo(id="ramo-microseguro-vida", nombre="Microseguro de vida"),
-    Ramo(id="ramo-parametrico", nombre="Paramétrico (clima / vuelo)"),
-    Ramo(id="ramo-proteccion-pagos", nombre="Protección de pagos"),
-    Ramo(id="ramo-vida-hipotecario", nombre="Vida hipotecario"),
+    Ramo(id="ramo-hogar", nombre="Hogar", orden=1),
+    Ramo(id="ramo-auto", nombre="Automóviles", orden=2),
+    Ramo(id="ramo-vida", nombre="Vida", orden=3),
+    Ramo(id="ramo-viaje", nombre="Viaje", orden=4),
+    Ramo(id="ramo-dispositivos", nombre="Protección de dispositivos", orden=5),
+    Ramo(id="ramo-microseguro-vida", nombre="Microseguro de vida", orden=6),
+    Ramo(id="ramo-parametrico", nombre="Paramétrico (clima / vuelo)", orden=7),
+    Ramo(id="ramo-proteccion-pagos", nombre="Protección de pagos", orden=8),
+    Ramo(id="ramo-vida-hipotecario", nombre="Vida hipotecario", orden=9),
 )
 
 SEED_PRODUCTOS = (
-    Producto(
-        id="hogar",
-        nombre="Seguro Hogar",
-        ramo_id="ramo-hogar",
-        activo=True,
-        disponible_mobile=True,
-    ),
-    Producto(
-        id="auto",
-        nombre="Seguro Auto",
-        ramo_id="ramo-auto",
-        activo=True,
-        disponible_mobile=True,
-    ),
-    Producto(
-        id="vida-temporal",
-        nombre="Vida Temporal",
-        ramo_id="ramo-vida",
-        activo=True,
-        disponible_mobile=False,
-    ),
+    Producto(id="hogar", nombre="Seguro Hogar", ramo_id="ramo-hogar"),
+    Producto(id="auto", nombre="Seguro Auto", ramo_id="ramo-auto"),
+    Producto(id="vida-temporal", nombre="Vida Temporal", ramo_id="ramo-vida"),
     Producto(
         id="viaje-internacional",
         nombre="Viaje Internacional",
         ramo_id="ramo-viaje",
-        activo=True,
-        disponible_mobile=True,
+        canales=[Canal.MOBILE, Canal.WEB, Canal.SOCIOS],
+        presentacion_mobile=MobilePresentation(
+            orden=1,
+            descripcion="Gastos médicos, equipaje y asistencia en viaje",
+            precio_desde=Decimal("120000"),
+        ),
     ),
     Producto(
         id="proteccion-celular",
         nombre="Protección Celular",
         ramo_id="ramo-dispositivos",
-        activo=True,
-        disponible_mobile=False,
+        canales=[Canal.SOCIOS],
+        presentacion_mobile=MobilePresentation(
+            orden=2,
+            descripcion="Daño accidental, robo y líquidos",
+            precio_desde=Decimal("250000"),
+        ),
     ),
     Producto(
         id="vida-esencial",
         nombre="Vida Esencial",
         ramo_id="ramo-microseguro-vida",
-        activo=True,
-        disponible_mobile=False,
+        canales=[Canal.WEB, Canal.SOCIOS],
+        presentacion_mobile=MobilePresentation(
+            orden=3,
+            descripcion="Fallecimiento y auxilio funerario",
+            precio_desde=Decimal("96000"),
+        ),
     ),
-    Producto(id="parametrico-clima-vuelo", nombre="Paramétrico Clima y Vuelo", ramo_id="ramo-parametrico"),
-    Producto(id="proteccion-pagos", nombre="Protección de Pagos", ramo_id="ramo-proteccion-pagos"),
-    Producto(id="vida-hipotecario", nombre="Vida Hipotecario", ramo_id="ramo-vida-hipotecario"),
+    Producto(
+        id="parametrico-clima-vuelo",
+        nombre="Paramétrico Clima y Vuelo",
+        ramo_id="ramo-parametrico",
+        canales=[Canal.WEB, Canal.SOCIOS],
+    ),
+    Producto(
+        id="proteccion-pagos",
+        nombre="Protección de Pagos",
+        ramo_id="ramo-proteccion-pagos",
+        canales=[Canal.SOCIOS],
+    ),
+    Producto(
+        id="vida-hipotecario",
+        nombre="Vida Hipotecario",
+        ramo_id="ramo-vida-hipotecario",
+        canales=[Canal.WEB, Canal.SOCIOS],
+        requiere_consentimiento=True,
+    ),
 )
 
 SEED_COBERTURAS = (

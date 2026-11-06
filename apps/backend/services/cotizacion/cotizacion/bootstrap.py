@@ -1,6 +1,6 @@
 """Inicialización única del almacén de cotización.
 
-Crea el schema y, si el catálogo no tiene productos, carga el dataset inicial.
+Crea el schema y carga el dataset inicial del catálogo y de las reglas de rating si están vacíos.
 No forma parte del arranque de las réplicas:
 
     python -m cotizacion.bootstrap
@@ -18,9 +18,16 @@ from cotizacion.config import settings
 from cotizacion.consenso.adapters.cotizacion_repository import PostgresCotizacionRepository
 from cotizacion.gobierno_socios.adapters.configuracion_repository import PostgresConfiguracionRepository
 from cotizacion.gobierno_socios.adapters.repository import PostgresSocioRepository
+from cotizacion.rating.adapters.repository import PostgresRulesRepository
+from cotizacion.rating.adapters.seed import seed_rules
+from cotizacion.rating.domain.ports import RulesRepository
 
 
 class _CatalogoBootstrap(CatalogoRepository, Protocol):
+    def create_schema(self) -> None: ...
+
+
+class _RulesBootstrap(RulesRepository, Protocol):
     def create_schema(self) -> None: ...
 
 
@@ -28,18 +35,22 @@ class _ConSchema(Protocol):
     def create_schema(self) -> None: ...
 
 
-def inicializar_almacen(catalogo: _CatalogoBootstrap, *almacenes: _ConSchema) -> None:
-    """Crea las tablas y siembra el catálogo vacío. Repetirlo no restaura filas borradas."""
+def inicializar_almacen(catalogo: _CatalogoBootstrap, rules: _RulesBootstrap, *almacenes: _ConSchema) -> None:
+    """Crea las tablas y siembra lo que esté vacío. Repetirlo no restaura filas borradas."""
     catalogo.create_schema()
+    rules.create_schema()
     for almacen in almacenes:
         almacen.create_schema()
     if not catalogo.list_productos():
         seed_catalogo(catalogo)
+    if not rules.versions():
+        seed_rules(rules)
 
 
 def bootstrap(engine: Engine) -> None:
     inicializar_almacen(
         PostgresCatalogoRepository(engine),
+        PostgresRulesRepository(engine),
         PostgresCotizacionRepository(engine),
         PostgresSocioRepository(engine),
         PostgresConfiguracionRepository(engine),

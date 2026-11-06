@@ -1,8 +1,10 @@
+from urllib.parse import quote
+
 import httpx
 from fastapi import APIRouter, HTTPException, status
 from solventa_common.integration.base import call_upstream
 
-from canales.clients import cotizacion, identidad
+from canales.clients import cotizacion, identidad, polizas
 from canales.web.policies import policy_detail, recent_policies
 
 router = APIRouter(prefix="/web", tags=["BFF Web"])
@@ -12,16 +14,6 @@ router = APIRouter(prefix="/web", tags=["BFF Web"])
 def info() -> dict:
     return {"component": "BFF Web"}
 
-
-RAMOS_COTIZABLES_WEB = {
-    "ramo-viaje",
-    "ramo-microseguro-vida",
-    "ramo-vida-hipotecario",
-    "ramo-parametrico",
-}
-
-RAMOS_CON_CONSENTIMIENTO = {"vida-hipotecario", "ramo-vida-hipotecario"}
-OPEN_FINANCE_SCOPE = "Open Finance"
 
 CUSTOMER_FIELDS = frozenset(
     {
@@ -40,8 +32,17 @@ CUSTOMER_FIELDS = frozenset(
 
 @router.get("/ramos")
 def listar_ramos() -> list:
-    ramos = call_upstream(cotizacion.get, "/catalogo/ramos")
-    return [r for r in ramos if r.get("id") in RAMOS_COTIZABLES_WEB]
+    return call_upstream(cotizacion.get, "/catalogo/canales/web/ramos")
+
+
+@router.get("/productos/{producto_id}/contrato")
+def contrato_producto(producto_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
+
+
+@router.get("/tipos-documento")
+def listar_tipos_documento() -> list:
+    return call_upstream(identidad.get, "/identidad/tipos-documento")
 
 
 def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:
@@ -101,15 +102,26 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
     return _asegurar_nuevo_cliente(solicitud, tipo_doc, num_doc)
 
 
+def _requires_consent(product_id: object) -> bool:
+    if not isinstance(product_id, str) or not product_id.strip():
+        return False
+    try:
+        product = call_upstream(cotizacion.get, f"/catalogo/productos/{quote(product_id.strip(), safe='')}")
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            return False
+        raise
+    return bool(product.get("requiere_consentimiento"))
+
+
 def _validar_consentimiento_si_aplica(solicitud: dict) -> dict | None:
-    producto_id = solicitud.get("producto_id", "")
-    if producto_id not in RAMOS_CON_CONSENTIMIENTO:
+    if not _requires_consent(solicitud.get("producto_id")):
         return None
     consentimiento_id = solicitud.get("consentimiento_id")
     if not consentimiento_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El ramo vida hipotecario requiere consentimiento digital previamente validado",
+            detail="El producto requiere consentimiento digital previamente validado",
         )
     consentimiento = call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
     if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != "OTORGADO":
@@ -122,7 +134,7 @@ def _validar_consentimiento_si_aplica(solicitud: dict) -> dict | None:
 
 def _open_finance_consent(consentimiento: dict | None) -> dict | None:
     """El cliente que autorizó Open Finance en el consentimiento digital lo autoriza también para la cotización."""
-    if not consentimiento or OPEN_FINANCE_SCOPE not in consentimiento.get("alcance_lista", []):
+    if not consentimiento or not consentimiento.get("open_finance"):
         return None
     return {
         "referencia_cliente": consentimiento["cliente_id"],
@@ -164,6 +176,16 @@ def listar_socios() -> list:
     return call_upstream(cotizacion.get, "/gobierno-socios/socios")
 
 
+@router.get("/socios/tipos")
+def listar_tipos_socio() -> list:
+    return call_upstream(cotizacion.get, "/gobierno-socios/tipos")
+
+
+@router.get("/socios/alcances")
+def listar_alcances() -> list:
+    return call_upstream(cotizacion.get, "/gobierno-socios/alcances")
+
+
 @router.get("/socios/{socio_id}")
 def obtener_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
@@ -177,6 +199,16 @@ def consultar_configuracion_socio(socio_id: str) -> dict:
 @router.put("/socios/{socio_id}/configuracion")
 def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
     return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
+
+
+@router.get("/polizas/estados")
+def listar_estados_poliza() -> list:
+    return call_upstream(polizas.get, "/polizas/catalogos/estados")
+
+
+@router.get("/polizas/causas-cancelacion")
+def listar_causas_cancelacion() -> list:
+    return call_upstream(polizas.get, "/polizas/catalogos/causas-cancelacion")
 
 
 @router.get("/polizas")

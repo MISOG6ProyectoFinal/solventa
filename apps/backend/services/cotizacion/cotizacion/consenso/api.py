@@ -9,10 +9,9 @@ from starlette.concurrency import run_in_threadpool
 
 from cotizacion.catalogo.domain.models import (
     Canal,
+    ProductNotInChannel,
     Producto,
-    ProductoFueraCatalogoMobile,
     ProductoInactivo,
-    ProductoNoDisponibleMobile,
     ProductoNoEncontrado,
 )
 from cotizacion.consenso.domain.consensus import SinConsenso
@@ -33,15 +32,10 @@ router = APIRouter(prefix="/consenso", tags=["Validador de Consenso"])
 _PRODUCT_ERRORS: dict[type[Exception], tuple[int, str, str]] = {
     ProductoNoEncontrado: (status.HTTP_404_NOT_FOUND, "producto_no_encontrado", "Producto no encontrado"),
     ProductoInactivo: (status.HTTP_422_UNPROCESSABLE_ENTITY, "producto_inactivo", "Producto inactivo"),
-    ProductoFueraCatalogoMobile: (
+    ProductNotInChannel: (
         status.HTTP_422_UNPROCESSABLE_ENTITY,
         "producto_fuera_del_canal",
-        "Producto fuera del catálogo móvil",
-    ),
-    ProductoNoDisponibleMobile: (
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
-        "producto_no_disponible",
-        "Producto no disponible para cotización móvil",
+        "Producto no ofrecido en el canal",
     ),
     ProductoNoTarifado: (status.HTTP_422_UNPROCESSABLE_ENTITY, "producto_sin_tarifa", "Producto sin tarifa"),
 }

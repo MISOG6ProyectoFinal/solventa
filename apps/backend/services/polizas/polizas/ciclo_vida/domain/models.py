@@ -12,6 +12,41 @@ from pydantic import BaseModel, Field, field_validator
 class PolicyStatus(StrEnum):
     ACTIVE = "activa"
     EXPIRED = "vencida"
+    CANCELLED = "cancelada"
+
+
+class CancellationCause(StrEnum):
+    WITHDRAWAL = "retracto"
+    INSURED_ASSET_SOLD = "venta-del-bien-asegurado"
+    SERVICE_DISSATISFACTION = "insatisfaccion-con-el-servicio"
+    ASSOCIATED_CREDIT_PREPAID = "pago-anticipado-del-credito-asociado"
+    PREMIUM_NON_PAYMENT = "impago-de-prima"
+
+
+class CatalogOption(BaseModel):
+    id: str
+    nombre: str
+
+
+class CancellationCauseOption(CatalogOption):
+    reembolsable: bool
+
+
+STATUS_NAMES: dict[PolicyStatus, str] = {
+    PolicyStatus.ACTIVE: "Activa",
+    PolicyStatus.EXPIRED: "Vencida",
+    PolicyStatus.CANCELLED: "Cancelada",
+}
+
+CANCELLATION_CAUSE_NAMES: dict[CancellationCause, str] = {
+    CancellationCause.WITHDRAWAL: "Retracto",
+    CancellationCause.INSURED_ASSET_SOLD: "Venta del bien asegurado",
+    CancellationCause.SERVICE_DISSATISFACTION: "Insatisfacción con el servicio",
+    CancellationCause.ASSOCIATED_CREDIT_PREPAID: "Pago anticipado del crédito asociado",
+    CancellationCause.PREMIUM_NON_PAYMENT: "Impago de prima",
+}
+
+NON_REFUNDABLE_CAUSES = frozenset({CancellationCause.PREMIUM_NON_PAYMENT})
 
 
 class Coverage(BaseModel):
