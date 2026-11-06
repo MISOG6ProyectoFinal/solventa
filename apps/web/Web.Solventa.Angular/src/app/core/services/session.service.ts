@@ -1,10 +1,10 @@
-import { Injectable, signal } from '@angular/core';
-import { STORAGE_KEYS } from '../constants/storage-keys.constants';
+import { Injectable, computed, inject } from '@angular/core';
+import { AuthService } from './auth.service';
 
-const DEFAULT_USER_NAME = 'Ana Gómez';
-
-/** Operador que usa el portal. Lo fija el inicio de sesión; hasta entonces aplica el operador por defecto. */
+/** Operador que usa el portal. Su nombre queda como responsable en las operaciones auditadas. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
-  readonly userName = signal(sessionStorage.getItem(STORAGE_KEYS.userName) ?? DEFAULT_USER_NAME);
+  private readonly auth = inject(AuthService);
+
+  readonly userName = computed(() => this.auth.operator()?.name ?? '');
 }

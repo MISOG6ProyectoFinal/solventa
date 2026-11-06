@@ -1,0 +1,11 @@
+<div class="space-y-2 pt-1">
+  @for (role of options; track role) {
+    <label class="flex items-start gap-2 text-sm text-foreground">
+      <input type="checkbox" class="rounded mt-0.5" [attr.data-role]="role" [checked]="roles().includes(role)" (change)="toggle(role)" />
+      <span>
+        {{ locale.label('role', role) }}
+        <span class="block text-xs text-muted-foreground">{{ locale.label('roleHint', role) }}</span>
+      </span>
+    </label>
+  }
+</div>

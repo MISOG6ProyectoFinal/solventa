@@ -8,6 +8,7 @@ import { NewPartner, PartnerCreated } from '../../../core/models/partner.model';
 import { PARTNER_CONFIG_DTO, PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
 import { toPartnerConfig } from './partners-api.mapper';
 import { PartnersService } from './partners.service';
+import { signInAs, signOut } from '../../../core/testing/auth.testing';
 
 const NEW_PARTNER: NewPartner = {
   name: 'Fintech Demo',
@@ -23,6 +24,7 @@ describe('PartnersService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    signInAs();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
     });
@@ -30,7 +32,10 @@ describe('PartnersService', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    signOut();
+  });
 
   it('loads the provisioned partners from the BFF', () => {
     service.load();

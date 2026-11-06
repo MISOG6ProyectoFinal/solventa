@@ -162,7 +162,10 @@ Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros
 
 ```bash
 docker compose up -d canales
+CONTRASENA=Solventa-local-2026 EN_IDENTIDAD="docker compose exec -T identidad" ./scripts/crear_administrador.sh admin@solventa.local
 ```
+
+El segundo comando crea el administrador del portal web, que se describe en [Sesión del portal](#sesión-del-portal).
 
 Todo el backend en un clúster local, sin cambios en el código, con el modo `local`:
 
@@ -179,14 +182,34 @@ Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `d
 
 `local.sh status` muestra los pods, `local.sh logs <servicio>` sus logs y `local.sh down` borra el clúster con sus datos. Siniestros corre con `PERSISTENT_STORES=false`, como en `.env.example`, porque con almacenes persistentes el servicio usa siempre el S3 real.
 
-Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales:
+Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales. Entra al portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA`, que por defecto son las del administrador local:
 
 ```bash
-python scripts/poblar_datos.py                                     # modo local
-python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
+python scripts/poblar_datos.py                                                               # modo local
+OPERADOR_CONTRASENA=<clave> python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
 ```
 
 Crea 5 socios con sus ramos habilitados, 12 clientes, cotizaciones por los canales móvil, web y de socios, y avisos de siniestro con evidencia. Al pasar por la API, los datos cumplen las mismas reglas del negocio. Se puede correr varias veces: el secreto de cada socio y la contraseña de cada cliente quedan en `scripts/.poblar/<host>.json`, fuera de git, y se reutilizan.
+
+### Sesión del portal
+
+El portal web pide inicio de sesión. Identidad guarda los operadores en la tabla `operadores` y firma un token de 8 horas con audiencia `portal`, distinto al del cliente móvil y con la misma `SESION_SECRETO`. Canales verifica el token en cada ruta de `/web`, aplica los permisos de cada rol y toma del token quién autoriza un socio, quién cambia su configuración y qué asesor cotiza.
+
+| Rol | Puede |
+|---|---|
+| `administrador` | Todo: alta y configuración de socios, y crear, cambiar de rol o desactivar operadores |
+| `asesor` | Consultar, cotizar y solicitar o validar consentimientos |
+| `consulta` | Solo consultar ramos, cotizaciones, pólizas, socios y consentimientos |
+
+Sin token, `/web` responde 401 (`sesion_invalida`); con un rol sin permiso, 403 (`permiso_denegado`). Desactivar un operador le impide iniciar sesión; el token que ya tenga sigue vigente hasta que vence.
+
+El primer administrador se crea con `scripts/crear_administrador.sh`, que corre el alta de operadores dentro del pod de Identidad con su conexión a la base. `local.sh up` lo llama con `admin@solventa.local` y la contraseña `Solventa-local-2026`. En AWS, con el `kubectl` conectado al clúster:
+
+```bash
+CONTRASENA=<clave> ./scripts/crear_administrador.sh admin@solventa.co "Nombre Apellido"
+```
+
+Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está. `EN_IDENTIDAD` cambia cómo entra al contenedor de Identidad; por defecto es `kubectl -n solventa exec -i deploy/identidad -c identidad --`.
 
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
@@ -294,10 +317,10 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 - **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
-PERFIL=humo ./load-tests/run.sh
+OPERADOR_CONTRASENA=<clave> PERFIL=humo ./load-tests/run.sh
 PERFIL=carga DURACION=5m ./load-tests/run.sh
 PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
 PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
@@ -327,6 +350,7 @@ El perfil `degradacion` cambia el modo de Open Finance en el servicio `simulador
 | `UMBRAL_COTIZACION_MS` | 400 | p95 máximo de cada cotización (ASR-01) |
 | `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
 | `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
+| `OPERADOR_CORREO`, `OPERADOR_CONTRASENA` | `admin@solventa.local` y sin valor | Operador del portal con rol `administrador` |
 | `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
 | `SEGUNDOS_POR_FASE`, `MODO_CAIDA` | 60 y `lento` | Duración de cada fase y cómo falla el proveedor (`lento` supera el timeout, `caido` responde 503) |
 | `CLIENTES_OPEN_FINANCE` | 200 | Clientes distintos en las cotizaciones de `degradacion`; los repetidos usan el último valor bueno |
@@ -342,11 +366,11 @@ k6 termina con error si alguna petición supera su p95 o su porcentaje de errore
 
 Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
 
-`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta. La carpeta **Fallos simulados** tumba cada tercero y lo devuelve a normal. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`, y la carpeta **Portal web** crea el socio que usa **API de socios**.
+`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta. La carpeta **Fallos simulados** tumba cada tercero y lo devuelve a normal. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`. La carpeta **Portal web** entra como administrador con `operadorCorreo` y `operadorContrasena`, guarda `portalToken` y crea el socio que usa **API de socios**. **Operadores y roles** crea un asesor, comprueba que consulta pero no da de alta socios, y lo desactiva.
 
 ```bash
-npx newman run postman/recorrido-canales.postman_collection.json
-npx newman run postman/recorrido-canales.postman_collection.json --env-var baseUrl=http://localhost:8000
+npx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<clave>
+npx newman run postman/recorrido-canales.postman_collection.json --env-var baseUrl=http://localhost:8000 --env-var operadorContrasena=Solventa-local-2026
 ```
 
 En `local`, Siniestros guarda las evidencias en memoria y la URL de carga (`upload.local`) no resuelve fuera del clúster: la subida, el radicado y la asistencia fallan en Newman.

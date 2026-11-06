@@ -1,18 +1,48 @@
 from urllib.parse import quote
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from solventa_common.integration.base import call_upstream
+from solventa_common.operator_session import ADMIN, ADVISOR
 
 from canales.clients import cotizacion, identidad, polizas
+from canales.web.auth import Operator, require_operator, require_roles
 from canales.web.policies import policy_detail, recent_policies
 
 router = APIRouter(prefix="/web", tags=["BFF Web"])
+
+require_writer = require_roles(ADMIN, ADVISOR)
+require_admin = require_roles(ADMIN)
+
+readers = APIRouter(dependencies=[Depends(require_operator)])
+writers = APIRouter(dependencies=[Depends(require_writer)])
+admins = APIRouter(dependencies=[Depends(require_admin)])
+
+
+class OperatorLogin(BaseModel):
+    correo: str
+    contrasena: str
 
 
 @router.get("/")
 def info() -> dict:
     return {"component": "BFF Web"}
+
+
+@router.post("/sesiones")
+def start_session(credentials: OperatorLogin) -> dict:
+    return call_upstream(identidad.post, "/identidad/operadores/sesiones", json=credentials.model_dump())
+
+
+@readers.get("/sesion")
+def current_session(operator: Operator) -> dict:
+    return {
+        "id": operator.operator_id,
+        "correo": operator.email,
+        "nombre": operator.name,
+        "roles": list(operator.roles),
+    }
 
 
 CUSTOMER_FIELDS = frozenset(
@@ -30,17 +60,17 @@ CUSTOMER_FIELDS = frozenset(
 )
 
 
-@router.get("/ramos")
+@readers.get("/ramos")
 def listar_ramos() -> list:
     return call_upstream(cotizacion.get, "/catalogo/canales/web/ramos")
 
 
-@router.get("/productos/{producto_id}/contrato")
+@readers.get("/productos/{producto_id}/contrato")
 def contrato_producto(producto_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
 
 
-@router.get("/tipos-documento")
+@readers.get("/tipos-documento")
 def listar_tipos_documento() -> list:
     return call_upstream(identidad.get, "/identidad/tipos-documento")
 
@@ -142,7 +172,7 @@ def _open_finance_consent(consentimiento: dict | None) -> dict | None:
     }
 
 
-@router.post("/cotizaciones")
+@writers.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
     """El portal resuelve el cliente y el consentimiento; la cotización es la de todos los canales."""
     open_finance = _open_finance_consent(_validar_consentimiento_si_aplica(solicitud))
@@ -161,63 +191,67 @@ def cotizar(solicitud: dict) -> dict:
     )
 
 
-@router.get("/cotizaciones/{cotizacion_id}")
+@readers.get("/cotizaciones/{cotizacion_id}")
 def obtener_cotizacion(cotizacion_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
 
 
-@router.post("/socios", status_code=status.HTTP_201_CREATED)
-def dar_de_alta_socio(alta: dict) -> dict:
-    return call_upstream(cotizacion.post, "/gobierno-socios/socios", json=alta)
+@admins.post("/socios", status_code=status.HTTP_201_CREATED)
+def dar_de_alta_socio(alta: dict, operator: Operator) -> dict:
+    return call_upstream(cotizacion.post, "/gobierno-socios/socios", json={**alta, "autorizado_por": operator.name})
 
 
-@router.get("/socios")
+@readers.get("/socios")
 def listar_socios() -> list:
     return call_upstream(cotizacion.get, "/gobierno-socios/socios")
 
 
-@router.get("/socios/tipos")
+@readers.get("/socios/tipos")
 def listar_tipos_socio() -> list:
     return call_upstream(cotizacion.get, "/gobierno-socios/tipos")
 
 
-@router.get("/socios/alcances")
+@readers.get("/socios/alcances")
 def listar_alcances() -> list:
     return call_upstream(cotizacion.get, "/gobierno-socios/alcances")
 
 
-@router.get("/socios/{socio_id}")
+@readers.get("/socios/{socio_id}")
 def obtener_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
 
 
-@router.get("/socios/{socio_id}/configuracion")
+@readers.get("/socios/{socio_id}/configuracion")
 def consultar_configuracion_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}/configuracion")
 
 
-@router.put("/socios/{socio_id}/configuracion")
-def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
-    return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
+@admins.put("/socios/{socio_id}/configuracion")
+def actualizar_configuracion_socio(socio_id: str, configuracion: dict, operator: Operator) -> dict:
+    return call_upstream(
+        cotizacion.put,
+        f"/gobierno-socios/socios/{socio_id}/configuracion",
+        json={**configuracion, "actualizado_por": operator.name},
+    )
 
 
-@router.get("/polizas/estados")
+@readers.get("/polizas/estados")
 def listar_estados_poliza() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/estados")
 
 
-@router.get("/polizas/causas-cancelacion")
+@readers.get("/polizas/causas-cancelacion")
 def listar_causas_cancelacion() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/causas-cancelacion")
 
 
-@router.get("/polizas")
+@readers.get("/polizas")
 def listar_polizas() -> list[dict]:
     """Últimas pólizas de todos los canales con el asegurado, el socio y el ramo."""
     return recent_policies()
 
 
-@router.get("/polizas/{poliza_id}")
+@readers.get("/polizas/{poliza_id}")
 def obtener_poliza(poliza_id: str) -> dict:
     """La póliza con el asegurado, el socio, el ramo, sus cobros y sus siniestros."""
     return policy_detail(poliza_id)
@@ -226,16 +260,36 @@ def obtener_poliza(poliza_id: str) -> dict:
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---
 
 
-@router.post("/consentimientos/solicitar", status_code=status.HTTP_201_CREATED)
-def solicitar_consentimiento(solicitud: dict) -> dict:
-    return call_upstream(identidad.post, "/identidad/solicitar", json=solicitud)
+@writers.post("/consentimientos/solicitar", status_code=status.HTTP_201_CREATED)
+def solicitar_consentimiento(solicitud: dict, operator: Operator) -> dict:
+    return call_upstream(identidad.post, "/identidad/solicitar", json={**solicitud, "asesor": operator.name})
 
 
-@router.post("/consentimientos/validar")
+@writers.post("/consentimientos/validar")
 def validar_consentimiento(solicitud: dict) -> dict:
     return call_upstream(identidad.post, "/identidad/validar", json=solicitud)
 
 
-@router.get("/consentimientos/{consentimiento_id}")
+@readers.get("/consentimientos/{consentimiento_id}")
 def consultar_consentimiento(consentimiento_id: str) -> dict:
     return call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
+
+
+@admins.get("/operadores")
+def list_operators() -> list:
+    return call_upstream(identidad.get, "/identidad/operadores")
+
+
+@admins.post("/operadores", status_code=status.HTTP_201_CREATED)
+def create_operator(payload: dict) -> dict:
+    return call_upstream(identidad.post, "/identidad/operadores", json=payload)
+
+
+@admins.patch("/operadores/{operator_id}")
+def update_operator(operator_id: str, changes: dict) -> dict:
+    return call_upstream(identidad.patch, f"/identidad/operadores/{quote(operator_id, safe='')}", json=changes)
+
+
+router.include_router(readers)
+router.include_router(writers)
+router.include_router(admins)

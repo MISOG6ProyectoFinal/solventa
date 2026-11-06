@@ -185,9 +185,21 @@ function cotizar(nombre, url, cuerpo, headers) {
   if (oferta) cotizaciones.add(1, { name: nombre });
 }
 
+function sesionDelPortal() {
+  if (!__ENV.OPERADOR_CONTRASENA) throw new Error('Falta OPERADOR_CONTRASENA para iniciar sesión en el portal');
+  const sesion = http.post(
+    `${BASE_URL}/web/sesiones`,
+    JSON.stringify({ correo: __ENV.OPERADOR_CORREO, contrasena: __ENV.OPERADOR_CONTRASENA }),
+    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+  );
+  if (sesion.status !== 200) throw new Error(`Inicio de sesión en el portal: ${sesion.status} ${sesion.body}`);
+  return { ...JSON_HEADERS, Authorization: `Bearer ${sesion.json().token}` };
+}
+
 export function setup() {
+  const portal = sesionDelPortal();
   if (__ENV.SOCIO_ID && __ENV.SOCIO_CLIENT_ID && __ENV.SOCIO_SECRETO) {
-    return { socioId: __ENV.SOCIO_ID, clientId: __ENV.SOCIO_CLIENT_ID, secreto: __ENV.SOCIO_SECRETO };
+    return { portal, socioId: __ENV.SOCIO_ID, clientId: __ENV.SOCIO_CLIENT_ID, secreto: __ENV.SOCIO_SECRETO };
   }
   const identificador = `CARGA-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
   const alta = http.post(
@@ -200,11 +212,14 @@ export function setup() {
       alcances: ['cotizacion', 'emision', 'consulta'],
       autorizado_por: 'Prueba de carga',
     }),
-    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+    { headers: portal, tags: { name: 'Preparación' } },
   );
   if (alta.status !== 201) throw new Error(`Alta del socio de prueba: ${alta.status} ${alta.body}`);
   const socio = alta.json();
-  const configuracion = http.get(`${BASE_URL}/web/socios/${socio.id}/configuracion`, { tags: { name: 'Preparación' } });
+  const configuracion = http.get(`${BASE_URL}/web/socios/${socio.id}/configuracion`, {
+    headers: portal,
+    tags: { name: 'Preparación' },
+  });
   const ramos = configuracion
     .json()
     .ramos.filter((r) => r.id === RAMO || r.id === RAMO_HIPOTECARIO)
@@ -212,11 +227,11 @@ export function setup() {
   const habilitar = http.put(
     `${BASE_URL}/web/socios/${socio.id}/configuracion`,
     JSON.stringify({ ramos, actualizado_por: 'Prueba de carga' }),
-    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+    { headers: portal, tags: { name: 'Preparación' } },
   );
   if (habilitar.status !== 200) throw new Error(`Configuración del socio de prueba: ${habilitar.status} ${habilitar.body}`);
   console.log(`Socio de la prueba: ${socio.id} (${identificador})`);
-  return { socioId: socio.id, clientId: socio.client_id, secreto: socio.secreto };
+  return { portal, socioId: socio.id, clientId: socio.client_id, secreto: socio.secreto };
 }
 
 export function movil() {
@@ -318,18 +333,23 @@ export function movil() {
 }
 
 export function web(datos) {
+  const headers = datos.portal;
   pedir('Ramos del portal', 'GET', `${BASE_URL}/web/ramos`, null, {
+    headers,
     validar: (ramos) => ramos.some((r) => r.id === RAMO && r.productos.some((p) => p.id === PRODUCTO)),
   });
   pedir('Contrato del producto (portal)', 'GET', `${BASE_URL}/web/productos/${PRODUCTO}/contrato`, null, {
+    headers,
     validar: (contrato) => contrato.properties.destino.enum.includes('España'),
   });
-  cotizar('Cotizar desde el portal', `${BASE_URL}/web/cotizaciones`, solicitudViaje());
-  pedir('Listar socios', 'GET', `${BASE_URL}/web/socios`, null, { validar: (socios) => socios.length > 0 });
+  cotizar('Cotizar desde el portal', `${BASE_URL}/web/cotizaciones`, solicitudViaje(), headers);
+  pedir('Listar socios', 'GET', `${BASE_URL}/web/socios`, null, { headers, validar: (socios) => socios.length > 0 });
   pedir('Detalle del socio', 'GET', `${BASE_URL}/web/socios/${datos.socioId}`, null, {
+    headers,
     validar: (socio) => socio.id === datos.socioId,
   });
   pedir('Configuración del socio', 'GET', `${BASE_URL}/web/socios/${datos.socioId}/configuracion`, null, {
+    headers,
     validar: (c) => c.ramos.find((r) => r.id === RAMO).habilitado,
   });
 }

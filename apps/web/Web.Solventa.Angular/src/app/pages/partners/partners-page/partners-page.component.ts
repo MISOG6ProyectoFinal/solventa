@@ -7,6 +7,8 @@ import { CreatePartnerModalComponent } from '../components/create-partner-modal/
 import { ButtonComponent } from '../../../ui/components/button/button.component';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { Partner } from '../../../core/models/partner.model';
+import { ADMIN_ROLES } from '../../../core/constants/roles.constants';
+import { AuthService } from '../../../core/services/auth.service';
 import { LocaleService } from '../../../core/services/locale.service';
 
 @Component({
@@ -26,6 +28,9 @@ import { LocaleService } from '../../../core/services/locale.service';
 export class PartnersPageComponent implements OnInit {
   protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
+  private readonly auth = inject(AuthService);
+
+  protected readonly canCreate = computed(() => this.auth.hasRole(...ADMIN_ROLES));
 
   readonly partners = this.partnersService.partners;
   readonly loading = this.partnersService.loading;

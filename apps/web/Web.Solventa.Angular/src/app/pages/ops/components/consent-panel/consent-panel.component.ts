@@ -20,6 +20,7 @@ import {
 } from '../../interfaces/consent.interface';
 import { ConsentService } from '../../services/consent.service';
 import { LocaleService } from '../../../../core/services/locale.service';
+import { SessionService } from '../../../../core/services/session.service';
 
 export type ConsentPanelState = 'idle' | 'enviando' | 'pending' | 'validando' | 'validated';
 
@@ -47,6 +48,7 @@ function detailMessage(errorField: object): string | null {
 export class ConsentPanelComponent {
   protected readonly locale = inject(LocaleService);
   private readonly consentService = inject(ConsentService);
+  private readonly session = inject(SessionService);
 
   readonly required = input.required<boolean>();
   readonly ramoLabel = input.required<string>();
@@ -58,6 +60,7 @@ export class ConsentPanelComponent {
   readonly nombre = input<string>('');
   readonly apellido = input<string>('');
   readonly fechaNacimiento = input<string>('');
+  readonly readOnly = input(false);
   readonly requested = output<void>();
   readonly consentValidated = output<string>();
 
@@ -134,6 +137,10 @@ export class ConsentPanelComponent {
     return fallback;
   }
 
+  private advisor(): string {
+    return `${this.session.userName()} (asesor)`.trim();
+  }
+
   private resolveEmail(destino: string): string {
     const rawCorreo = this.correo()?.trim();
     if (rawCorreo && rawCorreo.length > 0) {
@@ -171,7 +178,7 @@ export class ConsentPanelComponent {
       contacto_mask: this.contactoMask(),
       open_finance: this.openFinance(),
       open_data: this.openData(),
-      asesor: 'Ana Gómez (asesor)',
+      asesor: this.advisor(),
     };
   }
 
@@ -195,7 +202,7 @@ export class ConsentPanelComponent {
       fuente: `${this.locale.t(this.channel() === 'sms' ? 'consent.source.sms' : 'consent.source.email')}: ${this.contactoDestino()}`,
       fecha_otorgamiento: new Date().toISOString().replace('T', ' ').substring(0, 16),
       fecha_hora: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      asesor: 'Ana Gómez (asesor)',
+      asesor: this.advisor(),
       canal: this.locale.t(this.channel() === 'sms' ? 'consent.channelLabel.sms' : 'consent.channelLabel.email'),
       contacto: this.contactoDestino(),
       alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : this.locale.t('consent.noScope'),

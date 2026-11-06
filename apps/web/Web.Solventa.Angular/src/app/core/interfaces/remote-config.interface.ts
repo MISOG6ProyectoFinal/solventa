@@ -1,5 +1,6 @@
 import { IconName } from '../../ui/constants/icons.constants';
 import { TextKey } from '../i18n/es';
+import { OperatorRole } from '../models/operator.model';
 
 /** Descripción de un Micro Frontend remoto registrado en el shell. */
 export interface RemoteConfig {
@@ -15,4 +16,6 @@ export interface RemoteConfig {
   readonly icon: IconName;
   /** Atributo `data-testid` del ítem de menú. */
   readonly testId: string;
+  /** Roles que ven el ítem y entran a la ruta; sin valor lo ven todos. */
+  readonly roles?: readonly OperatorRole[];
 }

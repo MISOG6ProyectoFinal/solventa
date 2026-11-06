@@ -66,6 +66,8 @@ case "${1:-up}" in
     importar_imagenes
     secreto_de_sesion
     desplegar
+    CONTRASENA=Solventa-local-2026 EN_IDENTIDAD="docker exec -i $CONTENEDOR kubectl -n $NAMESPACE exec -i deploy/identidad -c identidad --" \
+      ./scripts/crear_administrador.sh admin@solventa.local
     kubectl_k3s -n "$NAMESPACE" get pods
     echo "Listo: API en http://localhost:8000 (por ejemplo http://localhost:8000/movil/productos)"
     ;;

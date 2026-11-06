@@ -4,6 +4,10 @@
       <slv-alert tone="error">{{ locale.t('quote.catalogError') }}</slv-alert>
     }
 
+    @if (!canQuote()) {
+      <slv-alert tone="info">{{ locale.t('quote.readOnly') }}</slv-alert>
+    }
+
     <slv-quote-form
       #quoteForm
       [(ramo)]="ramo"
@@ -35,6 +39,7 @@
       [nombre]="formValues()['nombre'] || quoteForm.valueOf('nombre')"
       [apellido]="formValues()['apellido'] || quoteForm.valueOf('apellido')"
       [fechaNacimiento]="formValues()['fechaNacimiento'] || quoteForm.valueOf('fechaNacimiento')"
+      [readOnly]="!canQuote()"
       (consentValidated)="onConsentValidated($event)"
     />
 

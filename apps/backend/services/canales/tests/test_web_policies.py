@@ -4,6 +4,8 @@ import httpx
 from canales.main import app
 from fastapi.testclient import TestClient
 
+from tests import web_auth
+
 client = TestClient(app)
 
 POLICY = {
@@ -78,7 +80,7 @@ def _wire(monkeypatch, polizas: dict) -> dict[str, _Service]:
 def test_lists_recent_policies_with_customer_partner_and_line(monkeypatch):
     services = _wire(monkeypatch, {"/polizas/recientes": [POLICY, PARTNER_POLICY]})
 
-    response = client.get("/web/polizas")
+    response = client.get("/web/polizas", headers=web_auth.viewer())
 
     assert response.status_code == 200
     mobile, partner = response.json()
@@ -101,7 +103,7 @@ def test_lists_recent_policies_with_customer_partner_and_line(monkeypatch):
 def test_detail_adds_payments_and_claims(monkeypatch):
     _wire(monkeypatch, {"/polizas/pol-1": POLICY})
 
-    response = client.get("/web/polizas/pol-1")
+    response = client.get("/web/polizas/pol-1", headers=web_auth.viewer())
 
     assert response.status_code == 200
     assert response.json()["pagos"] == [{"id": "cobro-1", "estado": "aprobado", "monto": "3927000.00"}]
@@ -112,7 +114,7 @@ def test_missing_data_in_other_services_does_not_hide_the_policy(monkeypatch):
     services = _wire(monkeypatch, {"/polizas/pol-2": {**PARTNER_POLICY, "producto_id": "otro"}})
     services["pagos"].responses.clear()
 
-    response = client.get("/web/polizas/pol-2")
+    response = client.get("/web/polizas/pol-2", headers=web_auth.viewer())
 
     assert response.status_code == 200
     assert response.json()["producto"] is None
@@ -124,7 +126,7 @@ def test_missing_data_in_other_services_does_not_hide_the_policy(monkeypatch):
 def test_unknown_policy_keeps_the_404(monkeypatch):
     _wire(monkeypatch, {})
 
-    assert client.get("/web/polizas/no-existe").status_code == 404
+    assert client.get("/web/polizas/no-existe", headers=web_auth.viewer()).status_code == 404
 
 
 class _Upstream:
@@ -154,7 +156,11 @@ def test_mortgage_quote_carries_the_open_finance_consent_the_customer_granted(mo
     monkeypatch.setattr("canales.web.api.identidad", _Upstream(consent))
     monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
 
-    response = client.post("/web/cotizaciones", json={"producto_id": "vida-hipotecario", "consentimiento_id": "CNS-1"})
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "CNS-1"},
+        headers=web_auth.advisor(),
+    )
 
     assert response.status_code == 200
     assert cotizacion.calls[0][1]["json"]["consentimiento_open_finance"] == {
@@ -175,6 +181,10 @@ def test_consent_without_open_finance_does_not_send_it(monkeypatch):
     monkeypatch.setattr("canales.web.api.identidad", _Upstream(consent))
     monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
 
-    client.post("/web/cotizaciones", json={"producto_id": "vida-hipotecario", "consentimiento_id": "CNS-2"})
+    client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "CNS-2"},
+        headers=web_auth.advisor(),
+    )
 
     assert "consentimiento_open_finance" not in cotizacion.calls[0][1]["json"]

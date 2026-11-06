@@ -19,6 +19,13 @@ from identidad.kyc.domain.use_cases import (
     StartSession,
     ValidarConsentimiento,
 )
+from identidad.operadores.adapters.repository import InMemoryOperatorRepository, PostgresOperatorRepository
+from identidad.operadores.domain.use_cases import (
+    CreateOperator,
+    ListOperators,
+    StartOperatorSession,
+    UpdateOperator,
+)
 
 
 class Container:
@@ -33,6 +40,7 @@ class Container:
         self.clients = InMemoryClientRepository()
         self.accounts = InMemoryAccountRepository()
         self.consentimientos = InMemoryConsentimientoRepository()
+        self.operators = InMemoryOperatorRepository()
         self._wire()
 
     def use_postgres(self, engine: Engine) -> None:
@@ -48,6 +56,10 @@ class Container:
         consent_repo.create_schema()
         self.consentimientos = consent_repo
 
+        operator_repo = PostgresOperatorRepository(engine)
+        operator_repo.create_schema()
+        self.operators = operator_repo
+
         self._wire()
 
     def _wire(self) -> None:
@@ -59,6 +71,10 @@ class Container:
         self.buscar_cliente_por_documento = BuscarClientePorDocumento(self.clients)
         self.asegurar_cliente = AsegurarCliente(self.clients)
         self.get_client = GetClient(self.clients)
+        self.start_operator_session = StartOperatorSession(self.operators, self.secret)
+        self.create_operator = CreateOperator(self.operators)
+        self.list_operators = ListOperators(self.operators)
+        self.update_operator = UpdateOperator(self.operators)
 
 
 container = Container()

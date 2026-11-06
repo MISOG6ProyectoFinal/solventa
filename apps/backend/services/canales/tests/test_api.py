@@ -5,6 +5,7 @@ import pytest
 from canales.main import app
 from fastapi.testclient import TestClient
 
+from tests import web_auth
 from tests.movil_auth import authorization
 
 client = TestClient(app)
@@ -34,7 +35,8 @@ def test_socios_exige_api_key():
 
 
 def test_servicio_interno_caido_responde_503():
-    assert client.post("/web/cotizaciones", json={"producto_id": "hogar"}).status_code == 503
+    response = client.post("/web/cotizaciones", json={"producto_id": "hogar"}, headers=web_auth.advisor())
+    assert response.status_code == 503
 
 
 class _Upstream:
@@ -169,7 +171,7 @@ def test_siniestros_no_disponible_responde_503():
 def test_bff_web_indica_canal_al_consenso(mock_client: MagicMock):
     mock_client.get.return_value = {"requiere_consentimiento": False}
     mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
-    response = client.post("/web/cotizaciones", json=SOLICITUD)
+    response = client.post("/web/cotizaciones", json=SOLICITUD, headers=web_auth.advisor())
     assert response.status_code == 200
     assert mock_client.post.call_args.args[0] == "/consenso/cotizaciones"
     assert mock_client.post.call_args.kwargs["headers"] == {"X-Canal": "web"}
@@ -242,17 +244,20 @@ def test_bff_web_da_de_alta_y_consulta_socios(monkeypatch):
     upstream = _Upstream(response=creado)
     monkeypatch.setattr("canales.web.api.cotizacion", upstream)
 
-    alta = client.post("/web/socios", json=ALTA_SOCIO)
+    alta = client.post("/web/socios", json=ALTA_SOCIO, headers=web_auth.admin())
     assert alta.status_code == 201
     assert alta.json() == creado
-    assert upstream.calls[0] == ("/gobierno-socios/socios", {"json": ALTA_SOCIO})
+    assert upstream.calls[0] == (
+        "/gobierno-socios/socios",
+        {"json": {**ALTA_SOCIO, "autorizado_por": web_auth.OPERATOR_NAME}},
+    )
 
     upstream.response = [{"id": "s-1"}]
-    assert client.get("/web/socios").json() == [{"id": "s-1"}]
+    assert client.get("/web/socios", headers=web_auth.viewer()).json() == [{"id": "s-1"}]
     assert upstream.calls[1][0] == "/gobierno-socios/socios"
 
     upstream.response = {"id": "s-1"}
-    assert client.get("/web/socios/s-1").json() == {"id": "s-1"}
+    assert client.get("/web/socios/s-1", headers=web_auth.viewer()).json() == {"id": "s-1"}
     assert upstream.calls[2][0] == "/gobierno-socios/socios/s-1"
 
 
@@ -263,7 +268,7 @@ def test_bff_web_conserva_el_motivo_del_identificador_duplicado(monkeypatch):
     }
     monkeypatch.setattr("canales.web.api.cotizacion", _Upstream(error=_error_json(409, detalle)))
 
-    response = client.post("/web/socios", json=ALTA_SOCIO)
+    response = client.post("/web/socios", json=ALTA_SOCIO, headers=web_auth.admin())
 
     assert response.status_code == 409
     assert response.json()["detail"] == detalle
@@ -273,13 +278,16 @@ def test_bff_web_consulta_y_actualiza_la_configuracion_del_socio(monkeypatch):
     vigente = {"socio_id": "s-1", "ramos": [{"id": "ramo-viaje", "habilitado": True, "coberturas": []}]}
     upstream = _Upstream(response=vigente)
     monkeypatch.setattr("canales.web.api.cotizacion", upstream)
-    cambio = {"ramos": [{"ramo_id": "ramo-viaje", "coberturas": []}], "actualizado_por": "Ana Gómez"}
+    cambio = {"ramos": [{"ramo_id": "ramo-viaje", "coberturas": []}]}
 
-    assert client.get("/web/socios/s-1/configuracion").json() == vigente
-    assert client.put("/web/socios/s-1/configuracion", json=cambio).json() == vigente
+    assert client.get("/web/socios/s-1/configuracion", headers=web_auth.viewer()).json() == vigente
+    assert client.put("/web/socios/s-1/configuracion", json=cambio, headers=web_auth.admin()).json() == vigente
 
     assert upstream.calls[0][0] == "/gobierno-socios/socios/s-1/configuracion"
-    assert upstream.calls[1] == ("/gobierno-socios/socios/s-1/configuracion", {"json": cambio})
+    assert upstream.calls[1] == (
+        "/gobierno-socios/socios/s-1/configuracion",
+        {"json": {**cambio, "actualizado_por": web_auth.OPERATOR_NAME}},
+    )
 
 
 def test_bff_socios_conserva_el_error_de_alcance_por_ramo(monkeypatch):
@@ -312,10 +320,10 @@ def test_bff_web_proxy_consentimientos(monkeypatch):
     upstream = _Upstream(response=resp_solicitud)
     monkeypatch.setattr("canales.web.api.identidad", upstream)
 
-    res_post = client.post("/web/consentimientos/solicitar", json=solicitud)
+    res_post = client.post("/web/consentimientos/solicitar", json=solicitud, headers=web_auth.advisor())
     assert res_post.status_code == 201
     assert res_post.json() == resp_solicitud
-    assert upstream.calls[0] == ("/identidad/solicitar", {"json": solicitud})
+    assert upstream.calls[0] == ("/identidad/solicitar", {"json": {**solicitud, "asesor": web_auth.OPERATOR_NAME}})
 
     resp_validar = {
         "consentimiento_id": "CNS-12345",
@@ -327,7 +335,11 @@ def test_bff_web_proxy_consentimientos(monkeypatch):
         "open_data": True,
     }
     upstream.response = resp_validar
-    res_val = client.post("/web/consentimientos/validar", json={"consentimiento_id": "CNS-12345", "codigo": "123456"})
+    res_val = client.post(
+        "/web/consentimientos/validar",
+        json={"consentimiento_id": "CNS-12345", "codigo": "123456"},
+        headers=web_auth.advisor(),
+    )
     assert res_val.status_code == 200
     assert res_val.json() == resp_validar
 
@@ -340,7 +352,7 @@ def test_bff_web_proxy_consentimientos(monkeypatch):
         "alcance": "Open Finance, Open Data",
     }
     upstream.response = resp_consulta
-    res_get = client.get("/web/consentimientos/CNS-12345")
+    res_get = client.get("/web/consentimientos/CNS-12345", headers=web_auth.viewer())
     assert res_get.status_code == 200
     assert res_get.json() == resp_consulta
 
@@ -394,6 +406,7 @@ def test_web_cotizacion_hipotecario_sin_consentimiento_responde_422(monkeypatch)
     response = client.post(
         "/web/cotizaciones",
         json={"producto_id": "vida-hipotecario", "valor_credito": 200000000},
+        headers=web_auth.advisor(),
     )
     assert response.status_code == 422
     assert "requiere consentimiento digital" in response.json()["detail"]
@@ -407,6 +420,7 @@ def test_web_cotizacion_hipotecario_consentimiento_no_otorgado_responde_422(monk
     response = client.post(
         "/web/cotizaciones",
         json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+        headers=web_auth.advisor(),
     )
     assert response.status_code == 422
     assert "no se encuentra otorgado" in response.json()["detail"]
@@ -421,6 +435,7 @@ def test_web_cotizacion_hipotecario_consentimiento_otorgado_reenvia(monkeypatch)
     response = client.post(
         "/web/cotizaciones",
         json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+        headers=web_auth.advisor(),
     )
     assert response.status_code == 200
     assert response.json()["id"] == "COT-2026-1234"
@@ -436,6 +451,7 @@ def test_web_cotizacion_hipotecario_consentimiento_otorgado_title_case_reenvia(m
     response = client.post(
         "/web/cotizaciones",
         json={"producto_id": "vida-hipotecario", "consentimiento_id": "cons-1"},
+        headers=web_auth.advisor(),
     )
     assert response.status_code == 200
     assert response.json()["id"] == "COT-2026-1234"
@@ -446,7 +462,7 @@ def test_web_obtener_cotizacion_persistida(monkeypatch):
     cotizacion_mock = _Upstream(response={"id": "COT-2026-7641", "estado": "VIGENTE"})
     monkeypatch.setattr("canales.web.api.cotizacion", cotizacion_mock)
 
-    response = client.get("/web/cotizaciones/COT-2026-7641")
+    response = client.get("/web/cotizaciones/COT-2026-7641", headers=web_auth.viewer())
     assert response.status_code == 200
     assert response.json()["id"] == "COT-2026-7641"
     assert cotizacion_mock.calls[0][0] == "/consenso/cotizaciones/COT-2026-7641"
@@ -481,7 +497,7 @@ def test_web_cotizacion_asocia_cliente_existente_por_documento(monkeypatch):
         "viajeros": 1,
         "destino": "España",
     }
-    resp = client.post("/web/cotizaciones", json=payload)
+    resp = client.post("/web/cotizaciones", json=payload, headers=web_auth.advisor())
     assert resp.status_code == 200
     cotizar_call = cotizacion_mock.calls[0][1]
     assert cotizar_call["headers"] == {"X-Canal": "web", "X-Cliente-Id": "CLI-10203040"}
@@ -529,7 +545,7 @@ def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
         "viajeros": 1,
         "destino": "México",
     }
-    resp = client.post("/web/cotizaciones", json=payload)
+    resp = client.post("/web/cotizaciones", json=payload, headers=web_auth.advisor())
     assert resp.status_code == 200
     cotizar_call = cotizacion_mock.calls[0][1]
     assert cotizar_call["headers"]["X-Cliente-Id"] == "CLI-99998888"
