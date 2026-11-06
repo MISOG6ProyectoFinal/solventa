@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from solventa_common.db import build_engine
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
@@ -24,6 +24,7 @@ from polizas.ciclo_vida.domain.use_cases import (
     GetRenewalOfferUseCase,
     IssuePolicyUseCase,
     ListClientPoliciesUseCase,
+    ListRecentPoliciesUseCase,
 )
 from polizas.config import settings
 
@@ -39,6 +40,7 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
     use_cases["list"] = ListClientPoliciesUseCase(policies)
     use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
     use_cases["get"] = GetPolicyUseCase(policies)
+    use_cases["recent"] = ListRecentPoliciesUseCase(policies)
 
 
 def _default_wire() -> None:
@@ -70,6 +72,12 @@ def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     if not token:
         raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
     return use_cases["list"].execute(token)
+
+
+@router.get("/recientes", response_model=list[Policy])
+def list_recent_policies(limite: Annotated[int, Query(ge=1, le=200)] = 100) -> list[Policy]:
+    """Lectura interna para el back-office: las últimas pólizas de todos los canales."""
+    return use_cases["recent"].execute(limite)
 
 
 @router.get("/{poliza_id}", response_model=Policy)

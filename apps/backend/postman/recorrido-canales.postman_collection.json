@@ -1365,7 +1365,7 @@
               }
             ],
             "url": "{{baseUrl}}/web/cotizaciones",
-            "description": "Vida hipotecario exige un consentimiento OTORGADO (422 si falta o no está otorgado). El portal resuelve el cliente por documento y lo envía a Cotización en X-Cliente-Id; los datos personales no viajan a Cotización. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos.",
+            "description": "Vida hipotecario exige un consentimiento OTORGADO (422 si falta o no está otorgado). El portal resuelve el cliente por documento y lo envía a Cotización en X-Cliente-Id; los datos personales no viajan a Cotización. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos. Si el consentimiento autoriza Open Finance, el portal lo envía como consentimiento_open_finance y la cotización consulta el score en Open Finance (servicio simuladores).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
@@ -1382,6 +1382,7 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(oferta.producto_id).to.equal('vida-hipotecario');",
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+                  "  pm.expect(oferta.senales[0].fuente).to.equal('open-finance');",
                   "});"
                 ]
               }
@@ -1503,12 +1504,38 @@
           ]
         },
         {
+          "name": "Listar pólizas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas",
+            "description": "Últimas 100 pólizas de todos los canales, la más reciente primero, con el asegurado, el socio, el producto y el ramo. Es la consulta de pólizas del back-office."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const polizas = pm.response.json();",
+                  "pm.test('Incluye la póliza emitida en el móvil', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const poliza = polizas.find((p) => p.id === pm.collectionVariables.get('polizaMovilId'));",
+                  "  pm.expect(poliza).to.be.an('object');",
+                  "  pm.expect(poliza.ramo_id).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Consultar póliza desde el portal",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/web/polizas/{{polizaMovilId}}",
-            "description": "Póliza con su estado, prima y vigencia. 404 poliza_no_encontrada si no existe."
+            "description": "Póliza con el asegurado (Identidad), el socio, el producto y el ramo (Cotización), sus cobros (Pagos) y sus siniestros (Siniestros). Un dato que falta en otro servicio no oculta la póliza. 404 poliza_no_encontrada si no existe."
           },
           "event": [
             {
@@ -1517,9 +1544,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "const poliza = pm.response.json();",
-                  "pm.test('Responde la póliza emitida en el móvil', function () {",
+                  "pm.test('Responde la póliza emitida en el móvil con su cobro', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(poliza.id).to.equal(pm.collectionVariables.get('polizaMovilId'));",
+                  "  pm.expect(poliza.cliente).to.be.an('object');",
+                  "  pm.expect(poliza.pagos.map((p) => p.estado)).to.include('aprobado');",
+                  "  pm.expect(poliza.siniestros).to.be.an('array');",
                   "});"
                 ]
               }

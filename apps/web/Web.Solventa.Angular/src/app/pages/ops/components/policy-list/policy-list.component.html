@@ -21,7 +21,7 @@
         <select slvInput [(ngModel)]="partnerFilter">
           <option [value]="allFilter">{{ locale.t('common.all') }}</option>
           @for (partner of partners(); track partner) {
-            <option [value]="partner">{{ partner }}</option>
+            <option [value]="partner">{{ locale.label('policies.source', partner) }}</option>
           }
         </select>
       </slv-field>
@@ -48,8 +48,8 @@
               <td class="px-5 py-3 font-medium text-foreground">{{ policy.number }}</td>
               <td class="px-5 py-3 text-foreground">{{ policy.insuredName }}</td>
               <td class="px-5 py-3 text-muted-foreground">{{ policy.tipoDocumento }} {{ policy.identification }}</td>
-              <td class="px-5 py-3">{{ locale.label('ramo', policy.ramo) }}</td>
-              <td class="px-5 py-3 text-muted-foreground">{{ policy.socioOrigen }}</td>
+              <td class="px-5 py-3">{{ locale.label('ramo', policy.ramo, policy.producto) }}</td>
+              <td class="px-5 py-3 text-muted-foreground">{{ locale.label('policies.source', policy.socioOrigen) }}</td>
               <td class="px-5 py-3">
                 <slv-badge [tone]="statusTone[policy.status]">{{ locale.label('status.policy', policy.status).toUpperCase() }}</slv-badge>
               </td>

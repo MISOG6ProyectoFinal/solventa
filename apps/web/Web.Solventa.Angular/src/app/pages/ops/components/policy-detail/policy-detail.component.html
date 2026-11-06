@@ -26,9 +26,9 @@
         <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">{{ locale.t('policy.detail') }}</p>
         <h2 class="text-xl font-semibold font-serif text-foreground">{{ policy().number }}</h2>
         <p class="text-sm mt-1 text-muted-foreground">
-          {{ policy().producto }} · {{ locale.label('ramo', policy().ramo) }} · {{ locale.t('policy.period', { start: policy().startDate, end: policy().endDate }) }}
+          {{ policy().producto }} · {{ locale.label('ramo', policy().ramo, policy().producto) }} · {{ locale.t('policy.period', { start: policy().startDate, end: policy().endDate }) }}
         </p>
-        <p class="text-xs mt-1 text-muted-foreground">{{ locale.t('policy.partner', { partner: policy().socioOrigen }) }}</p>
+        <p class="text-xs mt-1 text-muted-foreground">{{ locale.t('policy.partner', { partner: locale.label('policies.source', policy().socioOrigen) }) }}</p>
       </div>
       <slv-badge [tone]="statusTone[policy().status]">{{ locale.label('status.policy', policy().status) }}</slv-badge>
     </div>
@@ -130,12 +130,14 @@
                 <p class="text-xs mt-1 text-muted-foreground">
                   {{ locale.t('policy.claimDates', { occurred: claim.fechaOcurrencia, reported: claim.fechaAviso }) }}
                 </p>
-                <p class="text-xs mt-1 text-muted-foreground">
-                  {{ locale.t('policy.claimEstimated', { amount: claim.montoEstimado | copCurrency }) }}
-                  @if (claim.montoAprobado !== undefined) {
-                    {{ locale.t('policy.claimApproved', { amount: claim.montoAprobado | copCurrency }) }}
-                  }
-                </p>
+                @if (claim.montoEstimado !== undefined) {
+                  <p class="text-xs mt-1 text-muted-foreground">
+                    {{ locale.t('policy.claimEstimated', { amount: claim.montoEstimado | copCurrency }) }}
+                    @if (claim.montoAprobado !== undefined) {
+                      {{ locale.t('policy.claimApproved', { amount: claim.montoAprobado | copCurrency }) }}
+                    }
+                  </p>
+                }
               </div>
             } @empty {
               <p class="text-sm text-muted-foreground">{{ locale.t('policy.noClaims') }}</p>

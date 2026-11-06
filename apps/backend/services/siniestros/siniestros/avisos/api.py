@@ -111,6 +111,12 @@ def listar_avisos(x_cliente_id: Annotated[str, Header()]) -> list[Aviso]:
     return casos["listar_avisos"].execute(cliente_id=x_cliente_id)
 
 
+@router.get("/polizas/{poliza_id}/avisos")
+def list_policy_notices(poliza_id: str) -> list[Aviso]:
+    """Lectura interna para el back-office: los avisos de una póliza, el más reciente primero."""
+    return repository.list_by_policy(poliza_id)
+
+
 @router.get("/avisos/{aviso_id}")
 def get_notice(aviso_id: str) -> Aviso:
     """Lectura interna. El canal decide si quien pregunta es dueño del aviso."""

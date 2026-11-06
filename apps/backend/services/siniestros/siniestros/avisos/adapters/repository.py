@@ -94,6 +94,12 @@ class PostgresAvisoRepository:
             rows = conn.execute(query).mappings().all()
         return [_aviso(row) for row in rows]
 
+    def list_by_policy(self, poliza_id: str) -> list[Aviso]:
+        query = select(avisos).where(avisos.c.poliza_id == poliza_id).order_by(avisos.c.creado_en.desc())
+        with self.engine.connect() as conn:
+            rows = conn.execute(query).mappings().all()
+        return [_aviso(row) for row in rows]
+
     def add_evidencia(self, evidencia: Evidencia) -> None:
         with self.engine.begin() as conn:
             conn.execute(insert(evidencias).values(**_evidencia_values(evidencia)))

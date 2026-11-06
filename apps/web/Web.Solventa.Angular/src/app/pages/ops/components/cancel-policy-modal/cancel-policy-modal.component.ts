@@ -7,7 +7,8 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
-import { CANCEL_CAUSES, NON_REFUNDABLE_CAUSE, OPS_TODAY } from '../../constants/ops.constants';
+import { CANCEL_CAUSES, NON_REFUNDABLE_CAUSE } from '../../constants/ops.constants';
+import { todayIso } from '../../utils/today.utils';
 import { calculateCancellation } from '../../utils/policy-cancellation.utils';
 import { LocaleService } from '../../../../core/services/locale.service';
 
@@ -29,14 +30,14 @@ export class CancelPolicyModalComponent {
 
   protected readonly causes = CANCEL_CAUSES;
   protected readonly nonRefundableCause = NON_REFUNDABLE_CAUSE;
-  protected readonly today = OPS_TODAY;
+  protected readonly today = todayIso();
 
   protected readonly step = signal<CancelStep>('form');
   protected readonly cause = signal('');
 
   protected readonly quote = computed(() => {
     const cause = this.cause();
-    return cause ? calculateCancellation(this.policy(), cause, OPS_TODAY) : null;
+    return cause ? calculateCancellation(this.policy(), cause, this.today) : null;
   });
 
   protected goToConfirmation(): void {

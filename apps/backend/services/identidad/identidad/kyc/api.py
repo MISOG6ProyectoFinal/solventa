@@ -139,6 +139,14 @@ def buscar_cliente_por_documento(tipo_documento: str, numero_documento: str) -> 
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
 
+@router.get("/clientes/{cliente_id}", response_model=RespuestaCliente)
+def get_client(cliente_id: str) -> RespuestaCliente:
+    try:
+        return container.get_client.execute(cliente_id)
+    except ClienteNoEncontrado as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
 @router.post("/clientes/asegurar", response_model=RespuestaCliente)
 def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
     try:
