@@ -23,6 +23,8 @@ from identidad.kyc.domain.models import (
     SolicitudConsentimiento,
 )
 
+CORREO_DE_OTRO_DOCUMENTO = "El correo ya está registrado con otro documento"
+
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 
 
@@ -141,7 +143,7 @@ def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
     try:
         return container.asegurar_cliente.execute(solicitud)
     except ValueError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, "El correo ya está registrado con otro documento") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
 
 
 # --- Endpoints de Consentimiento Digital (HU002) ---
@@ -149,7 +151,10 @@ def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
 
 @router.post("/solicitar", status_code=status.HTTP_201_CREATED, response_model=RespuestaSolicitud)
 def solicitar_consentimiento(solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
-    return container.solicitar_consentimiento.execute(solicitud)
+    try:
+        return container.solicitar_consentimiento.execute(solicitud)
+    except EmailAlreadyRegistered as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
 
 
 @router.post("/validar", response_model=RespuestaValidacion)

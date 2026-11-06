@@ -230,7 +230,10 @@ class SolicitarConsentimiento:
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
             )
-            cliente_guardado = self.clients.upsert(cliente_obj)
+            try:
+                cliente_guardado = self.clients.upsert(cliente_obj)
+            except ValueError as exc:
+                raise EmailAlreadyRegistered from exc
             cliente_id = cliente_guardado.id
 
         # 2. Contacto, Máscara y Fuente
