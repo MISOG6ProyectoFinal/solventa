@@ -21,7 +21,7 @@
       </slv-alert>
     }
     @if (loading()) {
-      <p class="text-sm text-muted-foreground" role="status">{{ locale.t('policies.loading') }}</p>
+      <output class="block text-sm text-muted-foreground">{{ locale.t('policies.loading') }}</output>
     } @else if (!selectedPolicyId()) {
       <slv-policy-list 
         [policies]="policies()" 

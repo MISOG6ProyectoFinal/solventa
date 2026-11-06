@@ -23,6 +23,13 @@ import { LocaleService } from '../../../../core/services/locale.service';
 
 export type ConsentPanelState = 'idle' | 'enviando' | 'pending' | 'validando' | 'validated';
 
+/** Texto del error del backend: `detail` como texto o `{ codigo, mensaje }`. */
+function detailMessage(errorField: object): string | null {
+  const detail = (errorField as Record<string, unknown>)['detail'];
+  const text = typeof detail === 'string' ? detail : (detail as { mensaje?: unknown } | null)?.mensaje;
+  return typeof text === 'string' && text.trim().length > 0 ? text : null;
+}
+
 /** Consentimiento digital Open Finance / Open Data (solo obligatorio en ramos que lo requieren). */
 @Component({
   selector: 'slv-consent-panel',
@@ -111,15 +118,9 @@ export class ConsentPanelComponent {
     if (err && typeof err === 'object') {
       const errorObj = err as Record<string, unknown>;
       const errorField = errorObj['error'];
-      if (errorField && typeof errorField === 'object') {
-        const detail = (errorField as Record<string, unknown>)['detail'];
-        if (typeof detail === 'string' && detail.trim().length > 0) {
-          return detail;
-        }
-        const mensaje = (detail as { mensaje?: unknown } | null)?.mensaje;
-        if (typeof mensaje === 'string' && mensaje.trim().length > 0) {
-          return mensaje;
-        }
+      const detail = errorField && typeof errorField === 'object' ? detailMessage(errorField) : null;
+      if (detail) {
+        return detail;
       }
       const message = errorObj['message'];
       if (

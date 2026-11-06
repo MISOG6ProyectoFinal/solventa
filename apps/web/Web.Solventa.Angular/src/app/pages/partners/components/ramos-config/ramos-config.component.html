@@ -9,7 +9,7 @@
   }
 
   @if (loading()) {
-    <p class="text-sm text-muted-foreground" role="status">{{ locale.t('ramosConfig.loading') }}</p>
+    <output class="block text-sm text-muted-foreground">{{ locale.t('ramosConfig.loading') }}</output>
   }
 
   @if (config(); as config) {
@@ -48,13 +48,13 @@
     <slv-card class="!bg-[#F5F8FA]" data-testid="config-summary">
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('ramosConfig.current') }}</p>
-        <p class="text-xs text-muted-foreground" role="status">
+        <output class="block text-xs text-muted-foreground">
           @if (saving()) {
             {{ locale.t('ramosConfig.saving') }}
           } @else if (config.updatedAt) {
             {{ locale.t('ramosConfig.updated', { date: config.updatedAt, user: config.updatedBy ?? '' }) }}
           }
-        </p>
+        </output>
       </div>
       @if (enabledRamos().length === 0) {
         <p class="text-sm text-muted-foreground">{{ locale.t('ramosConfig.none') }}</p>
