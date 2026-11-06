@@ -5,6 +5,7 @@ from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
 from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
 from cotizacion.consenso.domain.models import CoberturaOferta
+from cotizacion.consenso.domain.quote_contract import published_contract
 from cotizacion.gobierno_socios.domain.configuracion import (
     CoberturaConfiguracionResponse,
     CoberturaFueraDelRamo,
@@ -15,7 +16,7 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct, published_contract
+from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct
 from cotizacion.gobierno_socios.domain.models import RamoResumen, Socio, SocioNoEncontrado
 from cotizacion.gobierno_socios.domain.ports import ConfiguracionRepository, SocioRepository
 

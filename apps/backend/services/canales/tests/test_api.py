@@ -475,9 +475,15 @@ def test_web_cotizacion_asocia_cliente_existente_por_documento(monkeypatch):
     }
     resp = client.post("/web/cotizaciones", json=payload)
     assert resp.status_code == 200
-    # Verifica que a cotizacion le llego el cliente_id existente
     cotizar_call = cotizacion_mock.calls[0][1]
-    assert cotizar_call["json"]["cliente_id"] == "CLI-10203040"
+    assert cotizar_call["headers"] == {"X-Canal": "web", "X-Cliente-Id": "CLI-10203040"}
+    assert cotizar_call["json"] == {
+        "producto_id": "viaje-internacional",
+        "fecha_salida": "2026-11-01",
+        "fecha_regreso": "2026-11-10",
+        "viajeros": 1,
+        "destino": "España",
+    }
 
 
 def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
@@ -517,9 +523,11 @@ def test_web_cotizacion_crea_cliente_si_no_existe_por_documento(monkeypatch):
     }
     resp = client.post("/web/cotizaciones", json=payload)
     assert resp.status_code == 200
-    # Verifica que se envio el cliente_id nuevo a la cotizacion
     cotizar_call = cotizacion_mock.calls[0][1]
-    assert cotizar_call["json"]["cliente_id"] == "CLI-99998888"
+    assert cotizar_call["headers"]["X-Cliente-Id"] == "CLI-99998888"
+    assert not {"cliente_id", "tipo_documento", "numero_documento", "nombre", "email", "telefono"} & set(
+        cotizar_call["json"]
+    )
 
 
 def test_movil_reenvia_la_consulta_de_prestadores_cercanos(monkeypatch):

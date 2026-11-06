@@ -1,4 +1,4 @@
-"""Orquestación: validar producto → consenso → enriquecer oferta → persistir una cotización."""
+"""Orquestación: consenso → enriquecer oferta → persistir una cotización."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -7,9 +7,8 @@ from decimal import Decimal
 
 from solventa_common.vigencia_cotizacion import calcular_vigente_hasta
 
-from cotizacion.catalogo.domain.models import Canal
+from cotizacion.catalogo.domain.models import Canal, Producto
 from cotizacion.catalogo.domain.ports import CatalogoRepository
-from cotizacion.catalogo.domain.use_cases import ValidarProductoParaCanalUseCase
 from cotizacion.consenso.domain.consensus import votar
 from cotizacion.consenso.domain.models import (
     ESTADO_COTIZACION_VIGENTE,
@@ -32,11 +31,11 @@ FanoutFn = Callable[[dict], Awaitable[list[dict]]]
 VIGENCIA_DIAS_DEFAULT = 365
 
 
-def _cliente_movil(canal: Canal, cliente_id: str | None) -> str | None:
-    if canal != Canal.MOBILE or cliente_id is None:
+def _customer(channel: Canal, customer_id: str | None) -> str | None:
+    """Móvil y web cotizan para un cliente identificado; un socio nunca asigna la oferta a un cliente."""
+    if channel == Canal.SOCIOS or customer_id is None:
         return None
-    propietario = cliente_id.strip()
-    return propietario or None
+    return customer_id.strip() or None
 
 
 def construir_vigencia_propuesta(hoy: date | None = None, dias: int = VIGENCIA_DIAS_DEFAULT) -> VigenciaPropuesta:
@@ -53,7 +52,6 @@ class CotizarConConsensoUseCase:
         quorum: int,
         vigencia_dias: int = VIGENCIA_DIAS_DEFAULT,
     ) -> None:
-        self.validar_producto = ValidarProductoParaCanalUseCase(catalogo)
         self.catalogo = catalogo
         self.cotizaciones = cotizaciones
         self.fanout = fanout
@@ -63,17 +61,18 @@ class CotizarConConsensoUseCase:
     async def execute(
         self,
         solicitud: SolicitudRating,
+        producto: Producto,
         canal: Canal,
         cliente_id: str | None = None,
         signals: list[AppliedSignal] | None = None,
         allowed_coverages: set[str] | None = None,
         partner_id: str | None = None,
     ) -> OfertaCotizacion:
-        """allowed_coverages limita la oferta a lo que el socio puede vender; None ofrece todas.
+        """El producto ya viene validado para el canal. allowed_coverages limita la oferta a lo que
+        el socio puede vender; None ofrece todas.
 
         El catálogo y la persistencia son síncronos: corren en un hilo para no detener el event loop.
         """
-        producto = await asyncio.to_thread(self.validar_producto.execute, solicitud.producto_id, canal)
         signals = signals or []
         body = solicitud.model_dump(mode="json", exclude={"cliente_id"})
         respuestas = await self.fanout(body)
@@ -98,7 +97,7 @@ class CotizarConConsensoUseCase:
             version_reglas=str(elegida["version_reglas"]),
             datos_riesgo=body,
             canal=str(canal),
-            cliente_id=getattr(solicitud, "cliente_id", None) or _cliente_movil(canal, cliente_id),
+            cliente_id=_customer(canal, cliente_id),
             socio_id=partner_id if canal == Canal.SOCIOS else None,
             degradada=any(signal.degraded for signal in signals),
             senales=signals,

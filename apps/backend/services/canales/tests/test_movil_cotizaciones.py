@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
+import httpx
 from canales.main import app
 from fastapi.testclient import TestClient
 
@@ -105,32 +106,46 @@ def test_bff_movil_no_propaga_pii_a_cotizacion(mock_client: MagicMock):
 
 
 @patch("canales.movil.api.cotizacion")
-def test_bff_movil_valida_el_formulario_antes_de_delegar(mock_client: MagicMock):
+def test_bff_movil_valida_el_titular_antes_de_delegar(mock_client: MagicMock):
     invalidas = (
         solicitud_viaje(nombre=""),
         solicitud_viaje(nombre="   "),
         solicitud_viaje(cedula=""),
         solicitud_viaje(cedula="10A0304050"),
-        solicitud_viaje(destino="Francia"),
-        solicitud_viaje(fecha_salida=(SALIDA - timedelta(days=1)).isoformat()),
-        solicitud_viaje(fecha_regreso=SALIDA.isoformat()),
-        solicitud_viaje(fecha_regreso=(SALIDA - timedelta(days=1)).isoformat()),
-        solicitud_viaje(viajeros=0),
-        solicitud_viaje(viajeros=-2),
     )
     headers = authorization()
     for body in invalidas:
         response = client.post("/movil/cotizaciones", json=body, headers=headers)
         assert response.status_code == 422, body
+        assert response.json()["detail"]["codigo"] == "datos_invalidos"
     mock_client.post.assert_not_called()
 
 
 @patch("canales.movil.api.cotizacion")
-def test_bff_movil_exige_todos_los_campos(mock_client: MagicMock):
-    completa = solicitud_viaje()
+def test_bff_movil_exige_nombre_y_cedula(mock_client: MagicMock):
     headers = authorization()
-    for campo in completa:
-        body = {k: v for k, v in completa.items() if k != campo}
+    for campo in ("nombre", "cedula"):
+        body = {k: v for k, v in solicitud_viaje().items() if k != campo}
         response = client.post("/movil/cotizaciones", json=body, headers=headers)
         assert response.status_code == 422, campo
+        assert response.json()["detail"]["campos"] == [{"campo": campo, "error": "Campo obligatorio"}]
     mock_client.post.assert_not_called()
+
+
+@patch("canales.movil.api.cotizacion")
+def test_bff_movil_deja_las_reglas_del_viaje_a_cotizacion(mock_client: MagicMock):
+    detalle = {
+        "codigo": "datos_invalidos",
+        "mensaje": "La solicitud tiene datos faltantes o inválidos. No se calculó la prima.",
+        "campos": [{"campo": "solicitud", "error": "La fecha de salida no puede ser anterior a hoy"}],
+    }
+    request = httpx.Request("POST", "https://cotizacion/consenso/cotizaciones")
+    rechazo = httpx.Response(422, json={"detail": detalle}, request=request)
+    mock_client.post.side_effect = httpx.HTTPStatusError("422", request=request, response=rechazo)
+    ayer = (SALIDA - timedelta(days=1)).isoformat()
+
+    response = client.post("/movil/cotizaciones", json=solicitud_viaje(fecha_salida=ayer), headers=authorization())
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == detalle
+    assert mock_client.post.call_args.kwargs["json"]["fecha_salida"] == ayer

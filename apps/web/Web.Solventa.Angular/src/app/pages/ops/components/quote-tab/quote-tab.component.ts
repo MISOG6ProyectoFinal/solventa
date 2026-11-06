@@ -20,6 +20,29 @@ import { ConsentPanelComponent } from '../consent-panel/consent-panel.component'
 import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
 
+const DEFAULT_QUOTE_ERROR = 'Error al calcular cotización';
+
+interface QuoteErrorDetail {
+  readonly mensaje?: string;
+  readonly campos?: readonly { readonly campo: string; readonly error: string }[];
+}
+
+/** El backend responde igual en todos los canales: `{ codigo, mensaje, campos? }`. */
+export function quoteErrorMessage(detail: unknown): string {
+  if (typeof detail === 'string' && detail !== '') {
+    return detail;
+  }
+  if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) {
+    return DEFAULT_QUOTE_ERROR;
+  }
+  const { mensaje, campos } = detail as QuoteErrorDetail;
+  if (!mensaje) {
+    return DEFAULT_QUOTE_ERROR;
+  }
+  const fields = (campos ?? []).map(({ campo, error }) => `${campo}: ${error}`);
+  return fields.length ? `${mensaje} ${fields.join('. ')}` : mensaje;
+}
+
 /** Pestaña "Cotización": formulario por ramo, consentimiento, simulación de proveedores y desglose. */
 @Component({
   selector: 'slv-quote-tab',
@@ -82,7 +105,7 @@ export class QuoteTabComponent {
         this.isCalculating.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err?.error?.detail ?? 'Error al calcular cotización');
+        this.errorMessage.set(quoteErrorMessage(err?.error?.detail));
         this.isCalculating.set(false);
       },
     });

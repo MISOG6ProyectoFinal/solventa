@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
-import { QuoteTabComponent } from './quote-tab.component';
+import { QuoteTabComponent, quoteErrorMessage } from './quote-tab.component';
 
 describe('QuoteTabComponent', () => {
   let fixture: ComponentFixture<QuoteTabComponent>;
@@ -117,6 +117,29 @@ describe('QuoteTabComponent', () => {
     expect(el.textContent).toContain('Producto sin tarifa');
   });
 
+  it('renders the unified error with the fields to fix', async () => {
+    const comp = fixture.componentInstance;
+    (comp as any).onQuoteReady({
+      valorCredito: '200000000',
+    });
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.quotes);
+    req.flush(
+      {
+        detail: {
+          codigo: 'datos_invalidos',
+          mensaje: 'La solicitud tiene datos faltantes o inválidos. No se calculó la prima.',
+          campos: [{ campo: 'entidad', error: 'Campo obligatorio' }],
+        },
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('No se calculó la prima. entidad: Campo obligatorio');
+  });
+
   it('renders amber degraded banner when response is degradada', async () => {
     const comp = fixture.componentInstance;
     (comp as unknown as { onQuoteReady: (v: Record<string, string>) => void }).onQuoteReady({
@@ -181,5 +204,24 @@ describe('QuoteTabComponent', () => {
     expect(el.textContent).not.toContain(
       'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.',
     );
+  });
+});
+
+describe('quoteErrorMessage', () => {
+  it('keeps a plain message', () => {
+    expect(quoteErrorMessage('Producto sin tarifa')).toBe('Producto sin tarifa');
+  });
+
+  it('shows the message of a product error', () => {
+    expect(
+      quoteErrorMessage({ codigo: 'producto_inactivo', mensaje: 'Producto inactivo: hogar' }),
+    ).toBe('Producto inactivo: hogar');
+  });
+
+  it('falls back when the detail has nothing to show', () => {
+    expect(quoteErrorMessage(undefined)).toBe('Error al calcular cotización');
+    expect(quoteErrorMessage('')).toBe('Error al calcular cotización');
+    expect(quoteErrorMessage([{ msg: 'Field required' }])).toBe('Error al calcular cotización');
+    expect(quoteErrorMessage({ codigo: 'x' })).toBe('Error al calcular cotización');
   });
 });

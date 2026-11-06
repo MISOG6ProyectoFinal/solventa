@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa recorrido Canales",
-    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro radicado y una evidencia. Las peticiones móviles autenticadas usan el token que guarda Iniciar sesión. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro radicado y una evidencia. Las peticiones móviles autenticadas usan el token que guarda Iniciar sesión. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6. Móvil, portal y socios cotizan con el mismo contrato de Cotización: el mismo viaje tiene la misma prima en los tres canales y un dato faltante responde 422 datos_invalidos con cada campo y su motivo. El score de riesgo y el cliente de la oferta los resuelve Solventa: el cuerpo no los fija.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -59,6 +59,14 @@
     },
     {
       "key": "socioSecreto",
+      "value": ""
+    },
+    {
+      "key": "primaPortal",
+      "value": ""
+    },
+    {
+      "key": "primaMovil",
       "value": ""
     }
   ],
@@ -242,7 +250,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
-            }
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -267,10 +276,49 @@
                 "type": "text/javascript",
                 "exec": [
                   "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('primaMovil', oferta.prima);",
                   "pm.test('El consenso devuelve una oferta', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
                   "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar desde el móvil sin un dato obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"1020304050\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const error = pm.response.json().detail;",
+                  "pm.test('El contrato explica cada campo y no calcula', function () {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(error.codigo).to.equal('datos_invalidos');",
+                  "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
                   "});"
                 ]
               }
@@ -530,7 +578,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
-            }
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -554,10 +603,49 @@
                 "type": "text/javascript",
                 "exec": [
                   "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('primaPortal', oferta.prima);",
                   "pm.test('El consenso devuelve una oferta', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
                   "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+                  "});",
+                  "pm.test('Misma prima que el móvil para el mismo viaje', function () {",
+                  "  const esperada = pm.collectionVariables.get('primaMovil');",
+                  "  if (esperada) pm.expect(oferta.prima).to.equal(esperada);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar desde el portal sin un dato obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/cotizaciones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const error = pm.response.json().detail;",
+                  "pm.test('El contrato explica cada campo y no calcula', function () {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(error.codigo).to.equal('datos_invalidos');",
+                  "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
                   "});"
                 ]
               }
@@ -694,7 +782,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
-            }
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -724,6 +813,10 @@
                   "  pm.expect(Number(oferta.prima)).to.be.above(0);",
                   "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
                   "  pm.expect(oferta.degradada).to.be.a('boolean');",
+                  "});",
+                  "pm.test('Misma prima que el portal para el mismo viaje', function () {",
+                  "  const esperada = pm.collectionVariables.get('primaPortal');",
+                  "  if (esperada) pm.expect(oferta.prima).to.equal(esperada);",
                   "});"
                 ]
               }
@@ -896,7 +989,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
-            }
+            },
+            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
