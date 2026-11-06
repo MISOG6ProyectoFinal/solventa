@@ -307,11 +307,12 @@ describe('QuoteTabComponent as a read-only operator', () => {
   const button = (text: string): HTMLButtonElement =>
     Array.from(el.querySelectorAll('button')).find((item) => item.textContent?.includes(text))!;
 
-  beforeEach(async () => {
-    signInAs(['consulta']);
+  const open = async (roles: Parameters<typeof signInAs>[0]): Promise<void> => {
+    TestBed.resetTestingModule();
+    signInAs(roles);
     await TestBed.configureTestingModule({
       imports: [QuoteTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideCatalogFixture()],
     }).compileComponents();
     httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(QuoteTabComponent);
@@ -319,42 +320,45 @@ describe('QuoteTabComponent as a read-only operator', () => {
     httpTesting
       .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
       .flush({ proveedor: 'open-finance', modo: 'normal' });
+    httpTesting.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
+    await fixture.whenStable();
+    httpTesting.expectOne(API_ENDPOINTS.productContract('viaje-internacional')).flush(CONTRACTS['viaje-internacional']);
     await fixture.whenStable();
     el = fixture.nativeElement;
-  });
+    const ramoSelect = el.querySelector<HTMLSelectElement>('slv-quote-form select')!;
+    ramoSelect.value = 'ramo-vida-hipotecario';
+    ramoSelect.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    httpTesting.expectOne(API_ENDPOINTS.productContract('vida-hipotecario')).flush(CONTRACTS['vida-hipotecario']);
+    await fixture.whenStable();
+  };
 
   afterEach(() => {
     httpTesting.verify();
     signOut();
   });
 
-  it('shows the form with an explanation but blocks the quote and the consent request', () => {
+  it('shows the form with an explanation but blocks the quote and the consent request', async () => {
+    await open(['consulta']);
+
     expect(el.querySelector('slv-quote-form')).not.toBeNull();
     expect(el.textContent).toContain('Su rol es de consulta');
     expect(button('Calcular cotización').disabled).toBe(true);
     expect(button('Solicitar consentimiento').disabled).toBe(true);
   });
 
-  it('does not calculate even when the calculation is forced', () => {
+  it('does not calculate even when the calculation is forced', async () => {
+    await open(['consulta']);
+
     (fixture.componentInstance as any).onQuoteReady({ tipoDocumento: 'CC' });
 
     httpTesting.expectNone(API_ENDPOINTS.quotes);
   });
 
   it('lets an advisor calculate once the consent is validated', async () => {
-    TestBed.resetTestingModule();
-    signInAs(['asesor']);
-    await TestBed.configureTestingModule({
-      imports: [QuoteTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
-    }).compileComponents();
-    httpTesting = TestBed.inject(HttpTestingController);
-    fixture = TestBed.createComponent(QuoteTabComponent);
-    await fixture.whenStable();
-    httpTesting.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
+    await open(['asesor']);
     (fixture.componentInstance as any).onConsentValidated('CNS-1');
     await fixture.whenStable();
-    el = fixture.nativeElement;
 
     expect(el.textContent).not.toContain('Su rol es de consulta');
     expect(button('Calcular cotización').disabled).toBe(false);

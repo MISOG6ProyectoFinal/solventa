@@ -586,7 +586,7 @@ def test_a_product_that_does_not_require_consent_is_quoted_without_one(monkeypat
     cotizacion = _Upstream(response={"id": "COT-3", "prima": "100.00"})
     monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
 
-    response = client.post("/web/cotizaciones", json={"producto_id": "viaje-internacional"})
+    response = client.post("/web/cotizaciones", json={"producto_id": "viaje-internacional"}, headers=web_auth.advisor())
 
     assert response.status_code == 200
     assert cotizacion.calls[0][0] == "/consenso/cotizaciones"
@@ -600,7 +600,7 @@ def test_an_unknown_product_is_left_for_cotizacion_to_reject(monkeypatch):
     cotizacion = Unknown(response={"id": "COT-4"})
     monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
 
-    response = client.post("/web/cotizaciones", json={"producto_id": "no-existe"})
+    response = client.post("/web/cotizaciones", json={"producto_id": "no-existe"}, headers=web_auth.advisor())
 
     assert response.status_code == 200
     assert cotizacion.calls[0][0] == "/consenso/cotizaciones"
@@ -622,7 +622,8 @@ def test_the_bff_serves_what_the_owner_service_publishes(monkeypatch, path, upst
     upstream = _Upstream(response=[{"id": "x"}])
     monkeypatch.setattr(service, upstream)
 
-    response = client.get(path)
+    headers = {} if path.startswith("/movil") else web_auth.viewer()
+    response = client.get(path, headers=headers)
 
     assert response.status_code == 200
     assert response.json() == [{"id": "x"}]
@@ -644,7 +645,7 @@ def test_the_bff_serves_the_product_contract_to_the_portal(monkeypatch):
     upstream = _Upstream(response={"properties": {}})
     monkeypatch.setattr("canales.web.api.cotizacion", upstream)
 
-    response = client.get("/web/productos/viaje-internacional/contrato")
+    response = client.get("/web/productos/viaje-internacional/contrato", headers=web_auth.viewer())
 
     assert response.status_code == 200
     assert upstream.calls[0][0] == "/catalogo/productos/viaje-internacional/contrato"

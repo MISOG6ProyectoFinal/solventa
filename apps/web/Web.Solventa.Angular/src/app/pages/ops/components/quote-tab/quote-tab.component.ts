@@ -29,7 +29,6 @@ import { QuoteFormComponent } from '../quote-form/quote-form.component';
 import { QUOTE_ROLES } from '../../../../core/constants/roles.constants';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LocaleService } from '../../../../core/services/locale.service';
-import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 
 interface QuoteErrorDetail {
   readonly mensaje?: string;
