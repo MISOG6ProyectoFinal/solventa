@@ -1,11 +1,12 @@
 from pydantic import model_validator
+from solventa_common.integration import simulated_provider
 from solventa_common.settings import ServiceSettings
 
 
 class SiniestrosSettings(ServiceSettings):
     service_name: str = "siniestros"
     evidencias_bucket: str = "solventa-evidencias"
-    red_asistencia_url: str = "http://simuladores/red-asistencia"
+    red_asistencia_url: str = simulated_provider("red-asistencia")
     # Postgres and S3. Tests leave this off and use the in-memory adapters.
     persistent_stores: bool = False
 

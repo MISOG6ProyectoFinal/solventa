@@ -1,4 +1,5 @@
 from pydantic import Field
+from solventa_common.integration import simulated_provider
 from solventa_common.settings import ServiceSettings
 
 
@@ -11,7 +12,7 @@ class CotizacionSettings(ServiceSettings):
     quorum: int = 2
     consenso_timeout_s: float = 0.3
     # Open Finance (ASR-03): presupuesto de 300 ms y techo duro de 3000 ms.
-    open_finance_url: str = "http://simuladores/open-finance"
+    open_finance_url: str = simulated_provider("open-finance")
     open_finance_api_key: str | None = None
     open_finance_timeout_s: float = Field(default=0.3, gt=0, le=3.0)
     open_finance_breaker_failures: int = Field(default=5, ge=1)

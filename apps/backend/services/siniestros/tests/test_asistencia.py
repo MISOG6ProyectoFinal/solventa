@@ -12,6 +12,7 @@ from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryO
 from siniestros.config import SiniestrosSettings
 from siniestros.main import app
 from solventa_common.events import InMemoryEventPublisher
+from solventa_common.integration import simulated_provider
 
 client = TestClient(app)
 
@@ -211,4 +212,4 @@ def test_sin_red_de_asistencia_la_solicitud_responde_503(network):
 def test_por_defecto_despacha_con_el_servicio_simuladores(monkeypatch):
     monkeypatch.delenv("RED_ASISTENCIA_URL", raising=False)
 
-    assert SiniestrosSettings().red_asistencia_url == "http://simuladores/red-asistencia"
+    assert SiniestrosSettings().red_asistencia_url == simulated_provider("red-asistencia")

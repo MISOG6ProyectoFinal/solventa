@@ -16,7 +16,7 @@ from pagos.cobros.domain.ports import PasarelaNoDisponible
 from pagos.cobros.domain.use_cases import CobrarPrimaUseCase
 from pagos.config import settings
 from pagos.main import app
-from solventa_common.integration import PasarelaPagosAdapter
+from solventa_common.integration import PasarelaPagosAdapter, simulated_provider
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.pool import StaticPool
 
@@ -315,7 +315,7 @@ def test_un_timeout_de_la_pasarela_no_reintenta():
 def test_por_defecto_cobra_en_la_pasarela_del_servicio_simuladores(monkeypatch):
     monkeypatch.delenv("PASARELA_URL", raising=False)
 
-    assert type(settings)().pasarela_url == "http://simuladores/pasarela-pagos"
+    assert type(settings)().pasarela_url == simulated_provider("pasarela-pagos")
 
 
 def test_con_url_se_usa_el_adapter_existente(monkeypatch):

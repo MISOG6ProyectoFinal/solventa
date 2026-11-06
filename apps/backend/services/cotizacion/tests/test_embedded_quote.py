@@ -21,6 +21,7 @@ from cotizacion.signals.domain.models import OpenFinanceConsent, SignalOrigin
 from cotizacion.signals.domain.use_cases import ResolveRiskProfileUseCase
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from solventa_common.integration import simulated_provider
 from solventa_common.resilience import InMemoryCache
 
 client = TestClient(app)
@@ -421,7 +422,7 @@ def test_adapter_takes_configured_timeout_and_does_not_retry():
 def test_open_finance_is_called_over_http_at_the_simulator_by_default(monkeypatch):
     monkeypatch.delenv("OPEN_FINANCE_URL", raising=False)
 
-    assert CotizacionSettings().open_finance_url == "http://simuladores/open-finance"
+    assert CotizacionSettings().open_finance_url == simulated_provider("open-finance")
 
 
 def test_timeout_cannot_exceed_the_3000_ms_ceiling():
