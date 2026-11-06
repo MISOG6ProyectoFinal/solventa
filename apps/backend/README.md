@@ -151,7 +151,10 @@ Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros
 
 ```bash
 docker compose up -d canales
+CONTRASENA=Solventa-local-2026 EN_IDENTIDAD="docker compose exec -T identidad" ./scripts/crear_administrador.sh admin@solventa.local
 ```
+
+El segundo comando crea el administrador del portal web, que se describe en [Sesión del portal](#sesión-del-portal).
 
 Todo el backend en un clúster local, sin cambios en el código, con el modo `local`:
 
@@ -195,7 +198,7 @@ El primer administrador se crea con `scripts/crear_administrador.sh`, que corre 
 CONTRASENA=<clave> ./scripts/crear_administrador.sh admin@solventa.co "Nombre Apellido"
 ```
 
-Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está.
+Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está. `EN_IDENTIDAD` cambia cómo entra al contenedor de Identidad; por defecto es `kubectl -n solventa exec -i deploy/identidad -c identidad --`.
 
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
