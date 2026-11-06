@@ -1,54 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 import { STORAGE_KEYS } from '../constants/storage-keys.constants';
+import { EN } from '../i18n/en';
+import { ES, TextKey } from '../i18n/es';
 
 export type Locale = 'es' | 'en';
+export type TextParams = Record<string, string | number>;
 
-const DICTIONARY: Record<Locale, Record<string, string>> = {
-  es: {
-    'web.nav.ops': 'Operaciones y Pólizas',
-    'web.nav.partners': 'Socios e Integraciones',
-    'web.header.menu': 'Menú',
-    'web.header.notifications': 'Notificaciones',
-    'web.header.back': 'Volver a inicio',
-    'web.profile.menu': 'Menú de perfil',
-    'web.profile.settings': 'Ajustes',
-    'web.profile.designSystem': 'Sistema de diseño',
-    'web.sidebar.userRole': 'Administrador',
-    'web.sidebar.userOrg': 'Solventa Central',
-    'remote.pending': 'Módulo remoto (Micro Frontend) pendiente de integrar.',
-    'settings.back': 'Volver',
-    'settings.title': 'Ajustes',
-    'settings.language': 'Idioma',
-    'settings.languageDesc': 'Elige el idioma de la interfaz.',
-    'settings.languageLabel': 'Idioma de la interfaz',
-    'settings.language.es': 'Español',
-    'settings.language.en': 'English',
-    'ds.title': 'Sistema de diseño',
-    'ds.subtitle': 'Colores · Tipografía · Componentes · Íconos',
-  },
-  en: {
-    'web.nav.ops': 'Operations & Policies',
-    'web.nav.partners': 'Partners & Integrations',
-    'web.header.menu': 'Menu',
-    'web.header.notifications': 'Notifications',
-    'web.header.back': 'Back to home',
-    'web.profile.menu': 'Profile menu',
-    'web.profile.settings': 'Settings',
-    'web.profile.designSystem': 'Design system',
-    'web.sidebar.userRole': 'Administrator',
-    'web.sidebar.userOrg': 'Solventa Central',
-    'remote.pending': 'Remote module (Micro Frontend) pending integration.',
-    'settings.back': 'Back',
-    'settings.title': 'Settings',
-    'settings.language': 'Language',
-    'settings.languageDesc': 'Choose the interface language.',
-    'settings.languageLabel': 'Interface language',
-    'settings.language.es': 'Español',
-    'settings.language.en': 'English',
-    'ds.title': 'Design system',
-    'ds.subtitle': 'Colors · Typography · Components · Icons',
-  },
-};
+const DICTIONARY: Record<Locale, Record<string, string>> = { es: ES, en: EN };
 
 /** Idioma activo (signal) y traducción. `t()` lee el signal, por lo que las plantillas se actualizan solas. */
 @Injectable({ providedIn: 'root' })
@@ -62,8 +20,18 @@ export class LocaleService {
     localStorage.setItem(STORAGE_KEYS.locale, locale);
   }
 
-  t(key: string): string {
-    return DICTIONARY[this._locale()][key] ?? key;
+  t(key: TextKey, params?: TextParams): string {
+    return this.format(DICTIONARY[this._locale()][key] ?? key, params);
+  }
+
+  /** Texto de un valor del dominio (estado, causa, opción). Sin traducción se muestra `fallback`, por defecto el valor. */
+  label(group: string, value: string, fallback: string = value): string {
+    return DICTIONARY[this._locale()][`${group}.${value}`] ?? fallback;
+  }
+
+  private format(text: string, params?: TextParams): string {
+    if (!params) return text;
+    return text.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match));
   }
 
   private initial(): Locale {

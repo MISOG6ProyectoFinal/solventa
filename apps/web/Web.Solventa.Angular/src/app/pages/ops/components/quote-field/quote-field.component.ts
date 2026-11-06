@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 /** Campo dinámico del formulario de cotización (texto, correo, fecha o lista). */
 @Component({
@@ -12,6 +13,7 @@ import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
   templateUrl: './quote-field.component.html',
 })
 export class QuoteFieldComponent {
+  protected readonly locale = inject(LocaleService);
   readonly definition = input.required<QuoteFieldDef>();
   readonly value = model('');
   readonly error = input('');

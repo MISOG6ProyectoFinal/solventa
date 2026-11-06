@@ -6,8 +6,8 @@ import { Ramo, RamoId } from '../../../../core/models/ramo.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { QUOTE_CLIENT_FIELDS, QUOTE_RISK_FIELDS } from '../../constants/quote-fields.constants';
-import { QuotesService } from '../../services/quotes.service';
 import { QuoteFieldComponent } from '../quote-field/quote-field.component';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 export type FormValues = Record<string, string>;
 
@@ -22,13 +22,13 @@ const HU_RAMOS_IDS: readonly RamoId[] = ['VIAJE', 'MICROSEGURO_VIDA', 'VIDA_HIPO
   templateUrl: './quote-form.component.html',
 })
 export class QuoteFormComponent {
-  private readonly quotesService = inject(QuotesService, { optional: true });
+  protected readonly locale = inject(LocaleService);
 
   readonly ramo = model.required<RamoId>();
   readonly quoteReady = output<FormValues>();
   readonly formChange = output<FormValues>();
 
-  /** Ramos del formulario: acotados estrictamente a los 4 de la HU y sincronizados con la BD */
+  /** Ramos del formulario: acotados estrictamente a los 4 de la HU. El nombre sale del idioma activo. */
   protected readonly ramos = signal<readonly Ramo[]>(
     RAMOS.filter((r) => HU_RAMOS_IDS.includes(r.id))
   );
@@ -39,33 +39,6 @@ export class QuoteFormComponent {
   private readonly submitted = signal(false);
 
   protected readonly riskFields = computed(() => QUOTE_RISK_FIELDS[this.ramo()] ?? []);
-  protected readonly ramoLabel = computed(
-    () => this.ramos().find((ramo) => ramo.id === this.ramo())?.label ?? ''
-  );
-
-  constructor() {
-    this.cargarRamosDesdeBd();
-  }
-
-  private cargarRamosDesdeBd(): void {
-    if (!this.quotesService) return;
-    this.quotesService.getRamos().subscribe({
-      next: (dbRamos) => {
-        const dbMap = new Map(
-          dbRamos.map((r) => [r.id.replace('ramo-', '').toUpperCase().replace(/-/g, '_'), r.nombre])
-        );
-        this.ramos.update((current) =>
-          current.map((item) => ({
-            ...item,
-            label: dbMap.get(item.id) ?? item.label,
-          }))
-        );
-      },
-      error: () => {
-        // En caso de fallo o modo offline, conserva los 4 ramos base
-      },
-    });
-  }
 
   protected readonly errors = computed<Record<string, string>>(() => {
     if (!this.submitted()) return {};
@@ -74,7 +47,7 @@ export class QuoteFormComponent {
     for (const field of allFields) {
       const val = (this.values()[field.key] ?? '').trim();
       if (field.required && !val) {
-        result[field.key] = 'Campo obligatorio';
+        result[field.key] = this.locale.t('common.required');
       }
     }
     return result;

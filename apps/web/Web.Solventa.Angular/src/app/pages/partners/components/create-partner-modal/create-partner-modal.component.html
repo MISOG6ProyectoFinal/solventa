@@ -1,7 +1,7 @@
 <slv-modal 
   [open]="open()" 
   (closed)="handleClose()"
-  [title]="createdResult() ? 'Socio aprovisionado' : 'Nuevo socio'"
+  [title]="createdResult() ? locale.t('createPartner.titleCreated') : locale.t('createPartner.title')"
   [wide]="true">
   
   @if (!createdResult()) {
@@ -9,42 +9,42 @@
       <div class="mb-4"><slv-alert tone="error">{{ submitError() }}</slv-alert></div>
     }
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <slv-field label="NOMBRE DEL SOCIO" [required]="true" [error]="errors()['name']">
+      <slv-field [label]="locale.t('createPartner.name')" [required]="true" [error]="errors()['name']">
         <input slvInput [invalid]="!!errors()['name']" [ngModel]="name()" (ngModelChange)="name.set($event)" />
       </slv-field>
       
-      <slv-field label="IDENTIFICADOR ÚNICO" [required]="true" [error]="errors()['identifier']">
+      <slv-field [label]="locale.t('createPartner.identifier')" [required]="true" [error]="errors()['identifier']">
         <input slvInput placeholder="MI-SOCIO" [invalid]="!!errors()['identifier']" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" />
-        <p class="text-[11px] text-muted-foreground mt-1">No se permiten duplicados</p>
+        <p class="text-[11px] text-muted-foreground mt-1">{{ locale.t('createPartner.identifierHint') }}</p>
       </slv-field>
       
-      <slv-field label="TIPO DE SOCIO" [required]="true">
+      <slv-field [label]="locale.t('createPartner.type')" [required]="true">
         <select slvInput [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
           @for (t of partnerTypes; track t) {
-            <option [value]="t">{{ t }}</option>
+            <option [value]="t">{{ locale.label('partnerType', t) }}</option>
           }
         </select>
       </slv-field>
       
-      <slv-field label="PAÍS" [required]="true">
+      <slv-field [label]="locale.t('createPartner.country')" [required]="true">
         <select slvInput [ngModel]="pais()" (ngModelChange)="pais.set($event)">
           <option value="Colombia">Colombia</option>
-          <option disabled value="México">México (Pronto)</option>
-          <option disabled value="Chile">Chile (Pronto)</option>
-          <option disabled value="Perú">Perú (Pronto)</option>
+          <option disabled value="México">{{ locale.t('createPartner.countrySoon', { country: 'México' }) }}</option>
+          <option disabled value="Chile">{{ locale.t('createPartner.countrySoon', { country: 'Chile' }) }}</option>
+          <option disabled value="Perú">{{ locale.t('createPartner.countrySoon', { country: 'Perú' }) }}</option>
         </select>
       </slv-field>
       
-      <slv-field label="CORREO DE CONTACTO TÉCNICO" [required]="true" [error]="errors()['email']">
+      <slv-field [label]="locale.t('createPartner.email')" [required]="true" [error]="errors()['email']">
         <input slvInput [invalid]="!!errors()['email']" [ngModel]="email()" (ngModelChange)="email.set($event)" />
       </slv-field>
       
-      <slv-field label="ALCANCE INICIAL" [required]="true" [error]="errors()['alcances']">
+      <slv-field [label]="locale.t('createPartner.scopes')" [required]="true" [error]="errors()['alcances']">
         <div class="space-y-2 pt-1">
-          @for (a of alcancesOptions; track a.id) {
+          @for (a of alcancesOptions; track a) {
             <label class="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" [checked]="alcances().includes(a.id)" (change)="toggleAlcance(a.id)" class="rounded" />
-              {{ a.label }}
+              <input type="checkbox" [checked]="alcances().includes(a)" (change)="toggleAlcance(a)" class="rounded" />
+              {{ locale.label('scope', a) }}
             </label>
           }
         </div>
@@ -52,36 +52,36 @@
     </div>
   } @else {
     <div class="space-y-4">
-      <slv-alert tone="success">Socio aprovisionado y contrato de API activo. Guarde el secreto: solo se muestra esta vez.</slv-alert>
+      <slv-alert tone="success">{{ locale.t('createPartner.created') }}</slv-alert>
       <div class="rounded-xl border border-border bg-background p-4 grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-sm">
         <div>
           <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">client_id</p>
           <p class="text-foreground break-all" data-testid="client-id">{{ createdResult()!.partner.clientId }}</p>
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">Secreto</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">{{ locale.t('createPartner.secret') }}</p>
           <p class="text-foreground break-all" data-testid="secret">{{ createdResult()!.secret }}</p>
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">Contrato API</p>
-          <p class="text-foreground">{{ createdResult()!.partner.apiContractStatus }} · {{ createdResult()!.partner.versionContratoApi }}</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">{{ locale.t('createPartner.contract') }}</p>
+          <p class="text-foreground">{{ locale.label('contract', createdResult()!.partner.apiContractStatus) }} · {{ createdResult()!.partner.versionContratoApi }}</p>
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">Credencial</p>
-          <p class="text-foreground">{{ createdResult()!.partner.credentialStatus }}</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground font-['Outfit']">{{ locale.t('createPartner.credential') }}</p>
+          <p class="text-foreground">{{ locale.label('credential', createdResult()!.partner.credentialStatus) }}</p>
         </div>
       </div>
       <div class="rounded-xl border border-border bg-white p-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm" data-testid="audit-trail">
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">Fecha de alta</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">{{ locale.t('createPartner.date') }}</p>
           <p class="text-foreground">{{ createdResult()!.partner.altaFecha }}</p>
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">Autorizado por</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">{{ locale.t('createPartner.authorizedBy') }}</p>
           <p class="text-foreground">{{ createdResult()!.partner.altaUsuario }}</p>
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">Alcance asignado</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted-foreground">{{ locale.t('createPartner.assignedScope') }}</p>
           <p class="text-foreground">{{ alcancesLabel(createdResult()!.partner.alcances) }}</p>
         </div>
       </div>
@@ -90,12 +90,12 @@
 
   <div slot="footer" class="flex gap-4">
     @if (!createdResult()) {
-      <button slv-button variant="outline" (click)="handleClose()">Cancelar</button>
+      <button slv-button variant="outline" (click)="handleClose()">{{ locale.t('common.cancel') }}</button>
       <button slv-button variant="primary" [disabled]="saving()" (click)="submit()">
-        {{ saving() ? 'Creando…' : 'Crear y aprovisionar' }}
+        {{ saving() ? locale.t('createPartner.submitting') : locale.t('createPartner.submit') }}
       </button>
     } @else {
-      <button slv-button variant="primary" (click)="handleClose()">Ir al detalle del socio</button>
+      <button slv-button variant="primary" (click)="handleClose()">{{ locale.t('createPartner.goToDetail') }}</button>
     }
   </div>
 </slv-modal>

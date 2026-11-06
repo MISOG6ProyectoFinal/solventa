@@ -13,6 +13,7 @@ from identidad.kyc.domain.use_cases import (
     AsegurarCliente,
     BuscarClientePorDocumento,
     ConsultarConsentimiento,
+    GetClient,
     RegisterClient,
     SolicitarConsentimiento,
     StartSession,
@@ -57,6 +58,7 @@ class Container:
         self.consultar_consentimiento = ConsultarConsentimiento(self.consentimientos, self.clients)
         self.buscar_cliente_por_documento = BuscarClientePorDocumento(self.clients)
         self.asegurar_cliente = AsegurarCliente(self.clients)
+        self.get_client = GetClient(self.clients)
 
 
 container = Container()

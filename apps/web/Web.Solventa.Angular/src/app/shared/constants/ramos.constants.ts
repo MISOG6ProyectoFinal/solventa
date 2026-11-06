@@ -21,10 +21,6 @@ export const RAMO_ICON: Record<RamoId, IconName> = {
   VIDA_HIPOTECARIO: 'vidaHipotecario',
 };
 
-export const ALCANCES: readonly { id: Alcance; label: string }[] = [
-  { id: 'cotizacion', label: 'Cotización' },
-  { id: 'emision', label: 'Emisión' },
-  { id: 'consulta', label: 'Consulta de pólizas y siniestros' },
-];
+export const ALCANCES: readonly Alcance[] = ['cotizacion', 'emision', 'consulta'];
 
 export const PARTNER_TYPES: readonly PartnerType[] = ['Banco', 'Aerolínea', 'E-commerce', 'Fintech', 'Retailer'];

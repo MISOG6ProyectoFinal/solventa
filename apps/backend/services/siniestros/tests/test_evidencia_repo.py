@@ -112,6 +112,16 @@ def test_el_listado_trae_solo_los_avisos_del_cliente(repository):
     assert [item.id for item in listed] == [propio.id]
 
 
+def test_el_listado_por_poliza_trae_solo_sus_avisos(repository):
+    poliza = f"POL-{uuid4()}"
+    propio = _aviso().model_copy(update={"poliza_id": poliza})
+    ajeno = _aviso("aviso-2")
+    repository.add_aviso(propio)
+    repository.add_aviso(ajeno)
+
+    assert [item.id for item in repository.list_by_policy(poliza)] == [propio.id]
+
+
 def test_radicar_actualiza_el_estado(repository):
     saved = _aviso()
     repository.add_aviso(saved)

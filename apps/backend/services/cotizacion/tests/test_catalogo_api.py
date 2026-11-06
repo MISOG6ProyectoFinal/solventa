@@ -70,3 +70,12 @@ def test_producto_inactivo_no_aparece():
         assert "viaje-internacional" not in ids
     finally:
         container.catalogo.productos["viaje-internacional"] = original
+
+
+def test_product_is_read_with_its_line():
+    response = client.get("/catalogo/productos/vida-hipotecario")
+
+    assert response.status_code == 200
+    assert response.json()["ramo_id"] == "ramo-vida-hipotecario"
+    assert response.json()["nombre"] == "Vida Hipotecario"
+    assert client.get("/catalogo/productos/no-existe").json()["detail"]["codigo"] == "producto_no_encontrado"

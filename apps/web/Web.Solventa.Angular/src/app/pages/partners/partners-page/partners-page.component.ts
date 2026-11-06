@@ -7,6 +7,7 @@ import { CreatePartnerModalComponent } from '../components/create-partner-modal/
 import { ButtonComponent } from '../../../ui/components/button/button.component';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { Partner } from '../../../core/models/partner.model';
+import { LocaleService } from '../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-partners-page',
@@ -23,6 +24,7 @@ import { Partner } from '../../../core/models/partner.model';
   templateUrl: './partners-page.component.html'
 })
 export class PartnersPageComponent implements OnInit {
+  protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
 
   readonly partners = this.partnersService.partners;

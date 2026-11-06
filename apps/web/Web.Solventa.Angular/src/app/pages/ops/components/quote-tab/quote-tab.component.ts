@@ -16,11 +16,11 @@ import { PROVIDER_SCENARIOS } from '../../constants/ops.constants';
 import { OfertaCotizacionResponse } from '../../interfaces/quote-payload.interface';
 import { mapFormValuesToQuotePayload } from '../../services/quote-payload.mapper';
 import { QuotesService } from '../../services/quotes.service';
+import { SimulatorService } from '../../services/simulator.service';
 import { ConsentPanelComponent } from '../consent-panel/consent-panel.component';
 import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
-
-const DEFAULT_QUOTE_ERROR = 'Error al calcular cotización';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 interface QuoteErrorDetail {
   readonly mensaje?: string;
@@ -28,16 +28,16 @@ interface QuoteErrorDetail {
 }
 
 /** El backend responde igual en todos los canales: `{ codigo, mensaje, campos? }`. */
-export function quoteErrorMessage(detail: unknown): string {
+export function quoteErrorMessage(detail: unknown, fallback: string): string {
   if (typeof detail === 'string' && detail !== '') {
     return detail;
   }
   if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) {
-    return DEFAULT_QUOTE_ERROR;
+    return fallback;
   }
   const { mensaje, campos } = detail as QuoteErrorDetail;
   if (!mensaje) {
-    return DEFAULT_QUOTE_ERROR;
+    return fallback;
   }
   const fields = (campos ?? []).map(({ campo, error }) => `${campo}: ${error}`);
   return fields.length ? `${mensaje} ${fields.join('. ')}` : mensaje;
@@ -60,10 +60,14 @@ export function quoteErrorMessage(detail: unknown): string {
   templateUrl: './quote-tab.component.html',
 })
 export class QuoteTabComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly quotesService = inject(QuotesService);
+
+  private readonly simulator = inject(SimulatorService);
 
   protected readonly scenarios = PROVIDER_SCENARIOS;
   protected readonly scenario = signal(PROVIDER_SCENARIOS[0].id);
+  protected readonly simulatorError = signal(false);
   protected readonly ramo = signal<RamoId>('VIDA_HIPOTECARIO');
 
   protected readonly isCalculating = signal(false);
@@ -74,11 +78,26 @@ export class QuoteTabComponent {
   protected readonly formValues = signal<Record<string, string>>({});
 
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
-  protected readonly ramoLabel = computed(() => this.ramoMeta()?.label ?? '');
+  protected readonly ramoLabel = computed(() => this.locale.label('ramo', this.ramo()));
   protected readonly requiresConsent = computed(() => this.ramoMeta()?.requiresConsent ?? false);
   protected readonly puedeCalcular = computed(
     () => !this.requiresConsent() || this.consentValidated(),
   );
+
+  constructor() {
+    this.simulator.openFinance().subscribe({
+      next: ({ modo }) => this.scenario.set(PROVIDER_SCENARIOS.find((s) => s.mode === modo)?.id ?? PROVIDER_SCENARIOS[0].id),
+      error: () => this.simulatorError.set(true),
+    });
+  }
+
+  protected changeScenario(id: string): void {
+    const scenario = PROVIDER_SCENARIOS.find((s) => s.id === id);
+    if (!scenario) return;
+    this.scenario.set(id);
+    this.simulatorError.set(false);
+    this.simulator.setOpenFinance(scenario.mode).subscribe({ error: () => this.simulatorError.set(true) });
+  }
 
   protected onConsentValidated(consentimientoId: string): void {
     this.consentimientoId.set(consentimientoId);
@@ -105,7 +124,7 @@ export class QuoteTabComponent {
         this.isCalculating.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(quoteErrorMessage(err?.error?.detail));
+        this.errorMessage.set(quoteErrorMessage(err?.error?.detail, this.locale.t('quote.error')));
         this.isCalculating.set(false);
       },
     });

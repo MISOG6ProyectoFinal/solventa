@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Partner } from '../../../core/models/partner.model';
+import { LocaleService } from '../../../core/services/locale.service';
 import { toPartner, toPartnerConfig } from '../services/partners-api.mapper';
 import { PartnersService } from '../services/partners.service';
 import { PARTNER_CONFIG_DTO, PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
@@ -47,6 +48,19 @@ describe('PartnersPageComponent', () => {
 
   it('loads the partners when the page opens', () => {
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the page in English when the language changes', async () => {
+    const locale = TestBed.inject(LocaleService);
+    partners.set([toPartner(PARTNER_DTO)]);
+    locale.setLocale('en');
+    await fixture.whenStable();
+
+    expect(el.querySelector('h1')?.textContent).toContain('Partners & Integrations');
+    expect(el.textContent).toContain('Provisioned partners');
+    expect(el.textContent).toContain('Active · v2');
+    expect(button('New partner')).toBeTruthy();
+    locale.setLocale('es');
   });
 
   it('shows an empty state while there are no partners', () => {

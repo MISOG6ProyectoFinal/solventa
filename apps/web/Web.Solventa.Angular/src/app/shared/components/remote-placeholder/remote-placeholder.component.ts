@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TextKey } from '../../../core/i18n/es';
 import { LocaleService } from '../../../core/services/locale.service';
 import { CardComponent } from '../../../ui/components/card/card.component';
 
@@ -12,5 +13,5 @@ import { CardComponent } from '../../../ui/components/card/card.component';
 })
 export class RemotePlaceholderComponent {
   protected readonly locale = inject(LocaleService);
-  protected readonly titleKey: string = inject(ActivatedRoute).snapshot.data['titleKey'] ?? '';
+  protected readonly titleKey: TextKey = inject(ActivatedRoute).snapshot.data['titleKey'] ?? 'remote.pending';
 }

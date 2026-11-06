@@ -19,6 +19,7 @@ import {
   SolicitudConsentimiento,
 } from '../../interfaces/consent.interface';
 import { ConsentService } from '../../services/consent.service';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 export type ConsentPanelState = 'idle' | 'enviando' | 'pending' | 'validando' | 'validated';
 
@@ -37,6 +38,7 @@ export type ConsentPanelState = 'idle' | 'enviando' | 'pending' | 'validando' | 
   templateUrl: './consent-panel.component.html',
 })
 export class ConsentPanelComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly consentService = inject(ConsentService);
 
   readonly required = input.required<boolean>();
@@ -53,7 +55,7 @@ export class ConsentPanelComponent {
   readonly consentValidated = output<string>();
 
   protected readonly channels = CONSENT_CHANNELS;
-  protected readonly channel = signal<'sms' | 'email'>(CONSENT_CHANNELS[0].id as 'sms' | 'email');
+  protected readonly channel = signal<'sms' | 'email'>(CONSENT_CHANNELS[0].id);
   protected readonly openFinance = signal(true);
   protected readonly openData = signal(true);
 
@@ -97,10 +99,12 @@ export class ConsentPanelComponent {
 
   protected readonly demoHint = computed(() => {
     const mask = this.contactoMaskDisplay();
-    const canalTxt = this.channel() === 'sms' ? 'al celular' : 'al correo';
     const demoCode = this.codigoDemo().trim();
-    const demoValue = demoCode.length > 0 ? demoCode : '123456';
-    return `Código enviado ${canalTxt} ${mask}. Para la demo use ${demoValue}.`;
+    return this.locale.t('consent.hint', {
+      channel: this.locale.t(this.channel() === 'sms' ? 'consent.hint.sms' : 'consent.hint.email'),
+      destination: mask,
+      code: demoCode.length > 0 ? demoCode : '123456',
+    });
   });
 
   private extractErrorMessage(err: unknown, fallback: string): string {
@@ -111,6 +115,10 @@ export class ConsentPanelComponent {
         const detail = (errorField as Record<string, unknown>)['detail'];
         if (typeof detail === 'string' && detail.trim().length > 0) {
           return detail;
+        }
+        const mensaje = (detail as { mensaje?: unknown } | null)?.mensaje;
+        if (typeof mensaje === 'string' && mensaje.trim().length > 0) {
+          return mensaje;
         }
       }
       const message = errorObj['message'];
@@ -191,24 +199,22 @@ export class ConsentPanelComponent {
       cliente_id: fallbackCliId,
       cliente_nombre: fallbackNom,
       cliente_documento: `${this.tipoDocumento()} ${this.documento()}`.trim(),
-      estado: 'Otorgado',
-      fuente: `${this.channel() === 'sms' ? 'SMS' : 'Correo'}: ${this.contactoDestino()}`,
+      estado: this.locale.t('consent.granted'),
+      fuente: `${this.locale.t(this.channel() === 'sms' ? 'consent.source.sms' : 'consent.source.email')}: ${this.contactoDestino()}`,
       fecha_otorgamiento: new Date().toISOString().replace('T', ' ').substring(0, 16),
       fecha_hora: new Date().toISOString().replace('T', ' ').substring(0, 16),
       asesor: 'Ana Gómez (asesor)',
-      canal: this.channel() === 'sms' ? 'Código por SMS' : 'Código por correo electrónico',
+      canal: this.locale.t(this.channel() === 'sms' ? 'consent.channelLabel.sms' : 'consent.channelLabel.email'),
       contacto: this.contactoDestino(),
-      alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : 'Ninguno',
+      alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : this.locale.t('consent.noScope'),
     };
   }
 
   solicitarConsentimiento(): void {
     const destino = this.contactoDestino();
     if (!destino) {
-      const canalTxt = this.channel() === 'sms' ? 'el celular' : 'el correo electrónico';
-      this.errorMsg.set(
-        `Por favor ingrese ${canalTxt} del cliente en el formulario antes de solicitar el código.`,
-      );
+      const contact = this.locale.t(this.channel() === 'sms' ? 'consent.contact.sms' : 'consent.contact.email');
+      this.errorMsg.set(this.locale.t('consent.error.contactMissing', { contact }));
       return;
     }
 
@@ -229,7 +235,7 @@ export class ConsentPanelComponent {
         this.estado.set('pending');
       },
       error: (err) => {
-        this.errorMsg.set(this.extractErrorMessage(err, 'Error al solicitar código OTP'));
+        this.errorMsg.set(this.extractErrorMessage(err, this.locale.t('consent.error.request')));
         this.estado.set('idle');
       },
     });
@@ -237,7 +243,7 @@ export class ConsentPanelComponent {
 
   validarCodigo(): void {
     if (!this.codigoInput().trim()) {
-      this.errorMsg.set('Ingrese el código dictado por el cliente');
+      this.errorMsg.set(this.locale.t('consent.error.codeMissing'));
       return;
     }
 
@@ -261,7 +267,7 @@ export class ConsentPanelComponent {
       },
       error: (err) => {
         this.errorMsg.set(
-          this.extractErrorMessage(err, 'Código OTP incorrecto. Vuelva a intentarlo.'),
+          this.extractErrorMessage(err, this.locale.t('consent.error.codeInvalid')),
         );
         this.estado.set('pending');
       },

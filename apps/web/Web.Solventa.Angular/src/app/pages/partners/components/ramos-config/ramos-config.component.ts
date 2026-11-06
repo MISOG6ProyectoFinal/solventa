@@ -5,6 +5,7 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { SwitchComponent } from '../../../../ui/components/switch/switch.component';
 import { PartnersService } from '../../services/partners.service';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-ramos-config',
@@ -14,6 +15,7 @@ import { PartnersService } from '../../services/partners.service';
   templateUrl: './ramos-config.component.html'
 })
 export class RamosConfigComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
 
   readonly partner = input.required<Partner>();
@@ -54,7 +56,7 @@ export class RamosConfigComponent {
   }
 
   coveragesLabel(ramo: PartnerRamoConfig): string {
-    return ramo.coverages.filter(c => c.enabled).map(c => c.name).join(', ') || 'Sin coberturas seleccionadas';
+    return ramo.coverages.filter(c => c.enabled).map(c => c.name).join(', ') || this.locale.t('ramosConfig.noCoverages');
   }
 
   private load(partnerId: string) {
@@ -74,7 +76,7 @@ export class RamosConfigComponent {
       error: () => {
         if (request !== this.lastRequest) return;
         this.loading.set(false);
-        this.error.set('No fue posible cargar la configuración del socio.');
+        this.error.set(this.locale.t('ramosConfig.loadError'));
       },
     });
   }
@@ -99,7 +101,7 @@ export class RamosConfigComponent {
         if (request !== this.lastRequest) return;
         this.config.set(this.confirmed);
         this.saving.set(false);
-        this.error.set('No fue posible guardar el cambio. Se conserva la configuración vigente.');
+        this.error.set(this.locale.t('ramosConfig.saveError'));
       },
     });
   }

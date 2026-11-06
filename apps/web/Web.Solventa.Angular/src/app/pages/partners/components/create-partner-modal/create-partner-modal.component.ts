@@ -10,6 +10,7 @@ import { InputDirective } from '../../../../shared/directives/input.directive';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 import { PartnersService } from '../../services/partners.service';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{1,62}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,6 +32,7 @@ const DUPLICATE_IDENTIFIER = 'identificador_duplicado';
   templateUrl: './create-partner-modal.component.html'
 })
 export class CreatePartnerModalComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
 
   readonly open = input.required<boolean>();
@@ -60,7 +62,7 @@ export class CreatePartnerModalComponent {
   }
 
   alcancesLabel(alcances: Alcance[]): string {
-    return alcances.map(a => ALCANCES.find(option => option.id === a)?.label ?? a).join(', ');
+    return alcances.map(a => this.locale.label('scope', a)).join(', ');
   }
 
   reset() {
@@ -107,24 +109,25 @@ export class CreatePartnerModalComponent {
         error: (error: ApiError) => {
           this.saving.set(false);
           if (error.code === DUPLICATE_IDENTIFIER) this.errors.set({ identifier: error.message });
-          else this.submitError.set('No fue posible crear el socio. Intente de nuevo.');
+          else this.submitError.set(this.locale.t('createPartner.error'));
         },
       });
   }
 
   private validate(): Record<string, string> {
     const errors: Record<string, string> = {};
-    if (!this.name().trim()) errors['name'] = 'Requerido';
+    const required = this.locale.t('common.requiredShort');
+    if (!this.name().trim()) errors['name'] = required;
 
     const identifier = this.identifier().trim();
-    if (!identifier) errors['identifier'] = 'Requerido';
-    else if (!IDENTIFIER_PATTERN.test(identifier)) errors['identifier'] = 'Use letras, números y guiones (mínimo 2)';
+    if (!identifier) errors['identifier'] = required;
+    else if (!IDENTIFIER_PATTERN.test(identifier)) errors['identifier'] = this.locale.t('createPartner.identifierInvalid');
 
     const email = this.email().trim();
-    if (!email) errors['email'] = 'Requerido';
-    else if (!EMAIL_PATTERN.test(email)) errors['email'] = 'Correo inválido';
+    if (!email) errors['email'] = required;
+    else if (!EMAIL_PATTERN.test(email)) errors['email'] = this.locale.t('createPartner.emailInvalid');
 
-    if (this.alcances().length === 0) errors['alcances'] = 'Seleccione al menos uno';
+    if (this.alcances().length === 0) errors['alcances'] = this.locale.t('createPartner.scopesRequired');
     return errors;
   }
 }

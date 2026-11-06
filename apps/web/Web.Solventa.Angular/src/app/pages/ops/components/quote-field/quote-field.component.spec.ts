@@ -17,20 +17,20 @@ describe('QuoteFieldComponent', () => {
   });
 
   it('renders a text input with its label and placeholder', async () => {
-    const el = await render({ key: 'nombre', label: 'Nombre completo', type: 'text', required: true, placeholder: 'Ej. Ana' });
+    const el = await render({ key: 'nombre', labelKey: 'quote.field.nombre', type: 'text', required: true, placeholder: 'Ej. Ana' });
 
-    expect(el.querySelector('label')!.textContent).toContain('Nombre completo');
+    expect(el.querySelector('label')!.textContent).toContain('Nombres');
     expect(el.querySelector('input')!.placeholder).toBe('Ej. Ana');
   });
 
   it('renders a select with the placeholder plus the declared options', async () => {
-    const el = await render({ key: 'tipo', label: 'Tipo', type: 'select', required: false, options: ['CC', 'CE'] });
+    const el = await render({ key: 'tipo', labelKey: 'quote.field.tipoDocumento', type: 'select', required: false, options: ['CC', 'CE'] });
 
     expect(el.querySelectorAll('option').length).toBe(3);
   });
 
   it('writes the typed text into the bound model', async () => {
-    const el = await render({ key: 'email', label: 'Correo', type: 'email', required: true });
+    const el = await render({ key: 'email', labelKey: 'quote.field.email', type: 'email', required: true });
     const input = el.querySelector('input')!;
 
     input.value = 'ana@email.com';
@@ -44,7 +44,7 @@ describe('QuoteFieldComponent', () => {
     it('bloquea caracteres alfabéticos cuando numeric es true', async () => {
       const el = await render({
         key: 'valorCredito',
-        label: 'Valor del crédito',
+        labelKey: 'quote.field.valorCredito',
         type: 'text',
         required: true,
         numeric: true,
@@ -60,7 +60,7 @@ describe('QuoteFieldComponent', () => {
     it('permite dígitos cuando numeric es true', async () => {
       const el = await render({
         key: 'valorCredito',
-        label: 'Valor del crédito',
+        labelKey: 'quote.field.valorCredito',
         type: 'text',
         required: true,
         numeric: true,
@@ -76,7 +76,7 @@ describe('QuoteFieldComponent', () => {
     it('permite teclas de navegación y edición en campos numéricos', async () => {
       const el = await render({
         key: 'valorCredito',
-        label: 'Valor del crédito',
+        labelKey: 'quote.field.valorCredito',
         type: 'text',
         required: true,
         numeric: true,
@@ -93,7 +93,7 @@ describe('QuoteFieldComponent', () => {
     it('permite atajos con ctrlKey o metaKey en campos numéricos', async () => {
       const el = await render({
         key: 'valorCredito',
-        label: 'Valor del crédito',
+        labelKey: 'quote.field.valorCredito',
         type: 'text',
         required: true,
         numeric: true,
@@ -112,7 +112,7 @@ describe('QuoteFieldComponent', () => {
     it('permite cualquier tecla si el campo no es numérico', async () => {
       const el = await render({
         key: 'nombre',
-        label: 'Nombre completo',
+        labelKey: 'quote.field.nombre',
         type: 'text',
         required: true,
         numeric: false,
@@ -127,7 +127,7 @@ describe('QuoteFieldComponent', () => {
     it('muestra el mensaje de error cuando el input error tiene valor', async () => {
       fixture.componentRef.setInput('definition', {
         key: 'nombre',
-        label: 'Nombre completo',
+        labelKey: 'quote.field.nombre',
         type: 'text',
         required: true,
       });

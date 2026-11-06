@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { LocaleService } from '../../../core/services/locale.service';
 
 /**
  * Modal con overlay. Contenido proyectado; el pie se proyecta con `slot="footer"`:
@@ -11,6 +12,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   templateUrl: './modal.component.html',
 })
 export class ModalComponent {
+  protected readonly locale = inject(LocaleService);
   readonly open = input(false);
   readonly title = input.required<string>();
   readonly wide = input(false);

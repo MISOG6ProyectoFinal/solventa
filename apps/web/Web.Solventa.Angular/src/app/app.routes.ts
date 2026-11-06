@@ -33,10 +33,6 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./layout/settings-page/settings-page.component').then((m) => m.SettingsPageComponent),
       },
-      {
-        path: 'design-system',
-        loadComponent: () => import('./layout/design-system-page/design-system-page.component').then((m) => m.DesignSystemPageComponent),
-      },
     ],
   },
   { path: '**', redirectTo: '' },

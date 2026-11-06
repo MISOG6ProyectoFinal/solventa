@@ -1,8 +1,8 @@
 <div class="space-y-5">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <button slv-button variant="outline" (click)="backRequested.emit()">Volver a socios</button>
+    <button slv-button variant="outline" (click)="backRequested.emit()">{{ locale.t('partners.back') }}</button>
     <slv-badge [tone]="getContractTone(partner().apiContractStatus)">
-      Contrato API: {{ partner().apiContractStatus }} · {{ partner().versionContratoApi }}
+      {{ locale.t('partners.contract', { status: locale.label('contract', partner().apiContractStatus), version: partner().versionContratoApi }) }}
     </slv-badge>
   </div>
 
@@ -11,26 +11,26 @@
       <div>
         <h2 class="text-xl font-semibold text-foreground font-['Fraunces']">{{ partner().name }}</h2>
         <p class="text-sm mt-1 text-muted-foreground">
-          {{ partner().identifier }} · {{ partner().tipo }} · {{ partner().pais }} · {{ partner().contactEmail }}
+          {{ partner().identifier }} · {{ locale.label('partnerType', partner().tipo) }} · {{ partner().pais }} · {{ partner().contactEmail }}
         </p>
         <p class="text-xs mt-1 text-muted-foreground">
-          Alta {{ partner().altaFecha }} por {{ partner().altaUsuario }} · Alcances: {{ getAlcancesLabel(partner().alcances) }}
+          {{ locale.t('partners.registered', { date: partner().altaFecha, user: partner().altaUsuario, scopes: getAlcancesLabel(partner().alcances) }) }}
         </p>
       </div>
       <div class="text-sm font-mono space-y-1 text-muted-foreground">
         <p>client_id: {{ partner().clientId }}</p>
-        <p>secreto: {{ partner().secret }}</p>
-        <p>credencial: {{ partner().credentialStatus }} · cuota: {{ partner().cuotaConsumo | number }} solicitudes/min</p>
+        <p>{{ locale.t('partners.secret', { secret: partner().secret }) }}</p>
+        <p>{{ locale.t('partners.credential', { status: locale.label('credential', partner().credentialStatus), quota: (partner().cuotaConsumo | number) ?? '' }) }}</p>
       </div>
     </div>
 
     @if (partner().apiContractStatus === 'Suspendido') {
       <div class="mb-4">
-        <slv-alert tone="error">El contrato de API está suspendido. Las solicitudes de este socio serán rechazadas.</slv-alert>
+        <slv-alert tone="error">{{ locale.t('partners.suspended') }}</slv-alert>
       </div>
     }
 
-    <slv-tabs [items]="tabs" [(active)]="activeTab"></slv-tabs>
+    <slv-tabs [items]="tabs()" [(active)]="activeTab"></slv-tabs>
 
     <div class="pt-5">
       @if (activeTab() === 'config') {
