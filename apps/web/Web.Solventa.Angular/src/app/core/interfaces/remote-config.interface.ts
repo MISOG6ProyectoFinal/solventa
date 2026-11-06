@@ -1,4 +1,5 @@
 import { IconName } from '../../ui/constants/icons.constants';
+import { TextKey } from '../i18n/es';
 
 /** Descripción de un Micro Frontend remoto registrado en el shell. */
 export interface RemoteConfig {
@@ -9,7 +10,7 @@ export interface RemoteConfig {
   /** Ruta del shell donde se monta. */
   readonly path: string;
   /** Clave i18n de la etiqueta del menú y del título de respaldo. */
-  readonly labelKey: string;
+  readonly labelKey: TextKey;
   /** Ícono del menú lateral. */
   readonly icon: IconName;
   /** Atributo `data-testid` del ítem de menú. */

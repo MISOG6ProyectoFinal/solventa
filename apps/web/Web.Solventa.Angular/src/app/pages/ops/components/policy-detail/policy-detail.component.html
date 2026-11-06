@@ -1,21 +1,21 @@
 <div class="space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <button slv-button type="button" variant="outline" (click)="backRequested.emit()">Volver al listado</button>
+    <button slv-button type="button" variant="outline" (click)="backRequested.emit()">{{ locale.t('policy.back') }}</button>
     <div class="flex flex-wrap gap-2">
       <button slv-button type="button" variant="secondary" [disabled]="!isActive()" (click)="endorsementRequested.emit()">
-        Registrar endoso
+        {{ locale.t('policy.endorse') }}
       </button>
       <button slv-button type="button" variant="danger" [disabled]="!isActive()" (click)="cancellationRequested.emit()">
-        Cancelar póliza
+        {{ locale.t('policy.cancel') }}
       </button>
     </div>
   </div>
 
   @if (!isActive()) {
     <slv-alert [tone]="policy().status === 'Cancelada' ? 'error' : 'warning'">
-      La póliza está {{ policy().status.toUpperCase() }} y no admite endosos ni cancelación.
+      {{ locale.t('policy.inactive', { status: locale.label('status.policy', policy().status).toUpperCase() }) }}
       @if (policy().cancelReason) {
-        Causa: {{ policy().cancelReason }} ({{ policy().cancelDate }}).
+        {{ locale.t('policy.inactiveCause', { cause: locale.label('cancel.cause', policy().cancelReason!), date: policy().cancelDate ?? '' }) }}
       }
     </slv-alert>
   }
@@ -23,17 +23,17 @@
   <slv-card>
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
-        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">Detalle de póliza</p>
+        <p class="text-xs uppercase tracking-wider mb-1 text-muted-foreground">{{ locale.t('policy.detail') }}</p>
         <h2 class="text-xl font-semibold font-serif text-foreground">{{ policy().number }}</h2>
         <p class="text-sm mt-1 text-muted-foreground">
-          {{ policy().producto }} · {{ ramoLabel() }} · {{ policy().startDate }} a {{ policy().endDate }}
+          {{ policy().producto }} · {{ locale.label('ramo', policy().ramo) }} · {{ locale.t('policy.period', { start: policy().startDate, end: policy().endDate }) }}
         </p>
-        <p class="text-xs mt-1 text-muted-foreground">Socio origen: {{ policy().socioOrigen }}</p>
+        <p class="text-xs mt-1 text-muted-foreground">{{ locale.t('policy.partner', { partner: policy().socioOrigen }) }}</p>
       </div>
-      <slv-badge [tone]="statusTone[policy().status]">{{ policy().status }}</slv-badge>
+      <slv-badge [tone]="statusTone[policy().status]">{{ locale.label('status.policy', policy().status) }}</slv-badge>
     </div>
 
-    <slv-tabs [items]="tabs" [(active)]="activeTab" />
+    <slv-tabs [items]="tabs()" [(active)]="activeTab" />
 
     <div class="pt-5">
       @switch (activeTab()) {
@@ -50,13 +50,13 @@
 
             @if (policy().beneficiaries.length) {
               <div>
-                <p class="text-xs uppercase tracking-wider mb-2 text-muted-foreground">Beneficiarios</p>
+                <p class="text-xs uppercase tracking-wider mb-2 text-muted-foreground">{{ locale.t('policy.beneficiaries') }}</p>
                 <div class="space-y-2">
                   @for (beneficiary of policy().beneficiaries; track beneficiary.name) {
                     <div class="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm">
                       <div>
                         <p class="text-foreground">{{ beneficiary.name }}</p>
-                        <p class="text-xs text-muted-foreground">{{ beneficiary.parentesco }}</p>
+                        <p class="text-xs text-muted-foreground">{{ locale.label('quote.option', beneficiary.parentesco) }}</p>
                       </div>
                       <span class="font-medium text-foreground">{{ beneficiary.porcentaje }}%</span>
                     </div>
@@ -72,10 +72,10 @@
             <table class="w-full text-sm">
               <thead>
                 <tr class="text-left border-b border-border text-muted-foreground">
-                  <th class="py-2 pr-4 font-medium">Cobertura</th>
-                  <th class="py-2 pr-4 font-medium">Suma asegurada</th>
-                  <th class="py-2 pr-4 font-medium">Deducible</th>
-                  <th class="py-2 pr-4 font-medium">Estado</th>
+                  <th class="py-2 pr-4 font-medium">{{ locale.t('policy.coverage') }}</th>
+                  <th class="py-2 pr-4 font-medium">{{ locale.t('policy.insuredSum') }}</th>
+                  <th class="py-2 pr-4 font-medium">{{ locale.t('policy.deductible') }}</th>
+                  <th class="py-2 pr-4 font-medium">{{ locale.t('common.status') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -86,13 +86,13 @@
                     <td class="py-3 pr-4 text-muted-foreground">{{ coverage.deducible }}</td>
                     <td class="py-3 pr-4">
                       <slv-badge [tone]="coverage.included ? 'success' : 'neutral'">
-                        {{ coverage.included ? 'Incluida' : 'No incluida' }}
+                        {{ coverage.included ? locale.t('policy.included') : locale.t('policy.notIncluded') }}
                       </slv-badge>
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="4" class="py-6 text-muted-foreground">Esta póliza no tiene coberturas registradas.</td>
+                    <td colspan="4" class="py-6 text-muted-foreground">{{ locale.t('policy.noCoverages') }}</td>
                   </tr>
                 }
               </tbody>
@@ -105,16 +105,16 @@
             @for (payment of policy().payments; track payment.ref) {
               <div class="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm">
                 <div>
-                  <p class="text-foreground">{{ payment.tipo }} · {{ payment.ref }}</p>
+                  <p class="text-foreground">{{ locale.label('payment.type', payment.tipo) }} · {{ payment.ref }}</p>
                   <p class="text-xs text-muted-foreground">{{ payment.date }} · {{ payment.medio }}</p>
                 </div>
                 <div class="text-right">
                   <p class="font-medium text-foreground">{{ payment.amount | copCurrency }}</p>
-                  <slv-badge [tone]="paymentTone[payment.status]">{{ payment.status }}</slv-badge>
+                  <slv-badge [tone]="paymentTone[payment.status]">{{ locale.label('status.payment', payment.status) }}</slv-badge>
                 </div>
               </div>
             } @empty {
-              <p class="text-sm text-muted-foreground">Esta póliza no tiene pagos registrados.</p>
+              <p class="text-sm text-muted-foreground">{{ locale.t('policy.noPayments') }}</p>
             }
           </div>
         }
@@ -125,20 +125,20 @@
               <div class="rounded-xl border border-border px-4 py-3 text-sm">
                 <div class="flex justify-between gap-3">
                   <p class="font-medium text-foreground">{{ claim.id }} · {{ claim.tipo }}</p>
-                  <slv-badge [tone]="claimTone[claim.status]">{{ claim.status }}</slv-badge>
+                  <slv-badge [tone]="claimTone[claim.status]">{{ locale.label('status.claim', claim.status) }}</slv-badge>
                 </div>
                 <p class="text-xs mt-1 text-muted-foreground">
-                  Ocurrencia: {{ claim.fechaOcurrencia }} · Aviso: {{ claim.fechaAviso }}
+                  {{ locale.t('policy.claimDates', { occurred: claim.fechaOcurrencia, reported: claim.fechaAviso }) }}
                 </p>
                 <p class="text-xs mt-1 text-muted-foreground">
-                  Monto estimado: {{ claim.montoEstimado | copCurrency }}
+                  {{ locale.t('policy.claimEstimated', { amount: claim.montoEstimado | copCurrency }) }}
                   @if (claim.montoAprobado !== undefined) {
-                    · Aprobado: {{ claim.montoAprobado | copCurrency }}
+                    {{ locale.t('policy.claimApproved', { amount: claim.montoAprobado | copCurrency }) }}
                   }
                 </p>
               </div>
             } @empty {
-              <p class="text-sm text-muted-foreground">Esta póliza no tiene siniestros registrados.</p>
+              <p class="text-sm text-muted-foreground">{{ locale.t('policy.noClaims') }}</p>
             }
           </div>
         }

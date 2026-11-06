@@ -1,16 +1,16 @@
 <slv-card [padding]="false">
   <div class="px-5 py-4 border-b border-border">
-    <h2 class="text-sm font-semibold text-foreground">Socios aprovisionados</h2>
+    <h2 class="text-sm font-semibold text-foreground">{{ locale.t('partners.list.title') }}</h2>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left border-b border-border text-muted-foreground">
-          <th class="px-5 py-3 font-medium">Socio</th>
-          <th class="px-5 py-3 font-medium">Tipo · País</th>
-          <th class="px-5 py-3 font-medium">Alcances</th>
-          <th class="px-5 py-3 font-medium">Contrato API</th>
-          <th class="px-5 py-3 font-medium">Ramos</th>
+          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.partner') }}</th>
+          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.typeCountry') }}</th>
+          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.scopes') }}</th>
+          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.contract') }}</th>
+          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.ramos') }}</th>
           <th class="px-5 py-3 font-medium"></th>
         </tr>
       </thead>
@@ -18,7 +18,7 @@
         @if (partners().length === 0) {
           <tr>
             <td colspan="6" class="px-5 py-10 text-center text-muted-foreground">
-              Aún no hay socios aprovisionados. Use «Nuevo socio» para dar de alta el primero.
+              {{ locale.t('partners.empty') }}
             </td>
           </tr>
         }
@@ -29,21 +29,21 @@
               <p class="font-mono text-xs text-muted-foreground">{{ p.identifier }}</p>
             </td>
             <td class="px-5 py-3 text-muted-foreground">
-              {{ p.tipo }} · {{ p.pais }}
+              {{ locale.label('partnerType', p.tipo) }} · {{ p.pais }}
             </td>
             <td class="px-5 py-3 text-muted-foreground">
               {{ getAlcancesLabel(p.alcances) }}
             </td>
             <td class="px-5 py-3">
               <slv-badge [tone]="getContractTone(p.apiContractStatus)">
-                {{ p.apiContractStatus }} · {{ p.versionContratoApi }}
+                {{ locale.label('contract', p.apiContractStatus) }} · {{ p.versionContratoApi }}
               </slv-badge>
             </td>
             <td class="px-5 py-3 text-foreground">
               {{ getRamosLabel(p.enabledRamos) }}
             </td>
             <td class="px-5 py-3 text-right">
-              <button slv-button variant="ghost" (click)="opened.emit(p.id)">Abrir</button>
+              <button slv-button variant="ghost" (click)="opened.emit(p.id)">{{ locale.t('common.open') }}</button>
             </td>
           </tr>
         }

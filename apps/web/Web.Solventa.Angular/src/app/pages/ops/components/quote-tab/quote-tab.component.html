@@ -32,10 +32,10 @@
     />
 
     <slv-card>
-      <slv-field label="Simulación de proveedores externos (demo)">
+      <slv-field [label]="locale.t('quote.simulation')">
         <select slvInput [(ngModel)]="scenario">
           @for (option of scenarios; track option.id) {
-            <option [value]="option.id">{{ option.label }}</option>
+            <option [value]="option.id">{{ locale.t(option.labelKey) }}</option>
           }
         </select>
       </slv-field>
@@ -48,7 +48,7 @@
         [disabled]="isCalculating() || !puedeCalcular()"
         (click)="quoteForm.submit()"
       >
-        {{ isCalculating() ? 'Calculando cotización...' : 'Calcular cotización' }}
+        {{ isCalculating() ? locale.t('quote.calculating') : locale.t('quote.calculate') }}
       </button>
     </div>
   </div>

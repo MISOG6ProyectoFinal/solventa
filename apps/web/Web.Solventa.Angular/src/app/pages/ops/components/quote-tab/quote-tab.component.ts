@@ -19,8 +19,7 @@ import { QuotesService } from '../../services/quotes.service';
 import { ConsentPanelComponent } from '../consent-panel/consent-panel.component';
 import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
-
-const DEFAULT_QUOTE_ERROR = 'Error al calcular cotización';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 interface QuoteErrorDetail {
   readonly mensaje?: string;
@@ -28,16 +27,16 @@ interface QuoteErrorDetail {
 }
 
 /** El backend responde igual en todos los canales: `{ codigo, mensaje, campos? }`. */
-export function quoteErrorMessage(detail: unknown): string {
+export function quoteErrorMessage(detail: unknown, fallback: string): string {
   if (typeof detail === 'string' && detail !== '') {
     return detail;
   }
   if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) {
-    return DEFAULT_QUOTE_ERROR;
+    return fallback;
   }
   const { mensaje, campos } = detail as QuoteErrorDetail;
   if (!mensaje) {
-    return DEFAULT_QUOTE_ERROR;
+    return fallback;
   }
   const fields = (campos ?? []).map(({ campo, error }) => `${campo}: ${error}`);
   return fields.length ? `${mensaje} ${fields.join('. ')}` : mensaje;
@@ -60,6 +59,7 @@ export function quoteErrorMessage(detail: unknown): string {
   templateUrl: './quote-tab.component.html',
 })
 export class QuoteTabComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly quotesService = inject(QuotesService);
 
   protected readonly scenarios = PROVIDER_SCENARIOS;
@@ -74,7 +74,7 @@ export class QuoteTabComponent {
   protected readonly formValues = signal<Record<string, string>>({});
 
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
-  protected readonly ramoLabel = computed(() => this.ramoMeta()?.label ?? '');
+  protected readonly ramoLabel = computed(() => this.locale.label('ramo', this.ramo()));
   protected readonly requiresConsent = computed(() => this.ramoMeta()?.requiresConsent ?? false);
   protected readonly puedeCalcular = computed(
     () => !this.requiresConsent() || this.consentValidated(),
@@ -105,7 +105,7 @@ export class QuoteTabComponent {
         this.isCalculating.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(quoteErrorMessage(err?.error?.detail));
+        this.errorMessage.set(quoteErrorMessage(err?.error?.detail, this.locale.t('quote.error')));
         this.isCalculating.set(false);
       },
     });

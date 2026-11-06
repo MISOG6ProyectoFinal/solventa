@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LocaleService } from '../../../core/services/locale.service';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
 import { OpsPoliciesService } from '../services/ops-policies.service';
 import { QuoteTabComponent } from '../components/quote-tab/quote-tab.component';
@@ -25,11 +26,12 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
 })
 export class OpsPageComponent {
   private readonly opsService = inject(OpsPoliciesService);
+  protected readonly locale = inject(LocaleService);
 
   activeTab = signal('cotizar');
-  tabs = signal([
-    { id: 'cotizar', label: 'Cotización' },
-    { id: 'polizas', label: 'Consulta de pólizas' }
+  tabs = computed(() => [
+    { id: 'cotizar', label: this.locale.t('ops.tab.quote') },
+    { id: 'polizas', label: this.locale.t('ops.tab.policies') },
   ]);
 
   selectedPolicyId = signal<string | null>(null);

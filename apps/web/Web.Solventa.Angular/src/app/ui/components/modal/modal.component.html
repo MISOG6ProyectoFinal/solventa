@@ -12,7 +12,7 @@
         <h3 class="text-lg font-semibold font-serif text-foreground">{{ title() }}</h3>
         <button
           type="button"
-          aria-label="Cerrar"
+          [attr.aria-label]="locale.t('common.close')"
           (click)="closed.emit()"
           class="w-8 h-8 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer"
         >

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Policy } from '../../../../core/models/policy.model';
 import { CopCurrencyPipe } from '../../../../shared/pipes/cop-currency.pipe';
@@ -9,6 +9,7 @@ import { FieldComponent } from '../../../../ui/components/field/field.component'
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
 import { CANCEL_CAUSES, NON_REFUNDABLE_CAUSE, OPS_TODAY } from '../../constants/ops.constants';
 import { calculateCancellation } from '../../utils/policy-cancellation.utils';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 type CancelStep = 'form' | 'confirm';
 
@@ -20,6 +21,7 @@ type CancelStep = 'form' | 'confirm';
   templateUrl: './cancel-policy-modal.component.html',
 })
 export class CancelPolicyModalComponent {
+  protected readonly locale = inject(LocaleService);
   readonly policy = input.required<Policy>();
 
   readonly closed = output<void>();

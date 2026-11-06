@@ -1,10 +1,6 @@
-export const PARTNER_TABS = [
-  { id: 'config', label: 'Ramos y coberturas' },
-  { id: 'ops', label: 'Operaciones del canal' }
-];
+import { TextKey } from '../../../core/i18n/es';
 
-export const OPS_TABS = [
-  { id: 'cotizar', label: 'Cotizar' },
-  { id: 'emitir', label: 'Emitir' },
-  { id: 'consultar', label: 'Consultar' }
+export const PARTNER_TABS: readonly { id: string; labelKey: TextKey }[] = [
+  { id: 'config', labelKey: 'partners.tab.config' },
+  { id: 'ops', labelKey: 'partners.tab.ops' },
 ];

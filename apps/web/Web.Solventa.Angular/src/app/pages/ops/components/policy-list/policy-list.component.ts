@@ -1,8 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Policy } from '../../../../core/models/policy.model';
-import { RamoId } from '../../../../core/models/ramo.model';
-import { RAMOS } from '../../../../shared/constants/ramos.constants';
 import { POLICY_STATUS_TONE } from '../../../../shared/constants/status-tone.constants';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { BadgeComponent } from '../../../../ui/components/badge/badge.component';
@@ -10,6 +8,7 @@ import { ButtonComponent } from '../../../../ui/components/button/button.compone
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { OPS_FILTER_ALL, POLICY_STATUS_OPTIONS } from '../../constants/ops.constants';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 /** Consulta de pólizas: filtros (texto, estado, socio) y tabla de resultados. */
 @Component({
@@ -19,6 +18,7 @@ import { OPS_FILTER_ALL, POLICY_STATUS_OPTIONS } from '../../constants/ops.const
   templateUrl: './policy-list.component.html',
 })
 export class PolicyListComponent {
+  protected readonly locale = inject(LocaleService);
   readonly policies = input.required<readonly Policy[]>();
   readonly partners = input.required<readonly string[]>();
   readonly opened = output<string>();
@@ -43,10 +43,6 @@ export class PolicyListComponent {
         (!partner || policy.socioOrigen === partner),
     );
   });
-
-  protected ramoLabel(id: RamoId): string {
-    return RAMOS.find((ramo) => ramo.id === id)?.label ?? id;
-  }
 
   private matchesText(policy: Policy, text: string): boolean {
     return (

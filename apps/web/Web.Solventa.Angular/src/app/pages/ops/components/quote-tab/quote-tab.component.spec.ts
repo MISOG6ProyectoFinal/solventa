@@ -208,20 +208,22 @@ describe('QuoteTabComponent', () => {
 });
 
 describe('quoteErrorMessage', () => {
+  const FALLBACK = 'Error al calcular cotización';
+
   it('keeps a plain message', () => {
-    expect(quoteErrorMessage('Producto sin tarifa')).toBe('Producto sin tarifa');
+    expect(quoteErrorMessage('Producto sin tarifa', FALLBACK)).toBe('Producto sin tarifa');
   });
 
   it('shows the message of a product error', () => {
     expect(
-      quoteErrorMessage({ codigo: 'producto_inactivo', mensaje: 'Producto inactivo: hogar' }),
+      quoteErrorMessage({ codigo: 'producto_inactivo', mensaje: 'Producto inactivo: hogar' }, FALLBACK),
     ).toBe('Producto inactivo: hogar');
   });
 
   it('falls back when the detail has nothing to show', () => {
-    expect(quoteErrorMessage(undefined)).toBe('Error al calcular cotización');
-    expect(quoteErrorMessage('')).toBe('Error al calcular cotización');
-    expect(quoteErrorMessage([{ msg: 'Field required' }])).toBe('Error al calcular cotización');
-    expect(quoteErrorMessage({ codigo: 'x' })).toBe('Error al calcular cotización');
+    expect(quoteErrorMessage(undefined, FALLBACK)).toBe(FALLBACK);
+    expect(quoteErrorMessage('', FALLBACK)).toBe(FALLBACK);
+    expect(quoteErrorMessage([{ msg: 'Field required' }], FALLBACK)).toBe(FALLBACK);
+    expect(quoteErrorMessage({ codigo: 'x' }, FALLBACK)).toBe(FALLBACK);
   });
 });

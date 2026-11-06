@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Policy } from '../../../../core/models/policy.model';
 import { InputDirective } from '../../../../shared/directives/input.directive';
@@ -8,6 +8,7 @@ import { FieldComponent } from '../../../../ui/components/field/field.component'
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
 import { ENDORSEMENT_TYPES, OPS_TODAY } from '../../constants/ops.constants';
 import { EndorsementDraft } from '../../interfaces/endorsement-draft.interface';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 /** Modal "Registrar endoso": paso de edición de los datos del asegurado. */
 @Component({
@@ -17,6 +18,7 @@ import { EndorsementDraft } from '../../interfaces/endorsement-draft.interface';
   templateUrl: './endorsement-modal.component.html',
 })
 export class EndorsementModalComponent {
+  protected readonly locale = inject(LocaleService);
   readonly policy = input.required<Policy>();
 
   readonly closed = output<void>();
@@ -33,10 +35,10 @@ export class EndorsementModalComponent {
   private readonly submitted = signal(false);
 
   protected readonly reasonError = computed(() =>
-    this.submitted() && !this.reason().trim() ? 'El motivo del endoso es obligatorio.' : '',
+    this.submitted() && !this.reason().trim() ? this.locale.t('endorsement.reasonRequired') : '',
   );
   protected readonly dateError = computed(() =>
-    this.submitted() && !this.effectiveDate() ? 'La fecha efectiva es obligatoria.' : '',
+    this.submitted() && !this.effectiveDate() ? this.locale.t('endorsement.dateRequired') : '',
   );
 
   protected submit(): void {

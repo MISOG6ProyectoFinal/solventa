@@ -21,7 +21,23 @@ describe('LocaleService', () => {
     expect(localStorage.getItem('slv.locale')).toBe('en');
   });
 
-  it('returns the key when a translation is missing', () => {
-    expect(TestBed.inject(LocaleService).t('no.such.key')).toBe('no.such.key');
+  it('fills the parameters of a text', () => {
+    const svc = TestBed.inject(LocaleService);
+    expect(svc.t('breakdown.ramo', { ramo: 'Viaje' })).toBe('Ramo: Viaje');
+    svc.setLocale('en');
+    expect(svc.t('partners.contract', { status: 'Active', version: 'v2' })).toBe('API contract: Active · v2');
+  });
+
+  it('translates domain values and keeps the value when there is no translation', () => {
+    const svc = TestBed.inject(LocaleService);
+    svc.setLocale('en');
+    expect(svc.label('status.policy', 'Activa')).toBe('Active');
+    expect(svc.label('quote.option', 'CC')).toBe('CC');
+    expect(svc.label('ramoApi', 'ramo-hogar', 'Hogar')).toBe('Hogar');
+  });
+
+  it('reads the saved language', () => {
+    localStorage.setItem('slv.locale', 'en');
+    expect(TestBed.inject(LocaleService).t('settings.title')).toBe('Settings');
   });
 });
