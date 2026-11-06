@@ -59,8 +59,17 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 
 La lógica completa está en los módulos que los experimentos validaron:
 
-- **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Cotización y Rating**: las reglas de rating (tasas por mil, tarifa diaria de viaje, recargos por destino, montos paramétricos e IVA) viven en la tabla `reglas_rating`, versionadas, con la versión inicial cargada por el bootstrap. `POST /cotizaciones/reglas` publica una versión nueva y aplica desde la siguiente cotización, sin redesplegar; `GET /cotizaciones/reglas` lee la vigente y `GET /cotizaciones/reglas/versiones` las publicadas. Cada cotización guarda `version_reglas`. Estos endpoints son internos: el ingress solo expone Canales. El servicio corre con 3 réplicas detrás de un Service headless.
 - **Una sola cotización para los tres canales**: móvil, portal y socios entran por el mismo flujo de `consenso` (`quote_request`). El `producto_id` decide el contrato del cuerpo (`consenso/domain/quote_contract.py`) y Rating tarifa con el modelo de ese producto. `score_riesgo` y `cliente_id` los resuelve Solventa: el score sale de Open Finance cuando la solicitud trae `consentimiento_open_finance` y el cliente llega en `X-Cliente-Id` desde el BFF. Un dato faltante responde 422 `datos_invalidos` con cada campo y su motivo, y un problema del producto responde `{codigo, mensaje}`. Cada canal conserva solo lo suyo: la sesión y el titular en el móvil, el cliente y el consentimiento digital en el portal, la credencial, el ramo y las coberturas del socio.
+- **Un dueño por dato de negocio**: el catálogo de Cotización guarda en qué canales se ofrece cada producto (`canales`), si exige consentimiento Open Finance (`requiere_consentimiento`) y su presentación móvil (`presentacion_mobile`). Un producto fuera del canal responde 422 `producto_fuera_del_canal`. Canales, el móvil y el portal leen de ahí y no repiten ids ni reglas. Las listas cerradas que valida el backend las publica su servicio dueño y Canales las reenvía:
+
+  | Dato | Dueño | Servicio | Web | Móvil |
+  |---|---|---|---|---|
+  | Ramos y productos por canal, consentimiento | Cotización | `GET /catalogo/canales/{canal}/ramos` | `GET /web/ramos` | `GET /movil/productos` |
+  | Contrato de cotización y opciones de sus campos | Cotización | `GET /catalogo/productos/{id}/contrato` | `GET /web/productos/{id}/contrato` | `GET /movil/productos/{id}/contrato` |
+  | Tipos de socio y alcances | Cotización | `GET /gobierno-socios/tipos`, `/alcances` | `GET /web/socios/tipos`, `/alcances` | |
+  | Estados de póliza y causas de cancelación | Pólizas | `GET /polizas/catalogos/estados`, `/causas-cancelacion` | `GET /web/polizas/estados`, `/causas-cancelacion` | |
+  | Tipos de documento | Identidad | `GET /identidad/tipos-documento` | `GET /web/tipos-documento` | `GET /movil/tipos-documento` |
 - **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, para que actuaría reconstruya la decisión con `GET /consenso/cotizaciones/{id}`.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
@@ -140,6 +149,8 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
 DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=solventa \
   poetry run uvicorn cotizacion.main:app --reload
 ```
+
+El bootstrap crea las tablas, carga el catálogo y las reglas de rating iniciales si están vacíos y completa los canales de un catálogo creado antes de ellos. Las réplicas no siembran nada: sin bootstrap no hay reglas y Cotización no puede tarifar.
 
 Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS, por eso Compose y k3s usan imágenes `postgis/postgis`. El catálogo se carga aparte, con el seed de aliados y los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda el seed:
 
@@ -278,8 +289,8 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 `load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
 
-- **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
-- **Portal web:** cotización asistida, listado, detalle y configuración de socios.
+- **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, tipos de documento, catálogo, contrato del producto, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
+- **Portal web:** ramos y contrato del producto, cotización asistida, listado, detalle y configuración de socios.
 - **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
