@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Protocol
 
 from polizas.ciclo_vida.domain.models import Policy
@@ -51,3 +52,5 @@ class PolicyRepository(Protocol):
     def list_by_client(self, cliente_id: str) -> list[Policy]: ...
 
     def list_recent(self, limit: int) -> list[Policy]: ...
+
+    def expire_ended(self, today: date) -> int: ...
