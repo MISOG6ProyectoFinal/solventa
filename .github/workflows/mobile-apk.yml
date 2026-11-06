@@ -70,36 +70,20 @@ jobs:
           printf 'API_BASE_URL=%s\n' "$API_BASE_URL" > apps/mobile/.env
           echo "Mobile API_BASE_URL=$API_BASE_URL"
 
+      - name: Checkout de los actions del workflow
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .ci
+          sparse-checkout: .github/actions
+
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: ./.ci/.github/actions/setup-node
         with:
           node-version-file: .nvmrc
-          cache: npm
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Instalar NDK, CMake y la plataforma Android
-        run: |
-          if [ -z "${ANDROID_HOME:-}" ]; then
-            echo "::error::Este runner no trae ANDROID_HOME."
-            exit 1
-          fi
-          export PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${PATH}"
-          set +o pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          set -o pipefail
-          sdkmanager --install \
-            "platforms;android-37.0" \
-            "build-tools;37.0.0" \
-            "ndk;27.1.12297006" \
-            "cmake;3.31.6"
-
-      - name: Install Node dependencies
-        run: npm ci
+      - name: Setup Android
+        uses: ./.ci/.github/actions/setup-android
 
       - name: Build APK
         env:
