@@ -1,9 +1,8 @@
 """Perfil financiero desde Open Finance, con el timeout duro del flujo de cotización.
 
-Sin OPEN_FINANCE_URL no hay proveedor real: responde el simulador de sandbox (RT-02).
+OPEN_FINANCE_URL apunta al proveedor. Mientras no hay acceso al real, apunta al servicio simuladores (RT-02).
 """
 
-import hashlib
 from decimal import Decimal, InvalidOperation
 
 import httpx
@@ -60,19 +59,7 @@ class OpenFinanceRiskProfile:
         return _valid_score(profile["score_riesgo"])
 
 
-class SandboxRiskProfile:
-    """Sandbox determinista: el mismo cliente siempre recibe el mismo score entre 0.30 y 0.70."""
-
-    source = SOURCE
-
-    def risk_score(self, consent: OpenFinanceConsent) -> Decimal:
-        digest = hashlib.sha256(consent.referencia_cliente.encode()).digest()
-        return Decimal(30 + digest[0] % 41) / Decimal(100)
-
-
 def build_provider(
-    url: str | None, api_key: str | None, timeout_s: float, breaker: CircuitBreaker | None = None
-) -> OpenFinanceRiskProfile | SandboxRiskProfile:
-    if url:
-        return OpenFinanceRiskProfile(OpenFinanceQuoteAdapter(url, api_key, timeout_s, breaker))
-    return SandboxRiskProfile()
+    url: str, api_key: str | None, timeout_s: float, breaker: CircuitBreaker | None = None
+) -> OpenFinanceRiskProfile:
+    return OpenFinanceRiskProfile(OpenFinanceQuoteAdapter(url, api_key, timeout_s, breaker))

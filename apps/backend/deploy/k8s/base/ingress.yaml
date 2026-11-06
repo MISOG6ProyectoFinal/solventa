@@ -34,3 +34,10 @@ spec:
             name: canales
             port:
               number: 80
+      - path: /simuladores
+        pathType: Prefix
+        backend:
+          service:
+            name: simuladores
+            port:
+              number: 80

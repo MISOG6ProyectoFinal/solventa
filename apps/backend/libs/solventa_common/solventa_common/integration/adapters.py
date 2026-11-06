@@ -76,3 +76,13 @@ class FirmaNotificacionAdapter(ExternalAdapter):
         return self._request(
             "POST", "/notifications", json={"channel": channel, "to": recipient, "template": template, "data": data}
         )
+
+
+class RedAsistenciaAdapter(ExternalAdapter):
+    """Red de prestadores que despacha grúa, ambulancia o perito y responde el tiempo estimado de llegada."""
+
+    name = "red-asistencia"
+    retries = 0
+
+    def dispatch(self, service: str, location: str, gps: str | None) -> Any:
+        return self._request("POST", "/despachos", json={"servicio": service, "ubicacion": location, "gps": gps})

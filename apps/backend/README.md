@@ -53,6 +53,7 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 | `pagos` | `cobros` | Cobros y Pagos | pagos |
 | `auditoria` | `linaje`, `analitica`, `notificaciones` | Auditoría y Linaje, Analítica y Fraude, Notificaciones (consumidores del bus) | auditoria |
 | `health-monitor` | | Monitor de Salud y Retiro | |
+| `simuladores` | `control`, `providers` | Terceros simulados: Open Finance, pasarela de pagos, notificaciones y red de asistencia | |
 | `solventa_common` | `integration` | Adaptadores por tercero + Circuit Breaker Global | |
 | SNS + SQS | | Bus de Eventos + Dead Letter Queue | |
 
@@ -77,7 +78,30 @@ Los demás módulos arrancan con su router y el dominio documentado en su `__ini
 | `idempotency` | Idempotency Key Validator sobre restricción de unicidad en PostgreSQL |
 | `resilience` | Circuit Breaker y Cache-Aside last-known-good sobre Redis |
 | `validation` | Error 422 `datos_invalidos` con los campos y su motivo, igual en todos los canales |
-| `integration` | Adaptadores Open Finance (700 ms), Open Data, KYC/AML, Pasarela de Pagos, ACORD, Firma y Notificación |
+| `integration` | Adaptadores Open Finance (700 ms), Open Data, KYC/AML, Pasarela de Pagos, ACORD, Firma y Notificación, Red de Asistencia |
+
+### Terceros simulados
+
+Solventa llama a los terceros por HTTP con los adaptadores de `integration`, también cuando el tercero es simulado. El servicio `simuladores` expone el mismo contrato que esos adaptadores y corre en `local` y en AWS. Para cambiar a un proveedor real basta con su variable de entorno:
+
+| Tercero | Quién lo llama | Variable (por defecto) |
+|---|---|---|
+| Open Finance | Cotización, score de riesgo (HU018) | `OPEN_FINANCE_URL` (`http://simuladores/open-finance`) |
+| Pasarela de pagos | Pagos, cobro de la prima | `PASARELA_URL` (`http://simuladores/pasarela-pagos`) |
+| Notificaciones | Identidad, OTP del consentimiento (HU002) | `FIRMA_NOTIFICACION_URL` (`http://simuladores/notificaciones`) |
+| Red de asistencia | Siniestros, despacho de grúa, ambulancia o perito | `RED_ASISTENCIA_URL` (`http://simuladores/red-asistencia`) |
+
+Los fallos se provocan por API, en `/simuladores` del mismo `BASE_URL`:
+
+| Endpoint | Uso |
+|---|---|
+| `GET /simuladores` | Modo, demora y llamadas de cada tercero |
+| `GET /simuladores/{proveedor}` | Lo mismo para un tercero |
+| `PUT /simuladores/{proveedor}/modo` | `{"modo": "normal" \| "lento" \| "caido" \| "invalida", "demora_s": 2}` |
+| `DELETE /simuladores/{proveedor}/llamadas` | Reinicia el conteo de llamadas |
+| `GET /simuladores/notificaciones/mensajes?to=` | Bandeja de lo enviado, para leer un OTP |
+
+`lento` responde después de `demora_s`, `caido` responde 503 e `invalida` responde un cuerpo que el adaptador no reconoce. La pasarela aprueba solo el token `demo-4242` y repite el resultado de una misma clave de idempotencia. El modo vive en memoria de la única réplica del servicio. Las pruebas unitarias de cada servicio usan dobles en código, no este servicio.
 
 ## Del modelo de despliegue a AWS
 
@@ -269,11 +293,7 @@ PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./load-tests/run.sh
 ```
 
-El perfil `degradacion` necesita `load-tests/open_finance_simulado.py` corriendo en el equipo (`poetry run python load-tests/open_finance_simulado.py --puerto 9090`) y Cotización apuntando a él con `OPEN_FINANCE_URL`. En el modo `local`, los pods llegan al equipo por `192.168.65.254`:
-
-```bash
-docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_FINANCE_URL=http://192.168.65.254:9090
-```
+El perfil `degradacion` cambia el modo de Open Finance en el servicio `simuladores` por `PUT /simuladores/open-finance/modo`, en el mismo `BASE_URL`. Sirve igual en `local` y en AWS.
 
 | Perfil | Qué ejecuta |
 |---|---|
@@ -281,7 +301,7 @@ docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_
 | `carga` | Usuarios constantes en móvil y portal web, más cotizaciones y ventas de socios a tasa fija |
 | `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
 | `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir, reintentar la emisión y consultar la póliza |
-| `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone el simulador en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
+| `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone Open Finance en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
 
 | Variable | Por defecto | Uso |
 |---|---|---|
@@ -297,7 +317,6 @@ docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_
 | `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
 | `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
 | `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
-| `OPEN_FINANCE_SIMULADO_URL` | `http://host.docker.internal:9090` | Simulador que controla k6 en `degradacion` |
 | `SEGUNDOS_POR_FASE`, `MODO_CAIDA` | 60 y `lento` | Duración de cada fase y cómo falla el proveedor (`lento` supera el timeout, `caido` responde 503) |
 | `CLIENTES_OPEN_FINANCE` | 200 | Clientes distintos en las cotizaciones de `degradacion`; los repetidos usan el último valor bueno |
 | `UMBRAL_DISPONIBILIDAD` | 99.9 | Disponibilidad mínima de cada fase en `degradacion` |
@@ -312,7 +331,14 @@ k6 termina con error si alguna petición supera su p95 o su porcentaje de errore
 
 Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
 
-`postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`.
+`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta. La carpeta **Fallos simulados** tumba cada tercero y lo devuelve a normal. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`, y la carpeta **Portal web** crea el socio que usa **API de socios**.
+
+```bash
+npx newman run postman/recorrido-canales.postman_collection.json
+npx newman run postman/recorrido-canales.postman_collection.json --env-var baseUrl=http://localhost:8000
+```
+
+En `local`, Siniestros guarda las evidencias en memoria y la URL de carga (`upload.local`) no resuelve fuera del clúster: la subida, el radicado y la asistencia fallan en Newman.
 
 ## Siguientes pasos
 

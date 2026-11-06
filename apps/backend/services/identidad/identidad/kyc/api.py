@@ -15,6 +15,7 @@ from identidad.kyc.domain.models import (
     DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    NotificationUnavailable,
     RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
@@ -155,6 +156,9 @@ def solicitar_consentimiento(solicitud: SolicitudConsentimiento) -> RespuestaSol
         return container.solicitar_consentimiento.execute(solicitud)
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
+    except NotificationUnavailable as exc:
+        detail = {"codigo": "notificacion_no_disponible", "mensaje": str(exc)}
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from exc
 
 
 @router.post("/validar", response_model=RespuestaValidacion)

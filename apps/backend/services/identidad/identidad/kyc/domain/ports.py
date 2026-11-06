@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Protocol
 
 from identidad.kyc.domain.models import Account, Client, Consentimiento
@@ -31,3 +32,7 @@ class ConsentimientoRepository(Protocol):
     def update(self, consentimiento: Consentimiento) -> None: ...
 
     def create_schema(self) -> None: ...
+
+
+class OtpSender(Protocol):
+    def send(self, channel: str, recipient: str, code: str, expires_at: datetime) -> None: ...

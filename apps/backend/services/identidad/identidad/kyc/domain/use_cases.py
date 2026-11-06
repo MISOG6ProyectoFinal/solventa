@@ -1,4 +1,3 @@
-import logging
 import secrets
 from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
@@ -27,10 +26,8 @@ from identidad.kyc.domain.models import (
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
-from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository
+from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository, OtpSender
 from identidad.kyc.domain.sesion import hash_password, new_salt, password_matches
-
-logger = logging.getLogger(__name__)
 
 SESSION_DAYS = 7
 _DUMMY_SALT = "00" * 16
@@ -205,9 +202,11 @@ class SolicitarConsentimiento:
     def __init__(
         self,
         repository: ConsentimientoRepository,
+        otp_sender: OtpSender,
         clients: ClientRepository | None = None,
     ) -> None:
         self.repository = repository
+        self.otp_sender = otp_sender
         self.clients = clients
 
     def execute(self, solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
@@ -268,16 +267,8 @@ class SolicitarConsentimiento:
             solicitado_en=ahora,
             expira_en=expira_en,
         )
+        self.otp_sender.send(consentimiento.canal, contacto or contacto_mask, codigo, expira_en)
         self.repository.add(consentimiento)
-
-        logger.info(
-            "📲 [MOCK OTP] Cliente: %s | Canal: %s | Fuente: %s | Código OTP: %s | Vence: %s",
-            cliente_id,
-            consentimiento.canal,
-            consentimiento.fuente,
-            codigo,
-            expira_en.isoformat(),
-        )
 
         return RespuestaSolicitud(
             consentimiento_id=consentimiento.id,
