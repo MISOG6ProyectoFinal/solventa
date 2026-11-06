@@ -7,13 +7,7 @@ from decimal import Decimal
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from pagos.cobros.adapters.pasarela import (
-    TOKEN_APROBADO,
-    TOKEN_RECHAZADO,
-    PasarelaPagosGateway,
-    PasarelaSimulada,
-    construir_pasarela,
-)
+from pagos.cobros.adapters.pasarela import PasarelaPagosGateway, construir_pasarela
 from pagos.cobros.adapters.repository import InMemoryCobroRepository, PostgresCobroRepository
 from pagos.cobros.adapters.schema import cobros as cobros_table
 from pagos.cobros.api import casos, router, wire
@@ -27,6 +21,20 @@ from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.pool import StaticPool
 
 client = TestClient(app)
+
+TOKEN_APROBADO = "demo-4242"
+TOKEN_RECHAZADO = "demo-rechazo"
+
+
+class PasarelaSimulada:
+    """Mock en código del contrato de la pasarela: aprueba solo el token de prueba."""
+
+    def __init__(self) -> None:
+        self.llamadas = 0
+
+    def charge(self, amount: float, currency: str, token: str, idempotency_key: str) -> dict:
+        self.llamadas += 1
+        return {"estado": "aprobado" if token == TOKEN_APROBADO else "rechazado", "referencia": idempotency_key}
 
 
 class _Pasarela:
@@ -290,7 +298,7 @@ def test_el_adapter_real_no_reintenta_y_el_gateway_lo_llama_una_vez():
     assert adapter.calls == [(10.0, "COP", TOKEN_APROBADO, "clave")]
 
 
-def test_un_timeout_de_la_pasarela_no_reintenta(monkeypatch):
+def test_un_timeout_de_la_pasarela_no_reintenta():
     llamadas = {"n": 0}
 
     class _Adapter:
@@ -302,8 +310,12 @@ def test_un_timeout_de_la_pasarela_no_reintenta(monkeypatch):
     with pytest.raises(PasarelaNoDisponible):
         gateway.charge(1.0, "COP", TOKEN_APROBADO, "clave")
     assert llamadas["n"] == 1
-    monkeypatch.setattr(settings, "pasarela_url", None)
-    assert isinstance(construir_pasarela(), PasarelaSimulada)
+
+
+def test_por_defecto_cobra_en_la_pasarela_del_servicio_simuladores(monkeypatch):
+    monkeypatch.delenv("PASARELA_URL", raising=False)
+
+    assert type(settings)().pasarela_url == "http://simuladores/pasarela-pagos"
 
 
 def test_con_url_se_usa_el_adapter_existente(monkeypatch):

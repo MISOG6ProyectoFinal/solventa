@@ -15,6 +15,7 @@ from identidad.kyc.domain.models import (
     DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    NotificationUnavailable,
     RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
@@ -149,7 +150,11 @@ def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
 
 @router.post("/solicitar", status_code=status.HTTP_201_CREATED, response_model=RespuestaSolicitud)
 def solicitar_consentimiento(solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
-    return container.solicitar_consentimiento.execute(solicitud)
+    try:
+        return container.solicitar_consentimiento.execute(solicitud)
+    except NotificationUnavailable as exc:
+        detail = {"codigo": "notificacion_no_disponible", "mensaje": str(exc)}
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from exc
 
 
 @router.post("/validar", response_model=RespuestaValidacion)

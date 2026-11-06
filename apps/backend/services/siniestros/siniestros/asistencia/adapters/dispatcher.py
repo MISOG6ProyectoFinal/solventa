@@ -1,20 +1,18 @@
-import secrets
-from collections.abc import Callable
+"""Despacho por la red de asistencia. RED_ASISTENCIA_URL apunta al servicio simuladores mientras no hay red real."""
 
+from solventa_common.integration import RedAsistenciaAdapter
+
+from siniestros.asistencia.domain.errors import MSG_RED, ReglaAsistencia
 from siniestros.asistencia.domain.models import Despacho, NuevaAsistencia
 
-# Minutes of arrival by service. There is no provider catalog yet, so these are fixed.
-ETA = {"grua": (25, 40), "ambulancia": (10, 20), "perito": (25, 40)}
 
-
-def nuevo_numero() -> str:
-    return f"AST-{1000 + secrets.randbelow(9000)}"
-
-
-class PrototypeDispatcher:
-    def __init__(self, numero_factory: Callable[[], str] = nuevo_numero) -> None:
-        self.numero_factory = numero_factory
+class AssistanceNetworkDispatcher:
+    def __init__(self, adapter: RedAsistenciaAdapter) -> None:
+        self.adapter = adapter
 
     def dispatch(self, solicitud: NuevaAsistencia) -> Despacho:
-        eta_min, eta_max = ETA[solicitud.servicio]
-        return Despacho(numero=self.numero_factory(), eta_min=eta_min, eta_max=eta_max)
+        try:
+            respuesta = self.adapter.dispatch(solicitud.servicio, solicitud.ubicacion, solicitud.gps)
+            return Despacho.model_validate(respuesta)
+        except Exception as exc:
+            raise ReglaAsistencia(503, MSG_RED) from exc

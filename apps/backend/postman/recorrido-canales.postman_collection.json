@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Solventa recorrido Canales",
-    "description": "Recorrido funcional de los tres canales de Canales (móvil, portal web y API de socios) para Postman o Newman. Cada iteración crea un cliente, un aviso de siniestro radicado y una evidencia. Las peticiones móviles autenticadas usan el token que guarda Iniciar sesión. La API de socios necesita socioId, socioClientId y socioSecreto de un socio con el ramo de viaje habilitado. La subida de evidencia lee load-tests/fixtures/evidencia.png, así que Newman se ejecuta desde apps/backend. La prueba de carga está en load-tests/canales.js con k6. Móvil, portal y socios cotizan con el mismo contrato de Cotización: el mismo viaje tiene la misma prima en los tres canales y un dato faltante responde 422 datos_invalidos con cada campo y su motivo. El score de riesgo y el cliente de la oferta los resuelve Solventa: el cuerpo no los fija.",
+    "name": "Solventa API",
+    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json\n\nLa carpeta Portal web crea el socio que usa API de socios. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -14,11 +14,43 @@
       "value": "viaje-internacional"
     },
     {
-      "key": "correo",
+      "key": "evidenciaBytes",
+      "value": "69"
+    },
+    {
+      "key": "avisoId",
       "value": ""
     },
     {
-      "key": "documento",
+      "key": "avisoSocioId",
+      "value": ""
+    },
+    {
+      "key": "clienteOpenFinance",
+      "value": ""
+    },
+    {
+      "key": "cobroMovilId",
+      "value": ""
+    },
+    {
+      "key": "cobroSocioId",
+      "value": ""
+    },
+    {
+      "key": "codigoDemo",
+      "value": ""
+    },
+    {
+      "key": "codigoOtp",
+      "value": ""
+    },
+    {
+      "key": "consentimientoId",
+      "value": ""
+    },
+    {
+      "key": "contactoOtp",
       "value": ""
     },
     {
@@ -26,15 +58,27 @@
       "value": ""
     },
     {
-      "key": "token",
+      "key": "correo",
       "value": ""
     },
     {
-      "key": "avisoId",
+      "key": "cotizacionMovilId",
       "value": ""
     },
     {
-      "key": "radicado",
+      "key": "cotizacionPortalId",
+      "value": ""
+    },
+    {
+      "key": "cotizacionSocioId",
+      "value": ""
+    },
+    {
+      "key": "documento",
+      "value": ""
+    },
+    {
+      "key": "documentoPortal",
       "value": ""
     },
     {
@@ -42,23 +86,15 @@
       "value": ""
     },
     {
-      "key": "uploadUrl",
+      "key": "polizaMovilId",
       "value": ""
     },
     {
-      "key": "evidenciaBytes",
-      "value": "69"
-    },
-    {
-      "key": "socioId",
+      "key": "polizaSocioId",
       "value": ""
     },
     {
-      "key": "socioClientId",
-      "value": ""
-    },
-    {
-      "key": "socioSecreto",
+      "key": "primaMovil",
       "value": ""
     },
     {
@@ -66,21 +102,255 @@
       "value": ""
     },
     {
-      "key": "primaMovil",
+      "key": "radicado",
+      "value": ""
+    },
+    {
+      "key": "ramosSocio",
+      "value": ""
+    },
+    {
+      "key": "socioClientId",
+      "value": ""
+    },
+    {
+      "key": "socioId",
+      "value": ""
+    },
+    {
+      "key": "socioSecreto",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "uploadUrl",
       "value": ""
     }
   ],
   "item": [
     {
+      "name": "Simuladores de terceros",
+      "description": "Control de los terceros simulados: Open Finance, pasarela de pagos, notificaciones y red de asistencia. PUT /simuladores/{proveedor}/modo cambia el modo: normal, lento (demora_s), caido o invalida.",
+      "item": [
+        {
+          "name": "Estado de los simuladores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/simuladores",
+            "description": "Terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia) con su modo, la demora de lento y las llamadas recibidas en cada modo. Solventa los llama por HTTP como a un proveedor real; sin autenticación."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const proveedores = pm.response.json();",
+                  "pm.test('Responde los tres terceros', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(proveedores.map((p) => p.proveedor)).to.have.members(['open-finance', 'pasarela-pagos', 'notificaciones', 'red-asistencia']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "open-finance en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/open-finance/modo",
+            "description": "Pone el simulador de open-finance en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('open-finance queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "pasarela-pagos en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/pasarela-pagos/modo",
+            "description": "Pone el simulador de pasarela-pagos en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('pasarela-pagos queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "notificaciones en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/notificaciones/modo",
+            "description": "Pone el simulador de notificaciones en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('notificaciones queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "red-asistencia en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/red-asistencia/modo",
+            "description": "Pone el simulador de red-asistencia en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('red-asistencia queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reiniciar llamadas de Open Finance",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/simuladores/open-finance/llamadas",
+            "description": "Pone en cero el conteo de llamadas de un tercero, para medir una demo o una prueba desde cero. Responde 204."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Conteo reiniciado', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado de Open Finance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/simuladores/open-finance",
+            "description": "Modo, demora y llamadas de un solo tercero. Un tercero que no existe responde 404 proveedor_no_encontrado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('Open Finance en normal y sin llamadas', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "  pm.expect(estado.llamadas).to.eql({});",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Móvil",
-      "description": "Recorrido del cliente en la app: registro e inicio de sesión y, con el token, consulta de sesión, catálogo, cotización, reporte de siniestro con evidencia, radicación y listado de avisos.",
+      "description": "BFF móvil. Autenticación Bearer con el token de Iniciar sesión.",
       "item": [
         {
           "name": "BFF móvil disponible",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/movil/"
+            "url": "{{baseUrl}}/movil/",
+            "description": "Comprueba que el BFF móvil responde. Sin autenticación."
           },
           "event": [
             {
@@ -110,7 +380,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"nombre\": \"Prueba\",\n  \"apellido\": \"Carga\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documento}}\",\n  \"telefono\": \"3001234567\",\n  \"fecha_nacimiento\": \"1990-05-20\"\n}"
-            }
+            },
+            "description": "Crea la cuenta del cliente y entrega una sesión. El correo y el documento se generan en cada corrida."
           },
           "event": [
             {
@@ -154,7 +425,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
-            }
+            },
+            "description": "Inicia sesión con correo y contraseña. Guarda el token Bearer que usan las demás peticiones del móvil."
           },
           "event": [
             {
@@ -183,7 +455,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/sesion"
+            "url": "{{baseUrl}}/movil/sesion",
+            "description": "Devuelve el cliente de la sesión. Con un token inválido o vencido responde 401."
           },
           "event": [
             {
@@ -210,7 +483,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/productos"
+            "url": "{{baseUrl}}/movil/productos",
+            "description": "Productos del catálogo móvil, con precio desde, coberturas y si se pueden cotizar hoy."
           },
           "event": [
             {
@@ -251,7 +525,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Cotiza un viaje. El BFF valida el titular (nombre y cédula) y no los envía a Cotización; el resto del cuerpo sigue el contrato común. El cliente de la oferta sale de la sesión. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -276,6 +550,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('cotizacionMovilId', oferta.id);",
                   "pm.collectionVariables.set('primaMovil', oferta.prima);",
                   "pm.test('El consenso devuelve una oferta', function () {",
                   "  pm.response.to.have.status(200);",
@@ -306,7 +581,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"1020304050\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Muestra el error del contrato común: 422 datos_invalidos con cada campo y su motivo. No se calcula la prima."
           },
           "event": [
             {
@@ -319,6 +594,244 @@
                   "  pm.response.to.have.status(422);",
                   "  pm.expect(error.codigo).to.equal('datos_invalidos');",
                   "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar con rechazo simulado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones/{{cotizacionMovilId}}/pagos",
+            "description": "Cobro con simulacion=rechazado: la pasarela responde rechazado y la cotización sigue sin pagar, lista para el siguiente intento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"intento_id\": \"{{intentoRechazo}}\",\n  \"simulacion\": \"rechazado\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('intentoRechazo', `postman-rechazo-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cobro = pm.response.json();",
+                  "pm.test('La pasarela rechaza el token de prueba', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(cobro.estado).to.equal('rechazado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar la cotización",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones/{{cotizacionMovilId}}/pagos",
+            "description": "Cobra la prima de la cotización del cliente. El monto sale de la cotización persistida, no del cuerpo. intento_id identifica el intento: repetirlo devuelve el mismo cobro. simulacion=rechazado usa el token de prueba que la pasarela rechaza y simulacion=vencida muestra el rechazo por cotización vencida (409).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"intento_id\": \"{{intentoPago}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('intentoPago', `postman-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cobro = pm.response.json();",
+                  "pm.collectionVariables.set('cobroMovilId', cobro.id);",
+                  "pm.test('La pasarela aprueba el cobro', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(cobro.estado).to.equal('aprobado');",
+                  "  pm.expect(cobro.cotizacion_id).to.equal(pm.collectionVariables.get('cotizacionMovilId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Emitir la póliza",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones/{{cotizacionMovilId}}/polizas",
+            "description": "Emite la póliza con el cobro aprobado. Pólizas valida el pago y arma la póliza desde la cotización. 201 cuando emite; 200 si esa cotización ya tenía póliza. 409 pago_no_aprobado o cotizacion_vencida cuando no se puede.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cobro_id\": \"{{cobroMovilId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.collectionVariables.set('polizaMovilId', poliza.id);",
+                  "pm.test('La póliza queda activa', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  pm.expect(poliza.estado).to.equal('activa');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pólizas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/polizas",
+            "description": "Pólizas activas del cliente de la sesión."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const polizas = pm.response.json();",
+                  "pm.test('Incluye la póliza emitida', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(polizas.map((p) => p.id)).to.include(pm.collectionVariables.get('polizaMovilId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Oferta de renovación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/polizas/{{polizaMovilId}}/renovacion/oferta",
+            "description": "Oferta de renovación de solo lectura: prima y vigencia propuestas. 409 poliza_no_renovable si la póliza no está activa o ya venció."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('La póliza activa tiene oferta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(Number(oferta.prima_propuesta)).to.be.above(0);",
+                  "  pm.expect(oferta.vigencia_propuesta).to.have.keys('desde', 'hasta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar la renovación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/polizas/{{polizaMovilId}}/renovacion/pagos",
+            "description": "Cobra la prima propuesta del ciclo vigente. No aplica la renovación sobre la póliza. intento_id y simulacion=rechazado funcionan igual que en el pago de la cotización.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"intento_id\": \"{{intentoRenovacion}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('intentoRenovacion', `postman-renovacion-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cobro = pm.response.json();",
+                  "pm.test('La pasarela aprueba la renovación', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(cobro.estado).to.equal('aprobado');",
+                  "  pm.expect(cobro.poliza_id).to.equal(pm.collectionVariables.get('polizaMovilId'));",
                   "});"
                 ]
               }
@@ -343,7 +856,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"poliza_id\": \"SLV-2026-03105\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso generado por la prueba de carga\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
-            }
+            },
+            "description": "Crea el aviso de siniestro en borrador para el cliente de la sesión."
           },
           "event": [
             {
@@ -390,7 +904,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"content_type\": \"image/png\",\n  \"bytes\": \"{{evidenciaBytes}}\"\n}"
-            }
+            },
+            "description": "Entrega una URL firmada para subir la evidencia directo al almacenamiento. Límite de evidencias activas por aviso: 409 al superarlo."
           },
           "event": [
             {
@@ -426,7 +941,8 @@
                 "src": "load-tests/fixtures/evidencia.png"
               }
             },
-            "url": "{{uploadUrl}}"
+            "url": "{{uploadUrl}}",
+            "description": "Sube el archivo a la URL firmada (S3). En k3s local Siniestros guarda en memoria y la URL upload.local no resuelve fuera del clúster."
           },
           "event": [
             {
@@ -452,7 +968,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias/{{evidenciaId}}/confirmar"
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias/{{evidenciaId}}/confirmar",
+            "description": "Confirma que el archivo quedó guardado y valida su tipo real."
           },
           "event": [
             {
@@ -479,7 +996,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias"
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/evidencias",
+            "description": "Evidencias del aviso con su estado."
           },
           "event": [
             {
@@ -506,7 +1024,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/radicar"
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/radicar",
+            "description": "Radica el aviso y le asigna el radicado SIN-n."
           },
           "event": [
             {
@@ -537,7 +1056,8 @@
                 "value": "Bearer {{token}}"
               }
             ],
-            "url": "{{baseUrl}}/movil/siniestros"
+            "url": "{{baseUrl}}/movil/siniestros",
+            "description": "Avisos del cliente de la sesión."
           },
           "event": [
             {
@@ -557,13 +1077,317 @@
               }
             }
           ]
+        },
+        {
+          "name": "Solicitar asistencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/asistencias",
+            "description": "Pide grúa, ambulancia o perito para un aviso radicado. La red de asistencia (servicio simuladores) asigna el número y el tiempo de llegada. 409 si el aviso está en borrador o ya tiene asistencia; 503 si la red no responde.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"servicio\": \"grua\",\n  \"ubicacion\": \"Calle 85 #12-34, Bogotá\",\n  \"gps\": \"GPS 4.6683, -74.0531 (±8 m)\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const asistencia = pm.response.json();",
+                  "pm.test('La asistencia queda creada', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(asistencia.servicio).to.equal('grua');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar asistencias",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/siniestros/{{avisoId}}/asistencias",
+            "description": "Asistencias solicitadas para el aviso."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const asistencias = pm.response.json();",
+                  "pm.test('Incluye la asistencia', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(asistencias).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prestadores cercanos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/prestadores/cercanos?lat=4.711&lon=-74.0721&radio_km=10",
+            "description": "Prestadores dentro del radio, como GeoJSON (PostGIS). Parámetros: lat, lon, radio_km y servicio opcional. 422 si el radio está fuera de rango."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mapa = pm.response.json();",
+                  "pm.test('Devuelve un FeatureCollection', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(mapa.type).to.equal('FeatureCollection');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
       "name": "Portal web",
-      "description": "Operación del back-office: cotización asistida y consulta de socios.",
+      "description": "BFF del portal de operación. Sin autenticación en este prototipo. Crea el socio que usa la carpeta API de socios.",
       "item": [
+        {
+          "name": "BFF web disponible",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/",
+            "description": "Comprueba que el BFF del portal responde. Sin autenticación."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde el BFF web', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ramos cotizables",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/ramos",
+            "description": "Ramos que el portal puede cotizar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ramos = pm.response.json();",
+                  "pm.test('Incluye viaje y vida hipotecario', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(ramos.map((r) => r.id)).to.include.members(['ramo-viaje', 'ramo-vida-hipotecario']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar consentimiento digital",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/consentimientos/solicitar",
+            "description": "HU002. Crea el consentimiento PENDIENTE y envía el OTP por SMS o correo con el proveedor de notificaciones (servicio simuladores). 503 notificacion_no_disponible si el envío falla: no queda consentimiento. codigo_demo devuelve el código solo para el prototipo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"apellido\": \"Díaz\",\n  \"email\": \"lina.{{documentoPortal}}@solventa.test\",\n  \"telefono\": \"{{contactoOtp}}\",\n  \"canal\": \"sms\",\n  \"contacto\": \"{{contactoOtp}}\",\n  \"ramo\": \"VIDA_HIPOTECARIO\",\n  \"asesor\": \"Ana Gómez (asesor)\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('documentoPortal', String(Date.now()).slice(-10));",
+                  "pm.collectionVariables.set('contactoOtp', '3' + String(Date.now()).slice(-9));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const consentimiento = pm.response.json();",
+                  "pm.collectionVariables.set('consentimientoId', consentimiento.consentimiento_id);",
+                  "pm.collectionVariables.set('codigoDemo', consentimiento.codigo_demo);",
+                  "pm.collectionVariables.set('documentoPortal', pm.variables.get('documentoPortal'));",
+                  "pm.test('El consentimiento queda pendiente', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(consentimiento.estado).to.equal('PENDIENTE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leer el OTP en la bandeja del simulador",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/simuladores/notificaciones/mensajes?to={{contactoOtp}}",
+            "description": "Bandeja de lo que envió el simulador de notificaciones, la más reciente primero. Es lo que el cliente recibiría por SMS. Filtro opcional to."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mensajes = pm.response.json();",
+                  "pm.collectionVariables.set('codigoOtp', mensajes[0].data.codigo);",
+                  "pm.test('Llegó el OTP del consentimiento', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(mensajes[0].template).to.equal('otp-consentimiento');",
+                  "  pm.expect(mensajes[0].data.codigo).to.equal(pm.collectionVariables.get('codigoDemo'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validar consentimiento con el OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/consentimientos/validar",
+            "description": "Valida el OTP. 200 con estado OTORGADO; 422 si el código no coincide; 410 si venció (5 minutos); 404 si no existe.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consentimiento_id\": \"{{consentimientoId}}\",\n  \"codigo\": \"{{codigoOtp}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const consentimiento = pm.response.json();",
+                  "pm.test('El consentimiento queda otorgado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(consentimiento.estado).to.equal('OTORGADO');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar consentimiento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/consentimientos/{{consentimientoId}}",
+            "description": "Estado del consentimiento y su alcance."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const consentimiento = pm.response.json();",
+                  "pm.test('Responde el consentimiento otorgado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(consentimiento.estado.toUpperCase()).to.equal('OTORGADO');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar vida hipotecario con consentimiento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/cotizaciones",
+            "description": "Vida hipotecario exige un consentimiento OTORGADO (422 si falta o no está otorgado). El portal resuelve el cliente por documento y lo envía a Cotización en X-Cliente-Id; los datos personales no viajan a Cotización. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('El consenso devuelve una oferta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(oferta.producto_id).to.equal('vida-hipotecario');",
+                  "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Cotizar desde el portal",
           "request": {
@@ -579,7 +1403,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Cotiza un viaje desde el portal. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -603,6 +1427,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('cotizacionPortalId', oferta.id);",
                   "pm.collectionVariables.set('primaPortal', oferta.prima);",
                   "pm.test('El consenso devuelve una oferta', function () {",
                   "  pm.response.to.have.status(200);",
@@ -633,7 +1458,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Muestra el error del contrato común en el portal."
           },
           "event": [
             {
@@ -653,11 +1478,98 @@
           ]
         },
         {
+          "name": "Consultar cotización",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/cotizaciones/{{cotizacionPortalId}}",
+            "description": "Oferta persistida: prima, coberturas, vigencia, señales y si salió degradada. 404 si no existe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('Responde la cotización', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(oferta.id).to.equal(pm.collectionVariables.get('cotizacionPortalId'));",
+                  "  pm.expect(oferta.estado).to.equal('VIGENTE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar póliza desde el portal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/{{polizaMovilId}}",
+            "description": "Póliza con su estado, prima y vigencia. 404 poliza_no_encontrada si no existe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.test('Responde la póliza emitida en el móvil', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(poliza.id).to.equal(pm.collectionVariables.get('polizaMovilId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta de socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios",
+            "description": "Da de alta un socio de distribución con sus alcances (cotizacion, emision, consulta). Devuelve client_id y el secreto una sola vez. 409 identificador_duplicado si el identificador ya existe.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Socio recorrido Postman\",\n  \"identificador\": \"POSTMAN-{{$timestamp}}\",\n  \"tipo\": \"Banco\",\n  \"correo_contacto\": \"api@socio.test\",\n  \"alcances\": [\n    \"cotizacion\",\n    \"emision\",\n    \"consulta\"\n  ],\n  \"autorizado_por\": \"Recorrido Postman\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const socio = pm.response.json();",
+                  "pm.collectionVariables.set('socioId', socio.id);",
+                  "pm.collectionVariables.set('socioClientId', socio.client_id);",
+                  "pm.collectionVariables.set('socioSecreto', socio.secreto);",
+                  "pm.test('El socio queda creado con su credencial', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(socio.client_id).to.be.a('string');",
+                  "  pm.expect(socio.secreto).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Listar socios",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/web/socios"
+            "url": "{{baseUrl}}/web/socios",
+            "description": "Socios con sus ramos habilitados y el estado de su credencial y contrato."
           },
           "event": [
             {
@@ -679,7 +1591,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/web/socios/{{socioId}}"
+            "url": "{{baseUrl}}/web/socios/{{socioId}}",
+            "description": "Detalle de un socio. 404 socio_no_encontrado si no existe."
           },
           "event": [
             {
@@ -697,11 +1610,69 @@
           ]
         },
         {
+          "name": "Ramos disponibles del socio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/configuracion",
+            "description": "Ramos del canal de socios con sus coberturas y cuáles tiene habilitados el socio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const configuracion = pm.response.json();",
+                  "const ramos = configuracion.ramos.filter((r) => ['ramo-viaje', 'ramo-vida-hipotecario'].includes(r.id)).map((r) => ({ ramo_id: r.id, coberturas: r.coberturas.map((c) => c.id) }));",
+                  "pm.collectionVariables.set('ramosSocio', JSON.stringify(ramos));",
+                  "pm.test('Responde los ramos del canal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(ramos).to.have.lengthOf(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Habilitar ramos del socio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/configuracion",
+            "description": "Reemplaza los ramos y coberturas que el socio puede vender. 422 ramo_fuera_del_canal o cobertura_fuera_del_ramo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ramos\": {{ramosSocio}},\n  \"actualizado_por\": \"Recorrido Postman\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La configuración queda guardada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Configuración del socio",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/web/socios/{{socioId}}/configuracion"
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/configuracion",
+            "description": "Confirma que el socio quedó con el ramo de viaje habilitado."
           },
           "event": [
             {
@@ -723,8 +1694,31 @@
     },
     {
       "name": "API de socios",
-      "description": "Cotización, pago y emisión desde el canal de un socio (ASR-01, ASR-04 y HU015). Pagar y emitir requieren que el socio tenga el alcance emision.",
+      "description": "API pública para socios. Credencial en X-Client-Id y X-Api-Key; pagos y emisión exigen Idempotency-Key.",
       "item": [
+        {
+          "name": "API de socios disponible",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/socios/",
+            "description": "Comprueba que la API pública de socios responde y sus versiones."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde la versión v1', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().versiones).to.include('v1');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Productos del socio",
           "request": {
@@ -739,7 +1733,8 @@
                 "value": "{{socioSecreto}}"
               }
             ],
-            "url": "{{baseUrl}}/socios/v1/productos"
+            "url": "{{baseUrl}}/socios/v1/productos",
+            "description": "Productos que el socio puede cotizar, con sus coberturas habilitadas y el contrato (JSON Schema) del cuerpo. Credencial en X-Client-Id y X-Api-Key."
           },
           "event": [
             {
@@ -783,7 +1778,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Cotización embebida (HU014). 401 credencial_invalida, 403 alcance_no_autorizado o ramo_no_habilitado. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
           },
           "event": [
             {
@@ -824,6 +1819,57 @@
           ]
         },
         {
+          "name": "Cotizar vida hipotecario con Open Finance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones",
+            "description": "Con consentimiento_open_finance, Cotización consulta el score en Open Finance (servicio simuladores) con timeout de 300 ms. La señal queda en senales con su origen: proveedor, cache o valor_por_defecto.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_open_finance\": {\n    \"referencia_cliente\": \"{{clienteOpenFinance}}\",\n    \"consentimiento_id\": \"consentimiento-{{clienteOpenFinance}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('clienteOpenFinance', `cliente-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('El score sale del proveedor', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(oferta.degradada).to.equal(false);",
+                  "  pm.expect(oferta.senales[0].origen).to.equal('proveedor');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Pagar como socio",
           "request": {
             "method": "POST",
@@ -849,7 +1895,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"medio_token\": \"demo-4242\"\n}"
-            }
+            },
+            "description": "Cobra la prima de la cotización del socio. El socio envía el token de la pasarela, nunca la tarjeta. Idempotency-Key obligatoria: la misma clave devuelve el mismo cobro."
           },
           "event": [
             {
@@ -903,7 +1950,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\"\n}"
-            }
+            },
+            "description": "Emite la póliza con el cobro aprobado (HU015). Idempotency-Key obligatoria."
           },
           "event": [
             {
@@ -947,7 +1995,8 @@
                 "value": "{{socioSecreto}}"
               }
             ],
-            "url": "{{baseUrl}}/socios/v1/polizas/{{polizaSocioId}}"
+            "url": "{{baseUrl}}/socios/v1/polizas/{{polizaSocioId}}",
+            "description": "Estado de una póliza del socio (HU016). 403 recurso_fuera_de_alcance si es de otro socio; 404 si no existe."
           },
           "event": [
             {
@@ -961,6 +2010,118 @@
                   "  pm.expect(poliza.id).to.equal(pm.collectionVariables.get('polizaSocioId'));",
                   "  pm.expect(poliza.estado).to.equal('activa');",
                   "  pm.expect(poliza).to.not.have.property('socio_id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reportar siniestro sobre la póliza del socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/siniestros",
+            "description": "Preparación de la consulta de siniestro: el cliente reporta desde el móvil un aviso sobre la póliza que emitió el socio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poliza_id\": \"{{polizaSocioId}}\",\n  \"tipo\": \"Cancelación de viaje\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso del recorrido de Postman\",\n  \"ubicacion\": \"Bogotá\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('ocurridoEn', new Date(Date.now() - 3600 * 1000).toISOString().slice(0, 19));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aviso = pm.response.json();",
+                  "pm.collectionVariables.set('avisoSocioId', aviso.id);",
+                  "pm.test('El aviso queda en borrador', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar siniestro como socio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/siniestros/{{avisoSocioId}}",
+            "description": "Estado de un siniestro sobre una póliza del socio (HU016): estado, radicado, póliza, tipo y fecha. No expone cliente, descripción ni ubicación."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const siniestro = pm.response.json();",
+                  "pm.test('Responde el siniestro sin datos del cliente', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(siniestro.poliza_id).to.equal(pm.collectionVariables.get('polizaSocioId'));",
+                  "  pm.expect(siniestro).to.not.have.property('descripcion');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar siniestro de otra póliza",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/siniestros/{{avisoId}}",
+            "description": "Un siniestro que no pertenece a una póliza del socio responde 403 recurso_fuera_de_alcance y no expone datos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No expone siniestros ajenos', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('recurso_fuera_de_alcance');",
                   "});"
                 ]
               }
@@ -990,7 +2151,7 @@
               "mode": "raw",
               "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"viajeros\": 2\n}"
             },
-            "description": "Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos."
+            "description": "Muestra el error del contrato común en la API de socios."
           },
           "event": [
             {
@@ -1003,6 +2164,475 @@
                   "  pm.response.to.have.status(422);",
                   "  pm.expect(error.codigo).to.equal('datos_invalidos');",
                   "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fallos simulados",
+      "description": "Cada fallo se provoca en el servicio simuladores y se devuelve a normal al terminar la carpeta.",
+      "item": [
+        {
+          "name": "open-finance en caido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/open-finance/modo",
+            "description": "Pone el simulador de open-finance en modo caido. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"caido\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('open-finance queda en caido', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('caido');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar con Open Finance caído",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones",
+            "description": "HU018. Con el proveedor caído la cotización sale igual: usa el último valor bueno del mismo cliente (cache) o el valor neutral, y queda degradada con el motivo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_open_finance\": {\n    \"referencia_cliente\": \"{{clienteOpenFinance}}\",\n    \"consentimiento_id\": \"consentimiento-{{clienteOpenFinance}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('La cotización sale degradada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(oferta.degradada).to.equal(true);",
+                  "  pm.expect(oferta.senales[0].origen).to.be.oneOf(['cache', 'valor_por_defecto']);",
+                  "  pm.expect(oferta.senales[0].motivo).to.be.oneOf(['error_proveedor', 'circuito_abierto']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "open-finance en lento",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/open-finance/modo",
+            "description": "Pone el simulador de open-finance en modo lento. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"lento\",\n  \"demora_s\": 0.5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('open-finance queda en lento', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('lento');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar con Open Finance lento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones",
+            "description": "El proveedor tarda más que el timeout de 300 ms: la cotización no lo espera y sale degradada por timeout.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_open_finance\": {\n    \"referencia_cliente\": \"{{clienteOpenFinance}}\",\n    \"consentimiento_id\": \"consentimiento-{{clienteOpenFinance}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.test('No espera al proveedor lento', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(oferta.degradada).to.equal(true);",
+                  "  pm.expect(oferta.senales[0].motivo).to.be.oneOf(['timeout', 'circuito_abierto']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "open-finance en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/open-finance/modo",
+            "description": "Pone el simulador de open-finance en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\",\n  \"demora_s\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('open-finance queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "pasarela-pagos en caido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/pasarela-pagos/modo",
+            "description": "Pone el simulador de pasarela-pagos en modo caido. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"caido\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('pasarela-pagos queda en caido', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('caido');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar para el pago fallido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 2\n}"
+            },
+            "description": "Cotización nueva para el pago con la pasarela caída."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dia = (desplazamiento) => {",
+                  "  const fecha = new Date();",
+                  "  fecha.setDate(fecha.getDate() + desplazamiento);",
+                  "  return fecha.toISOString().slice(0, 10);",
+                  "};",
+                  "pm.variables.set('fechaSalida', dia(30));",
+                  "pm.variables.set('fechaRegreso', dia(40));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('cotizacionSocioId', oferta.id);",
+                  "pm.test('El consenso devuelve una oferta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+                  "  pm.expect(oferta.coberturas).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(oferta.degradada).to.be.a('boolean');",
+                  "});",
+                  "pm.test('Misma prima que el portal para el mismo viaje', function () {",
+                  "  const esperada = pm.collectionVariables.get('primaPortal');",
+                  "  if (esperada) pm.expect(oferta.prima).to.equal(esperada);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar con la pasarela caída",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{claveFallida}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/cotizaciones/{{cotizacionSocioId}}/pagos",
+            "description": "Con la pasarela caída el cobro responde 503 y no se cobra. La misma Idempotency-Key se puede reintentar cuando vuelva.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medio_token\": \"demo-4242\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('claveFallida', `postman-fallida-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El cobro no se hace', function () {",
+                  "  pm.response.to.have.status(503);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "pasarela-pagos en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/pasarela-pagos/modo",
+            "description": "Pone el simulador de pasarela-pagos en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('pasarela-pagos queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "notificaciones en caido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/notificaciones/modo",
+            "description": "Pone el simulador de notificaciones en modo caido. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"caido\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('notificaciones queda en caido', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('caido');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar consentimiento sin notificaciones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/consentimientos/solicitar",
+            "description": "Sin proveedor de notificaciones el OTP no sale: 503 notificacion_no_disponible y no queda consentimiento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"apellido\": \"Díaz\",\n  \"email\": \"lina.{{documentoPortal}}@solventa.test\",\n  \"telefono\": \"{{contactoOtp}}\",\n  \"canal\": \"sms\",\n  \"contacto\": \"{{contactoOtp}}\",\n  \"ramo\": \"VIDA_HIPOTECARIO\",\n  \"asesor\": \"Ana Gómez (asesor)\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No crea un consentimiento sin OTP', function () {",
+                  "  pm.response.to.have.status(503);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('notificacion_no_disponible');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "notificaciones en normal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/simuladores/notificaciones/modo",
+            "description": "Pone el simulador de notificaciones en modo normal. normal responde bien, lento responde después de demora_s, caido responde 503 e invalida responde un cuerpo que el adaptador no reconoce. El modo vive en memoria del servicio simuladores hasta el siguiente cambio o reinicio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"normal\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const estado = pm.response.json();",
+                  "pm.test('notificaciones queda en normal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(estado.modo).to.equal('normal');",
                   "});"
                 ]
               }

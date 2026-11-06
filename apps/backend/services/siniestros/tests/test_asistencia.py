@@ -1,16 +1,33 @@
+import secrets
 from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from siniestros.asistencia import api as asistencia_api
-from siniestros.asistencia.adapters.dispatcher import PrototypeDispatcher
+from siniestros.asistencia.adapters.dispatcher import AssistanceNetworkDispatcher
 from siniestros.asistencia.adapters.memory import InMemoryAsistenciaRepository
+from siniestros.asistencia.domain.models import Despacho, NuevaAsistencia
 from siniestros.avisos import api as avisos_api
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
+from siniestros.config import SiniestrosSettings
 from siniestros.main import app
 from solventa_common.events import InMemoryEventPublisher
 
 client = TestClient(app)
+
+ETA = {"grua": (25, 40), "ambulancia": (10, 20), "perito": (25, 40)}
+
+
+class PrototypeDispatcher:
+    """Mock en código de la red de asistencia."""
+
+    def __init__(self, numero_factory=lambda: f"AST-{1000 + secrets.randbelow(9000)}") -> None:
+        self.numero_factory = numero_factory
+
+    def dispatch(self, solicitud: NuevaAsistencia) -> Despacho:
+        eta_min, eta_max = ETA[solicitud.servicio]
+        return Despacho(numero=self.numero_factory(), eta_min=eta_min, eta_max=eta_max)
+
 
 AVISO = {
     "cliente_id": "cliente-1",
@@ -153,3 +170,45 @@ def test_el_numero_no_se_repite():
 
     assert first["numero"] == "AST-1111"
     assert second["numero"] == "AST-2222"
+
+
+class _Network:
+    def __init__(self, response=None, error: Exception | None = None) -> None:
+        self.response = response
+        self.error = error
+        self.calls: list[tuple] = []
+
+    def dispatch(self, service, location, gps):
+        self.calls.append((service, location, gps))
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def test_la_red_de_asistencia_despacha_y_responde_la_llegada():
+    network = _Network({"numero": "AST-4321", "eta_min": 10, "eta_max": 20})
+    despacho = AssistanceNetworkDispatcher(network).dispatch(NuevaAsistencia(**SOLICITUD))
+
+    assert despacho == Despacho(numero="AST-4321", eta_min=10, eta_max=20)
+    assert network.calls == [("perito", SOLICITUD["ubicacion"], SOLICITUD["gps"])]
+
+
+@pytest.mark.parametrize("network", [_Network(error=ConnectionError("caida")), _Network(response={"estado": "?"})])
+def test_sin_red_de_asistencia_la_solicitud_responde_503(network):
+    asistencia_api.wire(
+        avisos_api.repository,
+        InMemoryAsistenciaRepository(),
+        InMemoryEventPublisher(),
+        AssistanceNetworkDispatcher(network),
+    )
+
+    response = _solicitar(_aviso())
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "La red de asistencia no está disponible. Intenta de nuevo en unos minutos."
+
+
+def test_por_defecto_despacha_con_el_servicio_simuladores(monkeypatch):
+    monkeypatch.delenv("RED_ASISTENCIA_URL", raising=False)
+
+    assert SiniestrosSettings().red_asistencia_url == "http://simuladores/red-asistencia"

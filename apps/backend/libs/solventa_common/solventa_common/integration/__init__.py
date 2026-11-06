@@ -7,6 +7,7 @@ from solventa_common.integration.adapters import (
     OpenDataAdapter,
     OpenFinanceAdapter,
     PasarelaPagosAdapter,
+    RedAsistenciaAdapter,
 )
 from solventa_common.integration.base import ExternalAdapter, ServiceClient
 
@@ -18,5 +19,6 @@ __all__ = [
     "OpenDataAdapter",
     "OpenFinanceAdapter",
     "PasarelaPagosAdapter",
+    "RedAsistenciaAdapter",
     "ServiceClient",
 ]

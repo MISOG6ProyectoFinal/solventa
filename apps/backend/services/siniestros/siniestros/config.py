@@ -5,6 +5,7 @@ from solventa_common.settings import ServiceSettings
 class SiniestrosSettings(ServiceSettings):
     service_name: str = "siniestros"
     evidencias_bucket: str = "solventa-evidencias"
+    red_asistencia_url: str = "http://simuladores/red-asistencia"
     # Postgres and S3. Tests leave this off and use the in-memory adapters.
     persistent_stores: bool = False
 

@@ -163,6 +163,10 @@ class ConsentimientoExpirado(Exception):
     pass
 
 
+class NotificationUnavailable(Exception):
+    pass
+
+
 class ClienteNoEncontrado(Exception):
     pass
 
