@@ -87,7 +87,7 @@ export class CreateOperatorModalComponent {
     else if (!isEmail(email)) errors['email'] = this.locale.t('createOperator.emailInvalid');
 
     if (!this.password()) errors['password'] = required;
-    else if (this.password().length < MIN_PASSWORD_LENGTH) errors['password'] = this.locale.t('createOperator.passwordShort');
+    else if (this.password().length < MIN_PASSWORD_LENGTH) errors['password'] = this.locale.t('createOperator.credentialShort');
 
     if (this.roles().length === 0) errors['roles'] = this.locale.t('createOperator.rolesRequired');
     return errors;
