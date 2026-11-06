@@ -1,8 +1,15 @@
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
   <div class="xl:col-span-3 space-y-5">
+    @if (catalogFailed()) {
+      <slv-alert tone="error">{{ locale.t('quote.catalogError') }}</slv-alert>
+    }
+
     <slv-quote-form
       #quoteForm
       [(ramo)]="ramo"
+      [ramos]="ramos()"
+      [contract]="contract()"
+      [documentTypes]="documentTypes()"
       (formChange)="formValues.set($event)"
       (quoteReady)="onQuoteReady($event)"
     />
@@ -24,7 +31,7 @@
         quoteForm.valueOf('correo')
       "
       [documento]="formValues()['numeroDocumento'] || quoteForm.valueOf('numeroDocumento')"
-      [tipoDocumento]="formValues()['tipoDocumento'] || quoteForm.valueOf('tipoDocumento') || 'CC'"
+      [tipoDocumento]="formValues()['tipoDocumento'] || quoteForm.valueOf('tipoDocumento')"
       [nombre]="formValues()['nombre'] || quoteForm.valueOf('nombre')"
       [apellido]="formValues()['apellido'] || quoteForm.valueOf('apellido')"
       [fechaNacimiento]="formValues()['fechaNacimiento'] || quoteForm.valueOf('fechaNacimiento')"

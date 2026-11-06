@@ -1,18 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, model, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RAMOS } from '../../../../shared/constants/ramos.constants';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { Ramo, RamoId } from '../../../../core/models/ramo.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { QUOTE_CLIENT_FIELDS, QUOTE_RISK_FIELDS } from '../../constants/quote-fields.constants';
+import { ProductContract } from '../../interfaces/product-contract.interface';
+import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
 import { QuoteFieldComponent } from '../quote-field/quote-field.component';
 import { LocaleService } from '../../../../core/services/locale.service';
 
 export type FormValues = Record<string, string>;
-
-/** Los 4 ramos del alcance de la HU001 */
-const HU_RAMOS_IDS: readonly RamoId[] = ['VIAJE', 'MICROSEGURO_VIDA', 'VIDA_HIPOTECARIO', 'PARAMETRICO'];
 
 /** Formulario dinámico por ramo: selector de ramo, datos del cliente y datos del riesgo. */
 @Component({
@@ -25,20 +23,27 @@ export class QuoteFormComponent {
   protected readonly locale = inject(LocaleService);
 
   readonly ramo = model.required<RamoId>();
+  readonly ramos = input.required<readonly Ramo[]>();
+  readonly contract = input<ProductContract | null>(null);
+  readonly documentTypes = input<readonly string[]>([]);
   readonly quoteReady = output<FormValues>();
   readonly formChange = output<FormValues>();
 
-  /** Ramos del formulario: acotados estrictamente a los 4 de la HU. El nombre sale del idioma activo. */
-  protected readonly ramos = signal<readonly Ramo[]>(
-    RAMOS.filter((r) => HU_RAMOS_IDS.includes(r.id))
-  );
+  protected readonly clientFields = computed(() => QUOTE_CLIENT_FIELDS.map((field) => this.withOptions(field)));
 
-  protected readonly clientFields = QUOTE_CLIENT_FIELDS;
-
-  private readonly values = signal<FormValues>({ tipoDocumento: 'CC' });
+  private readonly values = signal<FormValues>({});
   private readonly submitted = signal(false);
 
-  protected readonly riskFields = computed(() => QUOTE_RISK_FIELDS[this.ramo()] ?? []);
+  protected readonly riskFields = computed(() =>
+    (QUOTE_RISK_FIELDS[this.ramo()] ?? []).map((field) => this.withOptions(field)),
+  );
+
+  constructor() {
+    effect(() => {
+      const [first] = this.documentTypes();
+      if (first && !untracked(() => this.values()['tipoDocumento'])) this.setValue('tipoDocumento', first);
+    });
+  }
 
   protected readonly errors = computed<Record<string, string>>(() => {
     if (!this.submitted()) return {};
@@ -54,6 +59,12 @@ export class QuoteFormComponent {
   });
 
   protected readonly isValid = computed(() => Object.keys(this.errors()).length === 0);
+
+  private withOptions(field: QuoteFieldDef): QuoteFieldDef {
+    if (field.optionsSource === 'documentTypes') return { ...field, options: this.documentTypes() };
+    if (field.optionsSource === 'contract') return { ...field, options: this.contract()?.properties[field.key]?.enum ?? [] };
+    return field;
+  }
 
   public valueOf(key: string): string {
     return this.values()[key] ?? '';

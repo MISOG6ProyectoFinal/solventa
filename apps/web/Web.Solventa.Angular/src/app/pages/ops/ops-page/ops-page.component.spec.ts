@@ -2,6 +2,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
+import { provideCatalogFixture } from '../../../core/testing/catalog.fixtures';
+import { CONTRACTS, RAMOS_DTO } from '../../../core/testing/ramos.fixtures';
 import { errorInterceptor } from '../../../core/interceptors/error.interceptor';
 import { POLICY_DTO } from '../testing/policy.fixtures';
 import { OpsPageComponent } from './ops-page.component';
@@ -17,13 +19,16 @@ describe('OpsPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [OpsPageComponent],
-      providers: [provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
+      providers: [provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting(), provideCatalogFixture()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(OpsPageComponent);
     el = fixture.nativeElement;
     await fixture.whenStable();
     http.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
+    http.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
+    await fixture.whenStable();
+    http.expectOne(API_ENDPOINTS.productContract('viaje-internacional')).flush(CONTRACTS['viaje-internacional']);
   });
 
   afterEach(() => http.verify());

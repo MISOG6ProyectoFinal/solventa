@@ -12,7 +12,7 @@
   </div>
 
   @if (!isActive()) {
-    <slv-alert [tone]="policy().status === 'Cancelada' ? 'error' : 'warning'">
+    <slv-alert [tone]="policy().status === cancelledStatus ? 'error' : 'warning'">
       {{ locale.t('policy.inactive', { status: locale.label('status.policy', policy().status).toUpperCase() }) }}
       @if (policy().cancelReason) {
         {{ locale.t('policy.inactiveCause', { cause: locale.label('cancel.cause', policy().cancelReason!), date: policy().cancelDate ?? '' }) }}

@@ -1,6 +1,6 @@
-export type Alcance = 'cotizacion' | 'emision' | 'consulta';
+export type Alcance = string;
 
-export type PartnerType = 'Banco' | 'Aerolínea' | 'E-commerce' | 'Fintech' | 'Retailer';
+export type PartnerType = string;
 
 /** Ramo del canal embebido, identificado por el catálogo del backend. */
 export interface PartnerRamo {

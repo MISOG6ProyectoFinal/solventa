@@ -1,5 +1,5 @@
 import { POLICY_DTO } from '../testing/policy.fixtures';
-import { toPolicy, toRamoId } from './ops-policies-api.mapper';
+import { toPolicy } from './ops-policies-api.mapper';
 
 describe('ops policies mapper', () => {
   it('maps the policy, its insured, payments and claims', () => {
@@ -10,10 +10,10 @@ describe('ops policies mapper', () => {
       tipoDocumento: 'CC',
       identification: '1020304050',
       insuredName: 'Lina Díaz',
-      ramo: 'VIDA_HIPOTECARIO',
+      ramo: 'ramo-vida-hipotecario',
       producto: 'Vida Hipotecario',
       socioOrigen: 'mobile',
-      status: 'Activa',
+      status: 'activa',
       startDate: '2026-11-05',
       endDate: '2041-11-05',
       premium: 3927000,
@@ -48,13 +48,8 @@ describe('ops policies mapper', () => {
     expect(policy.socioOrigen).toBe('Banco Aurora');
     expect(policy.producto).toBe('vida-hipotecario');
     expect(policy.ramo).toBe('');
-    expect(policy.status).toBe('Vencida');
+    expect(policy.status).toBe('vencida');
     expect(policy.payments[0].status).toBe('Pendiente');
     expect(policy.claims[0]).toMatchObject({ id: 'aviso-2', status: 'Reportado', fechaAviso: '' });
-  });
-
-  it('turns the backend line id into the portal key', () => {
-    expect(toRamoId('ramo-proteccion-pagos')).toBe('PROTECCION_PAGOS');
-    expect(toRamoId(null)).toBe('');
   });
 });

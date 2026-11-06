@@ -1,4 +1,7 @@
-export type PolicyStatus = 'Activa' | 'Cancelada' | 'Vencida';
+export type PolicyStatus = string;
+
+export const ACTIVE_STATUS: PolicyStatus = 'activa';
+export const CANCELLED_STATUS: PolicyStatus = 'cancelada';
 
 export type ClaimStatus = 'Reportado' | 'En revisión' | 'Aprobado' | 'Pagado' | 'Rechazado' | 'Cerrado';
 
@@ -54,7 +57,7 @@ export interface Policy {
   tipoDocumento: string;
   identification: string;
   insuredName: string;
-  /** Clave del ramo en el portal (`VIDA_HIPOTECARIO`); vacía si el producto no tiene ramo conocido. */
+  /** Id del ramo en el catálogo (`ramo-vida-hipotecario`); vacío si el producto no tiene ramo conocido. */
   ramo: string;
   producto: string;
   socioOrigen: string;

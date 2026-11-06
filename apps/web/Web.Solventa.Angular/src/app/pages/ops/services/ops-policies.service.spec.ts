@@ -71,10 +71,10 @@ describe('OpsPoliciesService', () => {
     service.open('pol-1');
     http.expectOne(API_ENDPOINTS.policy('pol-1')).flush(POLICY_DTO);
 
-    service.cancel('pol-1', 'Retracto');
+    service.cancel('pol-1', 'retracto');
 
-    expect(service.selected()?.status).toBe('Cancelada');
-    expect(service.selected()?.cancelReason).toBe('Retracto');
+    expect(service.selected()?.status).toBe('cancelada');
+    expect(service.selected()?.cancelReason).toBe('retracto');
     expect(service.policies()[0].cancelDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 

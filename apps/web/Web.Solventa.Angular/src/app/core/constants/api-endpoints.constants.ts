@@ -7,6 +7,13 @@ export const API_ENDPOINTS = {
   simulator: (provider: string) => `${environment.apiBaseUrl}/simuladores/${provider}`,
   quotes: `${environment.apiBaseUrl}/web/cotizaciones`,
   ramos: `${environment.apiBaseUrl}/web/ramos`,
+  productContract: (productId: string) =>
+    `${environment.apiBaseUrl}/web/productos/${encodeURIComponent(productId)}/contrato`,
+  documentTypes: `${environment.apiBaseUrl}/web/tipos-documento`,
+  policyStatuses: `${environment.apiBaseUrl}/web/polizas/estados`,
+  cancellationCauses: `${environment.apiBaseUrl}/web/polizas/causas-cancelacion`,
+  partnerTypes: `${environment.apiBaseUrl}/web/socios/tipos`,
+  partnerScopes: `${environment.apiBaseUrl}/web/socios/alcances`,
   partners: `${environment.apiBaseUrl}/web/socios`,
   partnerConfig: (partnerId: string) => `${environment.apiBaseUrl}/web/socios/${partnerId}/configuracion`,
   consentimientos: {

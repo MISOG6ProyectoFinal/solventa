@@ -13,7 +13,7 @@ describe('ConsentPanelComponent', () => {
   const render = async (required: boolean, celular = '3001234567'): Promise<void> => {
     fixture.componentRef.setInput('required', required);
     fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
-    fixture.componentRef.setInput('ramoId', 'VIDA_HIPOTECARIO');
+    fixture.componentRef.setInput('ramoId', 'ramo-vida-hipotecario');
     fixture.componentRef.setInput('celular', celular);
     await fixture.whenStable();
     el = fixture.nativeElement;
@@ -408,7 +408,7 @@ describe('ConsentPanelComponent', () => {
     expect(fixture.componentInstance['contactoMask']()).toBe('123');
   });
 
-  it('builds payload with complete customer info and custom alcances', async () => {
+  it('builds payload with complete customer info and the scope flags', async () => {
     fixture.componentRef.setInput('required', true);
     fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
     fixture.componentRef.setInput('celular', '3176663766');
@@ -430,7 +430,9 @@ describe('ConsentPanelComponent', () => {
     expect(req.request.body.cliente_id).toBeUndefined();
     expect(req.request.body.nombre).toBe('Pedro Perez');
     expect(req.request.body.fecha_nacimiento).toBe('1990-05-15');
-    expect(req.request.body.alcance).toEqual([]);
+    expect(req.request.body.alcance).toBeUndefined();
+    expect(req.request.body.open_finance).toBe(false);
+    expect(req.request.body.open_data).toBe(false);
     req.flush({
       consentimiento_id: 'CNS-FULL',
       estado: 'PENDIENTE',

@@ -11,7 +11,7 @@
       <slv-field [label]="locale.t('common.status')">
         <select slvInput [(ngModel)]="statusFilter">
           <option [value]="allFilter">{{ locale.t('common.all') }}</option>
-          @for (status of statusOptions; track status) {
+          @for (status of statusOptions(); track status) {
             <option [value]="status">{{ locale.label('status.policy', status) }}</option>
           }
         </select>

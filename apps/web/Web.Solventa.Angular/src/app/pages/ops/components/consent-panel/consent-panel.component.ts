@@ -50,11 +50,11 @@ export class ConsentPanelComponent {
 
   readonly required = input.required<boolean>();
   readonly ramoLabel = input.required<string>();
-  readonly ramoId = input<string>('VIDA_HIPOTECARIO');
+  readonly ramoId = input<string>('');
   readonly celular = input<string>('');
   readonly correo = input<string>('');
   readonly documento = input<string>('');
-  readonly tipoDocumento = input<string>('CC');
+  readonly tipoDocumento = input<string>('');
   readonly nombre = input<string>('');
   readonly apellido = input<string>('');
   readonly fechaNacimiento = input<string>('');
@@ -152,21 +152,13 @@ export class ConsentPanelComponent {
 
   private buildSolicitudPayload(destino: string): SolicitudConsentimiento {
     const doc = this.documento()?.trim();
-    const alcances: string[] = [];
-    if (this.openFinance()) {
-      alcances.push('Open Finance');
-    }
-    if (this.openData()) {
-      alcances.push('Open Data');
-    }
-
     const rawTipoDoc = this.tipoDocumento()?.trim();
     const rawNombre = this.nombre()?.trim();
     const rawApellido = this.apellido()?.trim();
     const rawNacimiento = this.fechaNacimiento()?.trim();
 
     return {
-      tipo_documento: rawTipoDoc && rawTipoDoc.length > 0 ? rawTipoDoc : 'CC',
+      tipo_documento: rawTipoDoc || undefined,
       numero_documento: doc ?? '',
       nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
       apellido: rawApellido && rawApellido.length > 0 ? rawApellido : '',
@@ -177,7 +169,6 @@ export class ConsentPanelComponent {
       canal: this.channel(),
       contacto: destino,
       contacto_mask: this.contactoMask(),
-      alcance: alcances,
       open_finance: this.openFinance(),
       open_data: this.openData(),
       asesor: 'Ana Gómez (asesor)',
@@ -186,7 +177,7 @@ export class ConsentPanelComponent {
 
   private buildFallbackRegistro(): RespuestaConsultaConsentimiento {
     const rawDoc = this.documento()?.trim();
-    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${this.tipoDocumento() || 'CC'}-${rawDoc}` : 'CLI-51502';
+    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${this.tipoDocumento()}-${rawDoc}` : 'CLI-51502';
     const rawNom = this.nombre()?.trim();
     const rawApe = this.apellido()?.trim();
     const fallbackNom = [rawNom, rawApe].filter(Boolean).join(' ') || 'Cliente';

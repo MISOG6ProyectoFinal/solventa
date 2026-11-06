@@ -1,22 +1,8 @@
 import { TextKey } from '../../../core/i18n/es';
-import { PolicyStatus } from '../../../core/models/policy.model';
 import { SimulatorMode } from '../services/simulator.service';
 
 
 export const OPS_FILTER_ALL = '';
-
-export const POLICY_STATUS_OPTIONS: readonly PolicyStatus[] = ['Activa', 'Vencida', 'Cancelada'];
-
-export const CANCEL_CAUSES: readonly string[] = [
-  'Retracto',
-  'Venta del bien asegurado',
-  'Insatisfacción con el servicio',
-  'Pago anticipado del crédito asociado',
-  'Impago de prima',
-];
-
-/** Única causa que no genera devolución de prima. */
-export const NON_REFUNDABLE_CAUSE = 'Impago de prima';
 
 export interface EndorsementType {
   readonly id: string;

@@ -20,7 +20,7 @@
       
       <slv-field [label]="locale.t('createPartner.type')" [required]="true">
         <select slvInput [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
-          @for (t of partnerTypes; track t) {
+          @for (t of partnerTypes(); track t) {
             <option [value]="t">{{ locale.label('partnerType', t) }}</option>
           }
         </select>
@@ -41,7 +41,7 @@
       
       <slv-field [label]="locale.t('createPartner.scopes')" [required]="true" [error]="errors()['alcances']">
         <div class="space-y-2 pt-1">
-          @for (a of alcancesOptions; track a) {
+          @for (a of alcancesOptions(); track a) {
             <label class="flex items-center gap-2 text-sm text-foreground">
               <input type="checkbox" [checked]="alcances().includes(a)" (change)="toggleAlcance(a)" class="rounded" />
               {{ locale.label('scope', a) }}

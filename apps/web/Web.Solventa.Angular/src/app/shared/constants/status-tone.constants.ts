@@ -3,9 +3,9 @@ import { Tone } from '../../ui/constants/design-tokens.constants';
 
 /** Tono de `slv-badge` por estado de póliza. */
 export const POLICY_STATUS_TONE: Record<PolicyStatus, Tone> = {
-  Activa: 'success',
-  Cancelada: 'error',
-  Vencida: 'neutral',
+  activa: 'success',
+  cancelada: 'error',
+  vencida: 'neutral',
 };
 
 /** Tono de `slv-badge` por estado de siniestro. */

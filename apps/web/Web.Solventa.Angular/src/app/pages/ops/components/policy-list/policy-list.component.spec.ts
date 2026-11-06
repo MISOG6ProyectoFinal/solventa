@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideCatalogFixture } from '../../../../core/testing/catalog.fixtures';
 import { OPS_POLICIES } from '../../testing/policy.fixtures';
 import { PolicyListComponent } from './policy-list.component';
 
@@ -16,7 +17,10 @@ describe('PolicyListComponent', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [PolicyListComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [PolicyListComponent],
+      providers: [provideCatalogFixture()],
+    }).compileComponents();
     fixture = TestBed.createComponent(PolicyListComponent);
     fixture.componentRef.setInput('policies', OPS_POLICIES);
     fixture.componentRef.setInput('partners', ['Banco Aurora', 'RetailPay']);
@@ -28,6 +32,18 @@ describe('PolicyListComponent', () => {
     expect(rows().length).toBe(OPS_POLICIES.length);
     expect(rows()[0].textContent).toContain('SLV-2024-00391');
     expect(rows()[0].querySelector('slv-badge')!.textContent).toContain('ACTIVA');
+  });
+
+  it('offers the statuses the policy service publishes and filters by one', async () => {
+    const select = el.querySelectorAll('select')[0];
+
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['', 'activa', 'vencida', 'cancelada']);
+    select.value = 'vencida';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(rows().length).toBeGreaterThan(0);
+    expect(rows().every((row) => row.querySelector('slv-badge')!.textContent!.includes('VENCIDA'))).toBe(true);
   });
 
   it('filters by policy number or identification', async () => {

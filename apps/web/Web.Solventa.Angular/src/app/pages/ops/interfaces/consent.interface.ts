@@ -11,7 +11,6 @@ export interface SolicitudConsentimiento {
   canal: 'sms' | 'email';
   contacto?: string;
   contacto_mask?: string;
-  alcance?: string[];
   open_finance: boolean;
   open_data: boolean;
   asesor: string;

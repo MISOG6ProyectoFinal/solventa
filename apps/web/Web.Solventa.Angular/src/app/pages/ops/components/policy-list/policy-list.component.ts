@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { catchError, of } from 'rxjs';
 import { Policy } from '../../../../core/models/policy.model';
 import { POLICY_STATUS_TONE } from '../../../../shared/constants/status-tone.constants';
 import { InputDirective } from '../../../../shared/directives/input.directive';
@@ -7,7 +9,8 @@ import { BadgeComponent } from '../../../../ui/components/badge/badge.component'
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
-import { OPS_FILTER_ALL, POLICY_STATUS_OPTIONS } from '../../constants/ops.constants';
+import { CatalogService } from '../../../../core/services/catalog.service';
+import { OPS_FILTER_ALL } from '../../constants/ops.constants';
 import { LocaleService } from '../../../../core/services/locale.service';
 
 /** Consulta de pólizas: filtros (texto, estado, socio) y tabla de resultados. */
@@ -24,7 +27,9 @@ export class PolicyListComponent {
   readonly opened = output<string>();
 
   protected readonly allFilter = OPS_FILTER_ALL;
-  protected readonly statusOptions = POLICY_STATUS_OPTIONS;
+  protected readonly statusOptions = toSignal(inject(CatalogService).policyStatuses$.pipe(catchError(() => of([]))), {
+    initialValue: [],
+  });
   protected readonly statusTone = POLICY_STATUS_TONE;
 
   protected readonly query = signal('');

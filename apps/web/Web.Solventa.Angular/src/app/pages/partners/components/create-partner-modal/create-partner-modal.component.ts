@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { catchError, of } from 'rxjs';
 import { ApiError } from '../../../../core/interfaces/api-response.interface';
 import { Alcance, Partner, PartnerCreated, PartnerType } from '../../../../core/models/partner.model';
-import { PARTNER_TYPES, ALCANCES } from '../../../../shared/constants/ramos.constants';
+import { CatalogService } from '../../../../core/services/catalog.service';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { InputDirective } from '../../../../shared/directives/input.directive';
@@ -42,18 +44,26 @@ export class CreatePartnerModalComponent {
 
   name = signal('');
   identifier = signal('');
-  tipo = signal<PartnerType>('Retailer');
+  tipo = signal<PartnerType>('');
   pais = signal('Colombia');
   email = signal('');
-  alcances = signal<Alcance[]>(['cotizacion', 'emision']);
+  alcances = signal<Alcance[]>([]);
 
   errors = signal<Record<string, string>>({});
   submitError = signal<string | null>(null);
   saving = signal(false);
   createdResult = signal<PartnerCreated | null>(null);
 
-  readonly partnerTypes = PARTNER_TYPES;
-  readonly alcancesOptions = ALCANCES;
+  private readonly catalog = inject(CatalogService);
+  readonly partnerTypes = toSignal(this.catalog.partnerTypes$.pipe(catchError(() => of([]))), { initialValue: [] });
+  readonly alcancesOptions = toSignal(this.catalog.partnerScopes$.pipe(catchError(() => of([]))), { initialValue: [] });
+
+  constructor() {
+    effect(() => {
+      const [first] = this.partnerTypes();
+      if (first && !untracked(() => this.tipo())) this.tipo.set(first);
+    });
+  }
 
   toggleAlcance(a: Alcance) {
     this.alcances.update(prev =>
@@ -68,10 +78,10 @@ export class CreatePartnerModalComponent {
   reset() {
     this.name.set('');
     this.identifier.set('');
-    this.tipo.set('Retailer');
+    this.tipo.set(this.partnerTypes()[0] ?? '');
     this.pais.set('Colombia');
     this.email.set('');
-    this.alcances.set(['cotizacion', 'emision']);
+    this.alcances.set([]);
     this.errors.set({});
     this.submitError.set(null);
     this.saving.set(false);
