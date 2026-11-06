@@ -20,7 +20,7 @@
   }
 
   @if (loading()) {
-    <p class="text-sm text-muted-foreground" role="status">{{ locale.t('partners.loading') }}</p>
+    <output class="block text-sm text-muted-foreground">{{ locale.t('partners.loading') }}</output>
   } @else if (!selectedPartner()) {
     <slv-partner-list 
       [partners]="partners()"
