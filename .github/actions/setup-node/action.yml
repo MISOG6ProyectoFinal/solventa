@@ -1,0 +1,36 @@
+name: Setup Node workspace
+description: Installs Node and the workspace dependencies using the npm download cache
+
+inputs:
+  node-version:
+    description: Node version to install
+    default: 22.22.3
+  node-version-file:
+    description: File that pins the Node version, used instead of node-version when set
+    default: ""
+  install-web:
+    description: Also install the dependencies of the Angular app
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version-file == '' && inputs.node-version || '' }}
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          apps/web/Web.Solventa.Angular/package-lock.json
+
+    - name: Install Node dependencies
+      shell: bash
+      run: npm ci --prefer-offline --no-audit --no-fund
+
+    - name: Install web dependencies
+      if: inputs.install-web == 'true'
+      shell: bash
+      working-directory: apps/web/Web.Solventa.Angular
+      run: npm ci --prefer-offline --no-audit --no-fund

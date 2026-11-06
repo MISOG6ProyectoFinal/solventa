@@ -1,0 +1,64 @@
+name: Setup Sonarless
+description: Installs the tools the Sonar scripts need and keeps the Sonarless Docker images in the Actions cache
+
+inputs:
+  server-image:
+    description: SonarQube server image the Sonarless action runs
+    required: true
+  scanner-image:
+    description: Sonar scanner image the Sonarless action runs
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install missing tools
+      shell: bash
+      run: |
+        missing=()
+        for tool in jq curl bc; do
+          command -v "$tool" >/dev/null || missing+=("$tool")
+        done
+        if [ "${#missing[@]}" -gt 0 ]; then
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq "${missing[@]}"
+        fi
+
+    - name: Restore the Sonar images
+      id: images
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.sonarless/images
+        key: sonarless-images-${{ runner.os }}-${{ inputs.server-image }}-${{ inputs.scanner-image }}
+
+    - name: Load the cached Sonar images
+      if: steps.images.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        for archive in ~/.sonarless/images/*.tar; do
+          docker load --input "$archive" >/dev/null
+        done
+
+    - name: Pull and export the Sonar images
+      if: steps.images.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SERVER_IMAGE: ${{ inputs.server-image }}
+        SCANNER_IMAGE: ${{ inputs.scanner-image }}
+      run: |
+        mkdir -p ~/.sonarless/images
+        docker pull --quiet "$SERVER_IMAGE" >/dev/null &
+        server_pull=$!
+        docker pull --quiet "$SCANNER_IMAGE" >/dev/null &
+        scanner_pull=$!
+        wait "$server_pull"
+        wait "$scanner_pull"
+        docker save --output ~/.sonarless/images/server.tar "$SERVER_IMAGE"
+        docker save --output ~/.sonarless/images/scanner.tar "$SCANNER_IMAGE"
+
+    - name: Save the Sonar images
+      if: steps.images.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.sonarless/images
+        key: ${{ steps.images.outputs.cache-primary-key }}

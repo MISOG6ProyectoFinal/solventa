@@ -6,6 +6,9 @@ ROOT="$(pwd)"
 status=0
 run_coverage="${RUN_COVERAGE:-1}"
 JUNIT_PARTIALS="${ROOT}/.junit-partials"
+TEST_JOBS="${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}"
+LOGS="$(mktemp -d)"
+trap 'rm -rf "${LOGS}"' EXIT
 
 if [ "$run_coverage" = "1" ]; then
   export COVERAGE_FILE="${ROOT}/.coverage"
@@ -14,26 +17,35 @@ fi
 rm -rf "${JUNIT_PARTIALS}"
 mkdir -p "${JUNIT_PARTIALS}"
 
-for dir in libs/solventa_common services/*/; do
-  echo "== ${dir}"
-  junit_file="${JUNIT_PARTIALS}/$(echo "${dir%/}" | tr '/' '-').xml"
+run_dir() {
+  local dir="$1"
+  local name
+  name="$(echo "${dir%/}" | tr '/' '-')"
+  local junit_file="${JUNIT_PARTIALS}/${name}.xml"
   if [ "$run_coverage" = "1" ]; then
-    (
-      cd "$ROOT"
+    cd "$ROOT"
+    COVERAGE_FILE="${ROOT}/.coverage.${name}" \
       PYTHONPATH="${ROOT}/${dir}${PYTHONPATH:+:${PYTHONPATH}}" \
-        python -m pytest -q "${dir%/}/tests" \
-          --cov \
-          --cov-append \
-          --cov-config="${ROOT}/pyproject.toml" \
-          --cov-fail-under=0 \
-          --junitxml="${junit_file}"
-    ) || status=1
+      python -m pytest -q "${dir%/}/tests" \
+        --cov \
+        --cov-config="${ROOT}/pyproject.toml" \
+        --cov-fail-under=0 \
+        --junitxml="${junit_file}" \
+      > "${LOGS}/${name}.log" 2>&1
   else
-    (
-      cd "$dir"
-      python -m pytest -q --junitxml="${junit_file}"
-    ) || status=1
+    cd "$dir"
+    python -m pytest -q --junitxml="${junit_file}" > "${LOGS}/${name}.log" 2>&1
   fi
+}
+export -f run_dir
+export ROOT run_coverage JUNIT_PARTIALS LOGS
+
+dirs=(libs/solventa_common services/*/)
+printf '%s\n' "${dirs[@]}" | xargs -P "${TEST_JOBS}" -I{} bash -c 'run_dir "$1"' _ {} || status=1
+
+for dir in "${dirs[@]}"; do
+  echo "== ${dir}"
+  cat "${LOGS}/$(echo "${dir%/}" | tr '/' '-').log"
 done
 
 if compgen -G "${JUNIT_PARTIALS}/*.xml" > /dev/null; then
