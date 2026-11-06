@@ -35,7 +35,7 @@ export function defaultQuoteForm(): QuoteFormValues {
   return {
     nombre: 'María Rodríguez',
     cedula: '1020304050',
-    destino: 'España',
+    destino: '',
     fechaSalida: toDisplayDate(today),
     fechaRegreso: toDisplayDate(addDays(today, 14)),
     viajeros: '1',

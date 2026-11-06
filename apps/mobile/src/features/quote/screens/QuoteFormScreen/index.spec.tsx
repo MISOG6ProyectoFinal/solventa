@@ -52,6 +52,18 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
+const CONTRACT = {
+  properties: { destino: { enum: ['Estados Unidos', 'España', 'México', 'Otro país'] } },
+};
+
+function routeFetch(quote: () => unknown) {
+  return jest.fn(async (url: unknown) => (String(url).endsWith('/contrato') ? jsonResponse(CONTRACT) : quote()));
+}
+
+function quoteCalls() {
+  return jest.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/movil/cotizaciones'));
+}
+
 function seedViaje() {
   useQuoteStore.getState().selectProduct(VIAJE);
 }
@@ -62,13 +74,14 @@ describe('QuoteFormScreen', () => {
     useNavigation().goBack.mockClear();
     useQuoteStore.getState().clear();
     seedViaje();
-    global.fetch = jest.fn(async () => jsonResponse(OFERTA)) as typeof fetch;
+    global.fetch = routeFetch(() => jsonResponse(OFERTA)) as unknown as typeof fetch;
   });
 
   it('shows the viaje form with the prototype defaults', async () => {
     const defaults = defaultQuoteForm();
-    const { getByText, getByDisplayValue, queryByText } = await render(<QuoteFormScreen />);
+    const { findByText, getByText, getByDisplayValue, queryByText } = await render(<QuoteFormScreen />);
 
+    expect(await findByText('Estados Unidos')).toBeTruthy();
     expect(getByText('Comprar seguro')).toBeTruthy();
     expect(getByText('Cotiza y activa tu cobertura')).toBeTruthy();
     expect(getByText('Viaje Internacional')).toBeTruthy();
@@ -78,7 +91,6 @@ describe('QuoteFormScreen', () => {
     expect(getByText(/Cédula/)).toBeTruthy();
     expect(getByDisplayValue('1020304050')).toBeTruthy();
     expect(getByText(/Destino/)).toBeTruthy();
-    expect(getByText('España')).toBeTruthy();
     expect(getByText(/Fecha de salida/)).toBeTruthy();
     expect(getByText(defaults.fechaSalida)).toBeTruthy();
     expect(getByText(/Fecha de regreso/)).toBeTruthy();
@@ -89,15 +101,16 @@ describe('QuoteFormScreen', () => {
     expect(queryByText('Obligatorio')).toBeNull();
     expect(queryByText('Continuar')).toBeNull();
 
-    await fireEvent.press(getByText('España'));
-    expect(getByText('Estados Unidos')).toBeTruthy();
+    await fireEvent.press(getByText('Estados Unidos'));
+    expect(getByText('España')).toBeTruthy();
     expect(getByText('México')).toBeTruthy();
     expect(getByText('Otro país')).toBeTruthy();
   });
 
   it('does not post when the form is invalid', async () => {
-    const { getAllByText, getByDisplayValue, getByText } = await render(<QuoteFormScreen />);
+    const { findByText, getAllByText, getByDisplayValue, getByText } = await render(<QuoteFormScreen />);
 
+    await findByText('Estados Unidos');
     await fireEvent.changeText(getByDisplayValue('María Rodríguez'), '');
     await fireEvent.changeText(getByDisplayValue('1020304050'), '');
     await fireEvent.changeText(getByDisplayValue('1'), '0');
@@ -105,7 +118,7 @@ describe('QuoteFormScreen', () => {
 
     expect(getAllByText('Obligatorio').length).toBeGreaterThanOrEqual(2);
     expect(getByText('Debe ser un número mayor a 0')).toBeTruthy();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(quoteCalls()).toHaveLength(0);
     expect(useNavigation().navigate).not.toHaveBeenCalled();
   });
 
@@ -126,16 +139,17 @@ describe('QuoteFormScreen', () => {
 
   it('posts the exact viaje payload and opens the result', async () => {
     const defaults = defaultQuoteForm();
-    const { getByText } = await render(<QuoteFormScreen />);
+    const { findByText, getByText } = await render(<QuoteFormScreen />);
 
+    await findByText('Estados Unidos');
     await fireEvent.press(getByText('Calcular cotización'));
 
     await waitFor(() => {
       expect(useNavigation().navigate).toHaveBeenCalledWith('Quote', { screen: 'Result' });
     });
 
-    expect(fetch).toHaveBeenCalledTimes(1);
-    const [url, init] = jest.mocked(fetch).mock.calls[0];
+    expect(quoteCalls()).toHaveLength(1);
+    const [url, init] = quoteCalls()[0];
     expect(String(url)).toMatch(/\/movil\/cotizaciones$/);
     expect(init).toEqual({
       method: 'POST',
@@ -144,7 +158,7 @@ describe('QuoteFormScreen', () => {
         producto_id: 'viaje-internacional',
         nombre: 'María Rodríguez',
         cedula: '1020304050',
-        destino: 'España',
+        destino: 'Estados Unidos',
         fecha_salida: toApiDate(defaults.fechaSalida),
         fecha_regreso: toApiDate(defaults.fechaRegreso),
         viajeros: 1,
@@ -155,15 +169,16 @@ describe('QuoteFormScreen', () => {
 
   it('shows the calculating state and blocks a second submit', async () => {
     let release: (value: unknown) => void = () => undefined;
-    global.fetch = jest.fn(
+    global.fetch = routeFetch(
       () =>
         new Promise((resolve) => {
           release = () => resolve(jsonResponse(OFERTA));
         }),
-    ) as typeof fetch;
+    ) as unknown as typeof fetch;
 
-    const { getByText, getByTestId, queryByText, queryByTestId } = await render(<QuoteFormScreen />);
+    const { findByText, getByText, getByTestId, queryByText, queryByTestId } = await render(<QuoteFormScreen />);
 
+    await findByText('Estados Unidos');
     await fireEvent.press(getByText('Calcular cotización'));
 
     expect(getByText('Calculando cotización...')).toBeTruthy();
@@ -172,7 +187,7 @@ describe('QuoteFormScreen', () => {
     expect(queryByTestId('quote-calc')).toBeNull();
 
     await fireEvent.press(getByText('Calculando cotización...'));
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(quoteCalls()).toHaveLength(1);
 
     release(undefined);
 
@@ -182,23 +197,35 @@ describe('QuoteFormScreen', () => {
   });
 
   it('keeps the form open when the backend rejects the quote', async () => {
-    global.fetch = jest.fn(async () => jsonResponse({ detail: 'Producto no disponible para cotización móvil: proteccion-celular' }, 422)) as typeof fetch;
+    global.fetch = routeFetch(() =>
+      jsonResponse({ detail: 'Producto no ofrecido en el canal: proteccion-celular' }, 422),
+    ) as unknown as typeof fetch;
     const { findByText, getByText, queryByTestId } = await render(<QuoteFormScreen />);
 
+    await findByText('Estados Unidos');
     await fireEvent.press(getByText('Calcular cotización'));
 
-    expect(await findByText('Producto no disponible para cotización móvil: proteccion-celular')).toBeTruthy();
+    expect(await findByText('Producto no ofrecido en el canal: proteccion-celular')).toBeTruthy();
     expect(queryByTestId('quote-loading')).toBeNull();
     expect(getByText('Calcular cotización')).toBeTruthy();
     expect(useNavigation().navigate).not.toHaveBeenCalled();
   });
 
   it('shows the generic quote error when the API has no detail', async () => {
-    global.fetch = jest.fn(async () => jsonResponse({}, 500)) as typeof fetch;
+    global.fetch = routeFetch(() => jsonResponse({}, 500)) as unknown as typeof fetch;
     const { findByText, getByText } = await render(<QuoteFormScreen />);
 
+    await findByText('Estados Unidos');
     await fireEvent.press(getByText('Calcular cotización'));
 
     expect(await findByText('No se pudo calcular la cotización.')).toBeTruthy();
+  });
+
+  it('tells the traveler when the form options cannot be loaded', async () => {
+    global.fetch = jest.fn(async () => jsonResponse({}, 503)) as unknown as typeof fetch;
+
+    const { findByText } = await render(<QuoteFormScreen />);
+
+    expect(await findByText('No se pudieron cargar las opciones del formulario.')).toBeTruthy();
   });
 });

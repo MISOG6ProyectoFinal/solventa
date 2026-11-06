@@ -12,6 +12,10 @@ export type ProductoMovil = {
   coberturas: CoberturaMovil[];
 };
 
+export type ProductContract = {
+  properties: Record<string, { enum?: string[] }>;
+};
+
 export type OfertaCotizacion = {
   id: string;
   producto_id: string;
@@ -45,5 +49,3 @@ export type QuoteFormValues = {
   fechaRegreso: string;
   viajeros: string;
 };
-
-export const destinos = ['Estados Unidos', 'España', 'México', 'Otro país'] as const;

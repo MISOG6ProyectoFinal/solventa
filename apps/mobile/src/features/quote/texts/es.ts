@@ -22,6 +22,7 @@ export const es = {
     returnBeforeDeparture: 'Debe ser posterior a la salida',
     travelersAtLeastOne: 'Debe ser un número mayor a 0',
     quoteFailed: 'No se pudo calcular la cotización.',
+    contractFailed: 'No se pudieron cargar las opciones del formulario.',
   },
   result: {
     screenTitle: 'Tu cotización',

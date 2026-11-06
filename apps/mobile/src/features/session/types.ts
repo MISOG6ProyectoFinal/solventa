@@ -1,4 +1,4 @@
-export type DocumentType = 'CC' | 'CE' | 'Pasaporte';
+export type DocumentType = string;
 
 export type RegisterValues = {
   firstName: string;
