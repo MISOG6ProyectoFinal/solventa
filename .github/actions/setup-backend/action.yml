@@ -1,0 +1,31 @@
+name: Setup backend workspace
+description: Installs Python and Poetry and restores the backend virtualenv from cache
+
+inputs:
+  python-version:
+    description: Python version to install
+    default: "3.13"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      id: python
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Poetry
+      shell: bash
+      run: python -m pip install --disable-pip-version-check poetry
+
+    - name: Restore the backend virtualenv
+      uses: actions/cache@v6
+      with:
+        path: apps/backend/.venv
+        key: backend-venv-${{ runner.os }}-${{ steps.python.outputs.python-version }}-${{ hashFiles('apps/backend/poetry.lock', 'apps/backend/pyproject.toml', 'apps/backend/libs/solventa_common/pyproject.toml') }}
+
+    - name: Install backend dependencies
+      shell: bash
+      working-directory: apps/backend
+      run: poetry install --no-interaction
