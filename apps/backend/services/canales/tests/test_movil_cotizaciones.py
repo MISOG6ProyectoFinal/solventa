@@ -139,7 +139,7 @@ def test_bff_movil_deja_las_reglas_del_viaje_a_cotizacion(mock_client: MagicMock
         "mensaje": "La solicitud tiene datos faltantes o inválidos. No se calculó la prima.",
         "campos": [{"campo": "solicitud", "error": "La fecha de salida no puede ser anterior a hoy"}],
     }
-    request = httpx.Request("POST", "http://cotizacion/consenso/cotizaciones")
+    request = httpx.Request("POST", "https://cotizacion/consenso/cotizaciones")
     rechazo = httpx.Response(422, json={"detail": detalle}, request=request)
     mock_client.post.side_effect = httpx.HTTPStatusError("422", request=request, response=rechazo)
     ayer = (SALIDA - timedelta(days=1)).isoformat()
