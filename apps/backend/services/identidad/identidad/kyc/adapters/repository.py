@@ -113,20 +113,23 @@ class PostgresClientRepository:
             raise ValueError(client.email) from exc
 
     def update(self, client: Client) -> None:
-        with self.engine.begin() as conn:
-            conn.execute(
-                update(clients)
-                .where(clients.c.id == client.id)
-                .values(
-                    tipo_documento=client.tipo_documento,
-                    numero_documento=client.numero_documento or None,
-                    nombre=client.nombre,
-                    apellido=client.last_name or "",
-                    fecha_nacimiento=_parse_date(client.fecha_nacimiento),
-                    email=client.email,
-                    telefono=client.telefono,
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(
+                    update(clients)
+                    .where(clients.c.id == client.id)
+                    .values(
+                        tipo_documento=client.tipo_documento,
+                        numero_documento=client.numero_documento or None,
+                        nombre=client.nombre,
+                        apellido=client.last_name or "",
+                        fecha_nacimiento=_parse_date(client.fecha_nacimiento),
+                        email=client.email,
+                        telefono=client.telefono,
+                    )
                 )
-            )
+        except IntegrityError as exc:
+            raise ValueError(client.email) from exc
 
     def upsert(self, client: Client) -> Client:
         return _merge_and_save_client(self, client)
