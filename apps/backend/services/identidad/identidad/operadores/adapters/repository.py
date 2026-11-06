@@ -84,9 +84,6 @@ class InMemoryOperatorRepository:
     def __init__(self) -> None:
         self.operators_by_id: dict[str, Operator] = {}
 
-    def create_schema(self) -> None:
-        pass
-
     def add(self, operator: Operator) -> None:
         if self.get_by_email(operator.correo) is not None:
             raise EmailTaken(operator.correo)

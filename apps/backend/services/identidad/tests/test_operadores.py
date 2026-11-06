@@ -216,10 +216,15 @@ def test_el_contenedor_con_postgres_crea_el_esquema_de_operadores():
     assert container.operators.list() == []
 
 
-@pytest.mark.parametrize("make", [lambda: PostgresOperatorRepository(_sqlite()), InMemoryOperatorRepository])
+def _postgres_repository() -> PostgresOperatorRepository:
+    repo = PostgresOperatorRepository(_sqlite())
+    repo.create_schema()
+    return repo
+
+
+@pytest.mark.parametrize("make", [_postgres_repository, InMemoryOperatorRepository])
 def test_repositorio_guarda_busca_lista_y_actualiza(make):
     repo = make()
-    repo.create_schema()
     ahora = datetime.now(UTC)
     segundo = _operator("b@solventa.test", ahora + timedelta(minutes=1))
     primero = _operator("a@solventa.test", ahora)
@@ -247,10 +252,9 @@ def test_repositorio_guarda_busca_lista_y_actualiza(make):
     assert actualizado.activo is False
 
 
-@pytest.mark.parametrize("make", [lambda: PostgresOperatorRepository(_sqlite()), InMemoryOperatorRepository])
+@pytest.mark.parametrize("make", [_postgres_repository, InMemoryOperatorRepository])
 def test_repositorio_rechaza_el_correo_duplicado(make):
     repo = make()
-    repo.create_schema()
     repo.add(_operator("a@solventa.test"))
 
     with pytest.raises(EmailTaken):
