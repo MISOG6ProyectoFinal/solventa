@@ -43,7 +43,7 @@
           </slv-field>
         </div>
 
-        <button slv-button type="button" variant="secondary" (click)="solicitarConsentimiento()">
+        <button slv-button type="button" variant="secondary" [disabled]="readOnly()" (click)="solicitarConsentimiento()">
           {{ locale.t('consent.request') }}
         </button>
       </div>
@@ -81,7 +81,7 @@
             slv-button
             type="button"
             variant="primary"
-            [disabled]="estado() === 'validando'"
+            [disabled]="estado() === 'validando' || readOnly()"
             (click)="validarCodigo()"
           >
             {{ estado() === 'validando' ? locale.t('consent.validating') : locale.t('consent.validate') }}
@@ -90,7 +90,7 @@
             slv-button
             type="button"
             variant="secondary"
-            [disabled]="estado() === 'validando'"
+            [disabled]="estado() === 'validando' || readOnly()"
             (click)="reenviar()"
           >
             {{ locale.t('consent.resend') }}

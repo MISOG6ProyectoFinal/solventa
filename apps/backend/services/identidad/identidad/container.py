@@ -19,6 +19,14 @@ from identidad.kyc.domain.use_cases import (
     StartSession,
     ValidarConsentimiento,
 )
+from identidad.operadores.adapters.repository import InMemoryOperatorRepository, PostgresOperatorRepository
+from identidad.operadores.domain.use_cases import (
+    CreateOperator,
+    ListOperators,
+    StartOperatorSession,
+    UpdateOperator,
+    seed_admin,
+)
 
 
 class Container:
@@ -33,7 +41,9 @@ class Container:
         self.clients = InMemoryClientRepository()
         self.accounts = InMemoryAccountRepository()
         self.consentimientos = InMemoryConsentimientoRepository()
+        self.operators = InMemoryOperatorRepository()
         self._wire()
+        self._seed_admin()
 
     def use_postgres(self, engine: Engine) -> None:
         client_repo = PostgresClientRepository(engine)
@@ -48,7 +58,20 @@ class Container:
         consent_repo.create_schema()
         self.consentimientos = consent_repo
 
+        operator_repo = PostgresOperatorRepository(engine)
+        operator_repo.create_schema()
+        self.operators = operator_repo
+
         self._wire()
+        self._seed_admin()
+
+    def _seed_admin(self) -> None:
+        seed_admin(
+            self.operators,
+            settings.operador_admin_correo,
+            settings.operador_admin_nombre,
+            settings.operador_admin_contrasena,
+        )
 
     def _wire(self) -> None:
         self.start_session = StartSession(self.clients, self.accounts, self.secret)
@@ -59,6 +82,10 @@ class Container:
         self.buscar_cliente_por_documento = BuscarClientePorDocumento(self.clients)
         self.asegurar_cliente = AsegurarCliente(self.clients)
         self.get_client = GetClient(self.clients)
+        self.start_operator_session = StartOperatorSession(self.operators, self.secret)
+        self.create_operator = CreateOperator(self.operators)
+        self.list_operators = ListOperators(self.operators)
+        self.update_operator = UpdateOperator(self.operators)
 
 
 container = Container()

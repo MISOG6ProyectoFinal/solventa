@@ -1,7 +1,10 @@
 """Puebla un ambiente de Solventa con datos de prueba coherentes a través de la API pública de Canales.
 
     python scripts/poblar_datos.py                                  # modo local (http://localhost:8000)
-    python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net
+    OPERADOR_CONTRASENA=<clave> python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net
+
+El portal exige un operador: OPERADOR_CORREO (por defecto admin@solventa.local) y OPERADOR_CONTRASENA
+(por defecto la del modo local).
 
 Crea socios con sus ramos habilitados, clientes con sesión, cotizaciones por los tres canales y avisos
 de siniestro con evidencia. Es idempotente: las credenciales que solo se entregan una vez (secreto de
@@ -10,6 +13,7 @@ reutilizan en las siguientes corridas.
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -22,6 +26,7 @@ URL_LOCAL = "http://localhost:8000"
 EVIDENCIA = Path(__file__).resolve().parents[1] / "load-tests" / "fixtures" / "evidencia.png"
 CREDENCIALES = Path(__file__).resolve().parent / ".poblar"
 OPERADOR = "Ana Gómez"
+OPERADOR_LOCAL = ("admin@solventa.local", "Solventa-local-2026")
 
 SOCIOS = [
     {
@@ -185,12 +190,12 @@ def guardar_credenciales(archivo: Path, credenciales: dict) -> None:
     archivo.chmod(0o600)
 
 
-def poblar_socios(api: Api, credenciales: dict, conteo: dict) -> None:
+def poblar_socios(api: Api, credenciales: dict, conteo: dict, portal: str) -> None:
     for socio in SOCIOS:
         alta = {k: v for k, v in socio.items() if k != "ramos"} | {"pais": "Colombia", "autorizado_por": OPERADOR}
         guardado = credenciales["socios"].get(socio["identificador"])
         try:
-            creado = api.pedir("POST", "/web/socios", alta)
+            creado = api.pedir("POST", "/web/socios", alta, token=portal)
             guardado = {"id": creado["id"], "client_id": creado["client_id"], "secreto": creado["secreto"]}
             credenciales["socios"][socio["identificador"]] = guardado
             conteo["socios creados"] += 1
@@ -198,13 +203,13 @@ def poblar_socios(api: Api, credenciales: dict, conteo: dict) -> None:
             if error.estado != 409:
                 raise
             if guardado is None:
-                socios = api.pedir("GET", "/web/socios")
+                socios = api.pedir("GET", "/web/socios", token=portal)
                 existente = next(s for s in socios if s["identificador"] == socio["identificador"])
                 guardado = {"id": existente["id"], "client_id": existente["client_id"], "secreto": None}
                 credenciales["socios"][socio["identificador"]] = guardado
             conteo["socios existentes"] += 1
 
-        configuracion = api.pedir("GET", f"/web/socios/{guardado['id']}/configuracion")
+        configuracion = api.pedir("GET", f"/web/socios/{guardado['id']}/configuracion", token=portal)
         ramos = [
             {"ramo_id": ramo["id"], "coberturas": [c["id"] for c in ramo["coberturas"]]}
             for ramo in configuracion["ramos"]
@@ -214,6 +219,7 @@ def poblar_socios(api: Api, credenciales: dict, conteo: dict) -> None:
             "PUT",
             f"/web/socios/{guardado['id']}/configuracion",
             {"ramos": ramos, "actualizado_por": OPERADOR},
+            token=portal,
         )
 
         if not guardado.get("secreto"):
@@ -319,9 +325,15 @@ def poblar_clientes(api: Api, credenciales: dict, conteo: dict) -> None:
         conteo["avisos radicados"] += 1
 
 
-def poblar_portal(api: Api, conteo: dict) -> None:
+def sesion_del_portal(api: Api) -> str:
+    correo = os.getenv("OPERADOR_CORREO", OPERADOR_LOCAL[0])
+    contrasena = os.getenv("OPERADOR_CONTRASENA", OPERADOR_LOCAL[1])
+    return api.pedir("POST", "/web/sesiones", {"correo": correo, "contrasena": contrasena})["token"]
+
+
+def poblar_portal(api: Api, conteo: dict, portal: str) -> None:
     for indice, producto_id in enumerate(sorted(CON_TARIFA) * 2):
-        api.pedir("POST", "/web/cotizaciones", solicitud_por_producto(producto_id, indice))
+        api.pedir("POST", "/web/cotizaciones", solicitud_por_producto(producto_id, indice), token=portal)
         conteo["cotizaciones del portal"] += 1
 
 
@@ -348,9 +360,10 @@ def main(argumentos: list[str]) -> int:
     }
     print(f"==> Poblando {api.base}")
     try:
-        poblar_socios(api, credenciales, conteo)
+        portal = sesion_del_portal(api)
+        poblar_socios(api, credenciales, conteo, portal)
         poblar_clientes(api, credenciales, conteo)
-        poblar_portal(api, conteo)
+        poblar_portal(api, conteo, portal)
     except ErrorApi as error:
         print(f"La API respondió {error}", file=sys.stderr)
         return 1

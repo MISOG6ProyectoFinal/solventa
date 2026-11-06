@@ -6,6 +6,7 @@ from solventa_common.db import optional_engine, readiness_checks
 from identidad.config import settings
 from identidad.container import container
 from identidad.kyc.api import router as kyc_router
+from identidad.operadores.api import router as operators_router
 from identidad.perfilamiento.api import router as perfilamiento_router
 
 engine = optional_engine(settings.database_url)
@@ -15,6 +16,6 @@ if engine is not None:
 
 app = create_app(
     settings,
-    routers=[kyc_router, perfilamiento_router],
+    routers=[operators_router, kyc_router, perfilamiento_router],
     readiness_checks=readiness_checks(engine),
 )

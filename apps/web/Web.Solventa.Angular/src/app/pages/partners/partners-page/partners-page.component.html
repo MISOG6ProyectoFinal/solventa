@@ -8,7 +8,11 @@
       <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">{{ locale.t('partners.subtitle') }}</p>
     </div>
     <div class="flex gap-2">
-      <button slv-button variant="primary" (click)="showCreateModal.set(true)">{{ locale.t('partners.new') }}</button>
+      @if (canCreate()) {
+        <button slv-button variant="primary" (click)="showCreateModal.set(true)">{{ locale.t('partners.new') }}</button>
+      } @else {
+        <p class="text-xs text-muted-foreground" data-testid="partners-read-only">{{ locale.t('partners.readOnly') }}</p>
+      }
     </div>
   </div>
 

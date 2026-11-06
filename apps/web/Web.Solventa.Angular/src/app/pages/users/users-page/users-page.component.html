@@ -1,0 +1,95 @@
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full bg-accent"></div>
+        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">{{ locale.t('users.title') }}</h1>
+      </div>
+      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">{{ locale.t('users.subtitle') }}</p>
+    </div>
+    <div class="flex gap-2">
+      <button slv-button variant="primary" data-testid="users-new" (click)="showCreateModal.set(true)">{{ locale.t('users.new') }}</button>
+    </div>
+  </div>
+
+  @if (loadError()) {
+    <slv-alert tone="error">
+      {{ locale.t('users.loadError') }}
+      <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">{{ locale.t('users.retry') }}</button>
+    </slv-alert>
+  }
+
+  @if (updateError(); as message) {
+    <slv-alert tone="error">{{ message }}</slv-alert>
+  }
+
+  @if (loading()) {
+    <output class="block text-sm text-muted-foreground">{{ locale.t('users.loading') }}</output>
+  } @else {
+    <slv-card [padding]="false">
+      <div class="px-5 py-4 border-b border-border">
+        <h2 class="text-sm font-semibold text-foreground">{{ locale.t('users.list.title') }}</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-border text-muted-foreground">
+              <th class="px-5 py-3 font-medium">{{ locale.t('users.col.name') }}</th>
+              <th class="px-5 py-3 font-medium">{{ locale.t('users.col.email') }}</th>
+              <th class="px-5 py-3 font-medium">{{ locale.t('users.col.roles') }}</th>
+              <th class="px-5 py-3 font-medium">{{ locale.t('users.col.status') }}</th>
+              <th class="px-5 py-3 font-medium"><span class="sr-only">{{ locale.t('users.col.actions') }}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (operators().length === 0) {
+              <tr>
+                <td colspan="5" class="px-5 py-10 text-center text-muted-foreground">{{ locale.t('users.empty') }}</td>
+              </tr>
+            }
+            @for (operator of operators(); track operator.id) {
+              <tr class="border-b border-border last:border-0 hover:bg-background" [attr.data-operator]="operator.id">
+                <td class="px-5 py-3 font-medium text-foreground">
+                  {{ operator.name }}
+                  @if (isSelf(operator)) {
+                    <span class="text-xs font-normal text-muted-foreground">{{ locale.t('users.you') }}</span>
+                  }
+                </td>
+                <td class="px-5 py-3 text-muted-foreground">{{ operator.email }}</td>
+                <td class="px-5 py-3">
+                  <div class="flex flex-wrap gap-1">
+                    @for (role of operator.roles; track role) {
+                      <slv-badge tone="info">{{ locale.label('role', role) }}</slv-badge>
+                    }
+                  </div>
+                </td>
+                <td class="px-5 py-3">
+                  <slv-badge [tone]="operator.active ? 'success' : 'neutral'">
+                    {{ operator.active ? locale.t('users.active') : locale.t('users.inactive') }}
+                  </slv-badge>
+                </td>
+                <td class="px-5 py-3 text-right whitespace-nowrap">
+                  <button slv-button variant="ghost" data-action="edit-roles" [disabled]="isSelf(operator)" (click)="editing.set(operator)">
+                    {{ locale.t('users.editRoles') }}
+                  </button>
+                  <button
+                    slv-button
+                    variant="ghost"
+                    data-action="toggle-active"
+                    [disabled]="isSelf(operator) || pendingId() === operator.id"
+                    (click)="toggleActive(operator)"
+                  >
+                    {{ operator.active ? locale.t('users.deactivate') : locale.t('users.activate') }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </slv-card>
+  }
+
+  <slv-create-operator-modal [open]="showCreateModal()" (closed)="showCreateModal.set(false)" (created)="onCreated()" />
+  <slv-edit-roles-modal [operator]="editing()" (closed)="editing.set(null)" (saved)="onRolesSaved()" />
+</div>

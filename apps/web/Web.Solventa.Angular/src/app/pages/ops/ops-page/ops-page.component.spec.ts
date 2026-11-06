@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { errorInterceptor } from '../../../core/interceptors/error.interceptor';
 import { POLICY_DTO } from '../testing/policy.fixtures';
 import { OpsPageComponent } from './ops-page.component';
+import { signInAs, signOut } from '../../../core/testing/auth.testing';
 
 describe('OpsPageComponent', () => {
   let fixture: ComponentFixture<OpsPageComponent>;
@@ -15,6 +16,7 @@ describe('OpsPageComponent', () => {
     Array.from(el.querySelectorAll('button')).find((item) => item.textContent?.includes(text))!;
 
   beforeEach(async () => {
+    signInAs();
     await TestBed.configureTestingModule({
       imports: [OpsPageComponent],
       providers: [provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
@@ -26,7 +28,10 @@ describe('OpsPageComponent', () => {
     http.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    signOut();
+  });
 
   const showPolicies = async () => {
     button('Consulta de pólizas').click();

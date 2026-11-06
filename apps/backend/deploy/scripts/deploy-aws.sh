@@ -286,6 +286,14 @@ rollback() {
   kubectl -n "$NAMESPACE" rollout status deployment -l app.kubernetes.io/part-of=solventa --timeout=5m || true
 }
 
+operador_admin() {
+  if ! kubectl -n "$NAMESPACE" get secret operador-admin >/dev/null 2>&1; then
+    kubectl -n "$NAMESPACE" create secret generic operador-admin \
+      --from-literal=OPERADOR_ADMIN_CORREO="${OPERADOR_ADMIN_CORREO:-admin@solventa.co}" \
+      --from-literal=OPERADOR_ADMIN_CONTRASENA="$(openssl rand -base64 18)" >/dev/null
+  fi
+}
+
 k8s() {
   local overlay="$OVERLAY"
   # La versión la fija set-image-tag.sh: Backend CD con el tag del release, o 'images' a mano.
@@ -299,6 +307,8 @@ k8s() {
   else
     aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
   fi
+
+  operador_admin
 
   # Un Job es inmutable: se recrea para que corra con la imagen de este despliegue.
   kubectl -n "$NAMESPACE" delete job cotizacion-bootstrap siniestros-prestadores-sync --ignore-not-found

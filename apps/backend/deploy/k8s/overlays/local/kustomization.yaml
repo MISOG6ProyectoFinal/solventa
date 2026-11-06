@@ -45,6 +45,8 @@ secretGenerator:
     literals: [DB_HOST=postgres, DB_NAME=pagos, DB_USER=solventa, DB_PASSWORD=solventa]
   - name: db-auditoria
     literals: [DB_HOST=postgres, DB_NAME=auditoria, DB_USER=solventa, DB_PASSWORD=solventa]
+  - name: operador-admin
+    literals: [OPERADOR_ADMIN_CORREO=admin@solventa.local, OPERADOR_ADMIN_CONTRASENA=Solventa-local-2026]
 
 patches:
   - target:

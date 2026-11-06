@@ -3,8 +3,9 @@
   role="switch"
   [attr.aria-checked]="checked()"
   [attr.aria-label]="label() || null"
+  [disabled]="disabled()"
   (click)="checked.set(!checked())"
-  class="w-12 h-6 rounded-full relative border border-border transition-colors cursor-pointer"
+  class="w-12 h-6 rounded-full relative border border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
   [class]="checked() ? 'bg-accent border-accent' : 'bg-border'"
 >
   <span

@@ -5,6 +5,7 @@ import { toPartner, toPartnerConfig } from '../../services/partners-api.mapper';
 import { PartnersService } from '../../services/partners.service';
 import { PARTNER_CONFIG_DTO, PARTNER_DTO } from '../../testing/partner.fixtures';
 import { RamosConfigComponent } from './ramos-config.component';
+import { signInAs, signOut } from '../../../../core/testing/auth.testing';
 
 const CONFIG = toPartnerConfig(PARTNER_CONFIG_DTO);
 
@@ -35,6 +36,7 @@ describe('RamosConfigComponent', () => {
   };
 
   beforeEach(async () => {
+    signInAs();
     loadConfig = vi.fn<(partnerId: string) => Observable<PartnerConfig>>(() => of(CONFIG));
     saveConfig = vi.fn<(partnerId: string, config: PartnerConfig) => Observable<PartnerConfig>>((_id, config) => of(config));
     await TestBed.configureTestingModule({
@@ -42,6 +44,8 @@ describe('RamosConfigComponent', () => {
       providers: [{ provide: PartnersService, useValue: { loadConfig, saveConfig } }],
     }).compileComponents();
   });
+
+  afterEach(() => signOut());
 
   it('shows the current lines of the partner with their state', async () => {
     await create();
@@ -155,5 +159,28 @@ describe('RamosConfigComponent', () => {
     await fixture.whenStable();
 
     expect(loadConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets an administrator change lines and coverages', async () => {
+    await create();
+
+    expect(toggle('ramo-viaje').disabled).toBe(false);
+    expect(coverage('ramo-proteccion-pagos', 'Incapacidad temporal').disabled).toBe(false);
+    expect(el.textContent).not.toContain('Solo un administrador puede cambiar los ramos y las coberturas.');
+  });
+
+  it('shows the configuration to a read-only operator without letting them change it', async () => {
+    signInAs(['consulta']);
+    await create();
+
+    expect(el.textContent).toContain('Solo un administrador puede cambiar los ramos y las coberturas.');
+    expect(toggle('ramo-viaje').disabled).toBe(true);
+    expect(toggle('ramo-proteccion-pagos').disabled).toBe(true);
+    expect(coverage('ramo-proteccion-pagos', 'Desempleo involuntario').disabled).toBe(true);
+
+    toggle('ramo-viaje').click();
+    coverage('ramo-proteccion-pagos', 'Incapacidad temporal').click();
+    await fixture.whenStable();
+    expect(saveConfig).not.toHaveBeenCalled();
   });
 });

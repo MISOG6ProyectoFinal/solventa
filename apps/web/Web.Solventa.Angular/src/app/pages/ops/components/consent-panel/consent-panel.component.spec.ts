@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
 import { ConsentPanelComponent } from './consent-panel.component';
+import { signInAs, signOut } from '../../../../core/testing/auth.testing';
 
 describe('ConsentPanelComponent', () => {
   let fixture: ComponentFixture<ConsentPanelComponent>;
@@ -21,6 +22,7 @@ describe('ConsentPanelComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+    signInAs();
     await TestBed.configureTestingModule({
       imports: [ConsentPanelComponent],
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -32,6 +34,7 @@ describe('ConsentPanelComponent', () => {
 
   afterEach(() => {
     httpTesting.verify();
+    signOut();
     TestBed.resetTestingModule();
   });
 
@@ -473,5 +476,26 @@ describe('ConsentPanelComponent', () => {
     await fixture.whenStable();
 
     expect(el.textContent).toContain('Error al solicitar código OTP');
+  });
+
+  it('registers the signed-in operator as the advisor of the consent', async () => {
+    await render(true);
+
+    el.querySelector('button')!.click();
+    await fixture.whenStable();
+
+    const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
+    expect(req.request.body.asesor).toBe('Ana Gómez (asesor)');
+    req.flush({ consentimiento_id: 'CNS-1', estado: 'PENDIENTE', contacto_mask: '***4567', codigo_demo: '123456', expira_en: '2026-09-12T13:05:00Z' });
+  });
+
+  it('blocks the consent request for a read-only operator', async () => {
+    fixture.componentRef.setInput('readOnly', true);
+    await render(true);
+
+    const request = el.querySelector('button')!;
+    expect(request.disabled).toBe(true);
+    request.click();
+    httpTesting.expectNone(API_ENDPOINTS.consentimientos.solicitar);
   });
 });

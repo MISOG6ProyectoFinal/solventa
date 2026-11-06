@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints.constants';
 import { QuoteTabComponent, quoteErrorMessage } from './quote-tab.component';
+import { signInAs, signOut } from '../../../../core/testing/auth.testing';
 
 describe('QuoteTabComponent', () => {
   let fixture: ComponentFixture<QuoteTabComponent>;
@@ -11,6 +12,7 @@ describe('QuoteTabComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+    signInAs();
     await TestBed.configureTestingModule({
       imports: [QuoteTabComponent],
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -29,6 +31,7 @@ describe('QuoteTabComponent', () => {
 
   afterEach(() => {
     httpTesting.verify();
+    signOut();
     TestBed.resetTestingModule();
   });
 
@@ -228,6 +231,69 @@ describe('QuoteTabComponent', () => {
     await fixture.whenStable();
 
     expect(el.textContent).toContain('No fue posible cambiar el simulador de Open Finance.');
+  });
+});
+
+describe('QuoteTabComponent as a read-only operator', () => {
+  let fixture: ComponentFixture<QuoteTabComponent>;
+  let el: HTMLElement;
+  let httpTesting: HttpTestingController;
+
+  const button = (text: string): HTMLButtonElement =>
+    Array.from(el.querySelectorAll('button')).find((item) => item.textContent?.includes(text))!;
+
+  beforeEach(async () => {
+    signInAs(['consulta']);
+    await TestBed.configureTestingModule({
+      imports: [QuoteTabComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    httpTesting = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(QuoteTabComponent);
+    await fixture.whenStable();
+    httpTesting
+      .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
+      .flush({ proveedor: 'open-finance', modo: 'normal' });
+    await fixture.whenStable();
+    el = fixture.nativeElement;
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+    signOut();
+  });
+
+  it('shows the form with an explanation but blocks the quote and the consent request', () => {
+    expect(el.querySelector('slv-quote-form')).not.toBeNull();
+    expect(el.textContent).toContain('Su rol es de consulta');
+    expect(button('Calcular cotización').disabled).toBe(true);
+    expect(button('Solicitar consentimiento').disabled).toBe(true);
+  });
+
+  it('does not calculate even when the calculation is forced', () => {
+    (fixture.componentInstance as any).onQuoteReady({ tipoDocumento: 'CC' });
+
+    httpTesting.expectNone(API_ENDPOINTS.quotes);
+  });
+
+  it('lets an advisor calculate once the consent is validated', async () => {
+    TestBed.resetTestingModule();
+    signInAs(['asesor']);
+    await TestBed.configureTestingModule({
+      imports: [QuoteTabComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    httpTesting = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(QuoteTabComponent);
+    await fixture.whenStable();
+    httpTesting.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
+    (fixture.componentInstance as any).onConsentValidated('CNS-1');
+    await fixture.whenStable();
+    el = fixture.nativeElement;
+
+    expect(el.textContent).not.toContain('Su rol es de consulta');
+    expect(button('Calcular cotización').disabled).toBe(false);
+    expect(button('Solicitar consentimiento').disabled).toBe(false);
   });
 });
 
