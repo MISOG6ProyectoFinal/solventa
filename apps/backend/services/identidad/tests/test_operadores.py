@@ -9,7 +9,7 @@ from identidad.container import container
 from identidad.main import app
 from identidad.operadores.adapters.repository import InMemoryOperatorRepository, PostgresOperatorRepository
 from identidad.operadores.domain.models import EmailTaken, NewOperator, Operator
-from identidad.operadores.domain.use_cases import CreateOperator, seed_admin
+from identidad.operadores.domain.use_cases import CreateOperator
 from solventa_common.operator_session import ADMIN, ADVISOR, VIEWER, verify_operator_token
 from solventa_common.sesion import InvalidToken
 from sqlalchemy import create_engine
@@ -209,47 +209,11 @@ def test_la_ruta_de_operadores_no_la_captura_el_consentimiento():
     assert response.json() == []
 
 
-def test_el_administrador_inicial_se_crea_una_sola_vez():
-    repo = InMemoryOperatorRepository()
-
-    seed_admin(repo, "Admin@Solventa.test", "Administrador", CONTRASENA)
-    seed_admin(repo, "admin@solventa.test", "Otro Nombre", "otra-clave-larga")
-
-    operadores = repo.list()
-    assert len(operadores) == 1
-    assert operadores[0].correo == "admin@solventa.test"
-    assert operadores[0].nombre == "Administrador"
-    assert operadores[0].roles == [ADMIN]
-
-
-@pytest.mark.parametrize(("correo", "contrasena"), [("admin@solventa.test", None), (None, CONTRASENA), ("", "")])
-def test_sin_correo_o_contrasena_no_se_crea_administrador(correo, contrasena):
-    repo = InMemoryOperatorRepository()
-
-    seed_admin(repo, correo, "Administrador", contrasena)
-
-    assert repo.list() == []
-
-
-def test_el_contenedor_crea_el_administrador_inicial_desde_la_configuracion(monkeypatch):
-    monkeypatch.setattr(settings, "operador_admin_correo", "inicial@solventa.test")
-    monkeypatch.setattr(settings, "operador_admin_contrasena", CONTRASENA)
-
-    container.use_memory()
-    response = _login("inicial@solventa.test")
-
-    assert response.status_code == 200
-    assert verify_operator_token(response.json()["token"], settings.sesion_secreto).roles == (ADMIN,)
-
-
-def test_el_contenedor_con_postgres_crea_el_esquema_y_el_administrador(monkeypatch):
-    monkeypatch.setattr(settings, "operador_admin_correo", "inicial@solventa.test")
-    monkeypatch.setattr(settings, "operador_admin_contrasena", CONTRASENA)
-
+def test_el_contenedor_con_postgres_crea_el_esquema_de_operadores():
     container.use_postgres(_sqlite())
     container.use_postgres(container.operators.engine)
 
-    assert [operador.correo for operador in container.operators.list()] == ["inicial@solventa.test"]
+    assert container.operators.list() == []
 
 
 @pytest.mark.parametrize("make", [lambda: PostgresOperatorRepository(_sqlite()), InMemoryOperatorRepository])

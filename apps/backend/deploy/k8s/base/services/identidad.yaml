@@ -67,18 +67,6 @@ spec:
             secretKeyRef:
               name: sesion
               key: SESION_SECRETO
-        - name: OPERADOR_ADMIN_CORREO
-          valueFrom:
-            secretKeyRef:
-              name: operador-admin
-              key: OPERADOR_ADMIN_CORREO
-              optional: true
-        - name: OPERADOR_ADMIN_CONTRASENA
-          valueFrom:
-            secretKeyRef:
-              name: operador-admin
-              key: OPERADOR_ADMIN_CONTRASENA
-              optional: true
         envFrom:
         - configMapRef:
             name: solventa-platform

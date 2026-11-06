@@ -189,11 +189,13 @@ El portal web pide inicio de sesión. Identidad guarda los operadores en la tabl
 
 Sin token, `/web` responde 401 (`sesion_invalida`); con un rol sin permiso, 403 (`permiso_denegado`). Desactivar un operador le impide iniciar sesión; el token que ya tenga sigue vigente hasta que vence.
 
-Identidad crea el primer administrador al arrancar, con el Secret `operador-admin`. En `local` es `admin@solventa.local` con la contraseña `Solventa-local-2026`. En AWS, `deploy-aws.sh k8s` crea el Secret una sola vez con `admin@solventa.co` (o `OPERADOR_ADMIN_CORREO`) y una contraseña aleatoria, que se lee con:
+El primer administrador se crea con `scripts/crear_administrador.sh`, que corre el alta de operadores dentro del pod de Identidad con su conexión a la base. `local.sh up` lo llama con `admin@solventa.local` y la contraseña `Solventa-local-2026`. En AWS, con el `kubectl` conectado al clúster:
 
 ```bash
-kubectl -n solventa get secret operador-admin -o jsonpath='{.data.OPERADOR_ADMIN_CONTRASENA}' | base64 -d
+CONTRASENA=<clave> ./scripts/crear_administrador.sh admin@solventa.co "Nombre Apellido"
 ```
+
+Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está.
 
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
