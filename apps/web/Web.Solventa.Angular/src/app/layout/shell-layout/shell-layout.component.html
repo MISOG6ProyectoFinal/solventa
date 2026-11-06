@@ -40,7 +40,7 @@
           (click)="layout.toggleProfile()"
           class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs text-white font-semibold hover:ring-2 hover:ring-accent/40 transition cursor-pointer"
         >
-          AG
+          {{ operatorInitials() }}
         </button>
         @if (layout.profileOpen()) {
           <div
@@ -55,6 +55,14 @@
             >
               {{ locale.t('web.profile.settings') }}
             </a>
+            <button
+              type="button"
+              data-testid="web-profile-logout"
+              (click)="logout()"
+              class="block w-full text-left px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              {{ locale.t('web.profile.logout') }}
+            </button>
           </div>
         }
       </div>
@@ -65,7 +73,7 @@
     @if (showSidebar()) {
       <aside class="w-56 bg-white border-r border-border flex flex-col py-4 shrink-0">
         <nav class="flex-1 px-3 space-y-0.5">
-          @for (remote of remotes; track remote.path) {
+          @for (remote of remotes(); track remote.path) {
             <a
               [routerLink]="'/' + remote.path"
               routerLinkActive
@@ -84,9 +92,9 @@
           }
         </nav>
         <div class="px-4 pt-4 border-t border-border">
-          <div class="text-xs text-muted-foreground font-medium mb-1">{{ locale.t('web.sidebar.userRole') }}</div>
-          <div class="text-sm font-semibold text-foreground">Ana Gómez</div>
-          <div class="text-xs text-muted-foreground">{{ locale.t('web.sidebar.userOrg') }}</div>
+          <div class="text-xs text-muted-foreground font-medium mb-1" data-testid="web-operator-role">{{ roleLabel() }}</div>
+          <div class="text-sm font-semibold text-foreground" data-testid="web-operator-name">{{ operator()?.name }}</div>
+          <div class="text-xs text-muted-foreground break-all">{{ operator()?.email }}</div>
         </div>
       </aside>
     }

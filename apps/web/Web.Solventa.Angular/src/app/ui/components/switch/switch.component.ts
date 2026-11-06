@@ -10,4 +10,5 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 export class SwitchComponent {
   readonly checked = model(false);
   readonly label = input<string>('');
+  readonly disabled = input(false);
 }

@@ -20,7 +20,10 @@ import { SimulatorService } from '../../services/simulator.service';
 import { ConsentPanelComponent } from '../consent-panel/consent-panel.component';
 import { QuoteBreakdownComponent } from '../quote-breakdown/quote-breakdown.component';
 import { QuoteFormComponent } from '../quote-form/quote-form.component';
+import { QUOTE_ROLES } from '../../../../core/constants/roles.constants';
+import { AuthService } from '../../../../core/services/auth.service';
 import { LocaleService } from '../../../../core/services/locale.service';
+import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 
 interface QuoteErrorDetail {
   readonly mensaje?: string;
@@ -52,6 +55,7 @@ export function quoteErrorMessage(detail: unknown, fallback: string): string {
     FieldComponent,
     InputDirective,
     ButtonComponent,
+    AlertComponent,
     QuoteFormComponent,
     ConsentPanelComponent,
     QuoteBreakdownComponent,
@@ -62,6 +66,7 @@ export function quoteErrorMessage(detail: unknown, fallback: string): string {
 export class QuoteTabComponent {
   protected readonly locale = inject(LocaleService);
   private readonly quotesService = inject(QuotesService);
+  private readonly auth = inject(AuthService);
 
   private readonly simulator = inject(SimulatorService);
 
@@ -80,8 +85,9 @@ export class QuoteTabComponent {
   private readonly ramoMeta = computed(() => RAMOS.find((ramo) => ramo.id === this.ramo()));
   protected readonly ramoLabel = computed(() => this.locale.label('ramo', this.ramo()));
   protected readonly requiresConsent = computed(() => this.ramoMeta()?.requiresConsent ?? false);
+  protected readonly canQuote = computed(() => this.auth.hasRole(...QUOTE_ROLES));
   protected readonly puedeCalcular = computed(
-    () => !this.requiresConsent() || this.consentValidated(),
+    () => this.canQuote() && (!this.requiresConsent() || this.consentValidated()),
   );
 
   constructor() {
@@ -105,6 +111,7 @@ export class QuoteTabComponent {
   }
 
   protected onQuoteReady(values: Record<string, string>): void {
+    if (!this.canQuote()) return;
     this.isCalculating.set(true);
     this.errorMessage.set(null);
 

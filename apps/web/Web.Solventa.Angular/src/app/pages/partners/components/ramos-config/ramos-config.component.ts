@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ADMIN_ROLES } from '../../../../core/constants/roles.constants';
 import { Partner, PartnerConfig, PartnerRamoConfig } from '../../../../core/models/partner.model';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { SwitchComponent } from '../../../../ui/components/switch/switch.component';
 import { PartnersService } from '../../services/partners.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
@@ -17,6 +19,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 export class RamosConfigComponent {
   protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
+  private readonly auth = inject(AuthService);
 
   readonly partner = input.required<Partner>();
 
@@ -24,6 +27,8 @@ export class RamosConfigComponent {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+
+  protected readonly canEdit = computed(() => this.auth.hasRole(...ADMIN_ROLES));
 
   readonly enabledRamos = computed(() => this.config()?.ramos.filter(ramo => ramo.enabled) ?? []);
 
@@ -40,6 +45,7 @@ export class RamosConfigComponent {
   }
 
   toggleRamo(ramo: PartnerRamoConfig) {
+    if (!this.canEdit()) return;
     // Un ramo recién habilitado o deshabilitado queda sin coberturas seleccionadas.
     this.save(current => current.id !== ramo.id ? current : {
       ...current,
@@ -49,6 +55,7 @@ export class RamosConfigComponent {
   }
 
   toggleCoverage(ramo: PartnerRamoConfig, coverageId: string) {
+    if (!this.canEdit()) return;
     this.save(current => current.id !== ramo.id ? current : {
       ...current,
       coverages: current.coverages.map(c => c.id === coverageId ? { ...c, enabled: !c.enabled } : c),

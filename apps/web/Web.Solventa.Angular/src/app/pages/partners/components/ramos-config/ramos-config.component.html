@@ -4,6 +4,10 @@
     <p class="text-xs mt-1 text-muted-foreground">{{ locale.t('ramosConfig.subtitle') }}</p>
   </div>
 
+  @if (!canEdit()) {
+    <slv-alert tone="info">{{ locale.t('ramosConfig.readOnly') }}</slv-alert>
+  }
+
   @if (error()) {
     <slv-alert tone="error">{{ error() }}</slv-alert>
   }
@@ -27,7 +31,7 @@
               <p class="font-semibold text-sm text-foreground">{{ locale.label('ramoApi', r.id, r.name) }}</p>
               <p class="text-xs text-muted-foreground">{{ r.enabled ? locale.t('ramosConfig.enabled') : locale.t('ramosConfig.disabled') }}</p>
             </div>
-            <slv-switch [checked]="r.enabled" [label]="locale.label('ramoApi', r.id, r.name)" (checkedChange)="toggleRamo(r)" />
+            <slv-switch [checked]="r.enabled" [disabled]="!canEdit()" [label]="locale.label('ramoApi', r.id, r.name)" (checkedChange)="toggleRamo(r)" />
           </div>
 
           @if (r.enabled) {
@@ -35,7 +39,7 @@
               <p class="text-[11px] uppercase tracking-wider text-muted-foreground">{{ locale.t('common.coverages') }}</p>
               @for (cov of r.coverages; track cov.id) {
                 <label class="flex items-center gap-2 text-sm cursor-pointer text-foreground">
-                  <input type="checkbox" [checked]="cov.enabled" (change)="toggleCoverage(r, cov.id)" class="rounded border-border" />
+                  <input type="checkbox" [checked]="cov.enabled" [disabled]="!canEdit()" (change)="toggleCoverage(r, cov.id)" class="rounded border-border" />
                   {{ cov.name }}
                 </label>
               }

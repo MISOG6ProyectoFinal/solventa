@@ -1,0 +1,19 @@
+<slv-modal
+  [open]="!!operator()"
+  [title]="locale.t('editRoles.title', { name: operator()?.name ?? '' })"
+  (closed)="closed.emit()"
+>
+  @if (error(); as message) {
+    <div class="mb-4"><slv-alert tone="error">{{ message }}</slv-alert></div>
+  }
+  <slv-field [label]="locale.t('createOperator.roles')">
+    <slv-role-select [(roles)]="roles" />
+  </slv-field>
+
+  <div slot="footer" class="flex gap-4">
+    <button slv-button variant="outline" (click)="closed.emit()">{{ locale.t('common.cancel') }}</button>
+    <button slv-button variant="primary" [disabled]="saving()" (click)="submit()">
+      {{ saving() ? locale.t('editRoles.saving') : locale.t('editRoles.save') }}
+    </button>
+  </div>
+</slv-modal>

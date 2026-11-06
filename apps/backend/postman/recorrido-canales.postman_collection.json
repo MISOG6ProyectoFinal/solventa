@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa API",
-    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json\n\nLa carpeta Portal web crea el socio que usa API de socios. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -127,6 +127,30 @@
     },
     {
       "key": "uploadUrl",
+      "value": ""
+    },
+    {
+      "key": "operadorCorreo",
+      "value": "admin@solventa.local"
+    },
+    {
+      "key": "operadorContrasena",
+      "value": ""
+    },
+    {
+      "key": "portalToken",
+      "value": ""
+    },
+    {
+      "key": "asesorCorreo",
+      "value": ""
+    },
+    {
+      "key": "asesorToken",
+      "value": ""
+    },
+    {
+      "key": "asesorId",
       "value": ""
     }
   ],
@@ -1177,8 +1201,95 @@
     },
     {
       "name": "Portal web",
-      "description": "BFF del portal de operación. Sin autenticación en este prototipo. Crea el socio que usa la carpeta API de socios.",
+      "description": "BFF del portal de operación. Cada petición lleva el token del operador (Bearer) que guarda Iniciar sesión en el portal. Roles: administrador (todo), asesor (cotización, consentimiento y consulta) y consulta (solo lectura). Crea el socio que usa la carpeta API de socios.",
       "item": [
+        {
+          "name": "Portal sin sesión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/socios",
+            "description": "Sin token, toda ruta del portal responde 401 sesion_invalida.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pide iniciar sesión', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('sesion_invalida');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión en el portal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/sesiones",
+            "description": "Inicia sesión del operador con correo y contraseña. Devuelve el token (8 horas) y el operador con sus roles. 401 credenciales_invalidas si no coinciden o el operador está inactivo. El primer administrador sale del secreto operador-admin del clúster.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{operadorCorreo}}\",\n  \"contrasena\": \"{{operadorContrasena}}\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sesion = pm.response.json();",
+                  "pm.collectionVariables.set('portalToken', sesion.token);",
+                  "pm.test('El operador entra con su rol', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(sesion.operador.roles).to.include('administrador');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sesión del operador",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/sesion",
+            "description": "Operador del token: id, correo, nombre y roles. 401 sesion_invalida sin token o con uno vencido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const operador = pm.response.json();",
+                  "pm.test('Responde el operador de la sesión', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(operador.correo).to.equal(pm.collectionVariables.get('operadorCorreo'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "BFF web disponible",
           "request": {
@@ -1714,6 +1825,277 @@
                   "pm.test('El socio tiene el ramo de viaje habilitado', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(ramos.find((r) => r.id === 'ramo-viaje').habilitado).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{portalToken}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Operadores y roles",
+      "description": "Gestión de usuarios del portal (solo administrador) y el efecto de cada rol.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{portalToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Listar operadores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/operadores",
+            "description": "Operadores del portal con sus roles y si están activos. Nunca expone la contraseña. Solo administrador."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const operadores = pm.response.json();",
+                  "pm.test('Incluye al administrador', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(operadores.map((o) => o.correo)).to.include(pm.collectionVariables.get('operadorCorreo'));",
+                  "  pm.expect(operadores[0]).to.not.have.property('password_hash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear operador asesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/operadores",
+            "description": "Crea un operador con sus roles y una contraseña inicial. 409 correo_registrado si el correo ya existe; 422 si un rol no existe o la contraseña es corta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{asesorCorreo}}\",\n  \"nombre\": \"Pedro Asesor\",\n  \"roles\": [\n    \"asesor\"\n  ],\n  \"contrasena\": \"Asesor-postman-2026\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('asesorCorreo', `asesor.${Date.now()}@solventa.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const operador = pm.response.json();",
+                  "pm.collectionVariables.set('asesorId', operador.id);",
+                  "pm.test('El asesor queda creado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(operador.roles).to.eql(['asesor']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión como asesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/sesiones",
+            "description": "El asesor entra con la contraseña inicial.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{asesorCorreo}}\",\n  \"contrasena\": \"Asesor-postman-2026\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sesion = pm.response.json();",
+                  "pm.collectionVariables.set('asesorToken', sesion.token);",
+                  "pm.test('El asesor entra', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(sesion.operador.roles).to.eql(['asesor']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El asesor consulta pólizas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas",
+            "description": "La consulta está abierta a los tres roles.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{asesorToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Puede consultar', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El asesor no da de alta socios",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios",
+            "description": "Dar de alta socios es solo del administrador: 403 permiso_denegado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"No autorizado\",\n  \"identificador\": \"NO-AUTORIZADO-{{$timestamp}}\",\n  \"tipo\": \"Banco\",\n  \"correo_contacto\": \"x@socio.test\",\n  \"alcances\": [\n    \"cotizacion\"\n  ],\n  \"autorizado_por\": \"-\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{asesorToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rol sin permiso', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('permiso_denegado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar al asesor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/operadores/{{asesorId}}",
+            "description": "Cambia roles o desactiva un operador. Un operador inactivo no puede iniciar sesión.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Queda inactivo', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().activo).to.equal(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El asesor inactivo no entra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/sesiones",
+            "description": "Con el operador inactivo, el inicio de sesión responde 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{asesorCorreo}}\",\n  \"contrasena\": \"Asesor-postman-2026\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No inicia sesión', function () {",
+                  "  pm.response.to.have.status(401);",
                   "});"
                 ]
               }
@@ -2619,6 +3001,16 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"apellido\": \"Díaz\",\n  \"email\": \"lina.{{documentoPortal}}@solventa.test\",\n  \"telefono\": \"{{contactoOtp}}\",\n  \"canal\": \"sms\",\n  \"contacto\": \"{{contactoOtp}}\",\n  \"ramo\": \"VIDA_HIPOTECARIO\",\n  \"asesor\": \"Ana Gómez (asesor)\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{portalToken}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "event": [
