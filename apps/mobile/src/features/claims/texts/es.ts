@@ -16,6 +16,7 @@ export const es = {
   report: {
     screenTitle: 'Reportar siniestro',
     policyLabel: 'Póliza afectada',
+    noActivePolicies: 'No tienes pólizas activas para reportar un siniestro.',
     claimTypeLabel: 'Tipo de siniestro',
     occurredAtLabel: 'Fecha y hora de ocurrencia',
     locationLabel: 'Ubicación',

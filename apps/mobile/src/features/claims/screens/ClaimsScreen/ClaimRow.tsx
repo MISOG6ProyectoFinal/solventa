@@ -12,8 +12,13 @@ export type ClaimItem = { kind: 'pending'; report: StoredReport } | { kind: 'fil
 
 type ClaimRowProps = {
   item: ClaimItem;
+  policyNumber: string;
   onOpen: (item: ClaimItem) => void;
 };
+
+export function claimPolicyId(item: ClaimItem): string {
+  return item.kind === 'pending' ? item.report.poliza_id : item.aviso.poliza_id;
+}
 
 export function claimKey(item: ClaimItem): string {
   return item.kind === 'pending' ? `pending-${item.report.poliza_id}` : item.aviso.id;
@@ -26,7 +31,7 @@ function claimStatus(estado: string, texts: Texts): { label: string; variant: 'p
   return { label: texts.claims.statusDraft, variant: 'pending' };
 }
 
-export const ClaimRow = memo(function ClaimRow({ item, onOpen }: Readonly<ClaimRowProps>) {
+export const ClaimRow = memo(function ClaimRow({ item, policyNumber, onOpen }: Readonly<ClaimRowProps>) {
   const texts = useTexts();
   const claim = item.kind === 'pending' ? item.report : item.aviso;
   const status =
@@ -42,7 +47,7 @@ export const ClaimRow = memo(function ClaimRow({ item, onOpen }: Readonly<ClaimR
         </AppText>
         <StatusChip variant={status.variant}>{status.label}</StatusChip>
       </View>
-      <AppText variant="bodySmall">{claim.poliza_id}</AppText>
+      <AppText variant="bodySmall">{policyNumber}</AppText>
     </Card>
   );
 });

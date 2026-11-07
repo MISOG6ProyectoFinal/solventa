@@ -9,14 +9,9 @@ export type NewAviso = {
   description: string;
 };
 
-function policyId(policy: string): string {
-  const parts = policy.split(' · ');
-  return parts[parts.length - 1] ?? policy;
-}
-
 export function avisoPayload(aviso: NewAviso) {
   return {
-    poliza_id: policyId(aviso.policy),
+    poliza_id: aviso.policy,
     tipo: aviso.claimType,
     ocurrido_en: toIsoOccurredAt(aviso.occurredAt),
     descripcion: aviso.description,

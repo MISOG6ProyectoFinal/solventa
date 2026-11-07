@@ -8,6 +8,10 @@ import { deleteReport } from '../../offline/deleteReport';
 import { saveReport } from '../../offline/saveReport';
 import ClaimsScreen from './index';
 
+jest.mock('../../../policies/api/listPolicies', () => ({
+  listPolicies: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   const navigate = jest.fn();
@@ -64,7 +68,7 @@ async function savePendingReport() {
   mkdirSync(dirname('/tmp/foto.jpg'), { recursive: true });
   writeFileSync('/tmp/foto.jpg', Uint8Array.from([0xff, 0xd8, 0xff]));
   await saveReport({
-    policy: 'Viaje Internacional · SLV-2026-03105',
+    policy: 'SLV-2026-03105',
     claimType: 'Emergencia médica',
     occurredAt: '12/09/2026 10:30',
     location: 'Carrera 7 #32-16, La Candelaria, Bogotá',

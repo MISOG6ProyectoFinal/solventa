@@ -7,6 +7,8 @@ import { dirname } from 'node:path';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { readLocation } from '../../../../shared/location';
+import { listPolicies } from '../../../policies/api/listPolicies';
+import { Policy } from '../../../policies/types';
 import { deleteReport } from '../../offline/deleteReport';
 import { listReports } from '../../offline/listReports';
 import { useClaimsStore } from '../../store/useClaimsStore';
@@ -27,6 +29,38 @@ jest.mock('@react-navigation/native', () => {
     }),
   };
 });
+
+jest.mock('../../../policies/api/listPolicies', () => ({
+  listPolicies: jest.fn(),
+}));
+
+jest.mock('../../../quote/api/getProducts', () => ({
+  getProducts: jest.fn(() =>
+    Promise.resolve([
+      { id: 'viaje-internacional', nombre: 'Viaje Internacional' },
+      { id: 'proteccion-celular', nombre: 'Protección Celular' },
+    ]),
+  ),
+}));
+
+const TRAVEL_POLICY: Policy = {
+  id: 'poliza-viaje',
+  numero: 'SLV-2026-03105',
+  cotizacion_id: 'oferta-1',
+  cobro_id: 'cobro-1',
+  producto_id: 'viaje-internacional',
+  prima: '149940.00',
+  estado: 'activa',
+  vigencia: { desde: '2026-09-01', hasta: '2026-12-01' },
+  coberturas: [],
+};
+
+const PHONE_POLICY: Policy = {
+  ...TRAVEL_POLICY,
+  id: 'poliza-celular',
+  numero: 'SLV-2025-01820',
+  producto_id: 'proteccion-celular',
+};
 
 jest.mock('../../../../shared/location', () => ({
   readLocation: jest.fn(() =>
@@ -130,6 +164,9 @@ describe('ReportClaimScreen', () => {
     await deleteReport();
     jest.mocked(readLocation).mockReset();
     jest.mocked(readLocation).mockResolvedValue(currentPlace);
+    jest
+      .mocked(listPolicies)
+      .mockResolvedValue([TRAVEL_POLICY, PHONE_POLICY, { ...PHONE_POLICY, id: 'poliza-vencida', estado: 'vencida' }]);
     global.fetch = mockFiling() as typeof fetch;
     jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
     jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({ info: () => ({ status: 200 }) } as never);
@@ -139,12 +176,25 @@ describe('ReportClaimScreen', () => {
     jest.useRealTimers();
   });
 
+  it('blocks the report when the customer has no active policies', async () => {
+    jest.mocked(listPolicies).mockResolvedValue([{ ...TRAVEL_POLICY, estado: 'vencida' }]);
+    useClaimsStore.getState().addPhoto({ filePath: capturedPhoto, bytes: 1536 });
+    const { findByText, getByPlaceholderText, getByText, queryByText } = await render(<ReportClaimScreen />);
+
+    expect(await findByText('No tienes pólizas activas para reportar un siniestro.')).toBeTruthy();
+    expect(queryByText('Viaje Internacional · SLV-2026-03105')).toBeNull();
+    await fireEvent.changeText(getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(getByText('Enviar reporte'));
+
+    expect(jest.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/movil/siniestros'))).toBe(false);
+  });
+
   it('shows the online report form', async () => {
-    const { getByText, getByPlaceholderText, queryByText } = await render(<ReportClaimScreen />);
+    const { findByText, getByText, getByPlaceholderText, queryByText } = await render(<ReportClaimScreen />);
 
     expect(getByText('Reportar siniestro')).toBeTruthy();
     expect(getByText(/Póliza afectada/)).toBeTruthy();
-    expect(getByText('Viaje Internacional · SLV-2026-03105')).toBeTruthy();
+    expect(await findByText('Viaje Internacional · SLV-2026-03105')).toBeTruthy();
     expect(getByText(/Tipo de siniestro/)).toBeTruthy();
     expect(getByText('Accidente con vehículo de alquiler')).toBeTruthy();
     expect(getByText(/Fecha y hora de ocurrencia/)).toBeTruthy();
@@ -233,7 +283,7 @@ describe('ReportClaimScreen', () => {
             id: 'aviso-1',
             radicado: 'SIN-18247',
             estado: 'radicado',
-            poliza_id: 'SLV-2026-03105',
+            poliza_id: 'poliza-viaje',
             tipo: 'Accidente con vehículo de alquiler',
             ubicacion: currentPlace.address,
             descripcion: 'Golpe en la puerta',
@@ -247,7 +297,7 @@ describe('ReportClaimScreen', () => {
       return request?.method === 'POST' && request.body?.includes('poliza_id');
     });
     const body = JSON.parse((createCall?.[1] as { body: string }).body);
-    expect(body.poliza_id).toBe('SLV-2026-03105');
+    expect(body.poliza_id).toBe('poliza-viaje');
     expect(body.tipo).toBe('Accidente con vehículo de alquiler');
     expect(body.descripcion).toBe('Golpe en la puerta');
     expect(body.ubicacion).toBe(currentPlace.address);
@@ -334,7 +384,7 @@ describe('ReportClaimScreen', () => {
 
     const [saved] = await listReports();
     expect(saved?.descripcion).toBe('Golpe en la puerta');
-    expect(saved?.poliza_id).toBe('SLV-2026-03105');
+    expect(saved?.poliza_id).toBe('poliza-viaje');
     expect(saved?.tipo).toBe('Accidente con vehículo de alquiler');
 
     const restored = await render(<ReportClaimScreen />);

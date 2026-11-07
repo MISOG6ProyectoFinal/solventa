@@ -7,6 +7,7 @@ import { AppText, Banner, Button, Card, LoadingState, Screen, StatusChip } from 
 import { getAssistance, type Asistencia } from '../../api/getAssistance';
 import { listEvidencias, type Evidencia } from '../../api/listEvidencias';
 import { type Aviso } from '../../api/listAvisos';
+import { usePolicyNumber } from '../../policies';
 import { getTexts, useTexts } from '../../texts';
 import { type Texts } from '../../texts/es';
 import { formatOccurredAt } from '../../utils';
@@ -65,6 +66,7 @@ function AvisoDetailBody({
   onRequestAssistance,
 }: Readonly<DetailBodyProps>) {
   const texts = useTexts();
+  const policyNumber = usePolicyNumber();
   const filed = aviso.estado === 'radicado';
   const banner = bannerText(aviso, texts);
   const tiles = evidenceTiles(evidencias, texts);
@@ -82,7 +84,7 @@ function AvisoDetailBody({
           </AppText>
           <StatusChip variant={filed ? 'success' : 'pending'}>{statusLabel}</StatusChip>
         </View>
-        <AppText variant="bodySmall">{aviso.poliza_id}</AppText>
+        <AppText variant="bodySmall">{policyNumber(aviso.poliza_id)}</AppText>
         <AppText variant="bodySmall">
           {texts.detail.occurred(formatOccurredAt(aviso.ocurrido_en), aviso.ubicacion ?? '')}
         </AppText>
