@@ -10,6 +10,8 @@ from canales.clients import cotizacion, identidad, polizas
 from canales.web.auth import Operator, require_operator, require_roles
 from canales.web.policies import policy_detail, recent_policies
 
+CONSENT_GRANTED = "OTORGADO"
+
 router = APIRouter(prefix="/web", tags=["BFF Web"])
 
 require_writer = require_roles(ADMIN, ADVISOR)
@@ -154,7 +156,7 @@ def _validar_consentimiento_si_aplica(solicitud: dict) -> dict | None:
             detail="El producto requiere consentimiento digital previamente validado",
         )
     consentimiento = call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
-    if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != "OTORGADO":
+    if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != CONSENT_GRANTED:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El consentimiento digital no se encuentra otorgado o no es válido",

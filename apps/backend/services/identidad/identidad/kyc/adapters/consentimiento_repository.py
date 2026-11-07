@@ -12,7 +12,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import Engine
 
-from identidad.kyc.domain.models import Consentimiento
+from identidad.kyc.domain.models import (
+    DEFAULT_ALCANCE,
+    OPEN_DATA,
+    OPEN_FINANCE,
+    CanalOtp,
+    Consentimiento,
+    EstadoConsentimiento,
+)
 
 metadata = MetaData()
 
@@ -23,11 +30,11 @@ consentimientos_table = Table(
     Column("cliente_id", String(50), nullable=False),
     Column("alcance", String(254), nullable=True),
     Column("fuente", String(120), nullable=True),
-    Column("estado", String(20), nullable=False, default="PENDIENTE"),
+    Column("estado", String(20), nullable=False, default=EstadoConsentimiento.PENDING.value),
     Column("fecha_otorgamiento", DateTime(timezone=True), nullable=True),
     Column("fecha_revocacion", DateTime(timezone=True), nullable=True),
     Column("ramo", String(50), nullable=True),
-    Column("canal", String(20), nullable=True, default="sms"),
+    Column("canal", String(20), nullable=True, default=CanalOtp.SMS.value),
     Column("contacto", String(120), nullable=True),
     Column("contacto_mask", String(50), nullable=True),
     Column("open_finance", Boolean, nullable=False, default=True),
@@ -47,16 +54,16 @@ def _parse_alcance(row) -> list[str]:
         return [a.strip() for a in alcance_val.split(",") if a.strip()]
     alcance_list = []
     if row.get("open_finance"):
-        alcance_list.append("Open Finance")
+        alcance_list.append(OPEN_FINANCE)
     if row.get("open_data"):
-        alcance_list.append("Open Data")
-    return alcance_list or ["Open Finance", "Open Data"]
+        alcance_list.append(OPEN_DATA)
+    return alcance_list or list(DEFAULT_ALCANCE)
 
 
 def _resolve_fuente_from_row(row) -> str:
     if row.get("fuente"):
         return str(row["fuente"])
-    canal_label = "SMS" if row.get("canal") == "sms" else "Correo"
+    canal_label = "SMS" if row.get("canal") == CanalOtp.SMS else "Correo"
     dest = row.get("contacto") or row.get("contacto_mask") or ""
     return f"{canal_label}: {dest}"
 
@@ -75,7 +82,7 @@ def _to_model(row) -> Consentimiento:
         fecha_otorgamiento=fecha_otorgamiento,
         fecha_revocacion=row.get("fecha_revocacion"),
         ramo=row.get("ramo") or "",
-        canal=row.get("canal") or "sms",
+        canal=row.get("canal") or CanalOtp.SMS,
         contacto=row.get("contacto") or "",
         contacto_mask=row.get("contacto_mask") or "",
         open_finance=row.get("open_finance", True),
@@ -109,8 +116,8 @@ class PostgresConsentimientoRepository:
 
     def add(self, consentimiento: Consentimiento) -> None:
         with self.engine.begin() as conn:
-            alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
-            canal_tipo = "SMS" if consentimiento.canal == "sms" else "Correo"
+            alcance_str = ", ".join(consentimiento.alcance or DEFAULT_ALCANCE)
+            canal_tipo = "SMS" if consentimiento.canal == CanalOtp.SMS else "Correo"
             contacto_destino = consentimiento.contacto or consentimiento.contacto_mask
             fuente_val = consentimiento.fuente or f"{canal_tipo}: {contacto_destino}"
 
@@ -148,8 +155,8 @@ class PostgresConsentimientoRepository:
         return _to_model(row) if row else None
 
     def update(self, consentimiento: Consentimiento) -> None:
-        alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
-        canal_tipo = "SMS" if consentimiento.canal == "sms" else "Correo"
+        alcance_str = ", ".join(consentimiento.alcance or DEFAULT_ALCANCE)
+        canal_tipo = "SMS" if consentimiento.canal == CanalOtp.SMS else "Correo"
         contacto_destino = consentimiento.contacto or consentimiento.contacto_mask
         fuente_val = consentimiento.fuente or f"{canal_tipo}: {contacto_destino}"
         with self.engine.begin() as conn:

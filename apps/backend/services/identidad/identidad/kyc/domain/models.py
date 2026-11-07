@@ -1,9 +1,24 @@
 import re
 from datetime import date, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, field_validator, model_validator
 
 TIPOS_DOCUMENTO = ("CC", "CE", "Pasaporte")
+DEFAULT_TIPO_DOCUMENTO = TIPOS_DOCUMENTO[0]
+
+
+class CanalOtp(StrEnum):
+    SMS = "sms"
+    EMAIL = "email"
+
+
+class EstadoConsentimiento(StrEnum):
+    PENDING = "PENDIENTE"
+    GRANTED = "OTORGADO"
+    EXPIRED = "EXPIRADO"
+
+
 MIN_PASSWORD_LENGTH = 8
 # The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
@@ -15,7 +30,7 @@ class Client(BaseModel):
     nombre: str = ""
     first_name: str = ""
     last_name: str = ""
-    tipo_documento: str = "CC"
+    tipo_documento: str = DEFAULT_TIPO_DOCUMENTO
     numero_documento: str = ""
     fecha_nacimiento: date | str | None = None
     telefono: str = ""
@@ -66,7 +81,7 @@ DEFAULT_ALCANCE = [OPEN_FINANCE, OPEN_DATA]
 class Consentimiento(BaseModel):
     id: str
     cliente_id: str
-    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    alcance: list[str] = DEFAULT_ALCANCE
     fuente: str = ""
     estado: str  # PENDIENTE, OTORGADO, REVOCADO, EXPIRADO
     fecha_otorgamiento: datetime | None = None
@@ -81,7 +96,7 @@ class Consentimiento(BaseModel):
 
     # Compatibilidad y auxiliares
     ramo: str = ""
-    canal: str = "sms"
+    canal: str = CanalOtp.SMS
     contacto: str = ""
     contacto_mask: str = ""
     open_finance: bool = True
@@ -91,7 +106,7 @@ class Consentimiento(BaseModel):
 
 class SolicitudConsentimiento(BaseModel):
     cliente_id: str | None = None
-    tipo_documento: str = "CC"
+    tipo_documento: str = DEFAULT_TIPO_DOCUMENTO
     numero_documento: str = ""
     nombre: str = ""
     apellido: str = ""
@@ -99,20 +114,20 @@ class SolicitudConsentimiento(BaseModel):
     telefono: str = ""
     fecha_nacimiento: str | None = None
     ramo: str = ""
-    canal: str = "sms"
+    canal: str = CanalOtp.SMS
     contacto: str = ""
     contacto_mask: str = ""
-    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    alcance: list[str] = DEFAULT_ALCANCE
     open_finance: bool = True
     open_data: bool = True
-    asesor: str = "Ana Gómez (asesor)"
+    asesor: str = ""
 
 
 class RespuestaSolicitud(BaseModel):
     consentimiento_id: str
     cliente_id: str
     estado: str
-    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    alcance: list[str] = DEFAULT_ALCANCE
     fuente: str = ""
     contacto: str = ""
     contacto_mask: str = ""
@@ -129,7 +144,7 @@ class RespuestaValidacion(BaseModel):
     validado_en: str
     asesor: str
     canal: str
-    alcance: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    alcance: list[str] = DEFAULT_ALCANCE
     open_finance: bool
     open_data: bool
 
@@ -148,7 +163,7 @@ class RespuestaConsulta(BaseModel):
     canal: str
     contacto: str = ""
     alcance: str
-    alcance_lista: list[str] = [OPEN_FINANCE, OPEN_DATA]
+    alcance_lista: list[str] = DEFAULT_ALCANCE
     open_finance: bool
 
 
@@ -173,7 +188,7 @@ class ClienteNoEncontrado(Exception):
 
 
 class SolicitudAsegurarCliente(BaseModel):
-    tipo_documento: str = "CC"
+    tipo_documento: str = DEFAULT_TIPO_DOCUMENTO
     numero_documento: str
     nombre: str
     apellido: str = ""
