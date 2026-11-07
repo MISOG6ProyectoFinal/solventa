@@ -27,8 +27,6 @@ class PolicyNotFound(LookupError):
 class DuplicatePolicy(Exception):
     pass
 
-    pass
-
 
 class PolicyNotRenewable(ValueError):
     pass

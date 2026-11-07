@@ -203,11 +203,13 @@ class InMemoryPolicyRepository:
             return sorted(found, key=lambda policy: policy.emitida_en)
 
     def get(self, policy_id: str) -> Policy | None:
-        with self._lock:
-            return next((p for p in self.items if p.id == policy_id), None)
+        return self.get_by_id(policy_id)
 
     def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]:
-        return []
+        with self._lock:
+            if not any(p.id == policy_id for p in self.items):
+                return []
+            return []
 
     def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
         with self._lock:

@@ -42,6 +42,8 @@ from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
 
+POLICY_NOT_FOUND_DETAIL = "La póliza no existe."
+
 use_cases: dict = {}
 
 
@@ -120,7 +122,7 @@ def get_policy(poliza_id: str) -> Policy:
     try:
         return use_cases["get"].execute(poliza_id)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
 
 
 @router.get("/{poliza_id}/beneficiarios", response_model=list[Beneficiary])
@@ -128,7 +130,7 @@ def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
     try:
         return use_cases["get"].beneficiaries(poliza_id)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
 
 
 @router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)
@@ -140,7 +142,7 @@ def renewal_offer(poliza_id: str, x_cliente_id: Annotated[str, Header()]) -> Ren
     try:
         return use_cases["renewal_offer"].execute(poliza_id, cliente)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
     except PolicyNotRenewable as exc:
         raise _error(409, "poliza_no_renovable", "La póliza no está habilitada para renovar.") from exc
 

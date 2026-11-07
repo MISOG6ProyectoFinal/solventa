@@ -24,6 +24,14 @@ DB_PASS = "solventa"
 DB_HOST = "localhost"
 DB_PORT = "5433"
 
+COB_ASISTENCIA_VIAJE = "Asistencia en viaje"
+COB_DANO_ACCIDENTAL = "Daño accidental"
+COB_RETRASO_VUELO = "Retraso de vuelo"
+COB_DESEMPLEO_INVOLUNTARIO = "Desempleo involuntario"
+COB_FALLECIMIENTO_CREDITO = "Fallecimiento (saldo del crédito)"
+CREADOR_SISTEMA_SOLVENTA = "Sistema Solventa"
+BANNER_SEPARATOR = "================================================================="
+
 
 def get_engine(db_name: str):
     return create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{db_name}")
@@ -145,19 +153,19 @@ def seed_catalogo_y_cotizacion():
             ("viaje-gastos-medicos", "Gastos médicos en el exterior", "viaje-internacional"),
             ("viaje-cancelacion", "Cancelación de viaje", "viaje-internacional"),
             ("viaje-equipaje", "Pérdida de equipaje", "viaje-internacional"),
-            ("viaje-asistencia", "Asistencia en viaje", "viaje-internacional"),
-            ("celular-dano-accidental", "Daño accidental", "proteccion-celular"),
+            ("viaje-asistencia", COB_ASISTENCIA_VIAJE, "viaje-internacional"),
+            ("celular-dano-accidental", COB_DANO_ACCIDENTAL, "proteccion-celular"),
             ("celular-robo", "Robo", "proteccion-celular"),
             ("celular-liquidos", "Daño por líquidos", "proteccion-celular"),
             ("vida-esencial-fallecimiento", "Fallecimiento", "vida-esencial"),
             ("vida-esencial-auxilio", "Auxilio funerario", "vida-esencial"),
-            ("parametrico-retraso-vuelo", "Retraso de vuelo", "parametrico-clima-vuelo"),
+            ("parametrico-retraso-vuelo", COB_RETRASO_VUELO, "parametrico-clima-vuelo"),
             ("parametrico-lluvia", "Lluvia excesiva", "parametrico-clima-vuelo"),
             ("parametrico-sequia", "Sequía", "parametrico-clima-vuelo"),
-            ("pagos-desempleo", "Desempleo involuntario", "proteccion-pagos"),
+            ("pagos-desempleo", COB_DESEMPLEO_INVOLUNTARIO, "proteccion-pagos"),
             ("pagos-incapacidad-temporal", "Incapacidad temporal", "proteccion-pagos"),
             ("pagos-fallecimiento", "Fallecimiento (saldo de la deuda)", "proteccion-pagos"),
-            ("hipotecario-fallecimiento", "Fallecimiento (saldo del crédito)", "vida-hipotecario"),
+            ("hipotecario-fallecimiento", COB_FALLECIMIENTO_CREDITO, "vida-hipotecario"),
             ("hipotecario-incapacidad", "Incapacidad total y permanente", "vida-hipotecario"),
             ("hipotecario-enfermedades", "Enfermedades graves", "vida-hipotecario"),
         ]
@@ -188,7 +196,7 @@ def seed_catalogo_y_cotizacion():
                 "1.0",
                 10000,
                 now_utc,
-                "Sistema Solventa",
+                CREADOR_SISTEMA_SOLVENTA,
             ),
             (
                 "socio-aerolinea-andina",
@@ -206,7 +214,7 @@ def seed_catalogo_y_cotizacion():
                 "1.0",
                 5000,
                 now_utc,
-                "Sistema Solventa",
+                CREADOR_SISTEMA_SOLVENTA,
             ),
             (
                 "socio-retail-pay",
@@ -224,7 +232,7 @@ def seed_catalogo_y_cotizacion():
                 "1.0",
                 8000,
                 now_utc,
-                "Sistema Solventa",
+                CREADOR_SISTEMA_SOLVENTA,
             ),
         ]
         for s in socios_data:
@@ -268,7 +276,7 @@ def seed_catalogo_y_cotizacion():
                     [
                         {
                             "id": "hipotecario-fallecimiento",
-                            "nombre": "Fallecimiento (saldo del crédito)",
+                            "nombre": COB_FALLECIMIENTO_CREDITO,
                             "included": True,
                         },
                         {"id": "hipotecario-incapacidad", "nombre": "Incapacidad total y permanente", "included": True},
@@ -292,7 +300,7 @@ def seed_catalogo_y_cotizacion():
                 420000.00,
                 json.dumps(
                     [
-                        {"id": "celular-dano-accidental", "nombre": "Daño accidental", "included": True},
+                        {"id": "celular-dano-accidental", "nombre": COB_DANO_ACCIDENTAL, "included": True},
                         {"id": "celular-robo", "nombre": "Robo", "included": True},
                     ]
                 ),
@@ -312,7 +320,7 @@ def seed_catalogo_y_cotizacion():
                 "COT-2026-00901",
                 "viaje-internacional",
                 270000.00,
-                json.dumps([{"id": "viaje-asistencia", "nombre": "Asistencia en viaje", "included": True}]),
+                json.dumps([{"id": "viaje-asistencia", "nombre": COB_ASISTENCIA_VIAJE, "included": True}]),
                 date(2026, 4, 10),
                 date(2026, 4, 24),
                 "2026.04.0",
@@ -346,7 +354,7 @@ def seed_catalogo_y_cotizacion():
                 "COT-2026-02210",
                 "parametrico-clima-vuelo",
                 60000.00,
-                json.dumps([{"id": "parametrico-retraso-vuelo", "nombre": "Retraso de vuelo", "included": True}]),
+                json.dumps([{"id": "parametrico-retraso-vuelo", "nombre": COB_RETRASO_VUELO, "included": True}]),
                 date(2026, 8, 1),
                 date(2026, 12, 31),
                 "2026.08.0",
@@ -363,7 +371,7 @@ def seed_catalogo_y_cotizacion():
                 "COT-2025-03377",
                 "proteccion-pagos",
                 540000.00,
-                json.dumps([{"id": "pagos-desempleo", "nombre": "Desempleo involuntario", "included": True}]),
+                json.dumps([{"id": "pagos-desempleo", "nombre": COB_DESEMPLEO_INVOLUNTARIO, "included": True}]),
                 date(2025, 11, 15),
                 date(2026, 11, 14),
                 "2025.11.0",
@@ -668,7 +676,7 @@ def seed_polizas():
                     [
                         {
                             "id": "hipotecario-fallecimiento",
-                            "nombre": "Fallecimiento (saldo del crédito)",
+                            "nombre": COB_FALLECIMIENTO_CREDITO,
                             "included": True,
                         }
                     ]
@@ -689,7 +697,7 @@ def seed_polizas():
                 "PAY-09877",
                 "proteccion-celular",
                 420000.00,
-                json.dumps([{"id": "celular-dano-accidental", "nombre": "Daño accidental", "included": True}]),
+                json.dumps([{"id": "celular-dano-accidental", "nombre": COB_DANO_ACCIDENTAL, "included": True}]),
                 date(2025, 10, 6),
                 date(2026, 10, 5),
                 "web",
@@ -706,7 +714,7 @@ def seed_polizas():
                 "PAY-08711",
                 "viaje-internacional",
                 270000.00,
-                json.dumps([{"id": "viaje-asistencia", "nombre": "Asistencia en viaje", "included": True}]),
+                json.dumps([{"id": "viaje-asistencia", "nombre": COB_ASISTENCIA_VIAJE, "included": True}]),
                 date(2026, 4, 10),
                 date(2026, 4, 24),
                 "web",
@@ -740,7 +748,7 @@ def seed_polizas():
                 "PAY-05510",
                 "parametrico-clima-vuelo",
                 60000.00,
-                json.dumps([{"id": "parametrico-retraso-vuelo", "nombre": "Retraso de vuelo", "included": True}]),
+                json.dumps([{"id": "parametrico-retraso-vuelo", "nombre": COB_RETRASO_VUELO, "included": True}]),
                 date(2026, 8, 1),
                 date(2026, 12, 31),
                 "web",
@@ -757,7 +765,7 @@ def seed_polizas():
                 "PAY-04422",
                 "proteccion-pagos",
                 540000.00,
-                json.dumps([{"id": "pagos-desempleo", "nombre": "Desempleo involuntario", "included": True}]),
+                json.dumps([{"id": "pagos-desempleo", "nombre": COB_DESEMPLEO_INVOLUNTARIO, "included": True}]),
                 date(2025, 11, 15),
                 date(2026, 11, 14),
                 "web",
@@ -978,7 +986,7 @@ def seed_siniestros():
                 "SIN-4412",
                 "CLI-CC-1020304050",
                 "POL-01820",
-                "Daño accidental",
+                COB_DANO_ACCIDENTAL,
                 datetime(2026, 3, 2, 8, 30, tzinfo=UTC),
                 "Caída accidental del celular con fractura de pantalla",
                 "Bogotá, Colombia",
@@ -989,7 +997,7 @@ def seed_siniestros():
                 "SIN-PARAM-01",
                 "CLI-CC-80456789",
                 "POL-02210",
-                "Retraso de vuelo",
+                COB_RETRASO_VUELO,
                 datetime(2026, 9, 15, 17, 0, tzinfo=UTC),
                 "Disparador paramétrico automático: Retraso de vuelo AV-9345 mayor a 2 horas reportado por FlightAware",
                 "Aeropuerto El Dorado, Bogotá",
@@ -1044,17 +1052,17 @@ def seed_siniestros():
 
 
 def main():
-    print("=================================================================")
+    print(BANNER_SEPARATOR)
     print("Iniciando carga de datos congruentes en bases de datos PostgreSQL")
-    print("=================================================================")
+    print(BANNER_SEPARATOR)
     seed_identidad()
     seed_catalogo_y_cotizacion()
     seed_polizas()
     seed_pagos()
     seed_siniestros()
-    print("=================================================================")
+    print(BANNER_SEPARATOR)
     print("¡Base de datos poblada exitosamente y 100% congruente!")
-    print("=================================================================")
+    print(BANNER_SEPARATOR)
 
 
 if __name__ == "__main__":
