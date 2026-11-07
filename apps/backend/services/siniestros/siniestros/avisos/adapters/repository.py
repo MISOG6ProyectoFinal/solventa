@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, func, insert, select, update
 from sqlalchemy.engine import Engine
 
-from siniestros.avisos.domain.models import Aviso, Evidencia
+from siniestros.avisos.domain.models import Aviso, EstadoEvidencia, Evidencia
 
 metadata = MetaData()
 
@@ -126,7 +126,7 @@ class PostgresAvisoRepository:
         query = (
             select(func.count())
             .select_from(evidencias)
-            .where(evidencias.c.aviso_id == aviso_id, evidencias.c.estado != "rechazada")
+            .where(evidencias.c.aviso_id == aviso_id, evidencias.c.estado != EstadoEvidencia.REJECTED)
         )
         with self.engine.connect() as conn:
             return int(conn.execute(query).scalar_one())

@@ -1,6 +1,18 @@
 from datetime import datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class EstadoAviso(StrEnum):
+    DRAFT = "borrador"
+    FILED = "radicado"
+
+
+class EstadoEvidencia(StrEnum):
+    PENDING_UPLOAD = "pendiente_carga"
+    AVAILABLE = "disponible"
+    REJECTED = "rechazada"
 
 
 class Aviso(BaseModel):
@@ -11,7 +23,7 @@ class Aviso(BaseModel):
     ocurrido_en: datetime
     descripcion: str
     ubicacion: str | None = None
-    estado: str = "borrador"
+    estado: str = EstadoAviso.DRAFT
     radicado: str | None = None
 
 

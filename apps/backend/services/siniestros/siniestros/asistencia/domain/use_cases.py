@@ -12,7 +12,7 @@ from siniestros.asistencia.domain.errors import (
 )
 from siniestros.asistencia.domain.models import Asistencia, Despacho, NuevaAsistencia
 from siniestros.asistencia.domain.ports import AsistenciaRepository, AssistanceDispatcher
-from siniestros.avisos.domain.models import Aviso
+from siniestros.avisos.domain.models import Aviso, EstadoAviso
 from siniestros.avisos.domain.ports import AvisoRepository
 
 EVENT_TYPE = "AssistanceDispatchedEvent"
@@ -41,7 +41,7 @@ class SolicitarAsistenciaUseCase:
 
     def execute(self, aviso_id: str, solicitud: NuevaAsistencia, *, cliente_id: str) -> Asistencia:
         aviso = aviso_del_cliente(self.avisos, aviso_id, cliente_id)
-        if aviso.estado != "radicado":
+        if aviso.estado != EstadoAviso.FILED:
             raise ReglaAsistencia(409, MSG_BORRADOR)
         if self.repository.get_by_aviso(aviso_id) is not None:
             raise ReglaAsistencia(409, MSG_DUPLICADA)
