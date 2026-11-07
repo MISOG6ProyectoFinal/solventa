@@ -13,7 +13,7 @@ import { payQuote } from '../../api/payQuote';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { useTexts } from '../../texts';
 import { SimulacionPago } from '../../types';
-import { formatMoney, formatVigenteHasta, quoteReference } from '../../utils';
+import { formatMoney, formatVigenteHasta } from '../../utils';
 import styles from './styles';
 
 type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'expired' | 'issued' | 'issueFailed';
@@ -190,7 +190,7 @@ export default function QuotePaymentScreen() {
             {product.nombre}
           </AppText>
           <AppText variant="bodySmall">
-            {texts.payment.reference(quoteReference(oferta.id), formatVigenteHasta(oferta.vigente_hasta))}
+            {texts.payment.reference(oferta.id, formatVigenteHasta(oferta.vigente_hasta))}
           </AppText>
           <AppText variant="bodySmall">{texts.payment.amountLabel}</AppText>
           <AppText testID="quote-pay-amount" variant="sectionTitle" style={styles.amount}>

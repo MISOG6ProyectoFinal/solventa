@@ -82,12 +82,19 @@ describe('HomeScreen', () => {
   });
 
   it('shows the coverage summary without the offline state', async () => {
-    const { getByText, queryByText } = await render(<HomeScreen />);
+    jest
+      .mocked(listPolicies)
+      .mockResolvedValue([
+        NO_RENOVABLE,
+        { ...NO_RENOVABLE, id: 'poliza-3' },
+        { ...NO_RENOVABLE, id: 'poliza-4', estado: 'vencida' },
+      ]);
+    const { findByText, getByText, queryByText } = await render(<HomeScreen />);
 
     expect(getByText('Hola, Ana')).toBeTruthy();
     expect(getByText('Tu cobertura')).toBeTruthy();
     expect(getByText('Cobertura activa')).toBeTruthy();
-    expect(getByText('3 pólizas')).toBeTruthy();
+    expect(await findByText('2 pólizas')).toBeTruthy();
     expect(getByText('Ver pólizas')).toBeTruthy();
     expect(getByText('Comprar')).toBeTruthy();
     expect(getByText('Siniestros')).toBeTruthy();

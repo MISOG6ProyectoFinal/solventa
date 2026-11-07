@@ -6,7 +6,7 @@ import { AppText, Button, Card, CoverageList, Screen, StatusChip } from '../../.
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { useTexts } from '../../texts';
 import { fromApiDate } from '../../../../shared/date';
-import { formatMoney, formatVigenteHasta, quoteReference } from '../../utils';
+import { formatMoney, formatVigenteHasta } from '../../utils';
 import styles from './styles';
 
 export default function QuoteResultScreen() {
@@ -35,7 +35,7 @@ export default function QuoteResultScreen() {
             {product.nombre}
           </AppText>
           <AppText variant="bodySmall">
-            {texts.result.reference(quoteReference(oferta.id), formatVigenteHasta(oferta.vigente_hasta))}
+            {texts.result.reference(oferta.id, formatVigenteHasta(oferta.vigente_hasta))}
           </AppText>
           <AppText variant="sectionTitle" style={styles.premium}>
             {formatMoney(oferta.prima)}

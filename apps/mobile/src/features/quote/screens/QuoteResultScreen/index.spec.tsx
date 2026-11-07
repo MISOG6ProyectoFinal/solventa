@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { OfertaCotizacion, ProductoMovil } from '../../types';
-import { formatVigenteHasta, quoteReference } from '../../utils';
+import { formatVigenteHasta } from '../../utils';
 import QuoteResultScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -65,7 +65,7 @@ describe('QuoteResultScreen', () => {
     expect(getByText('Cotización vigente')).toBeTruthy();
     expect(getByText('Viaje Internacional')).toBeTruthy();
     expect(
-      getByText(`${quoteReference(OFERTA.id)} · Válida hasta ${formatVigenteHasta(OFERTA.vigente_hasta)}`),
+      getByText(`${OFERTA.id} · Válida hasta ${formatVigenteHasta(OFERTA.vigente_hasta)}`),
     ).toBeTruthy();
     expect(getByText(/Válida hasta hoy 23:59/)).toBeTruthy();
     expect(getByText('$149.940')).toBeTruthy();
