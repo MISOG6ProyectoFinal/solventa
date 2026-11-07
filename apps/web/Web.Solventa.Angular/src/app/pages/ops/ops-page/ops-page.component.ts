@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
 import { OpsPoliciesService } from '../services/ops-policies.service';
 import { QuoteTabComponent } from '../components/quote-tab/quote-tab.component';
@@ -13,6 +14,7 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
   standalone: true,
   imports: [
     CommonModule,
+    AlertComponent,
     TabsComponent,
     QuoteTabComponent,
     PolicyListComponent,
@@ -32,21 +34,25 @@ export class OpsPageComponent {
     { id: 'polizas', label: 'Consulta de pólizas' }
   ]);
 
-  selectedPolicyId = signal<string | null>(null);
-  selectedPolicy = computed(() => this.opsService.findById(this.selectedPolicyId()));
-  
+  selectedPolicy = this.opsService.selected;
+  loadError = this.opsService.loadError;
+
   policies = this.opsService.policies;
   partners = this.opsService.partners;
 
   showEndosoModal = signal(false);
   showCancelModal = signal(false);
 
+  searchPolicies(text: string): void {
+    this.opsService.search(text);
+  }
+
   openPolicy(id: string): void {
-    this.selectedPolicyId.set(id);
+    this.opsService.open(id);
   }
 
   closePolicy(): void {
-    this.selectedPolicyId.set(null);
+    this.opsService.close();
   }
 
   onEndorsementContinued(draft: any): void {
@@ -56,7 +62,7 @@ export class OpsPageComponent {
   }
 
   onCancellationConfirmed(cause: string): void {
-    const id = this.selectedPolicyId();
+    const id = this.selectedPolicy()?.id;
     if (id) {
       this.opsService.cancel(id, cause);
     }

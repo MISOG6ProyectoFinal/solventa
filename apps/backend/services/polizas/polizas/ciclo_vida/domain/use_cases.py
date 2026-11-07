@@ -1,17 +1,18 @@
 """Emite una póliza una sola vez por cotización, con cobro aprobado y cotización vigente al pagar."""
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from polizas.ciclo_vida.domain.models import Coverage, IssuePolicyRequest, Policy, Validity
+from polizas.ciclo_vida.domain.models import Beneficiary, Coverage, IssuePolicyRequest, Policy, PolicyStatus, Validity
 from polizas.ciclo_vida.domain.ports import (
     DuplicatePolicy,
     IdempotencyKeyReused,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotFound,
     PolicyRepository,
     QuoteExpired,
     QuoteNotFound,
@@ -78,6 +79,39 @@ class ListClientPoliciesUseCase:
 
     def execute(self, cliente_id: str) -> list[Policy]:
         return self.policies.list_by_client(cliente_id)
+
+
+def with_effective_status(policy: Policy, today: date) -> Policy:
+    """Una póliza activa cuya vigencia ya terminó se muestra como VENCIDA."""
+    if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < today:
+        return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
+    return policy
+
+
+class SearchPoliciesUseCase:
+    def __init__(self, policies: PolicyRepository, today: Callable[[], date] = date.today) -> None:
+        self.policies = policies
+        self.today = today
+
+    def execute(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        found = self.policies.search((text or "").strip() or None, cliente_ids)
+        return [with_effective_status(policy, self.today()) for policy in found]
+
+
+class GetPolicyUseCase:
+    def __init__(self, policies: PolicyRepository, today: Callable[[], date] = date.today) -> None:
+        self.policies = policies
+        self.today = today
+
+    def execute(self, policy_id: str) -> Policy:
+        policy = self.policies.get(policy_id)
+        if policy is None:
+            raise PolicyNotFound(policy_id)
+        return with_effective_status(policy, self.today())
+
+    def beneficiaries(self, policy_id: str) -> list[Beneficiary]:
+        self.execute(policy_id)
+        return self.policies.list_beneficiaries(policy_id)
 
 
 def _same_owner(quote: dict, request: IssuePolicyRequest) -> bool:

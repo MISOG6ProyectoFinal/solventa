@@ -1,4 +1,4 @@
-import { OPS_POLICIES } from '../data/ops-policies.data';
+import { OPS_POLICIES } from '../testing/ops-policies.fixture';
 import { calculateCancellation } from './policy-cancellation.utils';
 
 describe('calculateCancellation', () => {

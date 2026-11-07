@@ -14,12 +14,16 @@
   @if (activeTab() === 'cotizar') {
     <slv-quote-tab />
   } @else {
-    @if (!selectedPolicyId()) {
+    @if (loadError()) {
+      <slv-alert tone="error">No fue posible consultar las pólizas en este momento. Intente de nuevo en unos minutos.</slv-alert>
+    }
+    @if (!selectedPolicy()) {
       <slv-policy-list 
         [policies]="policies()" 
         [partners]="partners()" 
+        (searchChange)="searchPolicies($event)"
         (opened)="openPolicy($event)" />
-    } @else if (selectedPolicy()) {
+    } @else {
       <slv-policy-detail 
         [policy]="selectedPolicy()!"
         (backRequested)="closePolicy()"

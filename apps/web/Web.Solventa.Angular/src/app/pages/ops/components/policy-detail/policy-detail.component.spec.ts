@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { OPS_POLICIES } from '../../data/ops-policies.data';
+import { OPS_POLICIES } from '../../testing/ops-policies.fixture';
 import { PolicyDetailComponent } from './policy-detail.component';
 
 describe('PolicyDetailComponent', () => {

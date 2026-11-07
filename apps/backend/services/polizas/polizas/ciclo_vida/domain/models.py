@@ -6,16 +6,32 @@ from enum import StrEnum
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class PolicyStatus(StrEnum):
     ACTIVE = "activa"
+    CANCELLED = "cancelada"
+    EXPIRED = "vencida"  # derivado: activa con vigencia pasada, no se guarda
 
 
 class Coverage(BaseModel):
     id: str
     nombre: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _formato_sembrado(cls, value):
+        """Las pólizas sembradas guardan {name, included}; se leen como {id, nombre}."""
+        if isinstance(value, dict) and "nombre" not in value and "name" in value:
+            return {"id": value.get("id", value["name"]), "nombre": value["name"]}
+        return value
+
+
+class Beneficiary(BaseModel):
+    nombre: str
+    parentesco: str
+    porcentaje: Decimal
 
 
 class Validity(BaseModel):

@@ -6,8 +6,8 @@ export type ClaimStatus = 'Reportado' | 'En revisión' | 'Aprobado' | 'Pagado' |
 
 export interface PolicyCoverage {
   name: string;
-  sumaAsegurada: string;
-  deducible: string;
+  sumaAsegurada?: string;
+  deducible?: string;
   umbral?: string;
   included: boolean;
 }
@@ -22,7 +22,7 @@ export interface PolicyPayment {
   ref: string;
   date: string;
   tipo: 'Prima' | 'Indemnización' | 'Devolución';
-  medio: string;
+  medio?: string;
   amount: number;
   status: 'Aprobado' | 'Pendiente' | 'Rechazado';
 }
@@ -31,9 +31,9 @@ export interface PolicyClaim {
   id: string;
   tipo: string;
   fechaOcurrencia: string;
-  fechaAviso: string;
+  fechaAviso?: string;
   status: ClaimStatus;
-  montoEstimado: number;
+  montoEstimado?: number;
   montoAprobado?: number;
   parametrico?: { fuente: string; valorObservado: string; umbral: string };
 }

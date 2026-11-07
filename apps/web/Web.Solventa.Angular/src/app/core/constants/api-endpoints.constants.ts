@@ -3,6 +3,7 @@ import { environment } from '../../../environments/environment';
 /** Endpoints del backend; se resuelven contra `environment.apiBaseUrl`. */
 export const API_ENDPOINTS = {
   policies: `${environment.apiBaseUrl}/policies`,
+  webPolicies: `${environment.apiBaseUrl}/web/polizas`,
   quotes: `${environment.apiBaseUrl}/web/cotizaciones`,
   ramos: `${environment.apiBaseUrl}/web/ramos`,
   partners: `${environment.apiBaseUrl}/web/socios`,

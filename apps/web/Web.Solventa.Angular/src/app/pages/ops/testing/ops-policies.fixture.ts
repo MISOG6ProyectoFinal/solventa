@@ -16,7 +16,7 @@ const deviceCoverages: PolicyCoverage[] = [
   { name: 'Garantía extendida', sumaAsegurada: '$ 4.200.000', deducible: 'N/A', included: false },
 ];
 
-/** Pólizas de demostración (espejo de `INITIAL_POLICIES` en los mockups). */
+/** Pólizas de ejemplo solo para pruebas unitarias; el portal las lee del BFF. */
 export const OPS_POLICIES: readonly Policy[] = [
   {
     id: 'p1',

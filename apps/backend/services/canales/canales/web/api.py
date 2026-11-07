@@ -2,7 +2,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, status
 from solventa_common.integration.base import call_upstream
 
-from canales.clients import cotizacion, identidad, polizas
+from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 
 router = APIRouter(prefix="/web", tags=["BFF Web"])
 
@@ -149,9 +149,117 @@ def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
     return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
 
 
+# --- HU005: consulta de pólizas para el portal (vista ya armada para la UI) ---
+
+ESTADO_POLIZA = {"activa": "Activa", "cancelada": "Cancelada", "vencida": "Vencida"}
+ESTADO_PAGO = {"aprobado": "Aprobado", "procesando": "Pendiente", "rechazado": "Rechazado"}
+ESTADO_SINIESTRO = {"borrador": "Reportado", "radicado": "En revisión"}
+
+
+def _o_vacio(fn, *args, **kwargs) -> dict:
+    """Un cliente o socio que ya no existe no debe tumbar el listado."""
+    try:
+        return call_upstream(fn, *args, **kwargs) or {}
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            return {}
+        raise
+
+
+def _vista_poliza(poliza: dict, cliente: dict, socio: dict) -> dict:
+    return {
+        "id": poliza["id"],
+        "number": poliza["numero"],
+        "tipoDocumento": cliente.get("tipo_documento", ""),
+        "identification": cliente.get("numero_documento", ""),
+        "insuredName": f"{cliente.get('nombre', '')} {cliente.get('apellido', '')}".strip() or "Sin datos del asegurado",
+        "ramo": poliza["producto_id"],
+        "producto": poliza["producto_id"],
+        "socioOrigen": socio.get("nombre") or poliza.get("socio_id") or poliza["canal"],
+        "status": ESTADO_POLIZA.get(poliza["estado"], poliza["estado"]),
+        "startDate": poliza["vigencia"]["desde"],
+        "endDate": poliza["vigencia"]["hasta"],
+        "premium": float(poliza["prima"]),
+        "phone": cliente.get("telefono", ""),
+        "email": cliente.get("email", ""),
+        "coverages": [{"name": c["nombre"], "included": True} for c in poliza.get("coberturas", [])],
+        "beneficiaries": [],
+        "payments": [],
+        "claims": [],
+        "endorsements": [],
+    }
+
+
+def _contexto(poliza: dict, clientes: dict, socios: dict) -> tuple[dict, dict]:
+    cliente_id, socio_id = poliza.get("cliente_id"), poliza.get("socio_id")
+    if cliente_id and cliente_id not in clientes:
+        clientes[cliente_id] = _o_vacio(identidad.get, f"/identidad/clientes/{cliente_id}")
+    if socio_id and socio_id not in socios:
+        socios[socio_id] = _o_vacio(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
+    return clientes.get(cliente_id, {}), socios.get(socio_id, {})
+
+
+@router.get("/polizas")
+def buscar_polizas(q: str | None = None) -> list[dict]:
+    """Busca por número de póliza (parcial) o por número de identificación del cliente."""
+    texto = (q or "").strip()
+    params: dict = {}
+    if texto:
+        params["q"] = texto
+        cliente = _o_vacio(identidad.get, f"/identidad/clientes/por-numero/{texto}")
+        if cliente.get("id"):
+            params["cliente_id"] = [cliente["id"]]
+    encontradas = call_upstream(polizas.get, "/polizas", params=params)
+    clientes: dict = {}
+    socios: dict = {}
+    return [_vista_poliza(p, *_contexto(p, clientes, socios)) for p in encontradas]
+
+
+def _pagos(poliza: dict) -> list[dict]:
+    cobro = _o_vacio(pagos.get, f"/pagos/cobros/{poliza['cobro_id']}")
+    if not cobro:
+        return []
+    return [
+        {
+            "ref": cobro["id"],
+            "date": cobro["creado_en"][:10],
+            "tipo": "Prima",
+            "amount": float(cobro["monto"]),
+            "status": ESTADO_PAGO.get(cobro["estado"], "Pendiente"),
+        }
+    ]
+
+
+def _siniestros(poliza: dict) -> list[dict]:
+    if not poliza.get("cliente_id"):
+        return []
+    avisos = call_upstream(siniestros.get, "/siniestros/avisos", headers={"X-Cliente-Id": poliza["cliente_id"]})
+    return [
+        {
+            "id": a.get("radicado") or a["id"],
+            "tipo": a["tipo"],
+            "fechaOcurrencia": a["ocurrido_en"][:10],
+            "status": ESTADO_SINIESTRO.get(a["estado"], "Reportado"),
+        }
+        for a in avisos
+        if a["poliza_id"] == poliza["id"]
+    ]
+
+
 @router.get("/polizas/{poliza_id}")
 def obtener_poliza(poliza_id: str) -> dict:
-    return call_upstream(polizas.get, f"/polizas/{poliza_id}")
+    poliza = call_upstream(polizas.get, f"/polizas/{poliza_id}")
+    vista = _vista_poliza(poliza, *_contexto(poliza, {}, {}))
+    beneficiarios = call_upstream(polizas.get, f"/polizas/{poliza_id}/beneficiarios")
+    return {
+        **vista,
+        "beneficiaries": [
+            {"name": b["nombre"], "parentesco": b["parentesco"], "porcentaje": float(b["porcentaje"])}
+            for b in beneficiarios
+        ],
+        "payments": _pagos(poliza),
+        "claims": _siniestros(poliza),
+    }
 
 
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---

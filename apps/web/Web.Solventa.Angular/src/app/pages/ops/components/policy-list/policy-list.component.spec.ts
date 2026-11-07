@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { OPS_POLICIES } from '../../data/ops-policies.data';
+import { OPS_POLICIES } from '../../testing/ops-policies.fixture';
 import { PolicyListComponent } from './policy-list.component';
 
 describe('PolicyListComponent', () => {
@@ -30,15 +30,18 @@ describe('PolicyListComponent', () => {
     expect(rows()[0].querySelector('slv-badge')!.textContent).toContain('ACTIVA');
   });
 
-  it('filters by policy number or identification', async () => {
-    await type('01820');
+  it('asks the backend to search by the typed text', async () => {
+    const searched = vi.fn();
+    fixture.componentInstance.searchChange.subscribe(searched);
 
-    expect(rows().length).toBe(1);
-    expect(rows()[0].textContent).toContain('SLV-2025-01820');
+    await type('1020304050');
+
+    expect(searched).toHaveBeenLastCalledWith('1020304050');
   });
 
-  it('shows an empty message when nothing matches', async () => {
-    await type('no-existe');
+  it('shows an empty message when there are no results', async () => {
+    fixture.componentRef.setInput('policies', []);
+    await fixture.whenStable();
 
     expect(rows().length).toBe(1);
     expect(rows()[0].textContent).toContain('No se encontraron pólizas');
@@ -57,12 +60,6 @@ describe('PolicyListComponent', () => {
     ['policy-search', 'policy-filter-estado', 'policy-filter-socio', 'hu005-policy-results', 'btn-abrir-poliza-SLV-2024-00391'].forEach(
       (id) => expect(el.querySelector(`[data-testid="${id}"]`), id).not.toBeNull(),
     );
-  });
-
-  it('filters by customer identification number', async () => {
-    await type('1020304050');
-
-    expect(rows().length).toBe(2);
   });
 
   it('filters by status Vencida and shows only the VENCIDA badge', async () => {

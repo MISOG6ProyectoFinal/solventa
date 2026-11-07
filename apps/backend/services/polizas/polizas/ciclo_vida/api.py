@@ -1,21 +1,29 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from solventa_common.db import build_engine
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
-from polizas.ciclo_vida.domain.models import IssuePolicyRequest, Policy
+from polizas.ciclo_vida.domain.models import Beneficiary, IssuePolicyRequest, Policy
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotFound,
     PolicyRepository,
     QuoteExpired,
     QuoteNotFound,
     QuoteSource,
 )
-from polizas.ciclo_vida.domain.use_cases import IssuePolicyUseCase, ListClientPoliciesUseCase
+from polizas.ciclo_vida.domain.use_cases import (
+    GetPolicyUseCase,
+    IssuePolicyUseCase,
+    ListClientPoliciesUseCase,
+    SearchPoliciesUseCase,
+)
 from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
@@ -28,6 +36,8 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
         policies.create_schema()
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
+    use_cases["search"] = SearchPoliciesUseCase(policies)
+    use_cases["get"] = GetPolicyUseCase(policies)
 
 
 def _default_wire() -> None:
@@ -59,6 +69,28 @@ def list_client_policies(cliente_id: str) -> list[Policy]:
     if not token:
         raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
     return use_cases["list"].execute(token)
+
+
+@router.get("", response_model=list[Policy])
+def search_policies(q: str | None = None, cliente_id: Annotated[list[str] | None, Query()] = None) -> list[Policy]:
+    """Consulta del portal: número de póliza (parcial) o clientes ya resueltos por el BFF."""
+    return use_cases["search"].execute(q, cliente_id or [])
+
+
+@router.get("/{policy_id}", response_model=Policy)
+def get_policy(policy_id: str) -> Policy:
+    try:
+        return use_cases["get"].execute(policy_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+
+
+@router.get("/{policy_id}/beneficiarios", response_model=list[Beneficiary])
+def list_beneficiaries(policy_id: str) -> list[Beneficiary]:
+    try:
+        return use_cases["get"].beneficiaries(policy_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
 
 
 @router.post("/emisiones", response_model=Policy, status_code=status.HTTP_201_CREATED)

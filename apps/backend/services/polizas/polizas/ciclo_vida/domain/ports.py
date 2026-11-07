@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from polizas.ciclo_vida.domain.models import Policy
+from polizas.ciclo_vida.domain.models import Beneficiary, Policy
 
 
 class QuoteNotFound(LookupError):
@@ -16,6 +16,10 @@ class PaymentNotApproved(ValueError):
 
 
 class IdempotencyKeyReused(ValueError):
+    pass
+
+
+class PolicyNotFound(LookupError):
     pass
 
 
@@ -39,3 +43,11 @@ class PolicyRepository(Protocol):
     def get_by_quote(self, quote_id: str) -> Policy | None: ...
 
     def list_by_client(self, cliente_id: str) -> list[Policy]: ...
+
+    def get(self, policy_id: str) -> Policy | None: ...
+
+    def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]: ...
+
+    def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        """Pólizas cuyo número contiene `text` o que son de alguno de `cliente_ids`. Sin filtros, todas."""
+        ...

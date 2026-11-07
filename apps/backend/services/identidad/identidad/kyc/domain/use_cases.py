@@ -414,6 +414,22 @@ class BuscarClientePorDocumento:
         return _cliente_a_respuesta(cliente)
 
 
+class ConsultarCliente:
+    """Busca por id o, si no hay id, por número de documento (único). Lo usa el portal web."""
+
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, cliente_id: str | None = None, numero_documento: str | None = None) -> RespuestaCliente:
+        if cliente_id:
+            cliente = self.clients.get(cliente_id.strip())
+        else:
+            cliente = self.clients.get_by_numero_documento((numero_documento or "").strip())
+        if cliente is None:
+            raise ClienteNoEncontrado("Cliente no encontrado")
+        return _cliente_a_respuesta(cliente)
+
+
 class AsegurarCliente:
     def __init__(self, clients: ClientRepository) -> None:
         self.clients = clients
