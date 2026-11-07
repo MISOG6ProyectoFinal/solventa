@@ -53,12 +53,23 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 | `pagos` | `cobros` | Cobros y Pagos | pagos |
 | `auditoria` | `linaje`, `analitica`, `notificaciones` | Auditoría y Linaje, Analítica y Fraude, Notificaciones (consumidores del bus) | auditoria |
 | `health-monitor` | | Monitor de Salud y Retiro | |
+| `simuladores` | `control`, `providers` | Terceros simulados: Open Finance, pasarela de pagos, notificaciones y red de asistencia | |
 | `solventa_common` | `integration` | Adaptadores por tercero + Circuit Breaker Global | |
 | SNS + SQS | | Bus de Eventos + Dead Letter Queue | |
 
 La lógica completa está en los módulos que los experimentos validaron:
 
-- **Cotización y Rating**: reglas de rating como configuración versionada. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Cotización y Rating**: las reglas de rating (tasas por mil, tarifa diaria de viaje, recargos por destino, montos paramétricos e IVA) viven en la tabla `reglas_rating`, versionadas, con la versión inicial cargada por el bootstrap. `POST /cotizaciones/reglas` publica una versión nueva y aplica desde la siguiente cotización, sin redesplegar; `GET /cotizaciones/reglas` lee la vigente y `GET /cotizaciones/reglas/versiones` las publicadas. Cada cotización guarda `version_reglas`. Estos endpoints son internos: el ingress solo expone Canales. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Una sola cotización para los tres canales**: móvil, portal y socios entran por el mismo flujo de `consenso` (`quote_request`). El `producto_id` decide el contrato del cuerpo (`consenso/domain/quote_contract.py`) y Rating tarifa con el modelo de ese producto. `score_riesgo` y `cliente_id` los resuelve Solventa: el score sale de Open Finance cuando la solicitud trae `consentimiento_open_finance` y el cliente llega en `X-Cliente-Id` desde el BFF. Un dato faltante responde 422 `datos_invalidos` con cada campo y su motivo, y un problema del producto responde `{codigo, mensaje}`. Cada canal conserva solo lo suyo: la sesión y el titular en el móvil, el cliente y el consentimiento digital en el portal, la credencial, el ramo y las coberturas del socio.
+- **Un dueño por dato de negocio**: el catálogo de Cotización guarda en qué canales se ofrece cada producto (`canales`), si exige consentimiento Open Finance (`requiere_consentimiento`) y su presentación móvil (`presentacion_mobile`). Un producto fuera del canal responde 422 `producto_fuera_del_canal`. Canales, el móvil y el portal leen de ahí y no repiten ids ni reglas. Las listas cerradas que valida el backend las publica su servicio dueño y Canales las reenvía:
+
+  | Dato | Dueño | Servicio | Web | Móvil |
+  |---|---|---|---|---|
+  | Ramos y productos por canal, consentimiento | Cotización | `GET /catalogo/canales/{canal}/ramos` | `GET /web/ramos` | `GET /movil/productos` |
+  | Contrato de cotización y opciones de sus campos | Cotización | `GET /catalogo/productos/{id}/contrato` | `GET /web/productos/{id}/contrato` | `GET /movil/productos/{id}/contrato` |
+  | Tipos de socio y alcances | Cotización | `GET /gobierno-socios/tipos`, `/alcances` | `GET /web/socios/tipos`, `/alcances` | |
+  | Estados de póliza y causas de cancelación | Pólizas | `GET /polizas/catalogos/estados`, `/causas-cancelacion` | `GET /web/polizas/estados`, `/causas-cancelacion` | |
+  | Tipos de documento | Identidad | `GET /identidad/tipos-documento` | `GET /web/tipos-documento` | `GET /movil/tipos-documento` |
 - **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, para que actuaría reconstruya la decisión con `GET /consenso/cotizaciones/{id}`.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
@@ -75,7 +86,31 @@ Los demás módulos arrancan con su router y el dominio documentado en su `__ini
 | `events` | Publicación en SNS, consumo en SQS (Competing Consumers) |
 | `idempotency` | Idempotency Key Validator sobre restricción de unicidad en PostgreSQL |
 | `resilience` | Circuit Breaker y Cache-Aside last-known-good sobre Redis |
-| `integration` | Adaptadores Open Finance (700 ms), Open Data, KYC/AML, Pasarela de Pagos, ACORD, Firma y Notificación |
+| `validation` | Error 422 `datos_invalidos` con los campos y su motivo, igual en todos los canales |
+| `integration` | Adaptadores Open Finance (700 ms), Open Data, KYC/AML, Pasarela de Pagos, ACORD, Firma y Notificación, Red de Asistencia |
+
+### Terceros simulados
+
+Solventa llama a los terceros por HTTP con los adaptadores de `integration`, también cuando el tercero es simulado. El servicio `simuladores` expone el mismo contrato que esos adaptadores y corre en `local` y en AWS. Para cambiar a un proveedor real basta con su variable de entorno:
+
+| Tercero | Quién lo llama | Variable (por defecto) |
+|---|---|---|
+| Open Finance | Cotización, score de riesgo (HU018) | `OPEN_FINANCE_URL` (`http://simuladores/open-finance`) |
+| Pasarela de pagos | Pagos, cobro de la prima | `PASARELA_URL` (`http://simuladores/pasarela-pagos`) |
+| Notificaciones | Identidad, OTP del consentimiento (HU002) | `FIRMA_NOTIFICACION_URL` (`http://simuladores/notificaciones`) |
+| Red de asistencia | Siniestros, despacho de grúa, ambulancia o perito | `RED_ASISTENCIA_URL` (`http://simuladores/red-asistencia`) |
+
+Los fallos se provocan por API, en `/simuladores` del mismo `BASE_URL`:
+
+| Endpoint | Uso |
+|---|---|
+| `GET /simuladores` | Modo, demora y llamadas de cada tercero |
+| `GET /simuladores/{proveedor}` | Lo mismo para un tercero |
+| `PUT /simuladores/{proveedor}/modo` | `{"modo": "normal" \| "lento" \| "caido" \| "invalida", "demora_s": 2}` |
+| `DELETE /simuladores/{proveedor}/llamadas` | Reinicia el conteo de llamadas |
+| `GET /simuladores/notificaciones/mensajes?to=` | Bandeja de lo enviado, para leer un OTP |
+
+`lento` responde después de `demora_s`, `caido` responde 503 e `invalida` responde un cuerpo que el adaptador no reconoce. La pasarela aprueba solo el token `demo-4242` y repite el resultado de una misma clave de idempotencia. El modo vive en memoria de la única réplica del servicio. Las pruebas unitarias de cada servicio usan dobles en código, no este servicio.
 
 ## Del modelo de despliegue a AWS
 
@@ -115,6 +150,8 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
   poetry run uvicorn cotizacion.main:app --reload
 ```
 
+El bootstrap crea las tablas, carga el catálogo y las reglas de rating iniciales si están vacíos y completa los canales de un catálogo creado antes de ellos. Las réplicas no siembran nada: sin bootstrap no hay reglas y Cotización no puede tarifar.
+
 Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS, por eso Compose y k3s usan imágenes `postgis/postgis`. El catálogo se carga aparte, con el seed de aliados y los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda el seed:
 
 ```bash
@@ -125,7 +162,10 @@ Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros
 
 ```bash
 docker compose up -d canales
+CONTRASENA=Solventa-local-2026 EN_IDENTIDAD="docker compose exec -T identidad" ./scripts/crear_administrador.sh admin@solventa.local
 ```
+
+El segundo comando crea el administrador del portal web, que se describe en [Sesión del portal](#sesión-del-portal).
 
 Todo el backend en un clúster local, sin cambios en el código, con el modo `local`:
 
@@ -142,14 +182,34 @@ Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `d
 
 `local.sh status` muestra los pods, `local.sh logs <servicio>` sus logs y `local.sh down` borra el clúster con sus datos. Siniestros corre con `PERSISTENT_STORES=false`, como en `.env.example`, porque con almacenes persistentes el servicio usa siempre el S3 real.
 
-Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales:
+Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales. Entra al portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA`, que por defecto son las del administrador local:
 
 ```bash
-python scripts/poblar_datos.py                                     # modo local
-python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
+python scripts/poblar_datos.py                                                               # modo local
+OPERADOR_CONTRASENA=<clave> python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
 ```
 
 Crea 5 socios con sus ramos habilitados, 12 clientes, cotizaciones por los canales móvil, web y de socios, y avisos de siniestro con evidencia. Al pasar por la API, los datos cumplen las mismas reglas del negocio. Se puede correr varias veces: el secreto de cada socio y la contraseña de cada cliente quedan en `scripts/.poblar/<host>.json`, fuera de git, y se reutilizan.
+
+### Sesión del portal
+
+El portal web pide inicio de sesión. Identidad guarda los operadores en la tabla `operadores` y firma un token de 8 horas con audiencia `portal`, distinto al del cliente móvil y con la misma `SESION_SECRETO`. Canales verifica el token en cada ruta de `/web`, aplica los permisos de cada rol y toma del token quién autoriza un socio, quién cambia su configuración y qué asesor cotiza.
+
+| Rol | Puede |
+|---|---|
+| `administrador` | Todo: alta y configuración de socios, y crear, cambiar de rol o desactivar operadores |
+| `asesor` | Consultar, cotizar y solicitar o validar consentimientos |
+| `consulta` | Solo consultar ramos, cotizaciones, pólizas, socios y consentimientos |
+
+Sin token, `/web` responde 401 (`sesion_invalida`); con un rol sin permiso, 403 (`permiso_denegado`). Desactivar un operador le impide iniciar sesión; el token que ya tenga sigue vigente hasta que vence.
+
+El primer administrador se crea con `scripts/crear_administrador.sh`, que corre el alta de operadores dentro del pod de Identidad con su conexión a la base. `local.sh up` lo llama con `admin@solventa.local` y la contraseña `Solventa-local-2026`. En AWS, con el `kubectl` conectado al clúster:
+
+```bash
+CONTRASENA=<clave> ./scripts/crear_administrador.sh admin@solventa.co "Nombre Apellido"
+```
+
+Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está. `EN_IDENTIDAD` cambia cómo entra al contenedor de Identidad; por defecto es `kubectl -n solventa exec -i deploy/identidad -c identidad --`.
 
 Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
 
@@ -252,34 +312,30 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 `load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
 
-- **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, catálogo, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
-- **Portal web:** cotización asistida, listado, detalle y configuración de socios.
-- **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza y reintentar la emisión con la misma `Idempotency-Key` (HU015).
+- **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, tipos de documento, catálogo, contrato del producto, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
+- **Portal web:** ramos y contrato del producto, cotización asistida, listado, detalle y configuración de socios.
+- **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización y emisión. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
-PERFIL=humo ./load-tests/run.sh
+OPERADOR_CONTRASENA=<clave> PERFIL=humo ./load-tests/run.sh
 PERFIL=carga DURACION=5m ./load-tests/run.sh
 PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
 PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
 PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./load-tests/run.sh
 ```
 
-El perfil `degradacion` necesita `load-tests/open_finance_simulado.py` corriendo en el equipo (`poetry run python load-tests/open_finance_simulado.py --puerto 9090`) y Cotización apuntando a él con `OPEN_FINANCE_URL`. En el modo `local`, los pods llegan al equipo por `192.168.65.254`:
-
-```bash
-docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_FINANCE_URL=http://192.168.65.254:9090
-```
+El perfil `degradacion` cambia el modo de Open Finance en el servicio `simuladores` por `PUT /simuladores/open-finance/modo`, en el mismo `BASE_URL`. Sirve igual en `local` y en AWS.
 
 | Perfil | Qué ejecuta |
 |---|---|
 | `humo` | Una iteración por canal, para validar el ambiente |
 | `carga` | Usuarios constantes en móvil y portal web, más cotizaciones y ventas de socios a tasa fija |
 | `asr04` | Rampa de cotizaciones de socios de `TASA_INICIAL` a `TASA_OBJETIVO` por minuto en `RAMPA` y luego sostenida (ASR-04 y ASR-05) |
-| `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir y reintentar la emisión |
-| `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone el simulador en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
+| `emision` | Ventas completas de socios a `TASA_VENTAS` por minuto: cotizar, pagar, emitir, reintentar la emisión y consultar la póliza |
+| `degradacion` | Cotizaciones con Open Finance a `TASA_SOCIOS` por minuto. k6 pone Open Finance en normal, `MODO_CAIDA` y normal, `SEGUNDOS_POR_FASE` cada uno, y reporta disponibilidad y cotizaciones degradadas por fase |
 
 | Variable | Por defecto | Uso |
 |---|---|---|
@@ -294,8 +350,8 @@ docker exec solventa-k3s kubectl -n solventa set env deployment/cotizacion OPEN_
 | `UMBRAL_COTIZACION_MS` | 400 | p95 máximo de cada cotización (ASR-01) |
 | `UMBRAL_P95_MS` | 1000 | p95 máximo del resto de peticiones |
 | `UMBRAL_ERRORES` | 1 | Porcentaje máximo de errores por petición |
+| `OPERADOR_CORREO`, `OPERADOR_CONTRASENA` | `admin@solventa.local` y sin valor | Operador del portal con rol `administrador` |
 | `SOCIO_ID`, `SOCIO_CLIENT_ID`, `SOCIO_SECRETO` | Se crea un socio | Reutilizar un socio existente |
-| `OPEN_FINANCE_SIMULADO_URL` | `http://host.docker.internal:9090` | Simulador que controla k6 en `degradacion` |
 | `SEGUNDOS_POR_FASE`, `MODO_CAIDA` | 60 y `lento` | Duración de cada fase y cómo falla el proveedor (`lento` supera el timeout, `caido` responde 503) |
 | `CLIENTES_OPEN_FINANCE` | 200 | Clientes distintos en las cotizaciones de `degradacion`; los repetidos usan el último valor bueno |
 | `UMBRAL_DISPONIBILIDAD` | 99.9 | Disponibilidad mínima de cada fase en `degradacion` |
@@ -310,7 +366,14 @@ k6 termina con error si alguna petición supera su p95 o su porcentaje de errore
 
 Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
 
-`postman/recorrido-canales.postman_collection.json` tiene el mismo recorrido para revisarlo a mano en Postman o con Newman. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`.
+`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta. La carpeta **Fallos simulados** tumba cada tercero y lo devuelve a normal. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`. La carpeta **Portal web** entra como administrador con `operadorCorreo` y `operadorContrasena`, guarda `portalToken` y crea el socio que usa **API de socios**. **Operadores y roles** crea un asesor, comprueba que consulta pero no da de alta socios, y lo desactiva.
+
+```bash
+npx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<clave>
+npx newman run postman/recorrido-canales.postman_collection.json --env-var baseUrl=http://localhost:8000 --env-var operadorContrasena=Solventa-local-2026
+```
+
+En `local`, Siniestros guarda las evidencias en memoria y la URL de carga (`upload.local`) no resuelve fuera del clúster: la subida, el radicado y la asistencia fallan en Newman.
 
 ## Siguientes pasos
 

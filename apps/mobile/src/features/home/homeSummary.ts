@@ -10,16 +10,9 @@ export type HomeShortcut = {
   destination: HomeShortcutDestination;
 };
 
-export type HomeRenewal = {
-  productName: string;
-  policyNumber: string;
-  validUntil: string;
-};
-
 export type HomeSummary = {
   policyCount: number;
   shortcuts: HomeShortcut[];
-  renewal: HomeRenewal;
 };
 
 export const homeSummary: HomeSummary = {
@@ -29,9 +22,4 @@ export const homeSummary: HomeSummary = {
     { id: 'buy', destination: 'Buy' },
     { id: 'nearbyProviders', destination: 'NearbyProviders' },
   ],
-  renewal: {
-    productName: 'Protección Celular',
-    policyNumber: 'SLV-2025-01820',
-    validUntil: '2026-10-05',
-  },
 };

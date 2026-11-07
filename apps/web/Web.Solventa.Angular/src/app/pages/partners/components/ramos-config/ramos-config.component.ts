@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ADMIN_ROLES } from '../../../../core/constants/roles.constants';
 import { Partner, PartnerConfig, PartnerRamoConfig } from '../../../../core/models/partner.model';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { SwitchComponent } from '../../../../ui/components/switch/switch.component';
 import { PartnersService } from '../../services/partners.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-ramos-config',
@@ -14,7 +17,9 @@ import { PartnersService } from '../../services/partners.service';
   templateUrl: './ramos-config.component.html'
 })
 export class RamosConfigComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
+  private readonly auth = inject(AuthService);
 
   readonly partner = input.required<Partner>();
 
@@ -22,6 +27,8 @@ export class RamosConfigComponent {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+
+  protected readonly canEdit = computed(() => this.auth.hasRole(...ADMIN_ROLES));
 
   readonly enabledRamos = computed(() => this.config()?.ramos.filter(ramo => ramo.enabled) ?? []);
 
@@ -38,6 +45,7 @@ export class RamosConfigComponent {
   }
 
   toggleRamo(ramo: PartnerRamoConfig) {
+    if (!this.canEdit()) return;
     // Un ramo recién habilitado o deshabilitado queda sin coberturas seleccionadas.
     this.save(current => current.id !== ramo.id ? current : {
       ...current,
@@ -47,6 +55,7 @@ export class RamosConfigComponent {
   }
 
   toggleCoverage(ramo: PartnerRamoConfig, coverageId: string) {
+    if (!this.canEdit()) return;
     this.save(current => current.id !== ramo.id ? current : {
       ...current,
       coverages: current.coverages.map(c => c.id === coverageId ? { ...c, enabled: !c.enabled } : c),
@@ -54,7 +63,7 @@ export class RamosConfigComponent {
   }
 
   coveragesLabel(ramo: PartnerRamoConfig): string {
-    return ramo.coverages.filter(c => c.enabled).map(c => c.name).join(', ') || 'Sin coberturas seleccionadas';
+    return ramo.coverages.filter(c => c.enabled).map(c => c.name).join(', ') || this.locale.t('ramosConfig.noCoverages');
   }
 
   private load(partnerId: string) {
@@ -74,7 +83,7 @@ export class RamosConfigComponent {
       error: () => {
         if (request !== this.lastRequest) return;
         this.loading.set(false);
-        this.error.set('No fue posible cargar la configuración del socio.');
+        this.error.set(this.locale.t('ramosConfig.loadError'));
       },
     });
   }
@@ -99,7 +108,7 @@ export class RamosConfigComponent {
         if (request !== this.lastRequest) return;
         this.config.set(this.confirmed);
         this.saving.set(false);
-        this.error.set('No fue posible guardar el cambio. Se conserva la configuración vigente.');
+        this.error.set(this.locale.t('ramosConfig.saveError'));
       },
     });
   }

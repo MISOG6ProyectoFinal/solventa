@@ -1,18 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, model, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RAMOS } from '../../../../shared/constants/ramos.constants';
 import { InputDirective } from '../../../../shared/directives/input.directive';
-import { Ramo, RamoId } from '../../../../core/models/ramo.model';
+import { Ramo } from '../../../../core/models/ramo.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { QUOTE_CLIENT_FIELDS, QUOTE_RISK_FIELDS } from '../../constants/quote-fields.constants';
-import { QuotesService } from '../../services/quotes.service';
+import { ProductContract } from '../../interfaces/product-contract.interface';
+import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
 import { QuoteFieldComponent } from '../quote-field/quote-field.component';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 export type FormValues = Record<string, string>;
-
-/** Los 4 ramos del alcance de la HU001 */
-const HU_RAMOS_IDS: readonly RamoId[] = ['VIAJE', 'MICROSEGURO_VIDA', 'VIDA_HIPOTECARIO', 'PARAMETRICO'];
 
 /** Formulario dinámico por ramo: selector de ramo, datos del cliente y datos del riesgo. */
 @Component({
@@ -22,48 +20,28 @@ const HU_RAMOS_IDS: readonly RamoId[] = ['VIAJE', 'MICROSEGURO_VIDA', 'VIDA_HIPO
   templateUrl: './quote-form.component.html',
 })
 export class QuoteFormComponent {
-  private readonly quotesService = inject(QuotesService, { optional: true });
+  protected readonly locale = inject(LocaleService);
 
-  readonly ramo = model.required<RamoId>();
+  readonly ramo = model.required<string>();
+  readonly ramos = input.required<readonly Ramo[]>();
+  readonly contract = input<ProductContract | null>(null);
+  readonly documentTypes = input<readonly string[]>([]);
   readonly quoteReady = output<FormValues>();
   readonly formChange = output<FormValues>();
 
-  /** Ramos del formulario: acotados estrictamente a los 4 de la HU y sincronizados con la BD */
-  protected readonly ramos = signal<readonly Ramo[]>(
-    RAMOS.filter((r) => HU_RAMOS_IDS.includes(r.id))
-  );
+  protected readonly clientFields = computed(() => QUOTE_CLIENT_FIELDS.map((field) => this.withOptions(field)));
 
-  protected readonly clientFields = QUOTE_CLIENT_FIELDS;
-
-  private readonly values = signal<FormValues>({ tipoDocumento: 'CC' });
+  private readonly values = signal<FormValues>({});
   private readonly submitted = signal(false);
 
-  protected readonly riskFields = computed(() => QUOTE_RISK_FIELDS[this.ramo()] ?? []);
-  protected readonly ramoLabel = computed(
-    () => this.ramos().find((ramo) => ramo.id === this.ramo())?.label ?? ''
+  protected readonly riskFields = computed(() =>
+    (QUOTE_RISK_FIELDS[this.ramo()] ?? []).map((field) => this.withOptions(field)),
   );
 
   constructor() {
-    this.cargarRamosDesdeBd();
-  }
-
-  private cargarRamosDesdeBd(): void {
-    if (!this.quotesService) return;
-    this.quotesService.getRamos().subscribe({
-      next: (dbRamos) => {
-        const dbMap = new Map(
-          dbRamos.map((r) => [r.id.replace('ramo-', '').toUpperCase().replace(/-/g, '_'), r.nombre])
-        );
-        this.ramos.update((current) =>
-          current.map((item) => ({
-            ...item,
-            label: dbMap.get(item.id) ?? item.label,
-          }))
-        );
-      },
-      error: () => {
-        // En caso de fallo o modo offline, conserva los 4 ramos base
-      },
+    effect(() => {
+      const [first] = this.documentTypes();
+      if (first && !untracked(() => this.values()['tipoDocumento'])) this.setValue('tipoDocumento', first);
     });
   }
 
@@ -74,13 +52,19 @@ export class QuoteFormComponent {
     for (const field of allFields) {
       const val = (this.values()[field.key] ?? '').trim();
       if (field.required && !val) {
-        result[field.key] = 'Campo obligatorio';
+        result[field.key] = this.locale.t('common.required');
       }
     }
     return result;
   });
 
   protected readonly isValid = computed(() => Object.keys(this.errors()).length === 0);
+
+  private withOptions(field: QuoteFieldDef): QuoteFieldDef {
+    if (field.optionsSource === 'documentTypes') return { ...field, options: this.documentTypes() };
+    if (field.optionsSource === 'contract') return { ...field, options: this.contract()?.properties[field.key]?.enum ?? [] };
+    return field;
+  }
 
   public valueOf(key: string): string {
     return this.values()[key] ?? '';
@@ -97,7 +81,7 @@ export class QuoteFormComponent {
   }
 
   /** Al cambiar de ramo se conservan solo los datos del cliente y se resetea la validación. */
-  protected changeRamo(ramo: RamoId): void {
+  protected changeRamo(ramo: string): void {
     const clientKeys = new Set(QUOTE_CLIENT_FIELDS.map((field) => field.key));
     const filtered = Object.fromEntries(Object.entries(this.values()).filter(([key]) => clientKeys.has(key)));
     this.values.set(filtered);

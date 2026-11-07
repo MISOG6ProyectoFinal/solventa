@@ -9,5 +9,6 @@ services = [
   "identidad",
   "pagos",
   "polizas",
+  "simuladores",
   "siniestros",
 ]

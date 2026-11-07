@@ -10,6 +10,14 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOCKER_SONAR_SERVER: sonarqube:25.5.0.107428-community
+  DOCKER_SONAR_CLI: sonarsource/sonar-scanner-cli:11.3
+
 jobs:
   detect-affected:
     runs-on: ubuntu-latest
@@ -25,13 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.22.3
-          cache: npm
-
-      - name: Install Node dependencies
-        run: npm ci
+        uses: ./.github/actions/setup-node
 
       - name: Set Nx SHAs
         uses: nrwl/nx-set-shas@v5
@@ -75,33 +77,13 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: ./.github/actions/setup-node
         with:
-          node-version: 22.22.3
-          cache: npm
+          install-web: ${{ needs.detect-affected.outputs.web_affected }}
 
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Setup Python
+      - name: Setup backend
         if: needs.detect-affected.outputs.backend_affected == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install Poetry
-        if: needs.detect-affected.outputs.backend_affected == 'true'
-        run: python -m pip install poetry
-
-      - name: Install backend dependencies
-        if: needs.detect-affected.outputs.backend_affected == 'true'
-        working-directory: apps/backend
-        run: poetry install --no-interaction
-
-      - name: Install web dependencies
-        if: needs.detect-affected.outputs.web_affected == 'true'
-        working-directory: apps/web/Web.Solventa.Angular
-        run: npm ci
+        uses: ./.github/actions/setup-backend
 
       - name: Set Nx SHAs
         uses: nrwl/nx-set-shas@v5
@@ -117,33 +99,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          filter: tree:0
-          fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.22.3
-          cache: npm
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install Poetry
-        run: python -m pip install poetry
-
-      - name: Install backend dependencies
-        working-directory: apps/backend
-        run: poetry install --no-interaction
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
 
       - name: Run backend tests with coverage
-        run: npx nx run backend:test
+        working-directory: apps/backend
+        run: poetry run ./scripts/test-all.sh
 
       - name: Verificar reportes generados
         if: always()
@@ -178,18 +140,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          filter: tree:0
-          fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.22.3
-          cache: npm
-
-      - name: Install Node dependencies
-        run: npm ci
+        uses: ./.github/actions/setup-node
 
       - name: Prepare Mobile environment
         run: cp apps/mobile/.env.example apps/mobile/.env
@@ -224,8 +177,11 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v7
 
-      - name: Instalar herramientas de diagnóstico
-        run: sudo apt-get update && sudo apt-get install -y jq curl bc
+      - name: Setup Sonarless
+        uses: ./.github/actions/setup-sonar
+        with:
+          server-image: ${{ env.DOCKER_SONAR_SERVER }}
+          scanner-image: ${{ env.DOCKER_SONAR_CLI }}
 
       - name: Descargar reportes de pruebas de Mobile
         uses: actions/download-artifact@v4
@@ -276,22 +232,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          filter: tree:0
-          fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: ./.github/actions/setup-node
         with:
-          node-version: 22.22.3
-          cache: npm
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Install web dependencies
-        working-directory: apps/web/Web.Solventa.Angular
-        run: npm ci
+          install-web: "true"
 
       - name: Run web tests with coverage
         run: npx nx run web.solventa.angular:test --configuration=ci
@@ -320,8 +265,11 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v7
 
-      - name: Instalar herramientas de diagnóstico
-        run: sudo apt-get update && sudo apt-get install -y jq curl bc
+      - name: Setup Sonarless
+        uses: ./.github/actions/setup-sonar
+        with:
+          server-image: ${{ env.DOCKER_SONAR_SERVER }}
+          scanner-image: ${{ env.DOCKER_SONAR_CLI }}
 
       - name: Descargar reportes de pruebas de Web
         uses: actions/download-artifact@v4
@@ -375,8 +323,11 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v7
 
-      - name: Instalar herramientas de diagnóstico
-        run: sudo apt-get update && sudo apt-get install -y jq curl bc
+      - name: Setup Sonarless
+        uses: ./.github/actions/setup-sonar
+        with:
+          server-image: ${{ env.DOCKER_SONAR_SERVER }}
+          scanner-image: ${{ env.DOCKER_SONAR_CLI }}
 
       - name: Descargar reportes de pruebas
         uses: actions/download-artifact@v4

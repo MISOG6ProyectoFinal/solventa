@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { provideCatalogFixture } from '../../../../core/testing/catalog.fixtures';
 import { ApiError } from '../../../../core/interfaces/api-response.interface';
 import { NewPartner, PartnerCreated } from '../../../../core/models/partner.model';
 import { toPartner } from '../../services/partners-api.mapper';
@@ -28,6 +29,10 @@ describe('CreatePartnerModalComponent', () => {
     await type(0, 'Fintech Demo');
     await type(1, 'FINTECH-DEMO');
     await type(2, 'ops@fintech.demo');
+    const scopes = el.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
+    scopes[0].click();
+    scopes[1].click();
+    await fixture.whenStable();
   };
 
   const submit = async (): Promise<void> => {
@@ -39,12 +44,26 @@ describe('CreatePartnerModalComponent', () => {
     create = vi.fn<(partner: NewPartner) => Observable<PartnerCreated>>(() => of(CREATED));
     await TestBed.configureTestingModule({
       imports: [CreatePartnerModalComponent],
-      providers: [{ provide: PartnersService, useValue: { create } }],
+      providers: [{ provide: PartnersService, useValue: { create } }, provideCatalogFixture()],
     }).compileComponents();
     fixture = TestBed.createComponent(CreatePartnerModalComponent);
     fixture.componentRef.setInput('open', true);
     await fixture.whenStable();
     el = fixture.nativeElement;
+  });
+
+  it('offers the partner types and scopes the service publishes and preselects the first type', () => {
+    const type = el.querySelector('select')!;
+
+    expect(Array.from(type.options).map((option) => option.value)).toEqual([
+      'Banco',
+      'Aerolínea',
+      'E-commerce',
+      'Fintech',
+      'Retailer',
+    ]);
+    expect(fixture.componentInstance.tipo()).toBe('Banco');
+    expect(el.querySelectorAll('input[type=checkbox]').length).toBe(3);
   });
 
   it('requires name, identifier, email and at least one scope', async () => {
@@ -74,7 +93,7 @@ describe('CreatePartnerModalComponent', () => {
     expect(create).toHaveBeenCalledWith({
       name: 'Fintech Demo',
       identifier: 'FINTECH-DEMO',
-      tipo: 'Retailer',
+      tipo: 'Banco',
       pais: 'Colombia',
       contactEmail: 'ops@fintech.demo',
       alcances: ['cotizacion', 'emision'],

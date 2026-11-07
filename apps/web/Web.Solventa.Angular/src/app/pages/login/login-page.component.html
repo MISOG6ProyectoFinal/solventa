@@ -1,0 +1,46 @@
+<main class="min-h-screen flex items-center justify-center bg-background p-6">
+  <div class="w-full max-w-sm space-y-6">
+    <slv-logo class="justify-center" />
+
+    <slv-card>
+      <h1 class="text-xl font-semibold text-foreground font-['Fraunces']">{{ locale.t('login.title') }}</h1>
+      <p class="text-sm text-muted-foreground mt-1 mb-5">{{ locale.t('login.subtitle') }}</p>
+
+      @if (submitError(); as message) {
+        <div class="mb-4" data-testid="login-error"><slv-alert tone="error">{{ message }}</slv-alert></div>
+      }
+
+      <form class="space-y-4" novalidate (ngSubmit)="submit()">
+        <slv-field [label]="locale.t('login.email')" [required]="true" [error]="errors()['email']">
+          <input
+            slvInput
+            name="email"
+            type="email"
+            autocomplete="username"
+            data-testid="login-email"
+            [invalid]="!!errors()['email']"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+          />
+        </slv-field>
+
+        <slv-field [label]="locale.t('login.credential')" [required]="true" [error]="errors()['password']">
+          <input
+            slvInput
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            data-testid="login-password"
+            [invalid]="!!errors()['password']"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+          />
+        </slv-field>
+
+        <button slv-button type="submit" class="w-full" data-testid="login-submit" [disabled]="sending()">
+          {{ sending() ? locale.t('login.submitting') : locale.t('login.submit') }}
+        </button>
+      </form>
+    </slv-card>
+  </div>
+</main>

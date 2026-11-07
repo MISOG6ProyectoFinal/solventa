@@ -1,14 +1,17 @@
 from datetime import date
 from typing import Annotated, Literal
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
+from solventa_common.validation import invalid_data_detail, invalid_fields
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
+from canales.movil.referencia_renovacion import referencia_ciclo_renovacion
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
 INVALID_SESSION = "La sesión no es válida"
@@ -17,14 +20,11 @@ MENSAJE_COTIZACION_VENCIDA = "Esta cotización ya no está vigente. No se realiz
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
 
-class SolicitudCotizacionMovil(BaseModel):
-    producto_id: str
+class MobileQuoteHolder(BaseModel):
+    """Titular que captura el formulario. No viaja a Cotización, que valida y tarifa el resto."""
+
     nombre: str
     cedula: str
-    destino: Literal["Estados Unidos", "España", "México", "Otro país"]
-    fecha_salida: date
-    fecha_regreso: date
-    viajeros: int = Field(ge=1)
 
     @field_validator("nombre")
     @classmethod
@@ -41,14 +41,6 @@ class SolicitudCotizacionMovil(BaseModel):
         if not value.isdigit():
             raise ValueError("La cédula debe contener solo dígitos")
         return value
-
-    @model_validator(mode="after")
-    def _fechas_validas(self) -> "SolicitudCotizacionMovil":
-        if self.fecha_salida < date.today():
-            raise ValueError("La fecha de salida no puede ser anterior a hoy")
-        if self.fecha_regreso <= self.fecha_salida:
-            raise ValueError("La fecha de regreso debe ser posterior a la salida")
-        return self
 
 
 class SolicitudSesion(BaseModel):
@@ -127,6 +119,22 @@ def _cotizacion_vencida() -> HTTPException:
     )
 
 
+class SolicitudPagoRenovacion(BaseModel):
+    """El monto sale de la oferta vigente. El teléfono solo identifica el intento."""
+
+    model_config = ConfigDict(extra="ignore")
+    intento_id: str
+    simulacion: Literal["rechazado"] | None = None
+
+    @field_validator("intento_id")
+    @classmethod
+    def _intento(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El intento de pago no es válido")
+        return token
+
+
 class SolicitudEmisionMovil(BaseModel):
     """Mobile solo identifica el cobro. Pólizas valida el pago y arma la póliza desde la cotización."""
 
@@ -160,6 +168,11 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
     return call_upstream(identidad.post, "/identidad/sesiones", json=solicitud.model_dump())
 
 
+@router.get("/tipos-documento")
+def listar_tipos_documento() -> list:
+    return call_upstream(identidad.get, "/identidad/tipos-documento")
+
+
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
 def registrar(solicitud: SolicitudRegistro) -> dict:
     return call_upstream(identidad.post, "/identidad/clientes", json=solicitud.model_dump(mode="json"))
@@ -179,6 +192,11 @@ def sesion_actual(payload: Session) -> dict:
 def listar_productos() -> list:
     """Catálogo de productos del canal Mobile (vía servicio de Cotización)."""
     return call_upstream(cotizacion.get, "/catalogo/productos")
+
+
+@authenticated.get("/productos/{producto_id}/contrato")
+def contrato_producto(producto_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
@@ -201,7 +219,6 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
             "cotizacion_id": cotizacion_id,
             "cliente_id": session.client_id,
             "monto": str(oferta["prima"]),
-            "moneda": "COP",
             "idempotency_key": f"movil:{cotizacion_id}:{solicitud.intento_id}",
             "medio_token": token_prototipo(solicitud.simulacion),
         },
@@ -216,12 +233,16 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
 
 
 @authenticated.post("/cotizaciones")
-def cotizar(solicitud: SolicitudCotizacionMovil, session: Session) -> dict:
-    """Valida el formulario, delega en el consenso sin PII y devuelve la oferta completa."""
+def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
+    """Valida el titular, delega la cotización sin PII y devuelve la oferta completa."""
+    try:
+        MobileQuoteHolder.model_validate(solicitud)
+    except ValidationError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, invalid_data_detail(invalid_fields(exc))) from exc
     oferta = call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json=solicitud.model_dump(mode="json", exclude={"nombre", "cedula"}),
+        json={key: value for key, value in solicitud.items() if key not in MobileQuoteHolder.model_fields},
         headers={"X-Canal": "mobile", "X-Cliente-Id": session.client_id},
     )
     if isinstance(oferta, dict):
@@ -248,6 +269,48 @@ def emitir_poliza(cotizacion_id: str, session: Session, solicitud: SolicitudEmis
 @authenticated.get("/polizas")
 def listar_polizas(session: Session) -> list:
     return call_upstream(polizas.get, f"/polizas/clientes/{session.client_id}")
+
+
+@authenticated.get("/polizas/{poliza_id}/renovacion/oferta")
+def oferta_renovacion(poliza_id: str, session: Session) -> dict:
+    """Delega la consulta en Pólizas. El teléfono no elige el cliente ni calcula la oferta."""
+    return call_upstream(
+        polizas.get,
+        f"/polizas/{poliza_id}/renovacion/oferta",
+        headers=_cliente(session),
+    )
+
+
+@authenticated.post("/polizas/{poliza_id}/renovacion/pagos")
+def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoRenovacion) -> dict:
+    """Cobra la prima propuesta del ciclo vigente. No aplica la renovación sobre la póliza."""
+    oferta = call_upstream(
+        polizas.get,
+        f"/polizas/{poliza_id}/renovacion/oferta",
+        headers=_cliente(session),
+    )
+    if not isinstance(oferta, dict) or oferta.get("prima_propuesta") is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La oferta de renovación no tiene un valor a cobrar")
+    referencia = referencia_ciclo_renovacion(poliza_id, oferta["vigencia_propuesta"])
+    resultado = call_upstream(
+        pagos.post,
+        "/pagos/cobros",
+        json={
+            "tipo_referencia": "renovacion",
+            "referencia_id": referencia,
+            "cliente_id": session.client_id,
+            "monto": str(oferta["prima_propuesta"]),
+            "idempotency_key": f"movil:renovacion:{referencia}:{solicitud.intento_id}",
+            "medio_token": token_prototipo(solicitud.simulacion),
+        },
+    )
+    return {
+        "id": resultado["id"],
+        "poliza_id": poliza_id,
+        "estado": resultado["estado"],
+        "monto": resultado["monto"],
+        "moneda": resultado["moneda"],
+    }
 
 
 @authenticated.get("/siniestros")

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { OPS_POLICIES } from '../../testing/ops-policies.fixture';
+import { provideCatalogFixture } from '../../../../core/testing/catalog.fixtures';
+import { OPS_POLICIES } from '../../testing/policy.fixtures';
 import { PolicyListComponent } from './policy-list.component';
 
 describe('PolicyListComponent', () => {
@@ -16,7 +17,10 @@ describe('PolicyListComponent', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [PolicyListComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [PolicyListComponent],
+      providers: [provideCatalogFixture()],
+    }).compileComponents();
     fixture = TestBed.createComponent(PolicyListComponent);
     fixture.componentRef.setInput('policies', OPS_POLICIES);
     fixture.componentRef.setInput('partners', ['Banco Aurora', 'RetailPay']);
@@ -30,12 +34,28 @@ describe('PolicyListComponent', () => {
     expect(rows()[0].querySelector('slv-badge')!.textContent).toContain('ACTIVA');
   });
 
-  it('asks the backend to search by the typed text', async () => {
+  it('offers the statuses the policy service publishes and filters by one', async () => {
+    const select = el.querySelectorAll('select')[0];
+
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['', 'activa', 'vencida', 'cancelada']);
+    select.value = 'vencida';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(rows().length).toBeGreaterThan(0);
+    expect(rows().every((row) => row.querySelector('slv-badge')!.textContent!.includes('VENCIDA'))).toBe(true);
+  });
+
+  it('filters by policy number or identification', async () => {
+    await type('01820');
+    expect(rows().length).toBe(1);
+    expect(rows()[0].textContent).toContain('SLV-2025-01820');
+  });
+
+  it('notifies search change when typing', async () => {
     const searched = vi.fn();
     fixture.componentInstance.searchChange.subscribe(searched);
-
     await type('1020304050');
-
     expect(searched).toHaveBeenLastCalledWith('1020304050');
   });
 
@@ -64,7 +84,7 @@ describe('PolicyListComponent', () => {
 
   it('filters by status Vencida and shows only the VENCIDA badge', async () => {
     const select = el.querySelector<HTMLSelectElement>('[data-testid="policy-filter-estado"]')!;
-    select.value = 'Vencida';
+    select.value = 'vencida';
     select.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 

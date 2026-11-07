@@ -2,10 +2,13 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Partner } from '../../../core/models/partner.model';
+import { LocaleService } from '../../../core/services/locale.service';
 import { toPartner, toPartnerConfig } from '../services/partners-api.mapper';
 import { PartnersService } from '../services/partners.service';
+import { provideCatalogFixture } from '../../../core/testing/catalog.fixtures';
 import { PARTNER_CONFIG_DTO, PARTNER_CREATED_DTO, PARTNER_DTO } from '../testing/partner.fixtures';
 import { PartnersPageComponent } from './partners-page.component';
+import { signInAs, signOut } from '../../../core/testing/auth.testing';
 
 describe('PartnersPageComponent', () => {
   let fixture: ComponentFixture<PartnersPageComponent>;
@@ -32,21 +35,37 @@ describe('PartnersPageComponent', () => {
     Array.from(el.querySelectorAll('button')).find((item) => item.textContent?.includes(text))!;
 
   beforeEach(async () => {
+    signInAs();
     partners.set([]);
     loading.set(false);
     loadError.set(null);
     load.mockClear();
     await TestBed.configureTestingModule({
       imports: [PartnersPageComponent],
-      providers: [{ provide: PartnersService, useValue: service }],
+      providers: [{ provide: PartnersService, useValue: service }, provideCatalogFixture()],
     }).compileComponents();
     fixture = TestBed.createComponent(PartnersPageComponent);
     await fixture.whenStable();
     el = fixture.nativeElement;
   });
 
+  afterEach(() => signOut());
+
   it('loads the partners when the page opens', () => {
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the page in English when the language changes', async () => {
+    const locale = TestBed.inject(LocaleService);
+    partners.set([toPartner(PARTNER_DTO)]);
+    locale.setLocale('en');
+    await fixture.whenStable();
+
+    expect(el.querySelector('h1')?.textContent).toContain('Partners & Integrations');
+    expect(el.textContent).toContain('Provisioned partners');
+    expect(el.textContent).toContain('Active · v2');
+    expect(button('New partner')).toBeTruthy();
+    locale.setLocale('es');
   });
 
   it('shows an empty state while there are no partners', () => {
@@ -120,6 +139,7 @@ describe('PartnersPageComponent', () => {
       inputs[index].value = value;
       inputs[index].dispatchEvent(new Event('input'));
     });
+    el.querySelector<HTMLInputElement>('input[type=checkbox]')!.click();
     await fixture.whenStable();
     button('Crear y aprovisionar').click();
     await fixture.whenStable();
@@ -130,5 +150,28 @@ describe('PartnersPageComponent', () => {
     expect(el.querySelector('[role=dialog]')).toBeNull();
     expect(el.textContent).toContain('Contrato API: Activo · v2');
     expect(el.textContent).not.toContain('sv_sec_wp3wshvykwi');
+  });
+
+  it('offers the new partner button to an administrator', () => {
+    expect(button('Nuevo socio')).toBeTruthy();
+    expect(el.querySelector('[data-testid=partners-read-only]')).toBeNull();
+  });
+});
+
+describe('PartnersPageComponent as a read-only operator', () => {
+  afterEach(() => signOut());
+
+  it('hides the new partner button and explains why', async () => {
+    signInAs(['consulta']);
+    await TestBed.configureTestingModule({
+      imports: [PartnersPageComponent],
+      providers: [{ provide: PartnersService, useValue: { partners: signal([]), loading: signal(false), loadError: signal(null), load: vi.fn(), findById: () => null } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PartnersPageComponent);
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(Array.from(el.querySelectorAll('button')).some((item) => item.textContent?.includes('Nuevo socio'))).toBe(false);
+    expect(el.querySelector('[data-testid=partners-read-only]')?.textContent).toContain('Solo un administrador puede dar de alta socios.');
   });
 });

@@ -5,8 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Header, HTTPException
 from solventa_common.db import build_engine
 from solventa_common.events import EventPublisher
+from solventa_common.integration import RedAsistenciaAdapter
 
-from siniestros.asistencia.adapters.dispatcher import PrototypeDispatcher
+from siniestros.asistencia.adapters.dispatcher import AssistanceNetworkDispatcher
 from siniestros.asistencia.adapters.memory import InMemoryAsistenciaRepository
 from siniestros.asistencia.adapters.repository import PostgresAsistenciaRepository
 from siniestros.asistencia.domain.errors import ReglaAsistencia
@@ -40,7 +41,8 @@ def _default_wire() -> None:
         repository: AsistenciaRepository = PostgresAsistenciaRepository(build_engine(settings.database_url))
     else:
         repository = InMemoryAsistenciaRepository()
-    wire(avisos_api.repository, repository, build_publisher(), PrototypeDispatcher())
+    dispatcher = AssistanceNetworkDispatcher(RedAsistenciaAdapter(settings.red_asistencia_url))
+    wire(avisos_api.repository, repository, build_publisher(), dispatcher)
 
 
 def _http(exc: ReglaAsistencia) -> HTTPException:

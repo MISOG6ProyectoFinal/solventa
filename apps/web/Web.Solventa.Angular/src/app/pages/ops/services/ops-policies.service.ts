@@ -1,71 +1,63 @@
 import { HttpClient } from '@angular/common/http';
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounceTime, of, startWith, switchMap } from 'rxjs';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
-import { Policy } from '../../../core/models/policy.model';
-import { OPS_TODAY } from '../constants/ops.constants';
+import { ApiError } from '../../../core/interfaces/api-response.interface';
+import { CANCELLED_STATUS, Policy } from '../../../core/models/policy.model';
+import { todayIso } from '../utils/today.utils';
+import { PolicyDto, toPolicy } from './ops-policies-api.mapper';
 
-const SEARCH_DEBOUNCE_MS = 300;
-
-/** Pólizas del módulo Ops leídas del BFF web (búsqueda por número de póliza o identificación). */
+/** Pólizas del módulo Ops: las últimas de todos los canales, leídas del BFF Web. */
 @Injectable({ providedIn: 'root' })
 export class OpsPoliciesService {
   private readonly http = inject(HttpClient);
-  private readonly search$ = new Subject<string>();
-
   private readonly state = signal<readonly Policy[]>([]);
   private readonly detail = signal<Policy | null>(null);
 
   readonly policies = this.state.asReadonly();
   readonly selected = this.detail.asReadonly();
-  readonly loadError = signal(false);
-  readonly partners = computed(() => [...new Set(this.state().map((policy) => policy.socioOrigen))]);
+  readonly partners = computed(() => [...new Set(this.state().map((policy) => policy.socioOrigen).filter(Boolean))]);
+  readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
+  readonly detailLoading = signal(false);
 
-  constructor() {
-    this.search$
-      .pipe(
-        debounceTime(SEARCH_DEBOUNCE_MS),
-        startWith(''),
-        switchMap((q) =>
-          this.http.get<Policy[]>(API_ENDPOINTS.webPolicies, { params: q ? { q } : {} }).pipe(
-            catchError(() => {
-              this.loadError.set(true);
-              return of(null);
-            }),
-          ),
-        ),
-        takeUntilDestroyed(inject(DestroyRef)),
-      )
-      .subscribe((policies) => {
-        if (!policies) return;
-        this.loadError.set(false);
-        this.state.set(policies);
-      });
+  load(): void {
+    this.loading.set(true);
+    this.loadError.set(null);
+    this.http.get<PolicyDto[]>(API_ENDPOINTS.policies).subscribe({
+      next: (policies) => {
+        this.state.set(policies.map(toPolicy));
+        this.loading.set(false);
+      },
+      error: (error: ApiError) => {
+        this.loadError.set(error.message);
+        this.loading.set(false);
+      },
+    });
   }
 
-  search(text: string): void {
-    this.search$.next(text);
-  }
-
-  /** Muestra de inmediato lo del listado y completa pagos y siniestros con el detalle. */
-  open(id: string): void {
+  /** Abre una póliza: primero la del listado y luego el detalle con sus cobros y siniestros. */
+  open(id: string | null): void {
     this.detail.set(this.state().find((policy) => policy.id === id) ?? null);
-    this.http.get<Policy>(`${API_ENDPOINTS.webPolicies}/${id}`).subscribe({
-      next: (policy) => this.detail.set(policy),
-      error: () => this.loadError.set(true),
+    if (!id) return;
+    this.detailLoading.set(true);
+    this.http.get<PolicyDto>(API_ENDPOINTS.policy(id)).subscribe({
+      next: (dto) => {
+        this.detail.set(toPolicy(dto));
+        this.detailLoading.set(false);
+      },
+      error: () => this.detailLoading.set(false),
     });
   }
 
   close(): void {
-    this.detail.set(null);
+    this.open(null);
   }
 
-  // shortcut: la cancelación aún no se persiste en backend; solo actualiza lo cargado en pantalla.
+  /** Pólizas no expone la cancelación: el cambio se refleja solo en esta vista. */
   cancel(id: string, cause: string): void {
-    const apply = (policy: Policy): Policy =>
-      policy.id === id ? { ...policy, status: 'Cancelada', cancelReason: cause, cancelDate: OPS_TODAY } : policy;
-    this.state.update((policies) => policies.map(apply));
-    this.detail.update((policy) => (policy ? apply(policy) : policy));
+    const cancelled = (policy: Policy): Policy =>
+      policy.id === id ? { ...policy, status: CANCELLED_STATUS, cancelReason: cause, cancelDate: todayIso() } : policy;
+    this.state.update((policies) => policies.map(cancelled));
+    this.detail.update((policy) => (policy ? cancelled(policy) : policy));
   }
 }

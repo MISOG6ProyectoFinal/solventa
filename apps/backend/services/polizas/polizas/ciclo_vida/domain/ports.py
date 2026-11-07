@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Protocol
 
 from polizas.ciclo_vida.domain.models import Beneficiary, Policy
@@ -26,6 +27,12 @@ class PolicyNotFound(LookupError):
 class DuplicatePolicy(Exception):
     pass
 
+    pass
+
+
+class PolicyNotRenewable(ValueError):
+    pass
+
 
 class QuoteSource(Protocol):
     def get(self, quote_id: str) -> dict | None: ...
@@ -42,6 +49,8 @@ class PolicyRepository(Protocol):
 
     def get_by_quote(self, quote_id: str) -> Policy | None: ...
 
+    def get_by_id(self, policy_id: str) -> Policy | None: ...
+
     def list_by_client(self, cliente_id: str) -> list[Policy]: ...
 
     def get(self, policy_id: str) -> Policy | None: ...
@@ -49,5 +58,9 @@ class PolicyRepository(Protocol):
     def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]: ...
 
     def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
-        """Pólizas cuyo número contiene `text` o que son de alguno de `cliente_ids`. Sin filtros, todas."""
+        """Pólizas cuyo número contiene  o que son de alguno de . Sin filtros, todas."""
         ...
+
+    def list_recent(self, limit: int) -> list[Policy]: ...
+
+    def expire_ended(self, today: date) -> int: ...

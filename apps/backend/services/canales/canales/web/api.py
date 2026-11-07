@@ -1,10 +1,28 @@
-import httpx
-from fastapi import APIRouter, HTTPException, status
-from solventa_common.integration.base import call_upstream
+from urllib.parse import quote
 
-from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from solventa_common.integration.base import call_upstream
+from solventa_common.operator_session import ADMIN, ADVISOR
+
+from canales.clients import cotizacion, identidad, polizas
+from canales.web.auth import Operator, require_operator, require_roles
+from canales.web.policies import policy_detail, recent_policies
 
 router = APIRouter(prefix="/web", tags=["BFF Web"])
+
+require_writer = require_roles(ADMIN, ADVISOR)
+require_admin = require_roles(ADMIN)
+
+readers = APIRouter(dependencies=[Depends(require_operator)])
+writers = APIRouter(dependencies=[Depends(require_writer)])
+admins = APIRouter(dependencies=[Depends(require_admin)])
+
+
+class OperatorLogin(BaseModel):
+    correo: str
+    contrasena: str
 
 
 @router.get("/")
@@ -12,20 +30,49 @@ def info() -> dict:
     return {"component": "BFF Web"}
 
 
-RAMOS_COTIZABLES_WEB = {
-    "ramo-viaje",
-    "ramo-microseguro-vida",
-    "ramo-vida-hipotecario",
-    "ramo-parametrico",
-}
-
-RAMOS_CON_CONSENTIMIENTO = {"vida-hipotecario", "ramo-vida-hipotecario"}
+@router.post("/sesiones")
+def start_session(credentials: OperatorLogin) -> dict:
+    return call_upstream(identidad.post, "/identidad/operadores/sesiones", json=credentials.model_dump())
 
 
-@router.get("/ramos")
+@readers.get("/sesion")
+def current_session(operator: Operator) -> dict:
+    return {
+        "id": operator.operator_id,
+        "correo": operator.email,
+        "nombre": operator.name,
+        "roles": list(operator.roles),
+    }
+
+
+CUSTOMER_FIELDS = frozenset(
+    {
+        "cliente_id",
+        "tipo_documento",
+        "tipoDocumento",
+        "numero_documento",
+        "numeroDocumento",
+        "nombre",
+        "apellido",
+        "email",
+        "telefono",
+    }
+)
+
+
+@readers.get("/ramos")
 def listar_ramos() -> list:
-    ramos = call_upstream(cotizacion.get, "/catalogo/ramos")
-    return [r for r in ramos if r.get("id") in RAMOS_COTIZABLES_WEB]
+    return call_upstream(cotizacion.get, "/catalogo/canales/web/ramos")
+
+
+@readers.get("/productos/{producto_id}/contrato")
+def contrato_producto(producto_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
+
+
+@readers.get("/tipos-documento")
+def listar_tipos_documento() -> list:
+    return call_upstream(identidad.get, "/identidad/tipos-documento")
 
 
 def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:
@@ -85,15 +132,26 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
     return _asegurar_nuevo_cliente(solicitud, tipo_doc, num_doc)
 
 
-def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
-    producto_id = solicitud.get("producto_id", "")
-    if producto_id not in RAMOS_CON_CONSENTIMIENTO:
-        return
+def _requires_consent(product_id: object) -> bool:
+    if not isinstance(product_id, str) or not product_id.strip():
+        return False
+    try:
+        product = call_upstream(cotizacion.get, f"/catalogo/productos/{quote(product_id.strip(), safe='')}")
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            return False
+        raise
+    return bool(product.get("requiere_consentimiento"))
+
+
+def _validar_consentimiento_si_aplica(solicitud: dict) -> dict | None:
+    if not _requires_consent(solicitud.get("producto_id")):
+        return None
     consentimiento_id = solicitud.get("consentimiento_id")
     if not consentimiento_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El ramo vida hipotecario requiere consentimiento digital previamente validado",
+            detail="El producto requiere consentimiento digital previamente validado",
         )
     consentimiento = call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
     if not consentimiento or str(consentimiento.get("estado", "")).strip().upper() != "OTORGADO":
@@ -101,180 +159,137 @@ def _validar_consentimiento_si_aplica(solicitud: dict) -> None:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El consentimiento digital no se encuentra otorgado o no es válido",
         )
+    return consentimiento
 
 
-@router.post("/cotizaciones")
+def _open_finance_consent(consentimiento: dict | None) -> dict | None:
+    """El cliente que autorizó Open Finance en el consentimiento digital lo autoriza también para la cotización."""
+    if not consentimiento or not consentimiento.get("open_finance"):
+        return None
+    return {
+        "referencia_cliente": consentimiento["cliente_id"],
+        "consentimiento_id": consentimiento["consentimiento_id"],
+    }
+
+
+@writers.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
-    _validar_consentimiento_si_aplica(solicitud)
+    """El portal resuelve el cliente y el consentimiento; la cotización es la de todos los canales."""
+    open_finance = _open_finance_consent(_validar_consentimiento_si_aplica(solicitud))
 
+    headers = {"X-Canal": "web"}
     cliente_id = _resolver_cliente_id(solicitud)
     if cliente_id:
-        solicitud["cliente_id"] = cliente_id
+        headers["X-Cliente-Id"] = cliente_id
 
     return call_upstream(
         cotizacion.post,
         "/consenso/cotizaciones",
-        json=solicitud,
-        headers={"X-Canal": "web"},
+        json={key: value for key, value in solicitud.items() if key not in CUSTOMER_FIELDS}
+        | ({"consentimiento_open_finance": open_finance} if open_finance else {}),
+        headers=headers,
     )
 
 
-@router.get("/cotizaciones/{cotizacion_id}")
+@readers.get("/cotizaciones/{cotizacion_id}")
 def obtener_cotizacion(cotizacion_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
 
 
-@router.post("/socios", status_code=status.HTTP_201_CREATED)
-def dar_de_alta_socio(alta: dict) -> dict:
-    return call_upstream(cotizacion.post, "/gobierno-socios/socios", json=alta)
+@admins.post("/socios", status_code=status.HTTP_201_CREATED)
+def dar_de_alta_socio(alta: dict, operator: Operator) -> dict:
+    return call_upstream(cotizacion.post, "/gobierno-socios/socios", json={**alta, "autorizado_por": operator.name})
 
 
-@router.get("/socios")
+@readers.get("/socios")
 def listar_socios() -> list:
     return call_upstream(cotizacion.get, "/gobierno-socios/socios")
 
 
-@router.get("/socios/{socio_id}")
+@readers.get("/socios/tipos")
+def listar_tipos_socio() -> list:
+    return call_upstream(cotizacion.get, "/gobierno-socios/tipos")
+
+
+@readers.get("/socios/alcances")
+def listar_alcances() -> list:
+    return call_upstream(cotizacion.get, "/gobierno-socios/alcances")
+
+
+@readers.get("/socios/{socio_id}")
 def obtener_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
 
 
-@router.get("/socios/{socio_id}/configuracion")
+@readers.get("/socios/{socio_id}/configuracion")
 def consultar_configuracion_socio(socio_id: str) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}/configuracion")
 
 
-@router.put("/socios/{socio_id}/configuracion")
-def actualizar_configuracion_socio(socio_id: str, configuracion: dict) -> dict:
-    return call_upstream(cotizacion.put, f"/gobierno-socios/socios/{socio_id}/configuracion", json=configuracion)
+@admins.put("/socios/{socio_id}/configuracion")
+def actualizar_configuracion_socio(socio_id: str, configuracion: dict, operator: Operator) -> dict:
+    return call_upstream(
+        cotizacion.put,
+        f"/gobierno-socios/socios/{socio_id}/configuracion",
+        json={**configuracion, "actualizado_por": operator.name},
+    )
 
 
-# --- HU005: consulta de pólizas para el portal (vista ya armada para la UI) ---
-
-ESTADO_POLIZA = {"activa": "Activa", "cancelada": "Cancelada", "vencida": "Vencida"}
-ESTADO_PAGO = {"aprobado": "Aprobado", "procesando": "Pendiente", "rechazado": "Rechazado"}
-ESTADO_SINIESTRO = {"borrador": "Reportado", "radicado": "En revisión"}
+@readers.get("/polizas/estados")
+def listar_estados_poliza() -> list:
+    return call_upstream(polizas.get, "/polizas/catalogos/estados")
 
 
-def _o_vacio(fn, *args, **kwargs) -> dict:
-    """Un cliente o socio que ya no existe no debe tumbar el listado."""
-    try:
-        return call_upstream(fn, *args, **kwargs) or {}
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_404_NOT_FOUND:
-            return {}
-        raise
+@readers.get("/polizas/causas-cancelacion")
+def listar_causas_cancelacion() -> list:
+    return call_upstream(polizas.get, "/polizas/catalogos/causas-cancelacion")
 
 
-def _vista_poliza(poliza: dict, cliente: dict, socio: dict) -> dict:
-    return {
-        "id": poliza["id"],
-        "number": poliza["numero"],
-        "tipoDocumento": cliente.get("tipo_documento", ""),
-        "identification": cliente.get("numero_documento", ""),
-        "insuredName": f"{cliente.get('nombre', '')} {cliente.get('apellido', '')}".strip() or "Sin datos del asegurado",
-        "ramo": poliza["producto_id"],
-        "producto": poliza["producto_id"],
-        "socioOrigen": socio.get("nombre") or poliza.get("socio_id") or poliza["canal"],
-        "status": ESTADO_POLIZA.get(poliza["estado"], poliza["estado"]),
-        "startDate": poliza["vigencia"]["desde"],
-        "endDate": poliza["vigencia"]["hasta"],
-        "premium": float(poliza["prima"]),
-        "phone": cliente.get("telefono", ""),
-        "email": cliente.get("email", ""),
-        "coverages": [{"name": c["nombre"], "included": True} for c in poliza.get("coberturas", [])],
-        "beneficiaries": [],
-        "payments": [],
-        "claims": [],
-        "endorsements": [],
-    }
+@readers.get("/polizas")
+def listar_polizas() -> list[dict]:
+    """Últimas pólizas de todos los canales con el asegurado, el socio y el ramo."""
+    return recent_policies()
 
 
-def _contexto(poliza: dict, clientes: dict, socios: dict) -> tuple[dict, dict]:
-    cliente_id, socio_id = poliza.get("cliente_id"), poliza.get("socio_id")
-    if cliente_id and cliente_id not in clientes:
-        clientes[cliente_id] = _o_vacio(identidad.get, f"/identidad/clientes/{cliente_id}")
-    if socio_id and socio_id not in socios:
-        socios[socio_id] = _o_vacio(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
-    return clientes.get(cliente_id, {}), socios.get(socio_id, {})
-
-
-@router.get("/polizas")
-def buscar_polizas(q: str | None = None) -> list[dict]:
-    """Busca por número de póliza (parcial) o por número de identificación del cliente."""
-    texto = (q or "").strip()
-    params: dict = {}
-    if texto:
-        params["q"] = texto
-        cliente = _o_vacio(identidad.get, f"/identidad/clientes/por-numero/{texto}")
-        if cliente.get("id"):
-            params["cliente_id"] = [cliente["id"]]
-    encontradas = call_upstream(polizas.get, "/polizas", params=params)
-    clientes: dict = {}
-    socios: dict = {}
-    return [_vista_poliza(p, *_contexto(p, clientes, socios)) for p in encontradas]
-
-
-def _pagos(poliza: dict) -> list[dict]:
-    cobro = _o_vacio(pagos.get, f"/pagos/cobros/{poliza['cobro_id']}")
-    if not cobro:
-        return []
-    return [
-        {
-            "ref": cobro["id"],
-            "date": cobro["creado_en"][:10],
-            "tipo": "Prima",
-            "amount": float(cobro["monto"]),
-            "status": ESTADO_PAGO.get(cobro["estado"], "Pendiente"),
-        }
-    ]
-
-
-def _siniestros(poliza: dict) -> list[dict]:
-    if not poliza.get("cliente_id"):
-        return []
-    avisos = call_upstream(siniestros.get, "/siniestros/avisos", headers={"X-Cliente-Id": poliza["cliente_id"]})
-    return [
-        {
-            "id": a.get("radicado") or a["id"],
-            "tipo": a["tipo"],
-            "fechaOcurrencia": a["ocurrido_en"][:10],
-            "status": ESTADO_SINIESTRO.get(a["estado"], "Reportado"),
-        }
-        for a in avisos
-        if a["poliza_id"] == poliza["id"]
-    ]
-
-
-@router.get("/polizas/{poliza_id}")
+@readers.get("/polizas/{poliza_id}")
 def obtener_poliza(poliza_id: str) -> dict:
-    poliza = call_upstream(polizas.get, f"/polizas/{poliza_id}")
-    vista = _vista_poliza(poliza, *_contexto(poliza, {}, {}))
-    beneficiarios = call_upstream(polizas.get, f"/polizas/{poliza_id}/beneficiarios")
-    return {
-        **vista,
-        "beneficiaries": [
-            {"name": b["nombre"], "parentesco": b["parentesco"], "porcentaje": float(b["porcentaje"])}
-            for b in beneficiarios
-        ],
-        "payments": _pagos(poliza),
-        "claims": _siniestros(poliza),
-    }
+    """La póliza con el asegurado, el socio, el ramo, sus cobros y sus siniestros."""
+    return policy_detail(poliza_id)
 
 
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---
 
 
-@router.post("/consentimientos/solicitar", status_code=status.HTTP_201_CREATED)
-def solicitar_consentimiento(solicitud: dict) -> dict:
-    return call_upstream(identidad.post, "/identidad/solicitar", json=solicitud)
+@writers.post("/consentimientos/solicitar", status_code=status.HTTP_201_CREATED)
+def solicitar_consentimiento(solicitud: dict, operator: Operator) -> dict:
+    return call_upstream(identidad.post, "/identidad/solicitar", json={**solicitud, "asesor": operator.name})
 
 
-@router.post("/consentimientos/validar")
+@writers.post("/consentimientos/validar")
 def validar_consentimiento(solicitud: dict) -> dict:
     return call_upstream(identidad.post, "/identidad/validar", json=solicitud)
 
 
-@router.get("/consentimientos/{consentimiento_id}")
+@readers.get("/consentimientos/{consentimiento_id}")
 def consultar_consentimiento(consentimiento_id: str) -> dict:
     return call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
+
+
+@admins.get("/operadores")
+def list_operators() -> list:
+    return call_upstream(identidad.get, "/identidad/operadores")
+
+
+@admins.post("/operadores", status_code=status.HTTP_201_CREATED)
+def create_operator(payload: dict) -> dict:
+    return call_upstream(identidad.post, "/identidad/operadores", json=payload)
+
+
+@admins.patch("/operadores/{operator_id}")
+def update_operator(operator_id: str, changes: dict) -> dict:
+    return call_upstream(identidad.patch, f"/identidad/operadores/{quote(operator_id, safe='')}", json=changes)
+
+
+router.include_router(readers)
+router.include_router(writers)
+router.include_router(admins)

@@ -1,9 +1,11 @@
 export const PETICIONES = [
   { canal: 'Móvil', nombre: 'BFF móvil disponible' },
+  { canal: 'Móvil', nombre: 'Tipos de documento' },
   { canal: 'Móvil', nombre: 'Registrar cliente' },
   { canal: 'Móvil', nombre: 'Iniciar sesión' },
   { canal: 'Móvil', nombre: 'Consultar sesión' },
   { canal: 'Móvil', nombre: 'Catálogo de productos' },
+  { canal: 'Móvil', nombre: 'Contrato del producto (móvil)' },
   { canal: 'Móvil', nombre: 'Cotizar desde el móvil', cotizacion: true },
   { canal: 'Móvil', nombre: 'Reportar siniestro' },
   { canal: 'Móvil', nombre: 'Solicitar carga de evidencia' },
@@ -13,6 +15,8 @@ export const PETICIONES = [
   { canal: 'Móvil', nombre: 'Radicar siniestro' },
   { canal: 'Móvil', nombre: 'Listar siniestros' },
   { canal: 'Móvil', nombre: 'Prestadores cercanos', objetivoMs: 200 },
+  { canal: 'Portal web', nombre: 'Ramos del portal' },
+  { canal: 'Portal web', nombre: 'Contrato del producto (portal)' },
   { canal: 'Portal web', nombre: 'Cotizar desde el portal', cotizacion: true },
   { canal: 'Portal web', nombre: 'Listar socios' },
   { canal: 'Portal web', nombre: 'Detalle del socio' },
@@ -22,6 +26,7 @@ export const PETICIONES = [
   { canal: 'API de socios', nombre: 'Pagar como socio' },
   { canal: 'API de socios', nombre: 'Emitir póliza como socio' },
   { canal: 'API de socios', nombre: 'Reintentar la emisión' },
+  { canal: 'API de socios', nombre: 'Consultar póliza como socio' },
   { canal: 'API de socios', nombre: 'Cotizar con Open Finance', cotizacion: true },
 ];
 

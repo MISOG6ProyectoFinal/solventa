@@ -15,6 +15,7 @@ from identidad.kyc.domain.models import (
     DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     InvalidCredentials,
+    NotificationUnavailable,
     RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
@@ -22,6 +23,8 @@ from identidad.kyc.domain.models import (
     SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
+
+CORREO_DE_OTRO_DOCUMENTO = "El correo ya está registrado con otro documento"
 
 router = APIRouter(prefix="/identidad", tags=["Identidad, Consentimiento y KYC"])
 
@@ -99,6 +102,12 @@ def info() -> dict:
     return {"component": "Identidad, Consentimiento y KYC"}
 
 
+@router.get("/tipos-documento", response_model=list[str])
+def list_document_types() -> list[str]:
+    """Tipos de documento con que se registra un cliente."""
+    return list(TIPOS_DOCUMENTO)
+
+
 @router.post("/sesiones")
 def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
     try:
@@ -139,15 +148,15 @@ def buscar_cliente_por_documento(tipo_documento: str, numero_documento: str) -> 
 @router.get("/clientes/por-numero/{numero_documento}", response_model=RespuestaCliente)
 def buscar_cliente_por_numero(numero_documento: str) -> RespuestaCliente:
     try:
-        return container.consultar_cliente.execute(numero_documento=numero_documento)
+        return container.get_client.execute(numero_documento=numero_documento)
     except ClienteNoEncontrado as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
 
 @router.get("/clientes/{cliente_id}", response_model=RespuestaCliente)
-def obtener_cliente(cliente_id: str) -> RespuestaCliente:
+def get_client(cliente_id: str) -> RespuestaCliente:
     try:
-        return container.consultar_cliente.execute(cliente_id=cliente_id)
+        return container.get_client.execute(client_id=cliente_id)
     except ClienteNoEncontrado as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
@@ -157,7 +166,7 @@ def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
     try:
         return container.asegurar_cliente.execute(solicitud)
     except ValueError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, "El correo ya está registrado con otro documento") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
 
 
 # --- Endpoints de Consentimiento Digital (HU002) ---
@@ -165,7 +174,13 @@ def asegurar_cliente(solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
 
 @router.post("/solicitar", status_code=status.HTTP_201_CREATED, response_model=RespuestaSolicitud)
 def solicitar_consentimiento(solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
-    return container.solicitar_consentimiento.execute(solicitud)
+    try:
+        return container.solicitar_consentimiento.execute(solicitud)
+    except EmailAlreadyRegistered as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
+    except NotificationUnavailable as exc:
+        detail = {"codigo": "notificacion_no_disponible", "mensaje": str(exc)}
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from exc
 
 
 @router.post("/validar", response_model=RespuestaValidacion)

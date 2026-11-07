@@ -65,6 +65,22 @@ SolicitudRating = (
     | SolicitudCotizacion
 )
 
+RATING_REQUESTS: dict[str, type[SolicitudRating]] = {
+    "viaje-internacional": SolicitudCotizacionViaje,
+    "vida-esencial": SolicitudCotizacionMicroseguroVida,
+    "vida-hipotecario": SolicitudCotizacionVidaHipotecario,
+    "parametrico-clima-vuelo": SolicitudCotizacionParametrico,
+}
+
+
+def rating_request_type(product_id: object) -> type[SolicitudRating]:
+    """El producto decide qué datos se tarifan; los demás productos usan la tarifa genérica."""
+    return RATING_REQUESTS.get(product_id, SolicitudCotizacion) if isinstance(product_id, str) else SolicitudCotizacion
+
+
+def parse_rating_request(data: dict) -> SolicitudRating:
+    return rating_request_type(data.get("producto_id")).model_validate(data)
+
 
 class DesgloseCotizacion(BaseModel):
     prima_basica: Decimal

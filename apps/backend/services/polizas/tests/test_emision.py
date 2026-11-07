@@ -101,7 +101,7 @@ def test_el_listado_devuelve_solo_las_polizas_del_cliente():
 
     assert propias.status_code == 200
     assert [item["cobro_id"] for item in propias.json()] == ["cobro-1"]
-    assert propias.json()[0]["estado"] == "activa"
+    assert propias.json()[0]["estado"] == "vencida"
     assert [item["cobro_id"] for item in ajenas.json()] == ["cobro-2"]
     assert ficha.status_code == 200
     assert ficha.json()["component"] == "Pólizas y Ciclo de Vida"
@@ -226,10 +226,21 @@ def test_lee_polizas_sembradas_con_estado_capitalizado_y_coberturas_name():
     with engine.begin() as conn:
         conn.execute(
             insert(policies_table).values(
-                id="POL-1", numero="SLV-2026-00901", estado="Vencida", cotizacion_id="c", cobro_id="p",
-                producto_id="viaje-internacional", prima=270000, coberturas=[{"name": "Asistencia médica", "included": True}],
-                vigencia_desde=date(2026, 4, 10), vigencia_hasta=date(2026, 4, 24), canal="web", socio_id="Aerolínea Andina",
-                cliente_id="CLI-CC-79800123", idempotency_key="k", emitida_en=datetime(2026, 4, 10, 8, tzinfo=UTC),
+                id="POL-1",
+                numero="SLV-2026-00901",
+                estado="Vencida",
+                cotizacion_id="c",
+                cobro_id="p",
+                producto_id="viaje-internacional",
+                prima=270000,
+                coberturas=[{"name": "Asistencia médica", "included": True}],
+                vigencia_desde=date(2026, 4, 10),
+                vigencia_hasta=date(2026, 4, 24),
+                canal="web",
+                socio_id="Aerolínea Andina",
+                cliente_id="CLI-CC-79800123",
+                idempotency_key="k",
+                emitida_en=datetime(2026, 4, 10, 8, tzinfo=UTC),
             )
         )
     wire(repo, _Source(), _Source())
@@ -247,7 +258,15 @@ def test_lista_los_beneficiarios_de_la_poliza_o_404():
     memoria, postgres = _repos()
     with postgres.engine.begin() as conn:
         poliza = postgres.search("AAA", [])[0]
-        conn.execute(insert(beneficiaries_table).values(id="B1", poliza_id=poliza.id, nombre="Banco Aurora", parentesco="Acreedor", porcentaje=80))
+        conn.execute(
+            insert(beneficiaries_table).values(
+                id="B1",
+                poliza_id=poliza.id,
+                nombre="Banco Aurora",
+                parentesco="Acreedor",
+                porcentaje=80,
+            )
+        )
 
     wire(postgres, _Source(), _Source())
     data = client.get(f"/polizas/{poliza.id}/beneficiarios").json()

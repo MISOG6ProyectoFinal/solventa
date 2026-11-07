@@ -28,5 +28,5 @@ variable "rate_limit_per_5min" {
 variable "api_paths" {
   description = "Rutas que van al API Gateway; el resto lo sirve el portal."
   type        = list(string)
-  default     = ["/web/*", "/movil/*", "/socios/*"]
+  default     = ["/web/*", "/movil/*", "/socios/*", "/simuladores*"]
 }

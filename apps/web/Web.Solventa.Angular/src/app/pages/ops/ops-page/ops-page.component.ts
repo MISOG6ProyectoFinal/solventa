@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LocaleService } from '../../../core/services/locale.service';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
 import { OpsPoliciesService } from '../services/ops-policies.service';
@@ -27,32 +28,45 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
 })
 export class OpsPageComponent {
   private readonly opsService = inject(OpsPoliciesService);
+  protected readonly locale = inject(LocaleService);
 
   activeTab = signal('cotizar');
-  tabs = signal([
-    { id: 'cotizar', label: 'Cotización' },
-    { id: 'polizas', label: 'Consulta de pólizas' }
+  tabs = computed(() => [
+    { id: 'cotizar', label: this.locale.t('ops.tab.quote') },
+    { id: 'polizas', label: this.locale.t('ops.tab.policies') },
   ]);
 
+  selectedPolicyId = signal<string | null>(null);
   selectedPolicy = this.opsService.selected;
-  loadError = this.opsService.loadError;
 
   policies = this.opsService.policies;
   partners = this.opsService.partners;
+  loading = this.opsService.loading;
+  loadError = this.opsService.loadError;
+
+  constructor() {
+    this.opsService.load();
+  }
+
+  reload(): void {
+    this.opsService.load();
+  }
 
   showEndosoModal = signal(false);
   showCancelModal = signal(false);
 
-  searchPolicies(text: string): void {
-    this.opsService.search(text);
+  searchPolicies(_text: string): void {
+    // Filtrado manejado reactivamente en PolicyListComponent
   }
 
   openPolicy(id: string): void {
+    this.selectedPolicyId.set(id);
     this.opsService.open(id);
   }
 
   closePolicy(): void {
-    this.opsService.close();
+    this.selectedPolicyId.set(null);
+    this.opsService.open(null);
   }
 
   onEndorsementContinued(draft: any): void {

@@ -1,17 +1,12 @@
-"""Puerto hacia la pasarela.
+"""Puerto hacia la pasarela: delega en PasarelaPagosAdapter (un intento, sin reintentos).
 
-La implementación real delega en PasarelaPagosAdapter (un intento, sin reintentos).
-PasarelaSimulada existe solo para desarrollo, prototipo y tests: solo aprueba el
-alias demo-4242. No es una regla de negocio productiva.
+PASARELA_URL apunta al proveedor. Mientras no hay acceso al real, apunta al servicio simuladores.
 """
 
 from solventa_common.integration import PasarelaPagosAdapter
 
 from pagos.cobros.domain.ports import PasarelaNoDisponible
 from pagos.config import settings
-
-TOKEN_APROBADO = "demo-4242"
-TOKEN_RECHAZADO = "demo-rechazo"
 
 _APROBADO = {"approved", "aprobado", "succeeded", "success"}
 _RECHAZADO = {"rejected", "rechazado", "declined", "failed"}
@@ -38,20 +33,5 @@ class PasarelaPagosGateway:
         raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
 
 
-class PasarelaSimulada:
-    """Simulador de prototipo. No llama a un proveedor ni reintenta."""
-
-    def __init__(self) -> None:
-        self.llamadas = 0
-
-    def charge(self, amount: float, currency: str, token: str, idempotency_key: str) -> dict:
-        del amount, currency
-        self.llamadas += 1
-        estado = "aprobado" if token == TOKEN_APROBADO else "rechazado"
-        return {"estado": estado, "referencia": idempotency_key}
-
-
-def construir_pasarela() -> PasarelaPagosGateway | PasarelaSimulada:
-    if settings.pasarela_url:
-        return PasarelaPagosGateway(PasarelaPagosAdapter(settings.pasarela_url, settings.pasarela_api_key))
-    return PasarelaSimulada()
+def construir_pasarela() -> PasarelaPagosGateway:
+    return PasarelaPagosGateway(PasarelaPagosAdapter(settings.pasarela_url, settings.pasarela_api_key))

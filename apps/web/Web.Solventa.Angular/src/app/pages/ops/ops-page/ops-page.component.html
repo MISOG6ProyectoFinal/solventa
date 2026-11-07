@@ -3,9 +3,9 @@
     <div>
       <div class="flex items-center gap-3">
         <div class="w-1 h-8 rounded-full bg-accent"></div>
-        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">Operaciones y Pólizas</h1>
+        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">{{ locale.t('ops.title') }}</h1>
       </div>
-      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">Back-office comercial · Cotización, consentimiento Open Finance / Open Data y gestión de pólizas</p>
+      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">{{ locale.t('ops.subtitle') }}</p>
     </div>
   </div>
 
@@ -15,9 +15,14 @@
     <slv-quote-tab />
   } @else {
     @if (loadError()) {
-      <slv-alert tone="error">No fue posible consultar las pólizas en este momento. Intente de nuevo en unos minutos.</slv-alert>
+      <slv-alert tone="error">
+        {{ locale.t('policies.loadError') }}
+        <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">{{ locale.t('partners.retry') }}</button>
+      </slv-alert>
     }
-    @if (!selectedPolicy()) {
+    @if (loading()) {
+      <output class="block text-sm text-muted-foreground">{{ locale.t('policies.loading') }}</output>
+    } @else if (!selectedPolicyId()) {
       <slv-policy-list 
         [policies]="policies()" 
         [partners]="partners()" 

@@ -3,10 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Header, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 
-from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
-from cotizacion.catalogo.domain.models import Canal, Producto
-from cotizacion.consenso.api import quote
+from cotizacion.catalogo.domain.models import Canal, Producto, ProductoNoEncontrado
+from cotizacion.consenso.api import invalid_request, product_error, quote_request
 from cotizacion.consenso.domain.models import OfertaCotizacion
+from cotizacion.consenso.domain.quote_contract import InvalidRequest, requested_product
 from cotizacion.container import container
 from cotizacion.gobierno_socios.domain.configuracion import (
     ActualizarConfiguracionRequest,
@@ -16,14 +16,7 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.embedded_quote import (
-    InvalidRequest,
-    PartnerMortgageLifeRequest,
-    QuotableProduct,
-    requested_product,
-    to_rating_request,
-    validate_contract,
-)
+from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct
 from cotizacion.gobierno_socios.domain.models import (
     Alcance,
     AlcanceNoAutorizado,
@@ -38,8 +31,8 @@ from cotizacion.gobierno_socios.domain.models import (
     SocioCreadoResponse,
     SocioNoEncontrado,
     SocioResponse,
+    TipoSocio,
 )
-from cotizacion.signals.domain.models import AppliedSignal
 
 router = APIRouter(prefix="/gobierno-socios", tags=["Socios y Gobierno de API"])
 
@@ -67,14 +60,14 @@ def _socio_no_encontrado() -> HTTPException:
 
 
 def _vistas(socios: list[Socio]) -> list[SocioResponse]:
-    nombres = {ramo.id: ramo.nombre for ramo in container.catalogo.list_ramos()}
+    ramos = {ramo.id: ramo for ramo in container.catalogo.list_ramos()}
     ramos_por_socio = container.configuraciones.ramos_por_socio()
     return [
         SocioResponse(
             **socio.model_dump(),
             ramos_habilitados=[
-                RamoResumen(id=ramo_id, nombre=nombres.get(ramo_id, ramo_id))
-                for ramo_id in sorted(ramos_por_socio.get(socio.id, []), key=RAMOS_CANAL_SOCIOS.index)
+                RamoResumen(id=ramo_id, nombre=ramos[ramo_id].nombre)
+                for ramo_id in sorted(ramos_por_socio.get(socio.id, []), key=lambda ramo_id: ramos[ramo_id].orden)
             ],
         )
         for socio in socios
@@ -84,7 +77,7 @@ def _vistas(socios: list[Socio]) -> list[SocioResponse]:
 def autorizar_ramo(socio: Socio, producto_id: str) -> RamoHabilitado:
     producto: Producto | None = container.catalogo.get_producto(producto_id)
     if producto is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Producto no encontrado: {producto_id}")
+        raise product_error(ProductoNoEncontrado(producto_id))
     try:
         return container.autorizar_ramo.execute(socio, producto)
     except RamoNoHabilitado as exc:
@@ -97,6 +90,18 @@ def autorizar_ramo(socio: Socio, producto_id: str) -> RamoHabilitado:
 @router.get("/")
 def info() -> dict:
     return {"component": "Socios y Gobierno de API"}
+
+
+@router.get("/tipos", response_model=list[TipoSocio])
+def list_partner_types() -> list[TipoSocio]:
+    """Tipos de organización con que se da de alta un socio."""
+    return list(TipoSocio)
+
+
+@router.get("/alcances", response_model=list[Alcance])
+def list_scopes() -> list[Alcance]:
+    """Operaciones de la API pública que se pueden autorizar a un socio."""
+    return list(Alcance)
 
 
 @router.post("/socios", response_model=SocioCreadoResponse, status_code=status.HTTP_201_CREATED)
@@ -170,30 +175,16 @@ def partner_catalog(
     return container.partner_catalog.execute(socio)
 
 
-def _invalid_request(exc: InvalidRequest) -> HTTPException:
-    detail = _error("datos_invalidos", "La solicitud tiene datos faltantes o inválidos. No se calculó la prima.")
-    return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {**detail, "campos": exc.fields})
-
-
 @router.post("/cotizaciones", response_model=OfertaCotizacion)
 async def cotizar_como_socio(
     solicitud: Annotated[dict, Body()],
     client_id: Annotated[str, Header(alias="X-Client-Id")],
     secreto: Annotated[str, Header(alias="X-Api-Key")],
 ) -> OfertaCotizacion:
-    """Cotización embebida (HU014): credencial, ramo y contrato se validan antes de calcular."""
+    """Cotización embebida (HU014): credencial y ramo del socio; el resto es la cotización de todos los canales."""
     socio = await run_in_threadpool(autorizar_socio, client_id, secreto, Alcance.COTIZACION)
     try:
         line = await run_in_threadpool(autorizar_ramo, socio, requested_product(solicitud))
-        contract = validate_contract(solicitud)
     except InvalidRequest as exc:
-        raise _invalid_request(exc) from exc
-    signals: list[AppliedSignal] = []
-    if isinstance(contract, PartnerMortgageLifeRequest) and contract.consentimiento_open_finance:
-        signals.append(
-            await run_in_threadpool(container.resolve_risk_profile.execute, contract.consentimiento_open_finance)
-        )
-    rating = to_rating_request(contract, signals[0].score_riesgo if signals else None)
-    return await quote(
-        rating, Canal.SOCIOS, signals=signals, allowed_coverages=set(line.coberturas), partner_id=socio.id
-    )
+        raise invalid_request(exc) from exc
+    return await quote_request(solicitud, Canal.SOCIOS, allowed_coverages=set(line.coberturas), partner_id=socio.id)

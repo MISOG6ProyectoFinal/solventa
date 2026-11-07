@@ -11,10 +11,19 @@ type PolicyCardProps = {
   policy: Policy;
   productName?: string;
   variant?: 'confirmation' | 'list';
+  showRenewalHint?: boolean;
+  onPress?: () => void;
   testID?: string;
 };
 
-export function PolicyCard({ policy, productName, variant = 'list', testID }: Readonly<PolicyCardProps>) {
+export function PolicyCard({
+  policy,
+  productName,
+  variant = 'list',
+  showRenewalHint = false,
+  onPress,
+  testID,
+}: Readonly<PolicyCardProps>) {
   const texts = useTexts();
   const title = productName ?? policy.producto_id;
   const inicio = texts.policies.start(policyDate(policy.vigencia.desde));
@@ -23,7 +32,7 @@ export function PolicyCard({ policy, productName, variant = 'list', testID }: Re
   const coberturas = policy.coberturas.map((cobertura) => cobertura.nombre);
 
   return (
-    <Card testID={testID ?? 'policy-card'}>
+    <Card testID={testID ?? 'policy-card'} onPress={onPress}>
       {variant === 'list' ? (
         <View style={styles.titleRow}>
           <AppText variant="body" style={[styles.title, styles.titleInRow]}>
@@ -58,6 +67,11 @@ export function PolicyCard({ policy, productName, variant = 'list', testID }: Re
         </AppText>
       ) : null}
       <CoverageList items={coberturas} />
+      {showRenewalHint && policy.renovable ? (
+        <AppText variant="bodySmall" style={styles.renewalHint}>
+          {texts.policies.renewalOfferAvailable}
+        </AppText>
+      ) : null}
     </Card>
   );
 }

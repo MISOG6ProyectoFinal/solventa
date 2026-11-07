@@ -1,15 +1,20 @@
 from typing import Annotated
+from urllib.parse import quote
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Path, status
 from pydantic import BaseModel, Field
 from solventa_common.integration.base import call_upstream
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, pagos, polizas
+from canales.clients import cotizacion, pagos, polizas, siniestros
 
 ClientId = Annotated[str, Header(alias="X-Client-Id")]
 ApiKey = Annotated[str, Header(alias="X-Api-Key")]
 IdempotencyKey = Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=100)]
+ResourceId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
+
+POLICY_FIELDS = ("id", "numero", "estado", "cotizacion_id", "producto_id", "prima", "coberturas", "vigencia")
+CLAIM_FIELDS = ("id", "radicado", "estado", "poliza_id", "tipo", "ocurrido_en")
 
 router = APIRouter(prefix="/socios", tags=["API Pública de Socios"])
 
@@ -99,7 +104,6 @@ def pay_quote(
             "cotizacion_id": cotizacion_id,
             "cliente_id": f"socio:{partner['socio_id']}",
             "monto": str(quote["prima"]),
-            "moneda": "COP",
             "idempotency_key": f"socios:{partner['socio_id']}:{idempotency_key}",
             "medio_token": request.medio_token,
         },
@@ -127,5 +131,35 @@ def issue_policy(
             "socio_id": partner["socio_id"],
         },
     )
-    fields = ("id", "numero", "estado", "cotizacion_id", "producto_id", "prima", "coberturas", "vigencia")
-    return {key: policy[key] for key in fields}
+    return {key: policy[key] for key in POLICY_FIELDS}
+
+
+def _out_of_scope() -> HTTPException:
+    detail = {"codigo": "recurso_fuera_de_alcance", "mensaje": "El recurso no pertenece al socio."}
+    return HTTPException(status.HTTP_403_FORBIDDEN, detail)
+
+
+@router.get("/v1/polizas/{poliza_id}")
+def get_policy(poliza_id: ResourceId, x_client_id: ClientId, x_api_key: ApiKey) -> dict:
+    """Estado vigente y datos principales de una póliza emitida por este socio."""
+    partner = _authorize(x_client_id, x_api_key, "consulta")
+    policy = call_upstream(polizas.get, f"/polizas/{poliza_id}")
+    if policy.get("socio_id") != partner["socio_id"]:
+        raise _out_of_scope()
+    return {key: policy[key] for key in POLICY_FIELDS}
+
+
+@router.get("/v1/siniestros/{siniestro_id}")
+def get_claim(siniestro_id: ResourceId, x_client_id: ClientId, x_api_key: ApiKey) -> dict:
+    """Un siniestro es del socio cuando la póliza a la que pertenece la emitió ese socio."""
+    partner = _authorize(x_client_id, x_api_key, "consulta")
+    claim = call_upstream(siniestros.get, f"/siniestros/avisos/{siniestro_id}")
+    try:
+        policy = call_upstream(polizas.get, f"/polizas/{quote(claim['poliza_id'], safe='')}")
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            raise _out_of_scope() from exc
+        raise
+    if policy.get("socio_id") != partner["socio_id"]:
+        raise _out_of_scope()
+    return {key: claim[key] for key in CLAIM_FIELDS}

@@ -17,6 +17,7 @@ class Canal(StrEnum):
 class Ramo(BaseModel):
     id: str
     nombre: str
+    orden: int = 0
 
 
 class Cobertura(BaseModel):
@@ -25,12 +26,20 @@ class Cobertura(BaseModel):
     producto_id: str
 
 
+class MobilePresentation(BaseModel):
+    orden: int
+    descripcion: str
+    precio_desde: Decimal
+
+
 class Producto(BaseModel):
     id: str
     nombre: str
     ramo_id: str
     activo: bool = True
-    disponible_mobile: bool = False
+    canales: list[Canal] = Field(default_factory=list)
+    requiere_consentimiento: bool = False
+    presentacion_mobile: MobilePresentation | None = None
 
 
 class CoberturaResponse(BaseModel):
@@ -41,6 +50,19 @@ class CoberturaResponse(BaseModel):
 class RamoResponse(BaseModel):
     id: str
     nombre: str
+
+
+class ChannelProductResponse(BaseModel):
+    id: str
+    nombre: str
+    requiere_consentimiento: bool
+
+
+class ChannelLineResponse(BaseModel):
+    id: str
+    nombre: str
+    requiere_consentimiento: bool
+    productos: list[ChannelProductResponse]
 
 
 class ProductoMobileResponse(BaseModel):
@@ -57,11 +79,7 @@ class ProductoNoEncontrado(LookupError):
     pass
 
 
-class ProductoNoDisponibleMobile(ValueError):
-    pass
-
-
-class ProductoFueraCatalogoMobile(ValueError):
+class ProductNotInChannel(ValueError):
     pass
 
 

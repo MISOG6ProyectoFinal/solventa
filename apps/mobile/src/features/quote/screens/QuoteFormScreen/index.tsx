@@ -15,9 +15,10 @@ import {
   TextField,
 } from '../../../../shared/ui';
 import { createQuote } from '../../api/createQuote';
+import { getContract } from '../../api/getContract';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { useTexts } from '../../texts';
-import { destinos, type QuoteFormError, QuoteFormValues } from '../../types';
+import { type QuoteFormError, QuoteFormValues } from '../../types';
 import { defaultQuoteForm, digitsOnly, validateQuoteForm } from '../../utils';
 import styles from './styles';
 
@@ -28,6 +29,7 @@ export default function QuoteFormScreen() {
   const product = useQuoteStore((state) => state.product);
   const setOferta = useQuoteStore((state) => state.setOferta);
   const [values, setValues] = useState<QuoteFormValues>(defaultQuoteForm);
+  const [destinations, setDestinations] = useState<string[]>([]);
   const [errors, setErrors] = useState<ReturnType<typeof validateQuoteForm>>({});
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,26 @@ export default function QuoteFormScreen() {
       navigation.goBack();
     }
   }, [navigation, product]);
+
+  useEffect(() => {
+    if (!product) {
+      return undefined;
+    }
+    let active = true;
+    getContract(product.id)
+      .then((contract) => {
+        if (!active) return;
+        const options = contract.properties.destino?.enum ?? [];
+        setDestinations(options);
+        setValues((current) => (current.destino === '' ? { ...current, destino: options[0] ?? '' } : current));
+      })
+      .catch((cause) => {
+        if (active) setError(errorMessage(cause, texts.form.contractFailed));
+      });
+    return () => {
+      active = false;
+    };
+  }, [product, texts.form.contractFailed]);
 
   const submit = async () => {
     if (calculating || !product) {
@@ -109,7 +131,7 @@ export default function QuoteFormScreen() {
           <SelectField
             label={texts.form.destinationLabel}
             value={values.destino}
-            options={destinos.map((destino) => ({ value: destino, label: destino }))}
+            options={destinations.map((destination) => ({ value: destination, label: destination }))}
             onChange={(destino) => setValues((current) => ({ ...current, destino }))}
             required
             errorMessage={fieldError(errors.destino)}

@@ -1,10 +1,11 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from cotizacion.catalogo.domain.catalogo_socios import RAMOS_CANAL_SOCIOS
-from cotizacion.catalogo.domain.models import Cobertura, Producto, Ramo
+from cotizacion.catalogo.domain.models import Canal, Cobertura, Producto, Ramo
 from cotizacion.catalogo.domain.ports import CatalogoRepository
+from cotizacion.catalogo.domain.use_cases import lines_in_channel
 from cotizacion.consenso.domain.models import CoberturaOferta
+from cotizacion.consenso.domain.quote_contract import published_contract
 from cotizacion.gobierno_socios.domain.configuracion import (
     CoberturaConfiguracionResponse,
     CoberturaFueraDelRamo,
@@ -15,9 +16,10 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
-from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct, published_contract
+from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct
 from cotizacion.gobierno_socios.domain.models import RamoResumen, Socio, SocioNoEncontrado
 from cotizacion.gobierno_socios.domain.ports import ConfiguracionRepository, SocioRepository
+from cotizacion.rating.domain.ports import RulesRepository
 
 
 def _ahora() -> datetime:
@@ -31,16 +33,11 @@ class CatalogoCanalSocios:
         self.catalogo = catalogo
 
     def ramos(self) -> list[tuple[Ramo, list[Cobertura]]]:
-        ramos = {ramo.id: ramo for ramo in self.catalogo.list_ramos()}
-        productos = self.catalogo.list_productos()
         coberturas = self.catalogo.list_coberturas()
-        resultado = []
-        for ramo_id in RAMOS_CANAL_SOCIOS:
-            if ramo_id not in ramos:
-                continue
-            del_ramo = {p.id for p in productos if p.ramo_id == ramo_id}
-            resultado.append((ramos[ramo_id], [c for c in coberturas if c.producto_id in del_ramo]))
-        return resultado
+        return [
+            (ramo, [c for c in coberturas if c.producto_id in {p.id for p in productos}])
+            for ramo, productos in lines_in_channel(self.catalogo, Canal.SOCIOS)
+        ]
 
 
 class ConsultarConfiguracionUseCase:
@@ -136,21 +133,25 @@ class AutorizarRamoUseCase:
 class PartnerCatalogUseCase:
     """Productos que el socio puede cotizar con sus coberturas habilitadas y su contrato."""
 
-    def __init__(self, configurations: ConfiguracionRepository, catalog: CatalogoRepository) -> None:
+    def __init__(
+        self, configurations: ConfiguracionRepository, catalog: CatalogoRepository, rules: RulesRepository
+    ) -> None:
         self.configurations = configurations
         self.catalog = catalog
+        self.rules = rules
 
     def execute(self, socio: Socio) -> list[QuotableProduct]:
         configuration = self.configurations.get(socio.id)
         if configuration is None:
             return []
-        names = {ramo.id: ramo.nombre for ramo in self.catalog.list_ramos()}
-        enabled_lines = sorted(configuration.ramos, key=lambda line: RAMOS_CANAL_SOCIOS.index(line.ramo_id))
-        products = self.catalog.list_productos()
+        lines = {ramo.id: ramo for ramo in self.catalog.list_ramos()}
+        enabled_lines = sorted(configuration.ramos, key=lambda line: lines[line.ramo_id].orden)
+        products = [p for p in self.catalog.list_productos() if Canal.SOCIOS in p.canales]
+        rules = self.rules.current()
         result = []
         for line in enabled_lines:
             for product in (p for p in products if p.ramo_id == line.ramo_id and p.activo):
-                contract = published_contract(product.id)
+                contract = published_contract(product.id, rules)
                 if contract is None:
                     continue
                 coverages = [
@@ -162,7 +163,7 @@ class PartnerCatalogUseCase:
                     QuotableProduct(
                         producto_id=product.id,
                         nombre=product.nombre,
-                        ramo=RamoResumen(id=line.ramo_id, nombre=names.get(line.ramo_id, line.ramo_id)),
+                        ramo=RamoResumen(id=line.ramo_id, nombre=lines[line.ramo_id].nombre),
                         coberturas=coverages,
                         contrato=contract,
                     )

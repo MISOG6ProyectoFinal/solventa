@@ -24,6 +24,9 @@ class InMemoryAvisoRepository:
     def list_avisos(self, cliente_id: str) -> list[Aviso]:
         return [aviso for aviso in reversed(self.avisos.values()) if aviso.cliente_id == cliente_id]
 
+    def list_by_policy(self, poliza_id: str) -> list[Aviso]:
+        return [aviso for aviso in reversed(self.avisos.values()) if aviso.poliza_id == poliza_id]
+
     def add_evidencia(self, evidencia: Evidencia) -> None:
         self.evidencias[evidencia.id] = evidencia
 

@@ -1,6 +1,6 @@
 """Pruebas del catálogo Mobile expuesto por el servicio de cotización."""
 
-from cotizacion.catalogo.domain.models import Producto
+from cotizacion.catalogo.domain.models import Canal, Producto
 from cotizacion.container import container
 from cotizacion.main import app
 from fastapi.testclient import TestClient
@@ -63,10 +63,20 @@ def test_producto_inactivo_no_aparece():
         nombre="Viaje Internacional",
         ramo_id="ramo-viaje",
         activo=False,
-        disponible_mobile=True,
+        canales=[Canal.MOBILE],
+        presentacion_mobile=original.presentacion_mobile,
     )
     try:
         ids = {p["id"] for p in get_productos()}
         assert "viaje-internacional" not in ids
     finally:
         container.catalogo.productos["viaje-internacional"] = original
+
+
+def test_product_is_read_with_its_line():
+    response = client.get("/catalogo/productos/vida-hipotecario")
+
+    assert response.status_code == 200
+    assert response.json()["ramo_id"] == "ramo-vida-hipotecario"
+    assert response.json()["nombre"] == "Vida Hipotecario"
+    assert client.get("/catalogo/productos/no-existe").json()["detail"]["codigo"] == "producto_no_encontrado"

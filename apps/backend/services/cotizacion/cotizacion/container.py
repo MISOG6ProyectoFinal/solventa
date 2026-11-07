@@ -1,15 +1,19 @@
 """Composición de dependencias del servicio de cotización."""
 
 import asyncio
+import socket
 from collections.abc import Awaitable, Callable
 
-from pydantic import TypeAdapter
 from solventa_common.resilience import CircuitBreaker, InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
 
 from cotizacion.catalogo.adapters.repository import InMemoryCatalogoRepository, PostgresCatalogoRepository
 from cotizacion.catalogo.adapters.seed import seed_catalogo
-from cotizacion.catalogo.domain.use_cases import ListarProductosMobileUseCase
+from cotizacion.catalogo.domain.use_cases import (
+    ListarProductosMobileUseCase,
+    ListChannelLinesUseCase,
+    ValidarProductoParaCanalUseCase,
+)
 from cotizacion.config import settings
 from cotizacion.consenso.adapters.cotizacion_repository import (
     InMemoryCotizacionRepository,
@@ -33,45 +37,23 @@ from cotizacion.gobierno_socios.domain.use_cases_configuracion import (
     ConsultarConfiguracionUseCase,
     PartnerCatalogUseCase,
 )
-from cotizacion.rating.domain.models import SolicitudRating
-from cotizacion.rating.domain.rating import REGLAS_VIGENTES
+from cotizacion.rating.adapters.repository import InMemoryRulesRepository, PostgresRulesRepository
+from cotizacion.rating.adapters.seed import seed_rules
+from cotizacion.rating.domain.models import parse_rating_request
 from cotizacion.rating.domain.use_cases import CotizarUseCase
 from cotizacion.signals.adapters.open_finance import build_provider
 from cotizacion.signals.domain.use_cases import ResolveRiskProfileUseCase
 
 
-async def _fanout_produccion(body: dict) -> list[dict]:
-    try:
-        ips = await asyncio.to_thread(resolver_replicas, settings.cotizacion_replicas_host, settings.puerto_replicas)
-    except Exception:
-        ips = []
-    if not ips:
-        return await fanout_local(body)
-    ips = ips[: settings.replicas_esperadas]
-    respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
-    if respuestas:
-        return respuestas
-    return await fanout_local(body)
-
-
-_solicitud_rating = TypeAdapter(SolicitudRating)
-
-
-async def fanout_local(body: dict) -> list[dict]:
-    """Simula tres réplicas locales (tests / entorno sin DNS headless)."""
-    uc = CotizarUseCase(REGLAS_VIGENTES, instancia="local")
-    resultado = uc.execute(_solicitud_rating.validate_python(body))
-    payload = resultado.model_dump(mode="json")
-    return [payload, payload, payload]
-
-
 class Container:
     def __init__(self) -> None:
         self.catalogo = InMemoryCatalogoRepository()
+        self.rules = InMemoryRulesRepository()
         self.cotizaciones = InMemoryCotizacionRepository()
         self.socios = InMemorySocioRepository()
         self.configuraciones = InMemoryConfiguracionRepository()
         seed_catalogo(self.catalogo)
+        seed_rules(self.rules)
         self.signal_cache: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
         self.risk_profile_provider = build_provider(
             settings.open_finance_url,
@@ -83,23 +65,48 @@ class Container:
                 reset_timeout_s=settings.open_finance_breaker_reset_s,
             ),
         )
-        self.fanout: Callable[[dict], Awaitable[list[dict]]] = _fanout_produccion
+        self.fanout: Callable[[dict], Awaitable[list[dict]]] = self._fanout_produccion
         self._wire()
 
     def use_postgres(self, engine: Engine) -> None:
         """Conecta los repositorios. El schema y el seed viven en el bootstrap, no aquí."""
         self.catalogo = PostgresCatalogoRepository(engine)
+        self.rules = PostgresRulesRepository(engine)
         self.cotizaciones = PostgresCotizacionRepository(engine)
         self.socios = PostgresSocioRepository(engine)
         self.configuraciones = PostgresConfiguracionRepository(engine)
         self._wire()
 
     def use_local_fanout(self) -> None:
-        self.fanout = fanout_local
+        self.fanout = self._fanout_local
         self._wire()
 
+    async def _fanout_produccion(self, body: dict) -> list[dict]:
+        try:
+            ips = await asyncio.to_thread(
+                resolver_replicas, settings.cotizacion_replicas_host, settings.puerto_replicas
+            )
+        except Exception:
+            ips = []
+        if not ips:
+            return await self._fanout_local(body)
+        ips = ips[: settings.replicas_esperadas]
+        respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
+        if respuestas:
+            return respuestas
+        return await self._fanout_local(body)
+
+    async def _fanout_local(self, body: dict) -> list[dict]:
+        """Simula tres réplicas locales (tests / entorno sin DNS headless)."""
+        resultado = self.rate_quote.execute(parse_rating_request(body))
+        payload = resultado.model_dump(mode="json")
+        return [payload, payload, payload]
+
     def _wire(self) -> None:
+        self.rate_quote = CotizarUseCase(self.rules, instancia=socket.gethostname())
+        self.listar_lines_in_channel = ListChannelLinesUseCase(self.catalogo)
         self.listar_productos_mobile = ListarProductosMobileUseCase(self.catalogo)
+        self.validar_producto_canal = ValidarProductoParaCanalUseCase(self.catalogo)
         self.cotizar_con_consenso = CotizarConConsensoUseCase(
             catalogo=self.catalogo,
             cotizaciones=self.cotizaciones,
@@ -112,7 +119,7 @@ class Container:
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
-        self.partner_catalog = PartnerCatalogUseCase(self.configuraciones, self.catalogo)
+        self.partner_catalog = PartnerCatalogUseCase(self.configuraciones, self.catalogo, self.rules)
         self.resolve_risk_profile = ResolveRiskProfileUseCase(
             self.risk_profile_provider, self.signal_cache, settings.signal_cache_ttl_s
         )

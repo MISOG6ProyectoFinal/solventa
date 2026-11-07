@@ -16,7 +16,6 @@ const UMBRALES = {
 const PRODUCTO = 'viaje-internacional';
 const RAMO = 'ramo-viaje';
 const RAMO_HIPOTECARIO = 'ramo-vida-hipotecario';
-const SIMULADOR = (__ENV.OPEN_FINANCE_SIMULADO_URL || '').replace(/\/$/, '');
 const SEGUNDOS_POR_FASE = Number(__ENV.SEGUNDOS_POR_FASE || 60);
 const MODO_CAIDA = __ENV.MODO_CAIDA || 'lento';
 const CLIENTES_OPEN_FINANCE = Number(__ENV.CLIENTES_OPEN_FINANCE || 200);
@@ -186,9 +185,21 @@ function cotizar(nombre, url, cuerpo, headers) {
   if (oferta) cotizaciones.add(1, { name: nombre });
 }
 
+function sesionDelPortal() {
+  if (!__ENV.OPERADOR_CONTRASENA) throw new Error('Falta OPERADOR_CONTRASENA para iniciar sesión en el portal');
+  const sesion = http.post(
+    `${BASE_URL}/web/sesiones`,
+    JSON.stringify({ correo: __ENV.OPERADOR_CORREO, contrasena: __ENV.OPERADOR_CONTRASENA }),
+    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+  );
+  if (sesion.status !== 200) throw new Error(`Inicio de sesión en el portal: ${sesion.status} ${sesion.body}`);
+  return { ...JSON_HEADERS, Authorization: `Bearer ${sesion.json().token}` };
+}
+
 export function setup() {
+  const portal = sesionDelPortal();
   if (__ENV.SOCIO_ID && __ENV.SOCIO_CLIENT_ID && __ENV.SOCIO_SECRETO) {
-    return { socioId: __ENV.SOCIO_ID, clientId: __ENV.SOCIO_CLIENT_ID, secreto: __ENV.SOCIO_SECRETO };
+    return { portal, socioId: __ENV.SOCIO_ID, clientId: __ENV.SOCIO_CLIENT_ID, secreto: __ENV.SOCIO_SECRETO };
   }
   const identificador = `CARGA-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
   const alta = http.post(
@@ -198,14 +209,17 @@ export function setup() {
       identificador,
       tipo: 'Retailer',
       correo_contacto: 'carga@solventa.test',
-      alcances: ['cotizacion', 'emision'],
+      alcances: ['cotizacion', 'emision', 'consulta'],
       autorizado_por: 'Prueba de carga',
     }),
-    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+    { headers: portal, tags: { name: 'Preparación' } },
   );
   if (alta.status !== 201) throw new Error(`Alta del socio de prueba: ${alta.status} ${alta.body}`);
   const socio = alta.json();
-  const configuracion = http.get(`${BASE_URL}/web/socios/${socio.id}/configuracion`, { tags: { name: 'Preparación' } });
+  const configuracion = http.get(`${BASE_URL}/web/socios/${socio.id}/configuracion`, {
+    headers: portal,
+    tags: { name: 'Preparación' },
+  });
   const ramos = configuracion
     .json()
     .ramos.filter((r) => r.id === RAMO || r.id === RAMO_HIPOTECARIO)
@@ -213,15 +227,19 @@ export function setup() {
   const habilitar = http.put(
     `${BASE_URL}/web/socios/${socio.id}/configuracion`,
     JSON.stringify({ ramos, actualizado_por: 'Prueba de carga' }),
-    { headers: JSON_HEADERS, tags: { name: 'Preparación' } },
+    { headers: portal, tags: { name: 'Preparación' } },
   );
   if (habilitar.status !== 200) throw new Error(`Configuración del socio de prueba: ${habilitar.status} ${habilitar.body}`);
   console.log(`Socio de la prueba: ${socio.id} (${identificador})`);
-  return { socioId: socio.id, clientId: socio.client_id, secreto: socio.secreto };
+  return { portal, socioId: socio.id, clientId: socio.client_id, secreto: socio.secreto };
 }
 
 export function movil() {
   pedir('BFF móvil disponible', 'GET', `${BASE_URL}/movil/`, null);
+
+  pedir('Tipos de documento', 'GET', `${BASE_URL}/movil/tipos-documento`, null, {
+    validar: (tipos) => tipos.includes('CC'),
+  });
 
   const correo = `carga-${Date.now()}-${__VU}-${__ITER}@solventa.test`;
   const contrasena = `Clave-${aleatorio(12)}`;
@@ -255,6 +273,10 @@ export function movil() {
   pedir('Catálogo de productos', 'GET', `${BASE_URL}/movil/productos`, null, {
     headers: autenticado,
     validar: (productos) => productos.some((p) => p.id === PRODUCTO),
+  });
+  pedir('Contrato del producto (móvil)', 'GET', `${BASE_URL}/movil/productos/${PRODUCTO}/contrato`, null, {
+    headers: autenticado,
+    validar: (contrato) => contrato.properties.destino.enum.includes('España'),
   });
   cotizar(
     'Cotizar desde el móvil',
@@ -311,12 +333,23 @@ export function movil() {
 }
 
 export function web(datos) {
-  cotizar('Cotizar desde el portal', `${BASE_URL}/web/cotizaciones`, solicitudViaje());
-  pedir('Listar socios', 'GET', `${BASE_URL}/web/socios`, null, { validar: (socios) => socios.length > 0 });
+  const headers = datos.portal;
+  pedir('Ramos del portal', 'GET', `${BASE_URL}/web/ramos`, null, {
+    headers,
+    validar: (ramos) => ramos.some((r) => r.id === RAMO && r.productos.some((p) => p.id === PRODUCTO)),
+  });
+  pedir('Contrato del producto (portal)', 'GET', `${BASE_URL}/web/productos/${PRODUCTO}/contrato`, null, {
+    headers,
+    validar: (contrato) => contrato.properties.destino.enum.includes('España'),
+  });
+  cotizar('Cotizar desde el portal', `${BASE_URL}/web/cotizaciones`, solicitudViaje(), headers);
+  pedir('Listar socios', 'GET', `${BASE_URL}/web/socios`, null, { headers, validar: (socios) => socios.length > 0 });
   pedir('Detalle del socio', 'GET', `${BASE_URL}/web/socios/${datos.socioId}`, null, {
+    headers,
     validar: (socio) => socio.id === datos.socioId,
   });
   pedir('Configuración del socio', 'GET', `${BASE_URL}/web/socios/${datos.socioId}/configuracion`, null, {
+    headers,
     validar: (c) => c.ramos.find((r) => r.id === RAMO).habilitado,
   });
 }
@@ -358,7 +391,12 @@ export function ventaSocio(datos) {
     'Emitir póliza como socio',
     (p) => p.estado === 'activa' && /^POL-/.test(p.numero) && p.cotizacion_id === oferta.id,
   );
-  if (poliza) emitir('Reintentar la emisión', (p) => p.id === poliza.id);
+  if (!poliza) return;
+  emitir('Reintentar la emisión', (p) => p.id === poliza.id);
+  pedir('Consultar póliza como socio', 'GET', `${BASE_URL}/socios/v1/polizas/${poliza.id}`, null, {
+    headers: credenciales,
+    validar: (p) => p.id === poliza.id && p.estado === 'activa',
+  });
 }
 
 function faseDelProveedor() {
@@ -367,8 +405,10 @@ function faseDelProveedor() {
 }
 
 function cambiarModo(modo) {
-  if (!SIMULADOR) throw new Error('Falta OPEN_FINANCE_SIMULADO_URL para el perfil degradacion');
-  const respuesta = http.post(`${SIMULADOR}/modo/${modo}`, null, { tags: { name: 'Control del simulador' } });
+  const respuesta = http.put(`${BASE_URL}/simuladores/open-finance/modo`, JSON.stringify({ modo }), {
+    headers: JSON_HEADERS,
+    tags: { name: 'Control del simulador' },
+  });
   if (respuesta.status !== 200) throw new Error(`Simulador de Open Finance: ${respuesta.status} ${respuesta.body}`);
 }
 

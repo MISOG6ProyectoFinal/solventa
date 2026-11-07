@@ -1,18 +1,30 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from solventa_common.db import build_engine
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
-from polizas.ciclo_vida.domain.models import Beneficiary, IssuePolicyRequest, Policy
+from polizas.ciclo_vida.domain.models import (
+    CANCELLATION_CAUSE_NAMES,
+    NON_REFUNDABLE_CAUSES,
+    STATUS_NAMES,
+    Beneficiary,
+    CancellationCauseOption,
+    CatalogOption,
+    ClientPolicy,
+    IssuePolicyRequest,
+    Policy,
+    RenewalOffer,
+)
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
     PaymentNotApproved,
     PaymentSource,
     PolicyNotFound,
+    PolicyNotRenewable,
     PolicyRepository,
     QuoteExpired,
     QuoteNotFound,
@@ -20,8 +32,10 @@ from polizas.ciclo_vida.domain.ports import (
 )
 from polizas.ciclo_vida.domain.use_cases import (
     GetPolicyUseCase,
+    GetRenewalOfferUseCase,
     IssuePolicyUseCase,
     ListClientPoliciesUseCase,
+    ListRecentPoliciesUseCase,
     SearchPoliciesUseCase,
 )
 from polizas.config import settings
@@ -36,6 +50,8 @@ def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSourc
         policies.create_schema()
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
+    use_cases["recent"] = ListRecentPoliciesUseCase(policies)
+    use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
     use_cases["search"] = SearchPoliciesUseCase(policies)
     use_cases["get"] = GetPolicyUseCase(policies)
 
@@ -62,8 +78,23 @@ def info() -> dict:
     return {"component": "Pólizas y Ciclo de Vida"}
 
 
-@router.get("/clientes/{cliente_id}", response_model=list[Policy])
-def list_client_policies(cliente_id: str) -> list[Policy]:
+@router.get("/catalogos/estados", response_model=list[CatalogOption])
+def list_statuses() -> list[CatalogOption]:
+    """Estados en los que puede estar una póliza."""
+    return [CatalogOption(id=status.value, nombre=name) for status, name in STATUS_NAMES.items()]
+
+
+@router.get("/catalogos/causas-cancelacion", response_model=list[CancellationCauseOption])
+def list_cancellation_causes() -> list[CancellationCauseOption]:
+    """Causas con que se cancela una póliza y si la causa da derecho a devolución de prima."""
+    return [
+        CancellationCauseOption(id=cause.value, nombre=name, reembolsable=cause not in NON_REFUNDABLE_CAUSES)
+        for cause, name in CANCELLATION_CAUSE_NAMES.items()
+    ]
+
+
+@router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])
+def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     """Pólizas activas del cliente. El BFF envía el id de la sesión, no uno elegido en el teléfono."""
     token = cliente_id.strip()
     if not token:
@@ -77,20 +108,41 @@ def search_policies(q: str | None = None, cliente_id: Annotated[list[str] | None
     return use_cases["search"].execute(q, cliente_id or [])
 
 
-@router.get("/{policy_id}", response_model=Policy)
-def get_policy(policy_id: str) -> Policy:
+@router.get("/recientes", response_model=list[Policy])
+def list_recent_policies(limite: Annotated[int, Query(ge=1, le=200)] = 100) -> list[Policy]:
+    """Lectura interna para el back-office: las últimas pólizas de todos los canales."""
+    return use_cases["recent"].execute(limite)
+
+
+@router.get("/{poliza_id}", response_model=Policy)
+def get_policy(poliza_id: str) -> Policy:
+    """Lectura interna. El canal decide si quien pregunta es dueño de la póliza."""
     try:
-        return use_cases["get"].execute(policy_id)
+        return use_cases["get"].execute(poliza_id)
     except PolicyNotFound as exc:
         raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
 
 
-@router.get("/{policy_id}/beneficiarios", response_model=list[Beneficiary])
-def list_beneficiaries(policy_id: str) -> list[Beneficiary]:
+@router.get("/{poliza_id}/beneficiarios", response_model=list[Beneficiary])
+def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
     try:
-        return use_cases["get"].beneficiaries(policy_id)
+        return use_cases["get"].beneficiaries(poliza_id)
     except PolicyNotFound as exc:
         raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+
+
+@router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)
+def renewal_offer(poliza_id: str, x_cliente_id: Annotated[str, Header()]) -> RenewalOffer:
+    """Oferta de solo lectura. El cliente llega en X-Cliente-Id, no en el cuerpo ni en la query."""
+    cliente = x_cliente_id.strip()
+    if not cliente:
+        raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
+    try:
+        return use_cases["renewal_offer"].execute(poliza_id, cliente)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", "La póliza no existe.") from exc
+    except PolicyNotRenewable as exc:
+        raise _error(409, "poliza_no_renovable", "La póliza no está habilitada para renovar.") from exc
 
 
 @router.post("/emisiones", response_model=Policy, status_code=status.HTTP_201_CREATED)

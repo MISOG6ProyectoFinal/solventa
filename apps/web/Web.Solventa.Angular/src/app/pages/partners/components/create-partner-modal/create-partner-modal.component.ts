@@ -1,15 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { catchError, of } from 'rxjs';
 import { ApiError } from '../../../../core/interfaces/api-response.interface';
-import { Alcance, Partner, PartnerCreated, PartnerType } from '../../../../core/models/partner.model';
-import { PARTNER_TYPES, ALCANCES } from '../../../../shared/constants/ramos.constants';
+import { Partner, PartnerCreated } from '../../../../core/models/partner.model';
+import { CatalogService } from '../../../../core/services/catalog.service';
 import { ModalComponent } from '../../../../ui/components/modal/modal.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 import { PartnersService } from '../../services/partners.service';
+import { LocaleService } from '../../../../core/services/locale.service';
 
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{1,62}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,6 +34,7 @@ const DUPLICATE_IDENTIFIER = 'identificador_duplicado';
   templateUrl: './create-partner-modal.component.html'
 })
 export class CreatePartnerModalComponent {
+  protected readonly locale = inject(LocaleService);
   private readonly partnersService = inject(PartnersService);
 
   readonly open = input.required<boolean>();
@@ -40,36 +44,44 @@ export class CreatePartnerModalComponent {
 
   name = signal('');
   identifier = signal('');
-  tipo = signal<PartnerType>('Retailer');
+  tipo = signal('');
   pais = signal('Colombia');
   email = signal('');
-  alcances = signal<Alcance[]>(['cotizacion', 'emision']);
+  alcances = signal<string[]>([]);
 
   errors = signal<Record<string, string>>({});
   submitError = signal<string | null>(null);
   saving = signal(false);
   createdResult = signal<PartnerCreated | null>(null);
 
-  readonly partnerTypes = PARTNER_TYPES;
-  readonly alcancesOptions = ALCANCES;
+  private readonly catalog = inject(CatalogService);
+  readonly partnerTypes = toSignal(this.catalog.partnerTypes$.pipe(catchError(() => of([]))), { initialValue: [] });
+  readonly alcancesOptions = toSignal(this.catalog.partnerScopes$.pipe(catchError(() => of([]))), { initialValue: [] });
 
-  toggleAlcance(a: Alcance) {
+  constructor() {
+    effect(() => {
+      const [first] = this.partnerTypes();
+      if (first && !untracked(() => this.tipo())) this.tipo.set(first);
+    });
+  }
+
+  toggleAlcance(a: string) {
     this.alcances.update(prev =>
       prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]
     );
   }
 
-  alcancesLabel(alcances: Alcance[]): string {
-    return alcances.map(a => ALCANCES.find(option => option.id === a)?.label ?? a).join(', ');
+  alcancesLabel(alcances: string[]): string {
+    return alcances.map(a => this.locale.label('scope', a)).join(', ');
   }
 
   reset() {
     this.name.set('');
     this.identifier.set('');
-    this.tipo.set('Retailer');
+    this.tipo.set(this.partnerTypes()[0] ?? '');
     this.pais.set('Colombia');
     this.email.set('');
-    this.alcances.set(['cotizacion', 'emision']);
+    this.alcances.set([]);
     this.errors.set({});
     this.submitError.set(null);
     this.saving.set(false);
@@ -107,24 +119,25 @@ export class CreatePartnerModalComponent {
         error: (error: ApiError) => {
           this.saving.set(false);
           if (error.code === DUPLICATE_IDENTIFIER) this.errors.set({ identifier: error.message });
-          else this.submitError.set('No fue posible crear el socio. Intente de nuevo.');
+          else this.submitError.set(this.locale.t('createPartner.error'));
         },
       });
   }
 
   private validate(): Record<string, string> {
     const errors: Record<string, string> = {};
-    if (!this.name().trim()) errors['name'] = 'Requerido';
+    const required = this.locale.t('common.requiredShort');
+    if (!this.name().trim()) errors['name'] = required;
 
     const identifier = this.identifier().trim();
-    if (!identifier) errors['identifier'] = 'Requerido';
-    else if (!IDENTIFIER_PATTERN.test(identifier)) errors['identifier'] = 'Use letras, números y guiones (mínimo 2)';
+    if (!identifier) errors['identifier'] = required;
+    else if (!IDENTIFIER_PATTERN.test(identifier)) errors['identifier'] = this.locale.t('createPartner.identifierInvalid');
 
     const email = this.email().trim();
-    if (!email) errors['email'] = 'Requerido';
-    else if (!EMAIL_PATTERN.test(email)) errors['email'] = 'Correo inválido';
+    if (!email) errors['email'] = required;
+    else if (!EMAIL_PATTERN.test(email)) errors['email'] = this.locale.t('createPartner.emailInvalid');
 
-    if (this.alcances().length === 0) errors['alcances'] = 'Seleccione al menos uno';
+    if (this.alcances().length === 0) errors['alcances'] = this.locale.t('createPartner.scopesRequired');
     return errors;
   }
 }

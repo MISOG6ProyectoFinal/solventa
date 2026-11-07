@@ -15,13 +15,13 @@ from cotizacion.main import app
 from cotizacion.signals.adapters.open_finance import (
     OpenFinanceQuoteAdapter,
     OpenFinanceRiskProfile,
-    SandboxRiskProfile,
     build_provider,
 )
 from cotizacion.signals.domain.models import OpenFinanceConsent, SignalOrigin
 from cotizacion.signals.domain.use_cases import ResolveRiskProfileUseCase
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from solventa_common.integration import simulated_provider
 from solventa_common.resilience import InMemoryCache
 
 client = TestClient(app)
@@ -419,13 +419,10 @@ def test_adapter_takes_configured_timeout_and_does_not_retry():
     provider.adapter.client.close()
 
 
-def test_without_url_the_deterministic_sandbox_answers():
-    provider = build_provider(None, None, 0.3)
-    consent = OpenFinanceConsent(**CONSENT)
+def test_open_finance_is_called_over_http_at_the_simulator_by_default(monkeypatch):
+    monkeypatch.delenv("OPEN_FINANCE_URL", raising=False)
 
-    assert isinstance(provider, SandboxRiskProfile)
-    assert provider.risk_score(consent) == provider.risk_score(consent)
-    assert Decimal("0.30") <= provider.risk_score(consent) <= Decimal("0.70")
+    assert CotizacionSettings().open_finance_url == simulated_provider("open-finance")
 
 
 def test_timeout_cannot_exceed_the_3000_ms_ceiling():

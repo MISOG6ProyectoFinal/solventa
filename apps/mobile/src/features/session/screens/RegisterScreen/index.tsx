@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { StackActions, useNavigation } from '@react-navigation/native';
 
@@ -6,12 +6,12 @@ import { errorMessage } from '../../../../shared/api/client';
 import { isPastDate } from '../../../../shared/date';
 import { isValidEmail } from '../../../../shared/email';
 import { Banner, Button, DateField, Screen, SelectField, TextField } from '../../../../shared/ui';
+import { listDocumentTypes } from '../../api/listDocumentTypes';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useTexts } from '../../texts';
-import { type DocumentType, type RegisterValues } from '../../types';
+import { type RegisterValues } from '../../types';
 import styles from './styles';
 
-const documentTypes: DocumentType[] = ['CC', 'CE', 'Pasaporte'];
 const minPasswordLength = 8;
 
 const emptyValues: RegisterValues = {
@@ -19,7 +19,7 @@ const emptyValues: RegisterValues = {
   lastName: '',
   email: '',
   password: '',
-  documentType: 'CC',
+  documentType: '',
   documentNumber: '',
   phone: '',
   birthDate: '',
@@ -34,12 +34,29 @@ export default function RegisterScreen() {
   const navigation = useNavigation();
   const register = useSessionStore((state) => state.register);
   const [values, setValues] = useState<RegisterValues>(emptyValues);
+  const [documentTypes, setDocumentTypes] = useState<string[]>([]);
   const [missing, setMissing] = useState<TextKey[]>([]);
   const [emailInvalid, setEmailInvalid] = useState(false);
   const [birthDateInvalid, setBirthDateInvalid] = useState(false);
   const [passwordTooShort, setPasswordTooShort] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    listDocumentTypes()
+      .then((types) => {
+        if (!active) return;
+        setDocumentTypes(types);
+        setValues((current) => (current.documentType === '' ? { ...current, documentType: types[0] ?? '' } : current));
+      })
+      .catch((cause) => {
+        if (active) setError(errorMessage(cause, texts.register.documentTypesFailed));
+      });
+    return () => {
+      active = false;
+    };
+  }, [texts.register.documentTypesFailed]);
 
   const change = (key: keyof RegisterValues) => (value: string) =>
     setValues((current) => ({ ...current, [key]: value }));
@@ -108,7 +125,7 @@ export default function RegisterScreen() {
           <SelectField
             label={texts.register.documentTypeLabel}
             value={values.documentType}
-            options={documentTypes.map((value) => ({ value, label: texts.register.documentTypes[value] }))}
+            options={documentTypes.map((value) => ({ value, label: texts.register.documentTypes[value] ?? value }))}
             onChange={change('documentType')}
             required
           />

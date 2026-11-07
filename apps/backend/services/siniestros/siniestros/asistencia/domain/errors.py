@@ -2,6 +2,7 @@ MSG_AVISO = "No se encontró el reporte."
 MSG_BORRADOR = "Radica el siniestro antes de solicitar asistencia."
 MSG_DUPLICADA = "Ya solicitaste asistencia para este siniestro."
 MSG_NUMERO = "No se pudo asignar un número de solicitud."
+MSG_RED = "La red de asistencia no está disponible. Intenta de nuevo en unos minutos."
 
 
 class ReglaAsistencia(Exception):

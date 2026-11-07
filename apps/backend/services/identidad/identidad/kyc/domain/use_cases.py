@@ -1,4 +1,3 @@
-import logging
 import secrets
 from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
@@ -27,10 +26,8 @@ from identidad.kyc.domain.models import (
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
-from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository
+from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository, OtpSender
 from identidad.kyc.domain.sesion import hash_password, new_salt, password_matches
-
-logger = logging.getLogger(__name__)
 
 SESSION_DAYS = 7
 _DUMMY_SALT = "00" * 16
@@ -205,9 +202,11 @@ class SolicitarConsentimiento:
     def __init__(
         self,
         repository: ConsentimientoRepository,
+        otp_sender: OtpSender,
         clients: ClientRepository | None = None,
     ) -> None:
         self.repository = repository
+        self.otp_sender = otp_sender
         self.clients = clients
 
     def execute(self, solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
@@ -230,7 +229,10 @@ class SolicitarConsentimiento:
                 telefono=_resolve_cliente_telefono(solicitud),
                 fecha_nacimiento=solicitud.fecha_nacimiento,
             )
-            cliente_guardado = self.clients.upsert(cliente_obj)
+            try:
+                cliente_guardado = self.clients.upsert(cliente_obj)
+            except ValueError as exc:
+                raise EmailAlreadyRegistered from exc
             cliente_id = cliente_guardado.id
 
         # 2. Contacto, Máscara y Fuente
@@ -265,16 +267,8 @@ class SolicitarConsentimiento:
             solicitado_en=ahora,
             expira_en=expira_en,
         )
+        self.otp_sender.send(consentimiento.canal, contacto or contacto_mask, codigo, expira_en)
         self.repository.add(consentimiento)
-
-        logger.info(
-            "📲 [MOCK OTP] Cliente: %s | Canal: %s | Fuente: %s | Código OTP: %s | Vence: %s",
-            cliente_id,
-            consentimiento.canal,
-            consentimiento.fuente,
-            codigo,
-            expira_en.isoformat(),
-        )
 
         return RespuestaSolicitud(
             consentimiento_id=consentimiento.id,
@@ -379,6 +373,7 @@ class ConsultarConsentimiento:
             contacto=consentimiento.contacto or consentimiento.contacto_mask,
             alcance=alcance_str,
             alcance_lista=consentimiento.alcance,
+            open_finance=OPEN_FINANCE in consentimiento.alcance,
         )
 
 
@@ -414,20 +409,27 @@ class BuscarClientePorDocumento:
         return _cliente_a_respuesta(cliente)
 
 
-class ConsultarCliente:
-    """Busca por id o, si no hay id, por número de documento (único). Lo usa el portal web."""
+class GetClient:
+    """Lectura interna por id o número de documento, para que el back-office muestre al asegurado."""
 
     def __init__(self, clients: ClientRepository) -> None:
         self.clients = clients
 
-    def execute(self, cliente_id: str | None = None, numero_documento: str | None = None) -> RespuestaCliente:
-        if cliente_id:
-            cliente = self.clients.get(cliente_id.strip())
+    def execute(self, client_id: str | None = None, numero_documento: str | None = None) -> RespuestaCliente:
+        if client_id:
+            cliente = self.clients.get(client_id.strip())
+            missing_msg = f"Cliente {client_id} no encontrado"
+        elif numero_documento:
+            cliente = self.clients.get_by_numero_documento(numero_documento.strip())
+            missing_msg = f"Cliente con documento {numero_documento} no encontrado"
         else:
-            cliente = self.clients.get_by_numero_documento((numero_documento or "").strip())
+            raise ClienteNoEncontrado("Debe especificar client_id o numero_documento")
         if cliente is None:
-            raise ClienteNoEncontrado("Cliente no encontrado")
+            raise ClienteNoEncontrado(missing_msg)
         return _cliente_a_respuesta(cliente)
+
+
+ConsultarCliente = GetClient
 
 
 class AsegurarCliente:

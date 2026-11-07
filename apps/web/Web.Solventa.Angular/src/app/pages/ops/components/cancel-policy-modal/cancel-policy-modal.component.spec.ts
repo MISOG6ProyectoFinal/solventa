@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { OPS_POLICIES } from '../../testing/ops-policies.fixture';
+import { provideCatalogFixture } from '../../../../core/testing/catalog.fixtures';
+import { OPS_POLICIES } from '../../testing/policy.fixtures';
 import { CancelPolicyModalComponent } from './cancel-policy-modal.component';
 
 describe('CancelPolicyModalComponent', () => {
@@ -17,7 +18,10 @@ describe('CancelPolicyModalComponent', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [CancelPolicyModalComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [CancelPolicyModalComponent],
+      providers: [provideCatalogFixture()],
+    }).compileComponents();
     fixture = TestBed.createComponent(CancelPolicyModalComponent);
     fixture.componentRef.setInput('policy', OPS_POLICIES[1]);
     await fixture.whenStable();
@@ -31,7 +35,7 @@ describe('CancelPolicyModalComponent', () => {
   });
 
   it('shows the estimated refund once a cause is selected', async () => {
-    await selectCause('Retracto');
+    await selectCause('retracto');
 
     expect(el.textContent).toContain('Devolución estimada');
     expect(el.textContent).toContain('Días no devengados');
@@ -39,7 +43,7 @@ describe('CancelPolicyModalComponent', () => {
   });
 
   it('shows no refund for non-payment', async () => {
-    await selectCause('Impago de prima');
+    await selectCause('impago-de-prima');
 
     expect(el.textContent).toContain('No aplica devolución por impago de prima.');
   });
@@ -47,13 +51,13 @@ describe('CancelPolicyModalComponent', () => {
   it('goes through the confirmation step and emits the cause', async () => {
     const confirmed = vi.fn();
     fixture.componentInstance.confirmed.subscribe(confirmed);
-    await selectCause('Retracto');
+    await selectCause('retracto');
 
     button('Continuar').click();
     await fixture.whenStable();
     expect(el.textContent).toContain('SLV-2025-01820');
 
     button('Confirmar cancelación').click();
-    expect(confirmed).toHaveBeenCalledWith('Retracto');
+    expect(confirmed).toHaveBeenCalledWith('retracto');
   });
 });

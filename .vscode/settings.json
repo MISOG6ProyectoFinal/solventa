@@ -29,6 +29,7 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
-  "python-envs.defaultEnvManager": "ms-python.python:poetry",
-  "python-envs.defaultPackageManager": "ms-python.python:poetry"
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.defaultPackageManager": "ms-python.python:pip",
+  "python.defaultInterpreterPath": "${workspaceFolder}/apps/backend/.venv/bin/python"
 }

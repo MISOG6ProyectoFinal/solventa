@@ -1,0 +1,42 @@
+<slv-modal [open]="open()" [title]="locale.t('createOperator.title')" (closed)="close()">
+  @if (submitError(); as message) {
+    <div class="mb-4"><slv-alert tone="error">{{ message }}</slv-alert></div>
+  }
+  <div class="grid grid-cols-1 gap-4">
+    <slv-field [label]="locale.t('createOperator.name')" [required]="true" [error]="errors()['name']">
+      <input slvInput data-testid="operator-name" [invalid]="!!errors()['name']" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+    </slv-field>
+
+    <slv-field [label]="locale.t('createOperator.email')" [required]="true" [error]="errors()['email']">
+      <input slvInput type="email" data-testid="operator-email" [invalid]="!!errors()['email']" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+    </slv-field>
+
+    <slv-field
+      [label]="locale.t('createOperator.credential')"
+      [required]="true"
+      [hint]="locale.t('createOperator.credentialHint')"
+      [error]="errors()['password']"
+    >
+      <input
+        slvInput
+        type="password"
+        autocomplete="new-password"
+        data-testid="operator-password"
+        [invalid]="!!errors()['password']"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+      />
+    </slv-field>
+
+    <slv-field [label]="locale.t('createOperator.roles')" [required]="true" [error]="errors()['roles']">
+      <slv-role-select [(roles)]="roles" />
+    </slv-field>
+  </div>
+
+  <div slot="footer" class="flex gap-4">
+    <button slv-button variant="outline" (click)="close()">{{ locale.t('common.cancel') }}</button>
+    <button slv-button variant="primary" [disabled]="saving()" (click)="submit()">
+      {{ saving() ? locale.t('createOperator.submitting') : locale.t('createOperator.submit') }}
+    </button>
+  </div>
+</slv-modal>

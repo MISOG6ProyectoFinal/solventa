@@ -8,7 +8,8 @@ export default [
     "ignores": [
       "**/dist",
       "**/out-tsc",
-      "**/vite.config.*.timestamp*"
+      "**/vite.config.*.timestamp*",
+      "**/.angular/**"
     ]
   },
   {

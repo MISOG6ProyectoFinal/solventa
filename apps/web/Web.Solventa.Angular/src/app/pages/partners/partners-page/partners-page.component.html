@@ -3,24 +3,28 @@
     <div>
       <div class="flex items-center gap-3">
         <div class="w-1 h-8 rounded-full bg-accent"></div>
-        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">Socios e Integraciones</h1>
+        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">{{ locale.t('partners.title') }}</h1>
       </div>
-      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">Canal embebido · Alta de socios, configuración de ramos y operaciones del canal</p>
+      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">{{ locale.t('partners.subtitle') }}</p>
     </div>
     <div class="flex gap-2">
-      <button slv-button variant="primary" (click)="showCreateModal.set(true)">Nuevo socio</button>
+      @if (canCreate()) {
+        <button slv-button variant="primary" (click)="showCreateModal.set(true)">{{ locale.t('partners.new') }}</button>
+      } @else {
+        <p class="text-xs text-muted-foreground" data-testid="partners-read-only">{{ locale.t('partners.readOnly') }}</p>
+      }
     </div>
   </div>
 
   @if (loadError()) {
     <slv-alert tone="error">
-      No fue posible cargar los socios.
-      <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">Reintentar</button>
+      {{ locale.t('partners.loadError') }}
+      <button type="button" class="underline font-medium cursor-pointer" (click)="reload()">{{ locale.t('partners.retry') }}</button>
     </slv-alert>
   }
 
   @if (loading()) {
-    <p class="text-sm text-muted-foreground" role="status">Cargando socios…</p>
+    <output class="block text-sm text-muted-foreground">{{ locale.t('partners.loading') }}</output>
   } @else if (!selectedPartner()) {
     <slv-partner-list 
       [partners]="partners()"
