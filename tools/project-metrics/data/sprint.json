@@ -1,15 +1,15 @@
 {
   "sprint": {
-    "totalStoryPoints": 54,
-    "totalDays": 14,
+    "totalStoryPoints": 83,
+    "totalDays": 21,
     "days": [
       {
         "day": 1,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 3
       },
       {
         "day": 2,
-        "completedStoryPoints": 21
+        "completedStoryPoints": 5
       },
       {
         "day": 3,
@@ -17,7 +17,7 @@
       },
       {
         "day": 4,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 3
       },
       {
         "day": 5,
@@ -25,39 +25,11 @@
       },
       {
         "day": 6,
-        "completedStoryPoints": 0
+        "completedStoryPoints": 3
       },
       {
         "day": 7,
         "completedStoryPoints": 5
-      },
-      {
-        "day": 8,
-        "completedStoryPoints": 5
-      },
-      {
-        "day": 9,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 10,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 11,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 12,
-        "completedStoryPoints": 8
-      },
-      {
-        "day": 13,
-        "completedStoryPoints": 0
-      },
-      {
-        "day": 14,
-        "completedStoryPoints": 10
       }
     ]
   },
@@ -85,7 +57,7 @@
     {
       "week": 5,
       "planned": 28,
-      "actual": 0
+      "actual": 24
     },
     {
       "week": 6,
@@ -218,6 +190,34 @@
       {
         "day": 28,
         "valueDelivered": 2
+      },
+      {
+        "day": 29,
+        "valueDelivered": 3
+      },
+      {
+        "day": 30,
+        "valueDelivered": 6
+      },
+      {
+        "day": 31,
+        "valueDelivered": 5
+      },
+      {
+        "day": 32,
+        "valueDelivered": 5
+      },
+      {
+        "day": 33,
+        "valueDelivered": 0
+      },
+      {
+        "day": 34,
+        "valueDelivered": 3
+      },
+      {
+        "day": 35,
+        "valueDelivered": 4
       }
     ]
   },
@@ -238,7 +238,7 @@
       {
         "sprint": 3,
         "plannedStoryPoints": 83,
-        "completedStoryPoints": 0,
+        "completedStoryPoints": 24,
         "closed": false
       }
     ]
