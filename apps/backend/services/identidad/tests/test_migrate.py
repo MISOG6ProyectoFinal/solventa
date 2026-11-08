@@ -160,6 +160,7 @@ def test_la_migracion_arranca_sin_el_secreto_de_sesion(tmp_path):
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
 

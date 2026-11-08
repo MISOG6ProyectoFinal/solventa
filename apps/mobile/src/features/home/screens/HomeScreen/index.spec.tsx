@@ -9,6 +9,7 @@ import { useSessionStore } from '../../../session/store/useSessionStore';
 import HomeScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
+  const React = require('react');
   const navigate = jest.fn();
   return {
     useNavigation: () => ({
@@ -18,6 +19,9 @@ jest.mock('@react-navigation/native', () => {
       goBack: jest.fn(),
     }),
     DrawerActions: { openDrawer: () => ({ type: 'OPEN_DRAWER' }) },
+    useFocusEffect: (effect: () => undefined | (() => void)) => {
+      React.useEffect(() => effect(), [effect]);
+    },
   };
 });
 

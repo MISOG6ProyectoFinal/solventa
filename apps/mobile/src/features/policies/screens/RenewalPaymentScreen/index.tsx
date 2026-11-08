@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { StaticScreenProps } from '@react-navigation/native';
+import { StaticScreenProps, useNavigation } from '@react-navigation/native';
 
 import { errorMessage } from '../../../../shared/api/client';
 import { crearIntentoId } from '../../../../shared/payments/crearIntentoId';
 import { AppText, Banner, Button, Card, CheckboxField, ErrorState, LoadingState, Screen } from '../../../../shared/ui';
 import { formatMoney } from '../../../quote/utils';
+import { applyRenewal } from '../../api/applyRenewal';
 import { getRenewalOffer } from '../../api/getRenewalOffer';
 import { payRenewal } from '../../api/payRenewal';
 import { getTexts, useTexts } from '../../texts';
-import { RenewalOffer } from '../../types';
+import { Policy, RenewalOffer, RenewalResult } from '../../types';
 import { policyDate } from '../../utils';
+import RenewalConfirmation from '../RenewalConfirmation';
 import styles from './styles';
 
 type Props = StaticScreenProps<{
@@ -18,20 +20,24 @@ type Props = StaticScreenProps<{
   productName?: string;
 }>;
 
-type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'approved' | 'error';
+type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'error' | 'applying' | 'applied' | 'applyError';
 
 export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
   const { policyId, productName } = route.params;
   const texts = useTexts();
+  const navigation = useNavigation();
   const [offer, setOffer] = useState<RenewalOffer | null>(null);
   const [loadingOffer, setLoadingOffer] = useState(true);
   const [offerError, setOfferError] = useState<string | null>(null);
   const [status, setStatus] = useState<PaymentStatus>('ready');
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [renewal, setRenewal] = useState<RenewalResult | null>(null);
   const [simulateRejected, setSimulateRejected] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const inFlight = useRef(false);
   const intentoId = useRef<string | null>(null);
+  const paymentId = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,8 +67,29 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
     };
   }, [policyId, attempt]);
 
+  const apply = async (cobroId: string) => {
+    setApplyError(null);
+    setStatus('applying');
+    try {
+      const result = await applyRenewal(policyId, cobroId);
+      setRenewal(result);
+      setStatus('applied');
+    } catch {
+      setRenewal(null);
+      setStatus('applyError');
+      setApplyError(texts.renewal.applyFailed);
+    }
+  };
+
   const pay = async (attemptMode: 'new' | 'reuse') => {
-    if (inFlight.current || status === 'processing' || status === 'approved' || offer === null) {
+    if (
+      inFlight.current ||
+      status === 'processing' ||
+      status === 'applying' ||
+      status === 'applied' ||
+      status === 'applyError' ||
+      offer === null
+    ) {
       return;
     }
 
@@ -75,7 +102,8 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
     try {
       const resultado = await payRenewal(policyId, intento, simulateRejected ? 'rechazado' : undefined);
       if (resultado.estado === 'aprobado') {
-        setStatus('approved');
+        paymentId.current = resultado.id;
+        await apply(resultado.id);
         return;
       }
       if (resultado.estado === 'rechazado') {
@@ -91,6 +119,41 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
       inFlight.current = false;
     }
   };
+
+  const retryApply = async () => {
+    if (inFlight.current || paymentId.current === null) {
+      return;
+    }
+    inFlight.current = true;
+    try {
+      await apply(paymentId.current);
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
+  const viewPolicy = () => {
+    if (renewal === null) {
+      return;
+    }
+    navigation.navigate('PolicyDetail', {
+      policy: policyFromRenewal(renewal),
+      productName,
+    });
+  };
+
+  if (status === 'applied' && renewal !== null) {
+    return (
+      <Screen
+        testID="renewal-confirmation-screen"
+        header={{ title: texts.renewal.successTitle, hideBackButton: true }}
+      >
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          <RenewalConfirmation confirmation={renewal} productName={productName} onViewPolicy={viewPolicy} />
+        </ScrollView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen testID="renewal-payment-screen" header={{ title: texts.renewal.payTitle }}>
@@ -109,6 +172,7 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
               productName={productName}
               status={status}
               paymentError={paymentError}
+              applyError={applyError}
               simulateRejected={simulateRejected}
               onToggleSimulation={() => {
                 if (status === 'ready' || status === 'rejected') {
@@ -121,6 +185,9 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
               onRetry={() => {
                 void pay('reuse');
               }}
+              onRetryApply={() => {
+                void retryApply();
+              }}
             />
           )}
         </ScrollView>
@@ -129,35 +196,64 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
   );
 }
 
+function policyFromRenewal(renewal: RenewalResult): Policy {
+  return {
+    id: renewal.poliza_id,
+    numero: renewal.numero_poliza,
+    cotizacion_id: '',
+    cobro_id: renewal.cobro_id,
+    producto_id: renewal.producto_id,
+    prima: '',
+    estado: 'activa',
+    vigencia: renewal.vigencia_anterior,
+    coberturas: renewal.coberturas,
+    renovable: false,
+    renovacion: {
+      estado: 'aplicada',
+      cobro_id: renewal.cobro_id,
+      vigencia_nueva: renewal.vigencia_nueva,
+    },
+  };
+}
+
 function PaymentBody({
   offer,
   productName,
   status,
   paymentError,
+  applyError,
   simulateRejected,
   onToggleSimulation,
   onPay,
   onRetry,
+  onRetryApply,
 }: Readonly<{
   offer: RenewalOffer;
   productName?: string;
   status: PaymentStatus;
   paymentError: string | null;
+  applyError: string | null;
   simulateRejected: boolean;
   onToggleSimulation: () => void;
   onPay: () => void;
   onRetry: () => void;
+  onRetryApply: () => void;
 }>) {
   const texts = useTexts();
   const amount = formatMoney(offer.prima_propuesta);
   const nombre = productName ?? offer.producto_id;
-  const approved = status === 'approved';
+  const busy = status === 'processing' || status === 'applying';
 
   return (
     <>
       {status === 'processing' ? (
         <Banner testID="renewal-payment-status" variant="info">
           {texts.renewal.processing}
+        </Banner>
+      ) : null}
+      {status === 'applying' ? (
+        <Banner testID="renewal-applying" variant="info">
+          {texts.renewal.applying}
         </Banner>
       ) : null}
       {status === 'rejected' ? (
@@ -170,9 +266,9 @@ function PaymentBody({
           {paymentError ?? texts.renewal.paymentFailed}
         </Banner>
       ) : null}
-      {approved ? (
-        <Banner testID="renewal-payment-status" variant="success">
-          {texts.renewal.approved}
+      {status === 'applyError' ? (
+        <Banner testID="renewal-apply-error" variant="error">
+          {applyError ?? texts.renewal.applyFailed}
         </Banner>
       ) : null}
       <Card>
@@ -185,7 +281,7 @@ function PaymentBody({
         <AppText testID="renewal-pay-amount" variant="sectionTitle" style={styles.amount}>
           {amount}
         </AppText>
-        {approved ? null : (
+        {busy || status === 'applyError' ? null : (
           <AppText variant="bodySmall">
             {texts.renewal.payValidity(
               policyDate(offer.vigencia_propuesta.desde),
@@ -196,7 +292,7 @@ function PaymentBody({
         <AppText testID="renewal-payment-method" variant="bodySmall">
           {texts.renewal.method}
         </AppText>
-        {approved ? null : (
+        {busy || status === 'applyError' ? null : (
           <View style={styles.checks}>
             <CheckboxField
               testID="renewal-simulate-reject"
@@ -209,6 +305,9 @@ function PaymentBody({
       </Card>
       {status === 'error' ? (
         <Button testID="renewal-payment-retry" title={texts.renewal.retryButton} onPress={onRetry} />
+      ) : null}
+      {status === 'applyError' ? (
+        <Button testID="renewal-apply-retry" title={texts.renewal.retryApply} onPress={onRetryApply} />
       ) : null}
       {status === 'ready' || status === 'processing' || status === 'rejected' ? (
         <Button

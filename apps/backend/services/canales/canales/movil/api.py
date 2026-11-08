@@ -5,13 +5,13 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 from solventa_common.integration.base import call_upstream
+from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.validation import invalid_data_detail, invalid_fields
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
-from canales.movil.referencia_renovacion import referencia_ciclo_renovacion
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
 
 INVALID_SESSION = "La sesión no es válida"
@@ -132,6 +132,21 @@ class SolicitudPagoRenovacion(BaseModel):
         token = value.strip()
         if not token or len(token) > 64:
             raise ValueError("El intento de pago no es válido")
+        return token
+
+
+class SolicitudAplicarRenovacion(BaseModel):
+    """El teléfono identifica el cobro aprobado. Pólizas valida el pago, el ciclo y la vigencia."""
+
+    model_config = ConfigDict(extra="ignore")
+    cobro_id: str
+
+    @field_validator("cobro_id")
+    @classmethod
+    def _cobro(cls, value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > 64:
+            raise ValueError("El pago es obligatorio")
         return token
 
 
@@ -311,6 +326,17 @@ def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoR
         "monto": resultado["monto"],
         "moneda": resultado["moneda"],
     }
+
+
+@authenticated.post("/polizas/{poliza_id}/renovaciones")
+def aplicar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudAplicarRenovacion) -> dict:
+    """Delega la aplicación en Pólizas. El teléfono no declara vigencia, monto ni cliente."""
+    return call_upstream(
+        polizas.post,
+        f"/polizas/{poliza_id}/renovaciones",
+        json={"cobro_id": solicitud.cobro_id},
+        headers=_cliente(session),
+    )
 
 
 @authenticated.get("/siniestros")
