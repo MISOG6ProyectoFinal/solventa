@@ -18,6 +18,7 @@ export const es = {
     renewalOfferBody: (days: number) =>
       `Tu póliza vence en ${days} días. Consultar la oferta no modifica tu póliza actual.`,
     seeRenewalOffer: 'Ver oferta de renovación',
+    goHome: 'Ir al inicio',
   },
   renewal: {
     screenTitle: 'Oferta de renovación',
@@ -40,6 +41,15 @@ export const es = {
     rejected: 'El pago de renovación fue rechazado. Tu póliza actual no cambió y mantiene su vigencia.',
     approved: 'Pago aprobado',
     paymentFailed: 'No se pudo procesar el pago.',
+    applying: 'Aplicando renovación...',
+    applyFailed:
+      'El pago fue aprobado, pero la renovación todavía no quedó confirmada. No vuelvas a pagar; reintenta la confirmación.',
+    retryApply: 'Reintentar confirmación',
+    successTitle: 'Renovación exitosa',
+    successAlert: 'Renovación exitosa. La nueva vigencia ya quedó aplicada.',
+    newStart: (start: string) => `Nuevo inicio ${start}`,
+    newEnd: (end: string) => `Nuevo vencimiento ${end}`,
+    viewUpdated: 'Ver póliza actualizada',
   },
 };
 

@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PolicyStatus(StrEnum):
@@ -109,7 +109,56 @@ class RenewalOffer(BaseModel):
     coberturas_propuestas: list[Coverage]
 
 
+class RenewalRequest(BaseModel):
+    """El teléfono solo identifica el cobro. La vigencia y la prima salen de la póliza y de Pagos."""
+
+    model_config = ConfigDict(extra="ignore")
+    cobro_id: str = Field(min_length=1, max_length=64)
+
+    @field_validator("cobro_id")
+    @classmethod
+    def _cobro(cls, value: str) -> str:
+        token = value.strip()
+        if not token:
+            raise ValueError("El pago es obligatorio")
+        return token
+
+
+class Renewal(BaseModel):
+    """Ciclo ya aplicado. Conserva la vigencia anterior y la nueva sin reemplazar la póliza."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    poliza_id: str
+    ciclo: str
+    cobro_id: str
+    vigencia_anterior: Validity
+    vigencia_nueva: Validity
+    prima_anterior: Decimal
+    prima_nueva: Decimal
+    aplicada_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class RenewalConfirmation(BaseModel):
+    poliza_id: str
+    numero_poliza: str
+    producto_id: str
+    estado: Literal["aplicada"] = "aplicada"
+    cobro_id: str
+    vigencia_anterior: Validity
+    vigencia_nueva: Validity
+    coberturas: list[Coverage]
+
+
+class AppliedRenewal(BaseModel):
+    """Renovación comprada cuya vigencia todavía no reemplaza la cobertura en curso."""
+
+    estado: Literal["aplicada"] = "aplicada"
+    cobro_id: str
+    vigencia_nueva: Validity
+
+
 class ClientPolicy(Policy):
-    """Listado del cliente. `renovable` se calcula; no forma parte de la póliza guardada."""
+    """Listado del cliente. `renovable` y `renovacion` se calculan; no forman parte de la póliza guardada."""
 
     renovable: bool
+    renovacion: AppliedRenewal | None = None

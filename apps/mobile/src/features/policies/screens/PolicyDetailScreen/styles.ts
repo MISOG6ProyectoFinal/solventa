@@ -11,4 +11,8 @@ export default StyleSheet.create({
     padding: theme.space.lg,
     gap: theme.space.md,
   },
+  footer: {
+    paddingHorizontal: theme.space.lg,
+    paddingBottom: theme.space.lg,
+  },
 });
