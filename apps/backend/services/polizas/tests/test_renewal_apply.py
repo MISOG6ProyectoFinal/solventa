@@ -354,15 +354,11 @@ def test_dos_solicitudes_concurrentes_dejan_una_sola_renovacion():
     bus = _prepare(policies, _payment())
     caso = use_cases["apply"]
     resultados: list[tuple] = []
-    errores: list[BaseException] = []
     barrera = threading.Barrier(8)
 
     def correr() -> None:
         barrera.wait()
-        try:
-            resultados.append(caso.execute("poliza-1", "cliente-1", "cobro-renovacion"))
-        except BaseException as exc:  # pragma: no cover - el assert de abajo muestra el fallo
-            errores.append(exc)
+        resultados.append(caso.execute("poliza-1", "cliente-1", "cobro-renovacion"))
 
     hilos = [threading.Thread(target=correr) for _ in range(8)]
     for hilo in hilos:
@@ -370,7 +366,6 @@ def test_dos_solicitudes_concurrentes_dejan_una_sola_renovacion():
     for hilo in hilos:
         hilo.join(3)
 
-    assert errores == []
     assert len(resultados) == 8
     assert len(policies.renewals) == 1
     assert len({item[0].vigencia_nueva.desde for item in resultados}) == 1
