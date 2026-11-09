@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from siniestros.avisos.domain.models import Aviso, Evidencia, ObjetoGuardado
+from siniestros.avisos.domain.models import Aviso, EstadoEvidencia, Evidencia, ObjetoGuardado
 from siniestros.avisos.domain.use_cases import URL_TTL
 
 
@@ -43,7 +43,11 @@ class InMemoryAvisoRepository:
         return [item for item in self.evidencias.values() if item.aviso_id == aviso_id]
 
     def count_activas(self, aviso_id: str) -> int:
-        return sum(1 for item in self.evidencias.values() if item.aviso_id == aviso_id and item.estado != "rechazada")
+        return sum(
+            1
+            for item in self.evidencias.values()
+            if item.aviso_id == aviso_id and item.estado != EstadoEvidencia.REJECTED
+        )
 
 
 class InMemoryObjectStore:

@@ -4,7 +4,14 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from siniestros.avisos.domain.errors import ReglaEvidencia
-from siniestros.avisos.domain.models import Aviso, Carga, Evidencia, EvidenciaLista
+from siniestros.avisos.domain.models import (
+    Aviso,
+    Carga,
+    EstadoAviso,
+    EstadoEvidencia,
+    Evidencia,
+    EvidenciaLista,
+)
 from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
 
 MAX_BYTES = 52_428_800
@@ -16,8 +23,8 @@ MSG_REPORTE = "No se encontró el reporte."
 MSG_EVIDENCIA = "Agrega al menos una evidencia"
 MSG_RADICADO = "No se pudo asignar un número de radicado."
 MSG_TIPO = "Tipo de archivo no permitido. Use JPEG, PNG o MP4."
-MSG_TAMANO = "El archivo supera 50 MB."
-MSG_LIMITE = "Este reporte ya tiene 10 evidencias."
+MSG_TAMANO = f"El archivo supera {MAX_BYTES // 1_048_576} MB."
+MSG_LIMITE = f"Este reporte ya tiene {MAX_EVIDENCIAS} evidencias."
 MSG_VALIDACION = "El archivo no pasó la validación."
 
 
@@ -64,7 +71,7 @@ class CrearAvisoUseCase:
             ocurrido_en=ocurrido_en,
             descripcion=descripcion,
             ubicacion=ubicacion,
-            estado="borrador",
+            estado=EstadoAviso.DRAFT,
         )
         self.repository.add_aviso(aviso)
         return aviso
@@ -89,12 +96,14 @@ class RadicarAvisoUseCase:
 
     def execute(self, aviso_id: str, *, cliente_id: str) -> Aviso:
         aviso = aviso_del_cliente(self.repository, aviso_id, cliente_id)
-        if aviso.estado == "radicado":
+        if aviso.estado == EstadoAviso.FILED:
             return aviso
-        disponibles = [item for item in self.repository.list_evidencias(aviso_id) if item.estado == "disponible"]
+        disponibles = [
+            item for item in self.repository.list_evidencias(aviso_id) if item.estado == EstadoEvidencia.AVAILABLE
+        ]
         if not disponibles:
             raise ReglaEvidencia(422, MSG_EVIDENCIA)
-        filed = aviso.model_copy(update={"estado": "radicado", "radicado": self._radicado_libre()})
+        filed = aviso.model_copy(update={"estado": EstadoAviso.FILED, "radicado": self._radicado_libre()})
         self.repository.update_aviso(filed)
         return filed
 
@@ -132,7 +141,7 @@ class SolicitarCargaUseCase:
                 url=f"s3://{self.bucket}/{key}",
                 content_type=content_type,
                 tamano=size,
-                estado="pendiente_carga",
+                estado=EstadoEvidencia.PENDING_UPLOAD,
             )
         )
         return Carga(
@@ -168,12 +177,12 @@ class ConfirmarCargaUseCase:
         if not header_matches(evidencia.content_type, header):
             self._rechazar(evidencia)
 
-        ready = evidencia.model_copy(update={"estado": "disponible"})
+        ready = evidencia.model_copy(update={"estado": EstadoEvidencia.AVAILABLE})
         self.repository.update_evidencia(ready)
         return ready
 
     def _rechazar(self, evidencia: Evidencia) -> None:
-        self.repository.update_evidencia(evidencia.model_copy(update={"estado": "rechazada"}))
+        self.repository.update_evidencia(evidencia.model_copy(update={"estado": EstadoEvidencia.REJECTED}))
         raise ReglaEvidencia(422, MSG_VALIDACION)
 
 
@@ -186,7 +195,7 @@ class ListarEvidenciasUseCase:
         aviso_del_cliente(self.repository, aviso_id, cliente_id)
         listed: list[EvidenciaLista] = []
         for evidencia in self.repository.list_evidencias(aviso_id):
-            if evidencia.estado != "disponible":
+            if evidencia.estado != EstadoEvidencia.AVAILABLE:
                 continue
             listed.append(
                 EvidenciaLista(
