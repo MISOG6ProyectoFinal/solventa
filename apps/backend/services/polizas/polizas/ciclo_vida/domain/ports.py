@@ -1,7 +1,9 @@
 from datetime import date
 from typing import Protocol
 
-from polizas.ciclo_vida.domain.models import Beneficiary, Policy
+from solventa_common.events import Event
+
+from polizas.ciclo_vida.domain.models import Beneficiary, Policy, Renewal
 
 
 class QuoteNotFound(LookupError):
@@ -29,6 +31,18 @@ class DuplicatePolicy(Exception):
 
 
 class PolicyNotRenewable(ValueError):
+    pass
+
+
+class PaymentDoesNotMatch(ValueError):
+    pass
+
+
+class RenewalAlreadyApplied(ValueError):
+    pass
+
+
+class DuplicateRenewal(Exception):
     pass
 
 
@@ -62,3 +76,17 @@ class PolicyRepository(Protocol):
     def list_recent(self, limit: int) -> list[Policy]: ...
 
     def expire_ended(self, today: date) -> int: ...
+
+    def activate_renewed_terms(self, today: date) -> int: ...
+
+    def get_renewal_by_payment(self, cobro_id: str) -> Renewal | None: ...
+
+    def get_renewal_by_cycle(self, ciclo: str) -> Renewal | None: ...
+
+    def list_renewals(self, poliza_ids: list[str]) -> list[Renewal]: ...
+
+    def save_renewal(self, renewal: Renewal, event: Event) -> None: ...
+
+    def pending_events(self) -> list[Event]: ...
+
+    def mark_published(self, event_id: str) -> None: ...

@@ -2,9 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from solventa_common.db import build_engine
+from solventa_common.events import EventPublisher, InMemoryEventPublisher
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
+from polizas.ciclo_vida.adapters.bus import build_publisher
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
 from polizas.ciclo_vida.domain.models import (
@@ -17,10 +19,13 @@ from polizas.ciclo_vida.domain.models import (
     ClientPolicy,
     IssuePolicyRequest,
     Policy,
+    RenewalConfirmation,
     RenewalOffer,
+    RenewalRequest,
 )
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
+    PaymentDoesNotMatch,
     PaymentNotApproved,
     PaymentSource,
     PolicyNotFound,
@@ -29,8 +34,10 @@ from polizas.ciclo_vida.domain.ports import (
     QuoteExpired,
     QuoteNotFound,
     QuoteSource,
+    RenewalAlreadyApplied,
 )
 from polizas.ciclo_vida.domain.use_cases import (
+    ApplyRenewalUseCase,
     GetPolicyUseCase,
     GetRenewalOfferUseCase,
     IssuePolicyUseCase,
@@ -42,20 +49,26 @@ from polizas.config import settings
 
 router = APIRouter(prefix="/polizas", tags=["Pólizas y Ciclo de Vida"])
 
-POLICY_NOT_FOUND_DETAIL = "La póliza no existe."
-
 use_cases: dict = {}
 
 
-def wire(policies: PolicyRepository, quotes: QuoteSource, payments: PaymentSource) -> None:
+def wire(
+    policies: PolicyRepository,
+    quotes: QuoteSource,
+    payments: PaymentSource,
+    publisher: EventPublisher | None = None,
+) -> None:
     if hasattr(policies, "create_schema"):
         policies.create_schema()
+    bus = publisher or InMemoryEventPublisher()
+    use_cases["publisher"] = bus
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
     use_cases["recent"] = ListRecentPoliciesUseCase(policies)
     use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
     use_cases["search"] = SearchPoliciesUseCase(policies)
     use_cases["get"] = GetPolicyUseCase(policies)
+    use_cases["apply"] = ApplyRenewalUseCase(policies, payments, bus)
 
 
 def _default_wire() -> None:
@@ -65,10 +78,14 @@ def _default_wire() -> None:
         policies = InMemoryPolicyRepository()
     quotes = QuoteReader(ServiceClient("cotizacion", settings.cotizacion_url))
     payments = PaymentReader(ServiceClient("pagos", settings.pagos_url))
-    wire(policies, quotes, payments)
+    wire(policies, quotes, payments, build_publisher())
 
 
 _default_wire()
+
+
+_CLIENTE_OBLIGATORIO = "El cliente es obligatorio."
+_POLIZA_NO_EXISTE = "La póliza no existe."
 
 
 def _error(code: int, codigo: str, mensaje: str) -> HTTPException:
@@ -100,7 +117,7 @@ def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     """Pólizas activas del cliente. El BFF envía el id de la sesión, no uno elegido en el teléfono."""
     token = cliente_id.strip()
     if not token:
-        raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
+        raise _error(422, "cliente_obligatorio", _CLIENTE_OBLIGATORIO)
     return use_cases["list"].execute(token)
 
 
@@ -122,7 +139,7 @@ def get_policy(poliza_id: str) -> Policy:
     try:
         return use_cases["get"].execute(poliza_id)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
 
 
 @router.get("/{poliza_id}/beneficiarios", response_model=list[Beneficiary])
@@ -130,7 +147,7 @@ def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
     try:
         return use_cases["get"].beneficiaries(poliza_id)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
 
 
 @router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)
@@ -138,13 +155,49 @@ def renewal_offer(poliza_id: str, x_cliente_id: Annotated[str, Header()]) -> Ren
     """Oferta de solo lectura. El cliente llega en X-Cliente-Id, no en el cuerpo ni en la query."""
     cliente = x_cliente_id.strip()
     if not cliente:
-        raise _error(422, "cliente_obligatorio", "El cliente es obligatorio.")
+        raise _error(422, "cliente_obligatorio", _CLIENTE_OBLIGATORIO)
     try:
         return use_cases["renewal_offer"].execute(poliza_id, cliente)
     except PolicyNotFound as exc:
-        raise _error(404, "poliza_no_encontrada", POLICY_NOT_FOUND_DETAIL) from exc
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
     except PolicyNotRenewable as exc:
         raise _error(409, "poliza_no_renovable", "La póliza no está habilitada para renovar.") from exc
+
+
+@router.post("/{poliza_id}/renovaciones", response_model=RenewalConfirmation, status_code=status.HTTP_201_CREATED)
+def apply_renewal(
+    poliza_id: str,
+    request: RenewalRequest,
+    response: Response,
+    x_cliente_id: Annotated[str, Header()],
+) -> RenewalConfirmation:
+    """Aplica el ciclo cobrado. 201 la primera vez; 200 si ese cobro ya renovó la póliza."""
+    cliente = x_cliente_id.strip()
+    if not cliente:
+        raise _error(422, "cliente_obligatorio", _CLIENTE_OBLIGATORIO)
+    try:
+        confirmation, created = call_upstream(use_cases["apply"].execute, poliza_id, cliente, request.cobro_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+    except PaymentNotApproved as exc:
+        raise _error(409, "pago_no_aprobado", "El pago no está aprobado. La renovación no se aplicó.") from exc
+    except PaymentDoesNotMatch as exc:
+        raise _error(
+            409,
+            "pago_no_corresponde",
+            "El pago no corresponde a esta renovación. La póliza no cambió.",
+        ) from exc
+    except RenewalAlreadyApplied as exc:
+        raise _error(
+            409,
+            "renovacion_ya_aplicada",
+            "Esta renovación ya fue aplicada. No se duplicó la cobertura ni hace falta otro pago.",
+        ) from exc
+    except PolicyNotRenewable as exc:
+        raise _error(409, "poliza_no_renovable", "La póliza no está habilitada para renovar.") from exc
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return confirmation
 
 
 @router.post("/emisiones", response_model=Policy, status_code=status.HTTP_201_CREATED)

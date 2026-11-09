@@ -5,9 +5,12 @@ from uuid import uuid4
 from solventa_common.sesion import sign_token
 
 from identidad.kyc.domain.models import (
+    DEFAULT_ALCANCE,
+    DEFAULT_TIPO_DOCUMENTO,
     OPEN_DATA,
     OPEN_FINANCE,
     Account,
+    CanalOtp,
     Client,
     ClienteNoEncontrado,
     CodigoOtpInvalido,
@@ -16,6 +19,7 @@ from identidad.kyc.domain.models import (
     ConsentimientoNoEncontrado,
     DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
+    EstadoConsentimiento,
     InvalidCredentials,
     RespuestaCliente,
     RespuestaConsulta,
@@ -139,7 +143,7 @@ def id_cliente(tipo_documento: str, numero_documento: str) -> str:
 def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
     # Con documento el id lo calcula el servidor; el cliente_id enviado solo se respeta sin documento.
     if solicitud.numero_documento.strip():
-        return id_cliente(solicitud.tipo_documento or "CC", solicitud.numero_documento)
+        return id_cliente(solicitud.tipo_documento or DEFAULT_TIPO_DOCUMENTO, solicitud.numero_documento)
     cid = (solicitud.cliente_id or "").strip()
     if cid:
         return cid
@@ -149,7 +153,7 @@ def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
 def _resolve_cliente_email(solicitud: SolicitudConsentimiento) -> str | None:
     if solicitud.email and solicitud.email.strip():
         return solicitud.email.strip()
-    if solicitud.canal == "email" and solicitud.contacto:
+    if solicitud.canal == CanalOtp.EMAIL and solicitud.contacto:
         return solicitud.contacto.strip()
     return None
 
@@ -157,13 +161,13 @@ def _resolve_cliente_email(solicitud: SolicitudConsentimiento) -> str | None:
 def _resolve_cliente_telefono(solicitud: SolicitudConsentimiento) -> str:
     if solicitud.telefono and solicitud.telefono.strip():
         return solicitud.telefono.strip()
-    if solicitud.canal == "sms" and solicitud.contacto:
+    if solicitud.canal == CanalOtp.SMS and solicitud.contacto:
         return solicitud.contacto.strip()
     return ""
 
 
 def _mask_contacto(canal: str, contacto: str) -> str:
-    if canal == "sms":
+    if canal == CanalOtp.SMS:
         digits = "".join(filter(str.isdigit, contacto))
         return f"***{digits[-4:]}" if len(digits) >= 4 else contacto
     if "@" in contacto:
@@ -221,7 +225,7 @@ class SolicitarConsentimiento:
         if self.clients is not None and email:
             cliente_obj = Client(
                 id=cliente_id,
-                tipo_documento=solicitud.tipo_documento or "CC",
+                tipo_documento=solicitud.tipo_documento or DEFAULT_TIPO_DOCUMENTO,
                 numero_documento=solicitud.numero_documento or "",
                 nombre=solicitud.nombre or "Cliente",
                 last_name=solicitud.apellido or "",
@@ -237,7 +241,7 @@ class SolicitarConsentimiento:
 
         # 2. Contacto, Máscara y Fuente
         contacto, contacto_mask = _resolve_contacto_y_mascara(solicitud)
-        canal_txt = "SMS" if solicitud.canal.lower() == "sms" else "Correo"
+        canal_txt = "SMS" if solicitud.canal.lower() == CanalOtp.SMS else "Correo"
         fuente = f"{canal_txt}: {contacto or contacto_mask}"
 
         # 3. Alcance (List[String])
@@ -252,7 +256,7 @@ class SolicitarConsentimiento:
             cliente_id=cliente_id,
             alcance=alcance,
             fuente=fuente,
-            estado="PENDIENTE",
+            estado=EstadoConsentimiento.PENDING,
             fecha_otorgamiento=None,
             fecha_revocacion=None,
             ramo=solicitud.ramo,
@@ -298,14 +302,14 @@ class ValidarConsentimiento:
             expira = expira.replace(tzinfo=UTC)
 
         if ahora > expira:
-            consentimiento.estado = "EXPIRADO"
+            consentimiento.estado = EstadoConsentimiento.EXPIRED
             self.repository.update(consentimiento)
             raise ConsentimientoExpirado("El código OTP ha expirado. Solicite uno nuevo.")
 
         if not verificar_codigo(codigo, consentimiento.codigo_hash):
             raise CodigoOtpInvalido("Código OTP incorrecto. Vuelva a intentarlo.")
 
-        consentimiento.estado = "OTORGADO"
+        consentimiento.estado = EstadoConsentimiento.GRANTED
         consentimiento.fecha_otorgamiento = ahora
         consentimiento.validado_en = ahora
         self.repository.update(consentimiento)
@@ -350,8 +354,10 @@ class ConsultarConsentimiento:
         fecha_ref = consentimiento.fecha_otorgamiento or consentimiento.validado_en or consentimiento.solicitado_en
         fecha_hora_str = fecha_ref.strftime("%Y-%m-%d %H:%M")
 
-        canal_label = "Código por SMS" if consentimiento.canal.lower() == "sms" else "Código por correo electrónico"
-        alcance_str = ", ".join(consentimiento.alcance) if consentimiento.alcance else "Open Finance, Open Data"
+        canal_label = (
+            "Código por SMS" if consentimiento.canal.lower() == CanalOtp.SMS else "Código por correo electrónico"
+        )
+        alcance_str = ", ".join(consentimiento.alcance or DEFAULT_ALCANCE)
 
         fecha_otorgamiento_iso = (
             consentimiento.fecha_otorgamiento.isoformat() if consentimiento.fecha_otorgamiento else None
@@ -363,7 +369,9 @@ class ConsultarConsentimiento:
             cliente_id=consentimiento.cliente_id,
             cliente_nombre=cliente_nombre,
             cliente_documento=cliente_doc,
-            estado="Otorgado" if consentimiento.estado == "OTORGADO" else consentimiento.estado.capitalize(),
+            estado="Otorgado"
+            if consentimiento.estado == EstadoConsentimiento.GRANTED
+            else consentimiento.estado.capitalize(),
             fuente=consentimiento.fuente,
             fecha_otorgamiento=fecha_otorgamiento_iso,
             fecha_revocacion=fecha_revocacion_iso,

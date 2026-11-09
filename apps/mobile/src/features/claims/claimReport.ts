@@ -1,17 +1,6 @@
 import { ClaimReport } from "./types";
 
 export const claimReport: ClaimReport = {
-  policy: 'Viaje Internacional · SLV-2026-03105',
-  policies: [
-    {
-      value: 'Viaje Internacional · SLV-2026-03105',
-      label: 'Viaje Internacional · SLV-2026-03105',
-    },
-    {
-      value: 'Protección Celular · SLV-2025-01820',
-      label: 'Protección Celular · SLV-2025-01820',
-    },
-  ],
   claimType: 'Accidente con vehículo de alquiler',
   claimTypes: [
     {

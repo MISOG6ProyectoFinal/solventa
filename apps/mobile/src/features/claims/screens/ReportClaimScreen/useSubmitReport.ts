@@ -31,7 +31,7 @@ export function useSubmitReport(fields: ReportFields) {
     const files = toEvidenceFiles(photos, videos);
     setSubmitted(true);
     setSendError(null);
-    if (fields.description.trim() === '' || files.length === 0) {
+    if (fields.policy === '' || fields.description.trim() === '' || files.length === 0) {
       return;
     }
 

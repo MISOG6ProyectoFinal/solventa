@@ -6,6 +6,7 @@
 # La URL de carga usa AWS_ENDPOINT_URL (por defecto http://localstack:4566, solo visible
 # dentro de Compose). Para que el teléfono suba el archivo, defina en este directorio
 # AWS_ENDPOINT_URL=http://<ip-de-la-red>:4566 y vuelva a levantar siniestros.
+# La pasarela, Open Finance, las notificaciones y la red de asistencia viven en `simuladores`.
 # Cotización contra PostgreSQL (una vez, antes de uvicorn):
 #   cd services/cotizacion && DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa \
 #     DB_PASSWORD=solventa python -m cotizacion.bootstrap
@@ -62,10 +63,13 @@ services:
       AWS_EC2_METADATA_DISABLED: "true"
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-solventa-evidencias}
+      RED_ASISTENCIA_URL: http://simuladores:8000/red-asistencia
     depends_on:
       postgres:
         condition: service_healthy
       localstack:
+        condition: service_healthy
+      simuladores:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
@@ -95,8 +99,11 @@ services:
       DB_NAME: cotizacion
       DB_USER: solventa
       DB_PASSWORD: solventa
+      OPEN_FINANCE_URL: http://simuladores:8000/open-finance
     depends_on:
       postgres:
+        condition: service_healthy
+      simuladores:
         condition: service_healthy
   cotizacion:
     build: *cotizacion-build
@@ -122,8 +129,11 @@ services:
       DB_NAME: identidad
       DB_USER: solventa
       DB_PASSWORD: solventa
+      FIRMA_NOTIFICACION_URL: http://simuladores:8000/notificaciones
     depends_on:
       postgres:
+        condition: service_healthy
+      simuladores:
         condition: service_healthy
   identidad:
     build: *identidad-build
@@ -150,8 +160,11 @@ services:
       DB_NAME: pagos
       DB_USER: solventa
       DB_PASSWORD: solventa
+      PASARELA_URL: http://simuladores:8000/pasarela-pagos
     depends_on:
       postgres:
+        condition: service_healthy
+      simuladores:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
@@ -207,6 +220,19 @@ services:
         condition: service_started
       polizas:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+  simuladores:
+    build:
+      context: .
+      args:
+        SERVICE: simuladores
+    environment:
+      SERVICE_NAME: simuladores
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
       interval: 5s

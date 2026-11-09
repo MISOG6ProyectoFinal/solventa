@@ -29,7 +29,7 @@ export default function ReportClaimScreen() {
   const texts = useTexts();
   const navigation = useNavigation();
   const form = useReportForm();
-  const { policy, claimType, occurredAt, description, restoredAddress } = form;
+  const { policies, policy, claimType, occurredAt, description, restoredAddress } = form;
   const [limitReached, setLimitReached] = useState(false);
   const { location, failed: locationFailed, refresh } = useLocation();
   const photos = useClaimsStore((state) => state.photos);
@@ -62,11 +62,12 @@ export default function ReportClaimScreen() {
   return (
     <Screen testID="report-claim-screen" header={{ title: texts.report.screenTitle }}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {policies?.length === 0 ? <Banner variant="error">{texts.report.noActivePolicies}</Banner> : null}
         <Card>
           <SelectField
             label={texts.report.policyLabel}
             value={policy}
-            options={claimReport.policies}
+            options={policies ?? []}
             onChange={form.setPolicy}
             required
           />

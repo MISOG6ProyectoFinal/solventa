@@ -8,6 +8,12 @@ export type PolicyTerm = {
   hasta: string;
 };
 
+export type AppliedRenewal = {
+  estado: 'aplicada';
+  cobro_id: string;
+  vigencia_nueva: PolicyTerm;
+};
+
 export type Policy = {
   id: string;
   numero: string;
@@ -19,6 +25,18 @@ export type Policy = {
   vigencia: PolicyTerm;
   coberturas: PolicyCoverage[];
   renovable?: boolean;
+  renovacion?: AppliedRenewal | null;
+};
+
+export type RenewalResult = {
+  poliza_id: string;
+  numero_poliza: string;
+  producto_id: string;
+  estado: 'aplicada';
+  cobro_id: string;
+  vigencia_anterior: PolicyTerm;
+  vigencia_nueva: PolicyTerm;
+  coberturas: PolicyCoverage[];
 };
 
 export type RenewalOffer = {

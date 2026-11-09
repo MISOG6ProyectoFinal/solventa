@@ -24,15 +24,21 @@ jest.mock('@react-navigation/drawer', () => {
   };
 });
 
-jest.mock('@react-navigation/native', () => ({
-  StackActions: jest.requireActual('@react-navigation/native').StackActions,
-  useNavigation: () => ({
-    navigate: mockNavigate,
-    dispatch: (action: { payload: { name: string } }) => mockNavigate(action.payload.name),
-    goBack: jest.fn(),
-    canGoBack: () => false,
-  }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    StackActions: jest.requireActual('@react-navigation/native').StackActions,
+    useNavigation: () => ({
+      navigate: mockNavigate,
+      dispatch: (action: { payload: { name: string } }) => mockNavigate(action.payload.name),
+      goBack: jest.fn(),
+      canGoBack: () => false,
+    }),
+    useFocusEffect: (effect: () => undefined | (() => void)) => {
+      React.useEffect(() => effect(), [effect]);
+    },
+  };
+});
 
 jest.mock('./storage', () => ({
   readToken: jest.fn(),

@@ -6,12 +6,11 @@ import {
   digitsOnly,
   formatMoney,
   formatVigenteHasta,
-  quoteReference,
   validateQuoteForm,
 } from './utils';
 
 function form(overrides: Partial<QuoteFormValues> = {}): QuoteFormValues {
-  return { ...defaultQuoteForm(), destino: 'España', ...overrides };
+  return { ...defaultQuoteForm(), nombre: 'María Rodríguez', cedula: '1020304050', destino: 'España', ...overrides };
 }
 
 describe('quote utils', () => {
@@ -43,12 +42,12 @@ describe('quote utils', () => {
     expect(toDisplayDate(addDays(new Date(2026, 9, 10), 14))).toBe('24/10/2026');
   });
 
-  it('defaults the viaje form like the prototype, with live dates', () => {
+  it('defaults the viaje form with empty identity fields and live dates', () => {
     const today = new Date();
     const values = defaultQuoteForm();
 
-    expect(values.nombre).toBe('María Rodríguez');
-    expect(values.cedula).toBe('1020304050');
+    expect(values.nombre).toBe('');
+    expect(values.cedula).toBe('');
     expect(values.destino).toBe('');
     expect(values.viajeros).toBe('1');
     expect(values.fechaSalida).toBe(toDisplayDate(today));
@@ -71,11 +70,6 @@ describe('quote utils', () => {
     expect(validateQuoteForm(form({ fechaRegreso: defaultQuoteForm().fechaSalida })).fechaRegreso).toBe(
       'returnBeforeDeparture',
     );
-  });
-
-  it('derives a stable COT-M reference from the offer id', () => {
-    expect(quoteReference('oferta-1')).toMatch(/^COT-M-\d{5}$/);
-    expect(quoteReference('oferta-1')).toBe(quoteReference('oferta-1'));
   });
 
   it('keeps only digits', () => {

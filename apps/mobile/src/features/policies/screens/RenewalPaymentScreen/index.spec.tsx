@@ -2,11 +2,11 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { ApiError } from '../../../../shared/api/client';
-import { issuePolicy } from '../../api/issuePolicy';
+import { applyRenewal } from '../../api/applyRenewal';
 import { getRenewalOffer } from '../../api/getRenewalOffer';
 import { payRenewal } from '../../api/payRenewal';
 import { es as texts } from '../../texts/es';
-import { RenewalOffer } from '../../types';
+import { RenewalOffer, RenewalResult } from '../../types';
 import RenewalPaymentScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -28,8 +28,8 @@ jest.mock('../../api/payRenewal', () => ({
   payRenewal: jest.fn(),
 }));
 
-jest.mock('../../api/issuePolicy', () => ({
-  issuePolicy: jest.fn(),
+jest.mock('../../api/applyRenewal', () => ({
+  applyRenewal: jest.fn(),
 }));
 
 const OFERTA: RenewalOffer = {
@@ -43,6 +43,25 @@ const OFERTA: RenewalOffer = {
   coberturas_propuestas: [],
 };
 
+const CONFIRMADA: RenewalResult = {
+  poliza_id: 'poliza-1',
+  numero_poliza: 'POL-75885ABCDE',
+  producto_id: 'viaje-internacional',
+  estado: 'aplicada',
+  cobro_id: 'cobro-1',
+  vigencia_anterior: { desde: '2026-01-01', hasta: '2026-12-31' },
+  vigencia_nueva: { desde: '2027-01-01', hasta: '2027-12-31' },
+  coberturas: [{ id: 'medicos', nombre: 'Gastos médicos en el exterior' }],
+};
+
+const PAGO_APROBADO = {
+  id: 'cobro-1',
+  poliza_id: 'poliza-1',
+  estado: 'aprobado' as const,
+  monto: '200000.00',
+  moneda: 'COP',
+};
+
 function renderPayment() {
   return render(<RenewalPaymentScreen route={{ params: { policyId: 'poliza-1', productName: 'Viaje Internacional' } }} />);
 }
@@ -52,8 +71,9 @@ describe('RenewalPaymentScreen', () => {
     useNavigation().navigate.mockClear();
     jest.mocked(getRenewalOffer).mockReset();
     jest.mocked(payRenewal).mockReset();
-    jest.mocked(issuePolicy).mockReset();
+    jest.mocked(applyRenewal).mockReset();
     jest.mocked(getRenewalOffer).mockResolvedValue(OFERTA);
+    jest.mocked(applyRenewal).mockResolvedValue(CONFIRMADA);
   });
 
   it('confirms the proposed premium before charging and does not send the amount', async () => {
@@ -64,7 +84,7 @@ describe('RenewalPaymentScreen', () => {
           resolvePay = resolve;
         }),
     );
-    const { findByTestId, getByTestId, getByText } = await renderPayment();
+    const { findByTestId, getByTestId, getByText, queryByText } = await renderPayment();
 
     expect(await findByTestId('renewal-pay-amount')).toBeTruthy();
     expect(getByTestId('renewal-pay-amount').props.children).toBe('$200.000');
@@ -84,11 +104,27 @@ describe('RenewalPaymentScreen', () => {
     expect(payRenewal).toHaveBeenCalledWith('poliza-1', expect.any(String), undefined);
     expect(JSON.stringify(jest.mocked(payRenewal).mock.calls[0])).not.toContain('200000');
 
+    let resolveApply: (value: RenewalResult) => void = () => undefined;
+    jest.mocked(applyRenewal).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveApply = resolve;
+        }),
+    );
+
     await act(async () => {
-      resolvePay({ id: 'cobro-1', poliza_id: 'poliza-1', estado: 'aprobado', monto: '200000.00', moneda: 'COP' });
+      resolvePay(PAGO_APROBADO);
     });
 
-    expect(getByText(texts.renewal.approved)).toBeTruthy();
+    expect(getByText(texts.renewal.applying)).toBeTruthy();
+    expect(applyRenewal).toHaveBeenCalledTimes(1);
+    expect(applyRenewal).toHaveBeenCalledWith('poliza-1', 'cobro-1');
+    expect(payRenewal).toHaveBeenCalledTimes(1);
+    expect(queryByText(texts.renewal.successAlert)).toBeNull();
+
+    await act(async () => {
+      resolveApply(CONFIRMADA);
+    });
   });
 
   it('does not offer payment when the policy is no longer renewable', async () => {
@@ -126,7 +162,7 @@ describe('RenewalPaymentScreen', () => {
     expect(queryByText(texts.renewal.approved)).toBeNull();
     expect(queryByText('Renovación exitosa')).toBeNull();
     expect(queryByText('Renovación exitosa. La nueva vigencia ya quedó aplicada.')).toBeNull();
-    expect(issuePolicy).not.toHaveBeenCalled();
+    expect(applyRenewal).not.toHaveBeenCalled();
     expect(useNavigation().navigate).not.toHaveBeenCalled();
 
     await fireEvent.press(getByTestId('renewal-pay'));
@@ -136,27 +172,60 @@ describe('RenewalPaymentScreen', () => {
     expect(jest.mocked(payRenewal).mock.calls[0]).toEqual(['poliza-1', expect.any(String), undefined]);
   });
 
-  it('shows an approved payment without applying the new term', async () => {
-    jest.mocked(payRenewal).mockResolvedValue({
-      id: 'cobro-1',
-      poliza_id: 'poliza-1',
-      estado: 'aprobado',
-      monto: '200000.00',
-      moneda: 'COP',
-    });
-    const { findByText, getByTestId, queryByTestId, queryByText } = await renderPayment();
+  it('shows the new term from the applied renewal and opens the policy', async () => {
+    jest.mocked(payRenewal).mockResolvedValue(PAGO_APROBADO);
+    const { findByText, getByTestId, getByText, queryByText } = await renderPayment();
 
     await fireEvent.press(await findByText(texts.renewal.pay('$200.000')));
 
-    expect(await findByText(texts.renewal.approved)).toBeTruthy();
-    expect(getByTestId('renewal-payment-status')).toBeTruthy();
-    expect(queryByText(texts.renewal.payValidity('2026-10-25', '2026-11-08'))).toBeNull();
-    expect(queryByText('Renovación exitosa')).toBeNull();
-    expect(queryByText('La nueva vigencia ya quedó aplicada.')).toBeNull();
-    expect(queryByText('Ver póliza actualizada')).toBeNull();
-    expect(queryByTestId('renewal-pay')).toBeNull();
-    expect(issuePolicy).not.toHaveBeenCalled();
-    expect(useNavigation().navigate).not.toHaveBeenCalled();
+    expect(await findByText(texts.renewal.successAlert)).toBeTruthy();
+    expect(getByText(texts.renewal.successTitle)).toBeTruthy();
+    expect(getByTestId('renewal-new-start').props.children).toBe(texts.renewal.newStart('2027-01-01'));
+    expect(getByTestId('renewal-new-end').props.children).toBe(texts.renewal.newEnd('2027-12-31'));
+    expect(getByText('Gastos médicos en el exterior')).toBeTruthy();
+    expect(queryByText(texts.renewal.newStart('2026-10-25'))).toBeNull();
+    expect(queryByText(texts.renewal.pay('$200.000'))).toBeNull();
+    expect(payRenewal).toHaveBeenCalledTimes(1);
+    expect(applyRenewal).toHaveBeenCalledTimes(1);
+    expect(applyRenewal).toHaveBeenCalledWith('poliza-1', 'cobro-1');
+
+    await fireEvent.press(getByTestId('renewal-view-policy'));
+
+    expect(useNavigation().navigate).toHaveBeenCalledWith('PolicyDetail', {
+      policy: expect.objectContaining({
+        id: 'poliza-1',
+        numero: 'POL-75885ABCDE',
+        renovable: false,
+        vigencia: CONFIRMADA.vigencia_anterior,
+        renovacion: {
+          estado: 'aplicada',
+          cobro_id: 'cobro-1',
+          vigencia_nueva: CONFIRMADA.vigencia_nueva,
+        },
+      }),
+      productName: 'Viaje Internacional',
+    });
+  });
+
+  it('retries the same approved payment without charging again', async () => {
+    jest.mocked(payRenewal).mockResolvedValue(PAGO_APROBADO);
+    jest.mocked(applyRenewal).mockRejectedValueOnce(new ApiError(503, 'Pólizas no disponible'));
+    const { findByText, getByTestId, queryByText } = await renderPayment();
+
+    await fireEvent.press(await findByText(texts.renewal.pay('$200.000')));
+
+    expect(await findByText(texts.renewal.applyFailed)).toBeTruthy();
+    expect(queryByText(texts.renewal.successAlert)).toBeNull();
+    expect(queryByText(texts.renewal.pay('$200.000'))).toBeNull();
+    expect(getByTestId('renewal-apply-retry')).toBeTruthy();
+
+    await fireEvent.press(getByTestId('renewal-apply-retry'));
+
+    expect(await findByText(texts.renewal.successAlert)).toBeTruthy();
+    expect(payRenewal).toHaveBeenCalledTimes(1);
+    expect(applyRenewal).toHaveBeenCalledTimes(2);
+    expect(jest.mocked(applyRenewal).mock.calls[0]).toEqual(['poliza-1', 'cobro-1']);
+    expect(jest.mocked(applyRenewal).mock.calls[1]).toEqual(['poliza-1', 'cobro-1']);
   });
 
   it('reuses the same attempt when a technical error is retried', async () => {
@@ -167,7 +236,7 @@ describe('RenewalPaymentScreen', () => {
 
     expect(await findByText('Pasarela de pagos no disponible')).toBeTruthy();
     expect(getByTestId('renewal-payment-retry')).toBeTruthy();
-    expect(issuePolicy).not.toHaveBeenCalled();
+    expect(applyRenewal).not.toHaveBeenCalled();
 
     await fireEvent.press(getByTestId('renewal-payment-retry'));
 

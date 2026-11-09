@@ -7,12 +7,14 @@ import { theme } from '../../../../shared/theme';
 import { Banner, EmptyState, ErrorState, LoadingState, Screen } from '../../../../shared/ui';
 import { listAvisos, type Aviso } from '../../api/listAvisos';
 import { listReports, type StoredReport } from '../../offline/listReports';
+import { usePolicyNumber } from '../../policies';
 import { getTexts, useTexts } from '../../texts';
-import { ClaimRow, claimKey, type ClaimItem } from './ClaimRow';
+import { ClaimRow, claimKey, claimPolicyId, type ClaimItem } from './ClaimRow';
 import styles from './styles';
 
 export default function ClaimsScreen() {
   const texts = useTexts();
+  const policyNumber = usePolicyNumber();
   const navigation = useNavigation();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [pending, setPending] = useState<StoredReport[]>([]);
@@ -83,8 +85,10 @@ export default function ClaimsScreen() {
   );
 
   const renderClaim = useCallback(
-    (info: ListRenderItemInfo<ClaimItem>) => <ClaimRow item={info.item} onOpen={openClaim} />,
-    [openClaim],
+    (info: ListRenderItemInfo<ClaimItem>) => (
+      <ClaimRow item={info.item} policyNumber={policyNumber(claimPolicyId(info.item))} onOpen={openClaim} />
+    ),
+    [openClaim, policyNumber],
   );
 
   useFocusEffect(

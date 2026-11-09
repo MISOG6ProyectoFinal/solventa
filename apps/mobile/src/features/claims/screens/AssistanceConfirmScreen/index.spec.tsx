@@ -4,6 +4,10 @@ import { StackActions, useNavigation } from '@react-navigation/native';
 import { Aviso } from '../../api/listAvisos';
 import AssistanceConfirmScreen from './index';
 
+jest.mock('../../../policies/api/listPolicies', () => ({
+  listPolicies: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('@react-navigation/native', () => {
   const { StackActions } = jest.requireActual('@react-navigation/native');
   const goBack = jest.fn();

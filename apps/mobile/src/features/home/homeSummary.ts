@@ -11,12 +11,10 @@ export type HomeShortcut = {
 };
 
 export type HomeSummary = {
-  policyCount: number;
   shortcuts: HomeShortcut[];
 };
 
 export const homeSummary: HomeSummary = {
-  policyCount: 3,
   shortcuts: [
     { id: 'claims', destination: 'Claims' },
     { id: 'buy', destination: 'Buy' },

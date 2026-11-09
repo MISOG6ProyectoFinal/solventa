@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { DrawerActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { listPolicies } from '../../../policies/api/listPolicies';
@@ -18,31 +18,37 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const firstName = useSessionStore((state) => state.firstName);
   const [renewablePolicy, setRenewablePolicy] = useState<Policy | null>(null);
+  const [activeCount, setActiveCount] = useState<number | null>(null);
   const [productName, setProductName] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    let cancelled = false;
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setRenewablePolicy(null);
 
-    Promise.all([listPolicies(), getProducts().catch(() => [] as ProductoMovil[])])
-      .then(([policies, products]) => {
-        if (cancelled) {
-          return;
-        }
-        const policy = policies.find((item) => item.estado === 'activa' && item.renovable === true) ?? null;
-        const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
-        setRenewablePolicy(policy);
-        setProductName(policy ? names[policy.producto_id] : undefined);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRenewablePolicy(null);
-        }
-      });
+      Promise.all([listPolicies(), getProducts().catch(() => [] as ProductoMovil[])])
+        .then(([policies, products]) => {
+          if (cancelled) {
+            return;
+          }
+          const policy = policies.find((item) => item.estado === 'activa' && item.renovable === true) ?? null;
+          const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
+          setActiveCount(policies.filter((item) => item.estado === 'activa').length);
+          setRenewablePolicy(policy);
+          setProductName(policy ? names[policy.producto_id] : undefined);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setRenewablePolicy(null);
+            setActiveCount(null);
+          }
+        });
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const openDestination = (destination: HomeShortcutDestination) => {
     if (destination === 'NearbyProviders') {
@@ -73,9 +79,11 @@ export default function HomeScreen() {
             <AppText variant="label" style={styles.coverageLabel}>
               {texts.home.coverageLabel}
             </AppText>
-            <AppText variant="sectionTitle" style={styles.onNavy}>
-              {homeSummary.policyCount} {texts.home.policyCountSuffix}
-            </AppText>
+            {activeCount === null ? null : (
+              <AppText variant="sectionTitle" style={styles.onNavy}>
+                {texts.home.policyCount(activeCount)}
+              </AppText>
+            )}
           </View>
           <View style={styles.actions}>
             <View style={styles.action}>

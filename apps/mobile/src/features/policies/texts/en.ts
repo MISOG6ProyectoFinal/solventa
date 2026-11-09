@@ -20,6 +20,7 @@ export const en: Texts = {
     renewalOfferBody: (days) =>
       `Your policy expires in ${days} days. Viewing the offer does not change your current policy.`,
     seeRenewalOffer: 'See renewal offer',
+    goHome: 'Go to home',
   },
   renewal: {
     screenTitle: 'Renewal offer',
@@ -42,5 +43,14 @@ export const en: Texts = {
     rejected: 'The renewal payment was declined. Your current policy was not changed and remains in force.',
     approved: 'Payment approved',
     paymentFailed: 'Could not process the payment.',
+    applying: 'Applying renewal...',
+    applyFailed:
+      'The payment was approved, but the renewal is not confirmed yet. Do not pay again; retry the confirmation.',
+    retryApply: 'Retry confirmation',
+    successTitle: 'Renewal successful',
+    successAlert: 'Renewal successful. The new term is now applied.',
+    newStart: (start) => `New start ${start}`,
+    newEnd: (end) => `New end ${end}`,
+    viewUpdated: 'View updated policy',
   },
 };

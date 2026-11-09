@@ -1,8 +1,9 @@
 """Persistencia de pólizas. La clave de idempotencia y la cotización son únicas."""
 
 import threading
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
+from solventa_common.events import Event
 from sqlalchemy import (
     JSON,
     Column,
@@ -21,8 +22,8 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from polizas.ciclo_vida.domain.models import Beneficiary, Policy, PolicyStatus, Validity
-from polizas.ciclo_vida.domain.ports import DuplicatePolicy
+from polizas.ciclo_vida.domain.models import Beneficiary, Policy, PolicyStatus, Renewal, Validity
+from polizas.ciclo_vida.domain.ports import DuplicatePolicy, DuplicateRenewal
 
 metadata = MetaData()
 
@@ -46,6 +47,35 @@ policies = Table(
     Column("emitida_en", DateTime(timezone=True), nullable=False),
 )
 
+renewals = Table(
+    "renovaciones",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("poliza_id", String(36), nullable=False),
+    Column("ciclo", String(255), nullable=False, unique=True),
+    Column("cobro_id", String(64), nullable=False, unique=True),
+    Column("vigencia_anterior_desde", Date, nullable=False),
+    Column("vigencia_anterior_hasta", Date, nullable=False),
+    Column("vigencia_nueva_desde", Date, nullable=False),
+    Column("vigencia_nueva_hasta", Date, nullable=False),
+    Column("prima_anterior", Numeric(18, 2), nullable=False),
+    Column("prima_nueva", Numeric(18, 2), nullable=False),
+    Column("aplicada_en", DateTime(timezone=True), nullable=False),
+)
+
+outbox_events = Table(
+    "outbox_eventos",
+    metadata,
+    Column("event_id", String(36), primary_key=True),
+    Column("event_type", String(64), nullable=False),
+    Column("source", String(32), nullable=False),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    Column("idempotency_key", String(255), nullable=False, unique=True),
+    Column("payload", JSON, nullable=False),
+    Column("estado", String(16), nullable=False),
+    Column("publicado_en", DateTime(timezone=True), nullable=True),
+)
+
 
 beneficiaries = Table(
     "beneficiarios",
@@ -67,6 +97,66 @@ def _row_values(policy: Policy) -> dict:
         "vigencia_hasta": policy.vigencia.hasta,
         "emitida_en": policy.emitida_en,
     }
+
+
+def _renewal_values(renewal: Renewal) -> dict:
+    return {
+        "id": renewal.id,
+        "poliza_id": renewal.poliza_id,
+        "ciclo": renewal.ciclo,
+        "cobro_id": renewal.cobro_id,
+        "vigencia_anterior_desde": renewal.vigencia_anterior.desde,
+        "vigencia_anterior_hasta": renewal.vigencia_anterior.hasta,
+        "vigencia_nueva_desde": renewal.vigencia_nueva.desde,
+        "vigencia_nueva_hasta": renewal.vigencia_nueva.hasta,
+        "prima_anterior": renewal.prima_anterior,
+        "prima_nueva": renewal.prima_nueva,
+        "aplicada_en": renewal.aplicada_en,
+    }
+
+
+def _renewal(row) -> Renewal:
+    return Renewal(
+        id=row["id"],
+        poliza_id=row["poliza_id"],
+        ciclo=row["ciclo"],
+        cobro_id=row["cobro_id"],
+        vigencia_anterior=Validity(desde=row["vigencia_anterior_desde"], hasta=row["vigencia_anterior_hasta"]),
+        vigencia_nueva=Validity(desde=row["vigencia_nueva_desde"], hasta=row["vigencia_nueva_hasta"]),
+        prima_anterior=row["prima_anterior"],
+        prima_nueva=row["prima_nueva"],
+        aplicada_en=row["aplicada_en"],
+    )
+
+
+def _event_values(event: Event) -> dict:
+    return {
+        "event_id": event.event_id,
+        "event_type": event.event_type,
+        "source": event.source,
+        "occurred_at": event.occurred_at,
+        "idempotency_key": event.idempotency_key,
+        "payload": event.payload,
+        "estado": "pendiente",
+        "publicado_en": None,
+    }
+
+
+def _event(row) -> Event:
+    return Event(
+        event_id=row["event_id"],
+        event_type=row["event_type"],
+        source=row["source"],
+        occurred_at=row["occurred_at"],
+        idempotency_key=row["idempotency_key"],
+        payload=row["payload"],
+    )
+
+
+def _covers(renewal_row, policy_end: date, today: date) -> bool:
+    start = renewal_row["vigencia_nueva_desde"]
+    end = renewal_row["vigencia_nueva_hasta"]
+    return start == policy_end + timedelta(days=1) and start <= today <= end
 
 
 def _policy(row) -> Policy:
@@ -153,6 +243,7 @@ class PostgresPolicyRepository:
         return [_policy(row) for row in rows]
 
     def expire_ended(self, today: date) -> int:
+        self.activate_renewed_terms(today)
         with self.engine.begin() as conn:
             result = conn.execute(
                 update(policies)
@@ -160,6 +251,86 @@ class PostgresPolicyRepository:
                 .values(estado=PolicyStatus.EXPIRED.value)
             )
         return result.rowcount
+
+    def activate_renewed_terms(self, today: date) -> int:
+        with self.engine.begin() as conn:
+            rows = (
+                conn.execute(
+                    select(
+                        policies.c.id,
+                        policies.c.vigencia_hasta,
+                        renewals.c.vigencia_nueva_desde,
+                        renewals.c.vigencia_nueva_hasta,
+                        renewals.c.prima_nueva,
+                    )
+                    .join(renewals, renewals.c.poliza_id == policies.c.id)
+                    .where(policies.c.estado == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today)
+                )
+                .mappings()
+                .all()
+            )
+            changed = 0
+            for row in rows:
+                if not _covers(row, row["vigencia_hasta"], today):
+                    continue
+                conn.execute(
+                    update(policies)
+                    .where(policies.c.id == row["id"])
+                    .values(
+                        vigencia_desde=row["vigencia_nueva_desde"],
+                        vigencia_hasta=row["vigencia_nueva_hasta"],
+                        prima=row["prima_nueva"],
+                    )
+                )
+                changed += 1
+            return changed
+
+    def get_renewal_by_payment(self, cobro_id: str) -> Renewal | None:
+        return self._renewal_first(renewals.c.cobro_id == cobro_id)
+
+    def get_renewal_by_cycle(self, ciclo: str) -> Renewal | None:
+        return self._renewal_first(renewals.c.ciclo == ciclo)
+
+    def list_renewals(self, poliza_ids: list[str]) -> list[Renewal]:
+        if not poliza_ids:
+            return []
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(renewals).where(renewals.c.poliza_id.in_(poliza_ids))).mappings().all()
+        return [_renewal(row) for row in rows]
+
+    def save_renewal(self, renewal: Renewal, event: Event) -> None:
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(insert(renewals).values(**_renewal_values(renewal)))
+                conn.execute(insert(outbox_events).values(**_event_values(event)))
+        except IntegrityError as exc:
+            raise DuplicateRenewal(renewal.ciclo) from exc
+
+    def pending_events(self) -> list[Event]:
+        with self.engine.connect() as conn:
+            rows = (
+                conn.execute(
+                    select(outbox_events)
+                    .where(outbox_events.c.estado == "pendiente")
+                    .order_by(outbox_events.c.occurred_at)
+                )
+                .mappings()
+                .all()
+            )
+        return [_event(row) for row in rows]
+
+    def mark_published(self, event_id: str) -> None:
+        with self.engine.begin() as conn:
+            conn.execute(
+                update(outbox_events)
+                .where(outbox_events.c.event_id == event_id, outbox_events.c.estado == "pendiente")
+                .values(estado="publicado", publicado_en=datetime.now(UTC))
+            )
+
+    def _renewal_first(self, condition) -> Renewal | None:
+        with self.engine.connect() as conn:
+            row = conn.execute(select(renewals).where(condition)).mappings().first()
+        return _renewal(row) if row else None
 
     def _first(self, condition) -> Policy | None:
         with self.engine.connect() as conn:
@@ -170,7 +341,9 @@ class PostgresPolicyRepository:
 class InMemoryPolicyRepository:
     def __init__(self) -> None:
         self.items: list[Policy] = []
-        self._lock = threading.Lock()
+        self.renewals: list[Renewal] = []
+        self.events: list[tuple[Event, bool]] = []
+        self._lock = threading.RLock()
 
     def add(self, policy: Policy) -> None:
         with self._lock:
@@ -227,8 +400,64 @@ class InMemoryPolicyRepository:
             return sorted(self.items, key=lambda policy: policy.emitida_en, reverse=True)[:limit]
 
     def expire_ended(self, today: date) -> int:
+        self.activate_renewed_terms(today)
         with self._lock:
             ended = [p for p in self.items if p.estado is PolicyStatus.ACTIVE and p.vigencia.hasta < today]
             for policy in ended:
                 policy.estado = PolicyStatus.EXPIRED
             return len(ended)
+
+    def activate_renewed_terms(self, today: date) -> int:
+        with self._lock:
+            changed = 0
+            for policy in self.items:
+                if policy.estado is not PolicyStatus.ACTIVE or policy.vigencia.hasta >= today:
+                    continue
+                match = next(
+                    (
+                        renewal
+                        for renewal in self.renewals
+                        if renewal.poliza_id == policy.id
+                        and renewal.vigencia_nueva.desde == policy.vigencia.hasta + timedelta(days=1)
+                        and renewal.vigencia_nueva.desde <= today <= renewal.vigencia_nueva.hasta
+                    ),
+                    None,
+                )
+                if match is None:
+                    continue
+                policy.vigencia = match.vigencia_nueva.model_copy()
+                policy.prima = match.prima_nueva
+                changed += 1
+            return changed
+
+    def get_renewal_by_payment(self, cobro_id: str) -> Renewal | None:
+        with self._lock:
+            return next((renewal for renewal in self.renewals if renewal.cobro_id == cobro_id), None)
+
+    def get_renewal_by_cycle(self, ciclo: str) -> Renewal | None:
+        with self._lock:
+            return next((renewal for renewal in self.renewals if renewal.ciclo == ciclo), None)
+
+    def list_renewals(self, poliza_ids: list[str]) -> list[Renewal]:
+        wanted = set(poliza_ids)
+        with self._lock:
+            return [renewal for renewal in self.renewals if renewal.poliza_id in wanted]
+
+    def save_renewal(self, renewal: Renewal, event: Event) -> None:
+        with self._lock:
+            if any(item.ciclo == renewal.ciclo or item.cobro_id == renewal.cobro_id for item in self.renewals):
+                raise DuplicateRenewal(renewal.ciclo)
+            if any(stored.idempotency_key == event.idempotency_key for stored, _published in self.events):
+                raise DuplicateRenewal(renewal.ciclo)
+            self.renewals.append(renewal)
+            self.events.append((event, False))
+
+    def pending_events(self) -> list[Event]:
+        with self._lock:
+            return [event for event, published in self.events if not published]
+
+    def mark_published(self, event_id: str) -> None:
+        with self._lock:
+            self.events = [
+                (event, True) if event.event_id == event_id else (event, published) for event, published in self.events
+            ]

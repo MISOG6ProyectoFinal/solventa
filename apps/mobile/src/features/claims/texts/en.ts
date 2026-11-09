@@ -18,6 +18,7 @@ export const en: Texts = {
   report: {
     screenTitle: 'Report a claim',
     policyLabel: 'Affected policy',
+    noActivePolicies: 'You have no active policies to report a claim on.',
     claimTypeLabel: 'Claim type',
     occurredAtLabel: 'Date and time of occurrence',
     locationLabel: 'Location',

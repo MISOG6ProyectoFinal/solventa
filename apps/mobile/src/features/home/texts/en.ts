@@ -7,7 +7,7 @@ export const en: Texts = {
     screenSubtitle: 'Your coverage',
     menuLabel: 'Menu',
     coverageLabel: 'Active coverage',
-    policyCountSuffix: 'policies',
+    policyCount: (count) => (count === 1 ? '1 policy' : `${count} policies`),
     policiesButton: 'View policies',
     buyButton: 'Buy',
     shortcuts: {

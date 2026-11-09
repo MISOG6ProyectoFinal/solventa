@@ -5,6 +5,10 @@ import { readLocation } from '../../../../shared/location';
 import { Aviso } from '../../api/listAvisos';
 import AssistanceServiceScreen from './index';
 
+jest.mock('../../../policies/api/listPolicies', () => ({
+  listPolicies: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('@react-navigation/native', () => {
   const goBack = jest.fn();
   const navigate = jest.fn();

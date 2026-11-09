@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 
 import { claimReport } from '../../claimReport';
+import { useClaimPolicies } from '../../policies';
 import { listReports } from '../../offline/listReports';
 import { useClaimsStore } from '../../store/useClaimsStore';
 import { formatDate, fromIsoOccurredAt } from '../../utils';
 
 // Form fields, restored from the report saved on the device. Leaving the screen clears the evidence.
 export function useReportForm() {
-  const [policy, setPolicy] = useState(claimReport.policy);
+  const policies = useClaimPolicies();
+  const [policy, setPolicy] = useState('');
   const [claimType, setClaimType] = useState(claimReport.claimType);
   const [occurredAt, setOccurredAt] = useState(() => formatDate(new Date()));
   const [description, setDescription] = useState('');
@@ -23,8 +25,7 @@ export function useReportForm() {
       if (!saved) {
         return;
       }
-      const policyMatch = claimReport.policies.find((option) => option.value.split(' · ').pop() === saved.poliza_id);
-      setPolicy(policyMatch?.value ?? saved.poliza_id);
+      setPolicy(saved.poliza_id);
       setClaimType(saved.tipo);
       setOccurredAt(fromIsoOccurredAt(saved.ocurrido_en));
       setDescription(saved.descripcion);
@@ -39,7 +40,15 @@ export function useReportForm() {
     };
   }, []);
 
+  useEffect(() => {
+    const first = policies?.[0]?.value;
+    if (first) {
+      setPolicy((current) => (current === '' ? first : current));
+    }
+  }, [policies]);
+
   return {
+    policies,
     policy,
     setPolicy,
     claimType,
