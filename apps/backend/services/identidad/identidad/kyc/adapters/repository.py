@@ -4,7 +4,7 @@ from sqlalchemy import Column, Date, Index, MetaData, String, Table, insert, sel
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from identidad.kyc.domain.models import Client
+from identidad.kyc.domain.models import DEFAULT_TIPO_DOCUMENTO, Client
 
 metadata = MetaData()
 
@@ -12,7 +12,7 @@ clients = Table(
     "clientes",
     metadata,
     Column("id", String(36), primary_key=True),
-    Column("tipo_documento", String(10), nullable=True, default="CC"),
+    Column("tipo_documento", String(10), nullable=True, default=DEFAULT_TIPO_DOCUMENTO),
     Column("numero_documento", String(30), nullable=True),
     Column("nombre", String(120), nullable=False),
     Column("fecha_nacimiento", Date, nullable=True),
@@ -48,7 +48,7 @@ def _client(row) -> Client:
         email=row["email"],
         nombre=row.get("nombre") or "",
         last_name=row.get("apellido") or "",
-        tipo_documento=row.get("tipo_documento") or "CC",
+        tipo_documento=row.get("tipo_documento") or DEFAULT_TIPO_DOCUMENTO,
         numero_documento=row.get("numero_documento") or "",
         fecha_nacimiento=row.get("fecha_nacimiento"),
         telefono=row.get("telefono") or "",
