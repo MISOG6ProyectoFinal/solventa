@@ -4,8 +4,6 @@ export type ClaimChoice = {
 };
 
 export type ClaimReport = {
-  policy: string;
-  policies: ClaimChoice[];
   claimType: string;
   claimTypes: ClaimChoice[];
   occurredAt: string;

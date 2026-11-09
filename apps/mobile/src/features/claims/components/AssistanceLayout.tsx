@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { ScrollView } from 'react-native';
 
 import { Banner, Screen } from '../../../shared/ui';
+import { usePolicyNumber } from '../policies';
 import { useTexts } from '../texts';
 import detailStyles from './detailStyles';
 
@@ -14,10 +15,11 @@ type Props = {
 
 export function AssistanceLayout({ testID, policyId, error, children }: Readonly<Props>) {
   const texts = useTexts();
+  const policyNumber = usePolicyNumber();
   return (
     <Screen testID={testID} header={{ title: texts.assistance.screenTitle }}>
       <ScrollView style={detailStyles.scroll} contentContainerStyle={detailStyles.content}>
-        <Banner variant="success">{texts.assistance.coverageOk(policyId)}</Banner>
+        <Banner variant="success">{texts.assistance.coverageOk(policyNumber(policyId))}</Banner>
         {error ? <Banner variant="error">{error}</Banner> : null}
         {children}
       </ScrollView>
