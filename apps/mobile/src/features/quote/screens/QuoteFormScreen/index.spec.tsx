@@ -77,7 +77,7 @@ describe('QuoteFormScreen', () => {
     global.fetch = routeFetch(() => jsonResponse(OFERTA)) as unknown as typeof fetch;
   });
 
-  it('shows the viaje form with the prototype defaults', async () => {
+  it('shows the viaje form with empty identity fields', async () => {
     const defaults = defaultQuoteForm();
     const { findByText, getByText, getByDisplayValue, queryByText } = await render(<QuoteFormScreen />);
 
@@ -87,9 +87,7 @@ describe('QuoteFormScreen', () => {
     expect(getByText('Viaje Internacional')).toBeTruthy();
     expect(getByText('Gastos médicos, equipaje y asistencia en viaje')).toBeTruthy();
     expect(getByText(/Nombre completo/)).toBeTruthy();
-    expect(getByDisplayValue('María Rodríguez')).toBeTruthy();
     expect(getByText(/Cédula/)).toBeTruthy();
-    expect(getByDisplayValue('1020304050')).toBeTruthy();
     expect(getByText(/Destino/)).toBeTruthy();
     expect(getByText(/Fecha de salida/)).toBeTruthy();
     expect(getByText(defaults.fechaSalida)).toBeTruthy();
@@ -111,8 +109,6 @@ describe('QuoteFormScreen', () => {
     const { findByText, getAllByText, getByDisplayValue, getByText } = await render(<QuoteFormScreen />);
 
     await findByText('Estados Unidos');
-    await fireEvent.changeText(getByDisplayValue('María Rodríguez'), '');
-    await fireEvent.changeText(getByDisplayValue('1020304050'), '');
     await fireEvent.changeText(getByDisplayValue('1'), '0');
     await fireEvent.press(getByText('Calcular cotización'));
 
@@ -139,9 +135,11 @@ describe('QuoteFormScreen', () => {
 
   it('posts the exact viaje payload and opens the result', async () => {
     const defaults = defaultQuoteForm();
-    const { findByText, getByText } = await render(<QuoteFormScreen />);
+    const { findByText, getByText, getByTestId } = await render(<QuoteFormScreen />);
 
     await findByText('Estados Unidos');
+    await fireEvent.changeText(getByTestId('quote-nombre'), 'María Rodríguez');
+    await fireEvent.changeText(getByTestId('quote-documento'), '1020304050');
     await fireEvent.press(getByText('Calcular cotización'));
 
     await waitFor(() => {
@@ -179,6 +177,8 @@ describe('QuoteFormScreen', () => {
     const { findByText, getByText, getByTestId, queryByText, queryByTestId } = await render(<QuoteFormScreen />);
 
     await findByText('Estados Unidos');
+    await fireEvent.changeText(getByTestId('quote-nombre'), 'María Rodríguez');
+    await fireEvent.changeText(getByTestId('quote-documento'), '1020304050');
     await fireEvent.press(getByText('Calcular cotización'));
 
     expect(getByText('Calculando cotización...')).toBeTruthy();
@@ -200,9 +200,11 @@ describe('QuoteFormScreen', () => {
     global.fetch = routeFetch(() =>
       jsonResponse({ detail: 'Producto no ofrecido en el canal: proteccion-celular' }, 422),
     ) as unknown as typeof fetch;
-    const { findByText, getByText, queryByTestId } = await render(<QuoteFormScreen />);
+    const { findByText, getByText, getByTestId, queryByTestId } = await render(<QuoteFormScreen />);
 
     await findByText('Estados Unidos');
+    await fireEvent.changeText(getByTestId('quote-nombre'), 'María Rodríguez');
+    await fireEvent.changeText(getByTestId('quote-documento'), '1020304050');
     await fireEvent.press(getByText('Calcular cotización'));
 
     expect(await findByText('Producto no ofrecido en el canal: proteccion-celular')).toBeTruthy();
@@ -213,9 +215,11 @@ describe('QuoteFormScreen', () => {
 
   it('shows the generic quote error when the API has no detail', async () => {
     global.fetch = routeFetch(() => jsonResponse({}, 500)) as unknown as typeof fetch;
-    const { findByText, getByText } = await render(<QuoteFormScreen />);
+    const { findByText, getByText, getByTestId } = await render(<QuoteFormScreen />);
 
     await findByText('Estados Unidos');
+    await fireEvent.changeText(getByTestId('quote-nombre'), 'María Rodríguez');
+    await fireEvent.changeText(getByTestId('quote-documento'), '1020304050');
     await fireEvent.press(getByText('Calcular cotización'));
 
     expect(await findByText('No se pudo calcular la cotización.')).toBeTruthy();

@@ -5,7 +5,7 @@ export const es = {
     screenSubtitle: 'Tu cobertura',
     menuLabel: 'Menú',
     coverageLabel: 'Cobertura activa',
-    policyCountSuffix: 'pólizas',
+    policyCount: (count: number) => (count === 1 ? '1 póliza' : `${count} pólizas`),
     policiesButton: 'Ver pólizas',
     buyButton: 'Comprar',
     shortcuts: {

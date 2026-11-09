@@ -5,7 +5,7 @@ import { es as policyTexts } from '../../../policies/texts/es';
 import { useQuoteStore } from '../../store/useQuoteStore';
 import { es as texts } from '../../texts/es';
 import { OfertaCotizacion, ProductoMovil } from '../../types';
-import { formatVigenteHasta, quoteReference } from '../../utils';
+import { formatVigenteHasta } from '../../utils';
 import QuotePaymentScreen from './index';
 
 jest.mock('@react-navigation/native', () => {
@@ -104,7 +104,7 @@ describe('QuotePaymentScreen', () => {
     expect(getByText('Viaje Internacional')).toBeTruthy();
     expect(
       getByText(
-        texts.payment.reference(quoteReference(OFERTA.id), formatVigenteHasta(OFERTA.vigente_hasta)),
+        texts.payment.reference(OFERTA.id, formatVigenteHasta(OFERTA.vigente_hasta)),
       ),
     ).toBeTruthy();
     expect(getByText(/Vigente hasta hoy 23:59/)).toBeTruthy();

@@ -18,6 +18,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const firstName = useSessionStore((state) => state.firstName);
   const [renewablePolicy, setRenewablePolicy] = useState<Policy | null>(null);
+  const [activeCount, setActiveCount] = useState<number | null>(null);
   const [productName, setProductName] = useState<string | undefined>(undefined);
 
   useFocusEffect(
@@ -32,12 +33,14 @@ export default function HomeScreen() {
           }
           const policy = policies.find((item) => item.estado === 'activa' && item.renovable === true) ?? null;
           const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
+          setActiveCount(policies.filter((item) => item.estado === 'activa').length);
           setRenewablePolicy(policy);
           setProductName(policy ? names[policy.producto_id] : undefined);
         })
         .catch(() => {
           if (!cancelled) {
             setRenewablePolicy(null);
+            setActiveCount(null);
           }
         });
 
@@ -76,9 +79,11 @@ export default function HomeScreen() {
             <AppText variant="label" style={styles.coverageLabel}>
               {texts.home.coverageLabel}
             </AppText>
-            <AppText variant="sectionTitle" style={styles.onNavy}>
-              {homeSummary.policyCount} {texts.home.policyCountSuffix}
-            </AppText>
+            {activeCount === null ? null : (
+              <AppText variant="sectionTitle" style={styles.onNavy}>
+                {texts.home.policyCount(activeCount)}
+              </AppText>
+            )}
           </View>
           <View style={styles.actions}>
             <View style={styles.action}>

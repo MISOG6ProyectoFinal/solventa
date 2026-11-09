@@ -33,8 +33,8 @@ export function addDays(date: Date, days: number): Date {
 export function defaultQuoteForm(): QuoteFormValues {
   const today = new Date();
   return {
-    nombre: 'María Rodríguez',
-    cedula: '1020304050',
+    nombre: '',
+    cedula: '',
     destino: '',
     fechaSalida: toDisplayDate(today),
     fechaRegreso: toDisplayDate(addDays(today, 14)),
@@ -67,15 +67,6 @@ export function formatVigenteHasta(
   }
 
   return `${match[3]}/${match[2]}/${match[1]} ${clock}`;
-}
-
-/** Referencia visual estable derivada del id de la oferta, estilo COT-M-XXXXX. */
-export function quoteReference(ofertaId: string): string {
-  let hash = 0;
-  for (const char of ofertaId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 90000;
-  }
-  return `COT-M-${10000 + hash}`;
 }
 
 /** Reglas del formulario de viaje; devuelve un mensaje por campo inválido. */
