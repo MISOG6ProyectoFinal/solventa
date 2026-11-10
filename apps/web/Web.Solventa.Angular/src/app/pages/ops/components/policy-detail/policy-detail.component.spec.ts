@@ -31,10 +31,10 @@ describe('PolicyDetailComponent', () => {
 
   it('enables the actions only for active policies', async () => {
     await render('p1');
-    expect(actionButton('Registrar endoso').disabled).toBe(false);
+    expect(actionButton('Crear endoso').disabled).toBe(false);
 
     await render('p4');
-    expect(actionButton('Registrar endoso').disabled).toBe(true);
+    expect(actionButton('Crear endoso').disabled).toBe(true);
     expect(actionButton('Cancelar póliza').disabled).toBe(true);
     expect(el.textContent).toContain('no admite endosos ni cancelación');
   });
@@ -49,7 +49,7 @@ describe('PolicyDetailComponent', () => {
     fixture.componentInstance.cancellationRequested.subscribe(cancel);
 
     actionButton('Volver al listado').click();
-    actionButton('Registrar endoso').click();
+    actionButton('Crear endoso').click();
     actionButton('Cancelar póliza').click();
 
     expect(back).toHaveBeenCalledOnce();

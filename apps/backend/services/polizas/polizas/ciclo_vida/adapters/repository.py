@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from polizas.ciclo_vida.domain.models import Beneficiary, Policy, PolicyStatus, Renewal, Validity
+from polizas.ciclo_vida.domain.models import Beneficiary, Endorsement, Policy, PolicyStatus, Renewal, Validity
 from polizas.ciclo_vida.domain.ports import DuplicatePolicy, DuplicateRenewal
 
 metadata = MetaData()
@@ -61,6 +61,21 @@ renewals = Table(
     Column("prima_anterior", Numeric(18, 2), nullable=False),
     Column("prima_nueva", Numeric(18, 2), nullable=False),
     Column("aplicada_en", DateTime(timezone=True), nullable=False),
+)
+
+endorsements = Table(
+    "endosos",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("poliza_id", String(36), ForeignKey("polizas.id", ondelete="CASCADE"), nullable=False),
+    Column("tipo", String(60), nullable=False),
+    Column("fecha_efectiva", Date, nullable=False),
+    Column("prima_ajustada", Numeric(18, 2), nullable=True),
+    Column("motivo", String(255), nullable=False),
+    Column("usuario_id", String(64), nullable=True),
+    Column("version_anterior", JSON, nullable=True),
+    Column("version_nueva", JSON, nullable=True),
+    Column("creado_en", DateTime(timezone=True), nullable=True),
 )
 
 outbox_events = Table(
@@ -306,6 +321,37 @@ class PostgresPolicyRepository:
         except IntegrityError as exc:
             raise DuplicateRenewal(renewal.ciclo) from exc
 
+    def save_endorsement(self, endorsement: Endorsement, event: Event) -> None:
+        with self.engine.begin() as conn:
+            conn.execute(
+                insert(endorsements).values(
+                    **endorsement.model_dump(exclude={"creado_en"}), creado_en=endorsement.creado_en
+                )
+            )
+            conn.execute(insert(outbox_events).values(**_event_values(event)))
+
+    def list_endorsements(self, policy_id: str) -> list[Endorsement]:
+        with self.engine.connect() as conn:
+            rows = (
+                conn.execute(
+                    select(endorsements).where(endorsements.c.poliza_id == policy_id).order_by(endorsements.c.creado_en)
+                )
+                .mappings()
+                .all()
+            )
+        return [
+            Endorsement(
+                **{
+                    **row,
+                    "usuario_id": row["usuario_id"] or "",
+                    "version_anterior": row["version_anterior"] or {},
+                    "version_nueva": row["version_nueva"] or {},
+                    "creado_en": row["creado_en"] or datetime.now(UTC),
+                }
+            )
+            for row in rows
+        ]
+
     def pending_events(self) -> list[Event]:
         with self.engine.connect() as conn:
             rows = (
@@ -343,6 +389,7 @@ class InMemoryPolicyRepository:
         self.items: list[Policy] = []
         self.renewals: list[Renewal] = []
         self.events: list[tuple[Event, bool]] = []
+        self.endorsements: list[Endorsement] = []
         self._lock = threading.RLock()
 
     def add(self, policy: Policy) -> None:
@@ -451,6 +498,15 @@ class InMemoryPolicyRepository:
                 raise DuplicateRenewal(renewal.ciclo)
             self.renewals.append(renewal)
             self.events.append((event, False))
+
+    def save_endorsement(self, endorsement: Endorsement, event: Event) -> None:
+        with self._lock:
+            self.endorsements.append(endorsement)
+            self.events.append((event, False))
+
+    def list_endorsements(self, policy_id: str) -> list[Endorsement]:
+        with self._lock:
+            return [e for e in self.endorsements if e.poliza_id == policy_id]
 
     def pending_events(self) -> list[Event]:
         with self._lock:

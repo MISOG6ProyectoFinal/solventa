@@ -52,14 +52,48 @@ def recent_policies() -> list[dict]:
     return _summaries(call_upstream(polizas.get, "/polizas/recientes", params={"limite": RECENT_LIMIT}))
 
 
+def _insured(view: dict, endorsements: list[dict]) -> dict:
+    """Datos vigentes del asegurado: el último endoso gana sobre Identidad, que un endoso nunca modifica."""
+    for endorsement in reversed(endorsements):
+        if endorsement.get("version_nueva"):
+            return endorsement["version_nueva"]
+    customer = view.get("cliente") or {}
+    return {
+        "nombre": " ".join(filter(None, [customer.get("nombre"), customer.get("apellido")])),
+        "telefono": customer.get("telefono", ""),
+        "correo": customer.get("email", ""),
+        "direccion": "",
+    }
+
+
+def register_endorsement(poliza_id: str, body: dict, operator_id: str) -> dict:
+    policy_id = quote(poliza_id, safe="")
+    [view] = _summaries([call_upstream(polizas.get, f"/polizas/{policy_id}")])
+    endorsements = call_upstream(polizas.get, f"/polizas/{policy_id}/endosos")
+    return call_upstream(
+        polizas.post,
+        f"/polizas/{policy_id}/endosos",
+        json={
+            "usuario_id": operator_id,
+            "fecha_efectiva": body.get("fecha_efectiva"),
+            "motivo": body.get("motivo", ""),
+            "version_anterior": _insured(view, endorsements),
+            "version_nueva": body.get("version_nueva"),
+        },
+    )
+
+
 def policy_detail(poliza_id: str) -> dict:
     policy_id = quote(poliza_id, safe="")
     [view] = _summaries([call_upstream(polizas.get, f"/polizas/{policy_id}")])
     payment = _optional(pagos.get, f"/pagos/cobros/{quote(view['cobro_id'], safe='')}")
     claims = _optional(siniestros.get, f"/siniestros/polizas/{policy_id}/avisos")
     beneficiaries = _optional(polizas.get, f"/polizas/{policy_id}/beneficiarios")
+    endorsements = _optional(polizas.get, f"/polizas/{policy_id}/endosos") or []
     return {
         **view,
+        "asegurado": _insured(view, endorsements),
+        "endosos": endorsements,
         "pagos": [payment] if isinstance(payment, dict) else [],
         "siniestros": claims or [],
         "beneficiarios": beneficiaries or [],

@@ -11,12 +11,15 @@ from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, Pos
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
 from polizas.ciclo_vida.domain.models import (
     CANCELLATION_CAUSE_NAMES,
+    ENDORSEMENT_TYPES,
     NON_REFUNDABLE_CAUSES,
     STATUS_NAMES,
     Beneficiary,
     CancellationCauseOption,
     CatalogOption,
     ClientPolicy,
+    Endorsement,
+    EndorsementRequest,
     IssuePolicyRequest,
     Policy,
     RenewalConfirmation,
@@ -25,9 +28,11 @@ from polizas.ciclo_vida.domain.models import (
 )
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
+    InvalidEndorsement,
     PaymentDoesNotMatch,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotEndorsable,
     PolicyNotFound,
     PolicyNotRenewable,
     PolicyRepository,
@@ -43,6 +48,7 @@ from polizas.ciclo_vida.domain.use_cases import (
     IssuePolicyUseCase,
     ListClientPoliciesUseCase,
     ListRecentPoliciesUseCase,
+    RegisterEndorsementUseCase,
     SearchPoliciesUseCase,
 )
 from polizas.config import settings
@@ -68,6 +74,7 @@ def wire(
     use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
     use_cases["search"] = SearchPoliciesUseCase(policies)
     use_cases["get"] = GetPolicyUseCase(policies)
+    use_cases["endorse"] = RegisterEndorsementUseCase(policies, bus)
     use_cases["apply"] = ApplyRenewalUseCase(policies, payments, bus)
 
 
@@ -112,6 +119,12 @@ def list_cancellation_causes() -> list[CancellationCauseOption]:
     ]
 
 
+@router.get("/catalogos/tipos-endoso", response_model=list[CatalogOption])
+def list_endorsement_types(ramo_id: str | None = None) -> list[CatalogOption]:
+    """Tipos de endoso del ramo. Por ahora iguales para todos (ver ENDORSEMENT_TYPES)."""
+    return [CatalogOption(id=type_id, nombre=name) for type_id, name in ENDORSEMENT_TYPES.items()]
+
+
 @router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])
 def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     """Pólizas activas del cliente. El BFF envía el id de la sesión, no uno elegido en el teléfono."""
@@ -148,6 +161,27 @@ def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
         return use_cases["get"].beneficiaries(poliza_id)
     except PolicyNotFound as exc:
         raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+
+
+@router.get("/{poliza_id}/endosos", response_model=list[Endorsement])
+def list_endorsements(poliza_id: str) -> list[Endorsement]:
+    try:
+        return use_cases["endorse"].list(poliza_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+
+
+@router.post("/{poliza_id}/endosos", response_model=Endorsement, status_code=status.HTTP_201_CREATED)
+def register_endorsement(poliza_id: str, request: EndorsementRequest) -> Endorsement:
+    """Endoso de datos del asegurado. No escribe en Identidad: guarda ambas versiones y publica el evento."""
+    try:
+        return use_cases["endorse"].execute(poliza_id, request)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+    except PolicyNotEndorsable as exc:
+        raise _error(409, "poliza_no_endosable", "La póliza no está activa y no admite endosos.") from exc
+    except InvalidEndorsement as exc:
+        raise _error(422, exc.codigo, exc.mensaje) from exc
 
 
 @router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)

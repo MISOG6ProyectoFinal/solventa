@@ -657,6 +657,9 @@ def seed_polizas():
             fecha_efectiva DATE NOT NULL,
             prima_ajustada NUMERIC(18, 2),
             motivo VARCHAR(255) NOT NULL,
+            usuario_id VARCHAR(64),
+            version_anterior JSON,
+            version_nueva JSON,
             creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
         """)

@@ -1,8 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
 import { CANCELLED_STATUS, Policy } from '../../../core/models/policy.model';
+import { EndorsementDraft } from '../interfaces/endorsement-draft.interface';
 import { todayIso } from '../utils/today.utils';
 import { PolicyDto, toPolicy } from './ops-policies-api.mapper';
 
@@ -47,6 +49,16 @@ export class OpsPoliciesService {
       },
       error: () => this.detailLoading.set(false),
     });
+  }
+
+  /** Registra el endoso en Pólizas (no toca Identidad) y recarga el detalle con la versión nueva. */
+  registerEndorsement(id: string, draft: EndorsementDraft): Observable<unknown> {
+    const body = {
+      fecha_efectiva: draft.effectiveDate,
+      motivo: draft.reason,
+      version_nueva: { nombre: draft.name, telefono: draft.phone, correo: draft.email, direccion: draft.address },
+    };
+    return this.http.post(API_ENDPOINTS.policyEndorsements(id), body).pipe(tap(() => this.open(id)));
   }
 
   close(): void {

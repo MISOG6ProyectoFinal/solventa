@@ -1,4 +1,4 @@
-import { Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
+import { Endorsement, Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
 
 export interface PolicyCustomerDto {
   readonly tipo_documento: string;
@@ -7,6 +7,24 @@ export interface PolicyCustomerDto {
   readonly apellido: string;
   readonly email: string;
   readonly telefono: string;
+}
+
+export interface InsuredDto {
+  readonly nombre: string;
+  readonly telefono: string;
+  readonly correo: string;
+  readonly direccion: string;
+}
+
+export interface PolicyEndorsementDto {
+  readonly id: string;
+  readonly tipo: string;
+  readonly fecha_efectiva: string;
+  readonly motivo: string;
+  readonly usuario_id: string;
+  readonly creado_en: string;
+  readonly version_anterior: Partial<InsuredDto>;
+  readonly version_nueva: Partial<InsuredDto>;
 }
 
 export interface PolicyPaymentDto {
@@ -39,6 +57,9 @@ export interface PolicyDto {
   readonly socio: { id: string; nombre: string } | null;
   readonly producto: { id: string; nombre: string } | null;
   readonly ramo_id: string | null;
+  /** Datos vigentes del asegurado: el último endoso sobre Identidad. Solo viene en el detalle. */
+  readonly asegurado?: InsuredDto;
+  readonly endosos?: readonly PolicyEndorsementDto[];
   readonly pagos?: readonly PolicyPaymentDto[];
   readonly siniestros?: readonly PolicyClaimDto[];
   readonly beneficiarios?: readonly { readonly nombre: string; readonly parentesco: string; readonly porcentaje: number | string }[];
@@ -67,14 +88,38 @@ function toClaim(dto: PolicyClaimDto): PolicyClaim {
   };
 }
 
+const INSURED_LABELS: readonly [keyof InsuredDto, string][] = [
+  ['nombre', 'Nombre'],
+  ['telefono', 'Teléfono'],
+  ['correo', 'Correo'],
+  ['direccion', 'Dirección'],
+];
+
+function toEndorsement(dto: PolicyEndorsementDto): Endorsement {
+  const pairs = (version: Partial<InsuredDto>): [string, string][] =>
+    INSURED_LABELS.map(([key, label]): [string, string] => [label, version[key] ?? NONE]);
+  return {
+    id: dto.id,
+    tipo: dto.tipo,
+    fechaEfectiva: dto.fecha_efectiva,
+    motivo: dto.motivo,
+    usuario: dto.usuario_id,
+    registrado: dto.creado_en,
+    antes: pairs(dto.version_anterior),
+    despues: pairs(dto.version_nueva),
+  };
+}
+
 export function toPolicy(dto: PolicyDto): Policy {
   const customer = dto.cliente;
+  const insured = dto.asegurado;
+  const customerName = customer ? [customer.nombre, customer.apellido].filter(Boolean).join(' ') : NONE;
   return {
     id: dto.id,
     number: dto.numero,
     tipoDocumento: customer?.tipo_documento ?? '',
     identification: customer?.numero_documento ?? '',
-    insuredName: customer ? [customer.nombre, customer.apellido].filter(Boolean).join(' ') : NONE,
+    insuredName: insured?.nombre || customerName,
     ramo: dto.ramo_id ?? '',
     producto: dto.producto?.nombre ?? dto.producto_id,
     socioOrigen: dto.socio?.nombre ?? dto.canal,
@@ -82,8 +127,9 @@ export function toPolicy(dto: PolicyDto): Policy {
     startDate: dto.vigencia.desde,
     endDate: dto.vigencia.hasta,
     premium: Number(dto.prima),
-    phone: customer?.telefono || NONE,
-    email: customer?.email || NONE,
+    address: insured?.direccion || undefined,
+    phone: insured?.telefono || customer?.telefono || NONE,
+    email: insured?.correo || customer?.email || NONE,
     coverages: dto.coberturas.map((coverage) => ({
       name: coverage.nombre,
       sumaAsegurada: NONE,
@@ -97,6 +143,6 @@ export function toPolicy(dto: PolicyDto): Policy {
     })),
     payments: (dto.pagos ?? []).map(toPayment),
     claims: (dto.siniestros ?? []).map(toClaim),
-    endorsements: [],
+    endorsements: (dto.endosos ?? []).filter((e) => e.version_nueva?.nombre).map(toEndorsement),
   };
 }

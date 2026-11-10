@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ApiError } from '../../../core/interfaces/api-response.interface';
+import { EndorsementDraft } from '../interfaces/endorsement-draft.interface';
 import { LocaleService } from '../../../core/services/locale.service';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
@@ -53,6 +55,7 @@ export class OpsPageComponent {
   }
 
   showEndosoModal = signal(false);
+  endorsementError = signal<string | null>(null);
   showCancelModal = signal(false);
 
   searchPolicies(_text: string): void {
@@ -69,10 +72,14 @@ export class OpsPageComponent {
     this.opsService.open(null);
   }
 
-  onEndorsementContinued(draft: any): void {
-    // Aquí se llamaría al servicio para registrar el endoso
-    this.showEndosoModal.set(false);
-    console.log('Endoso registrado:', draft);
+  onEndorsementSaved(draft: EndorsementDraft): void {
+    const id = this.selectedPolicy()?.id;
+    if (!id) return;
+    this.endorsementError.set(null);
+    this.opsService.registerEndorsement(id, draft).subscribe({
+      next: () => this.showEndosoModal.set(false),
+      error: (error: ApiError) => this.endorsementError.set(error.message),
+    });
   }
 
   onCancellationConfirmed(cause: string): void {

@@ -176,3 +176,53 @@ class ClientPolicy(Policy):
 
     renovable: bool
     renovacion: AppliedRenewal | None = None
+
+
+TIPO_ENDOSO_DATOS_ASEGURADO = "datos-asegurado"
+
+# shortcut: mismos tipos para todos los ramos; Producto aún no define diferencias, cambiar este mapa cuando lo haga.
+ENDORSEMENT_TYPES: dict[str, str] = {TIPO_ENDOSO_DATOS_ASEGURADO: "Datos del asegurado"}
+
+
+class InsuredData(BaseModel):
+    """Datos del asegurado que un endoso puede cambiar. No se escriben en Identidad."""
+
+    nombre: str = Field(min_length=1, max_length=120)
+    telefono: str = Field(max_length=40)
+    correo: str = Field(max_length=120)
+    direccion: str = Field(max_length=200)
+
+    @field_validator("*")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+
+class EndorsementRequest(BaseModel):
+    """El BFF arma la versión anterior (Identidad + endosos previos) y el usuario desde el token del operador."""
+
+    usuario_id: str = Field(min_length=1, max_length=64)
+    fecha_efectiva: date
+    motivo: str = Field(max_length=255)
+    version_anterior: InsuredData
+    version_nueva: InsuredData
+
+    @field_validator("motivo")
+    @classmethod
+    def _motivo(cls, value: str) -> str:
+        token = value.strip()
+        if not token:
+            raise ValueError("El motivo del endoso es obligatorio")
+        return token
+
+
+class Endorsement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    poliza_id: str
+    tipo: str = TIPO_ENDOSO_DATOS_ASEGURADO
+    fecha_efectiva: date
+    motivo: str
+    usuario_id: str = ""
+    version_anterior: dict = Field(default_factory=dict)
+    version_nueva: dict = Field(default_factory=dict)
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
