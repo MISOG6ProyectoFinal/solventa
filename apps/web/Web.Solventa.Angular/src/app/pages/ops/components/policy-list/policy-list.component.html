@@ -4,12 +4,12 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="md:col-span-2">
         <slv-field [label]="locale.t('policies.search')" [hint]="locale.t('policies.searchHint')">
-          <input slvInput type="text" [placeholder]="locale.t('policies.searchPlaceholder')" [(ngModel)]="query" />
+          <input slvInput type="text" [placeholder]="locale.t('policies.searchPlaceholder')" data-testid="policy-search" [(ngModel)]="query" />
         </slv-field>
       </div>
 
       <slv-field [label]="locale.t('common.status')">
-        <select slvInput [(ngModel)]="statusFilter">
+        <select slvInput data-testid="policy-filter-estado" [(ngModel)]="statusFilter">
           <option [value]="allFilter">{{ locale.t('common.all') }}</option>
           @for (status of statusOptions(); track status) {
             <option [value]="status">{{ locale.label('status.policy', status) }}</option>
@@ -18,7 +18,7 @@
       </slv-field>
 
       <slv-field [label]="locale.t('policies.partner')">
-        <select slvInput [(ngModel)]="partnerFilter">
+        <select slvInput data-testid="policy-filter-socio" [(ngModel)]="partnerFilter">
           <option [value]="allFilter">{{ locale.t('common.all') }}</option>
           @for (partner of partners(); track partner) {
             <option [value]="partner">{{ locale.label('policies.source', partner) }}</option>
@@ -28,6 +28,7 @@
     </div>
   </slv-card>
 
+  <div data-testid="hu005-policy-results">
   <slv-card [padding]="false">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -42,7 +43,7 @@
             <th class="px-5 py-3 font-medium"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-testid="hu005-policy-results">
           @for (policy of filteredPolicies(); track policy.id) {
             <tr class="border-b border-border last:border-0">
               <td class="px-5 py-3 font-medium text-foreground">{{ policy.number }}</td>
@@ -54,7 +55,7 @@
                 <slv-badge [tone]="statusTone[policy.status]">{{ locale.label('status.policy', policy.status).toUpperCase() }}</slv-badge>
               </td>
               <td class="px-5 py-3 text-right">
-                <button slv-button type="button" variant="ghost" (click)="opened.emit(policy.id)">{{ locale.t('common.open') }}</button>
+<button slv-button type="button" variant="ghost" [attr.data-testid]="'btn-abrir-poliza-' + policy.number" (click)="opened.emit(policy.id)">{{ locale.t('common.open') }}</button>
               </td>
             </tr>
           } @empty {
@@ -68,4 +69,5 @@
       </table>
     </div>
   </slv-card>
+  </div>
 </div>

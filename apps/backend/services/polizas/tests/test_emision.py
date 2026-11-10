@@ -151,3 +151,127 @@ def test_solicitudes_concurrentes_dejan_una_sola_poliza():
     assert len({policy.id for policy in resultados}) == 1
     assert len(policies.items) == 1
     assert router.prefix == "/polizas"
+
+
+def _poliza(numero: str, cliente_id: str, hasta: str = "2099-01-01", estado: str = "activa"):
+    from polizas.ciclo_vida.domain.models import Coverage, Policy, PolicyStatus, Validity
+
+    return Policy(
+        numero=numero,
+        estado=PolicyStatus(estado),
+        cotizacion_id=f"cot-{numero}",
+        cobro_id=f"cobro-{numero}",
+        producto_id="viaje-internacional",
+        prima="1000.00",
+        coberturas=[Coverage(id="medicos", nombre="Gastos médicos")],
+        vigencia=Validity(desde="2026-01-01", hasta=hasta),
+        canal="mobile",
+        cliente_id=cliente_id,
+        idempotency_key=f"k-{numero}",
+    )
+
+
+def _repos():
+    memoria = InMemoryPolicyRepository()
+    postgres = PostgresPolicyRepository(_engine())
+    postgres.create_schema()
+    for repo in (memoria, postgres):
+        repo.add(_poliza("POL-AAA111", "cli-1"))
+        repo.add(_poliza("POL-BBB222", "cli-2", hasta="2020-01-01"))
+        repo.add(_poliza("POL-CCC333", "cli-1", estado="cancelada"))
+    return memoria, postgres
+
+
+def test_la_consulta_busca_por_numero_parcial_o_por_cliente_y_sin_filtro_devuelve_todas():
+    for repo in _repos():
+        assert [p.numero for p in repo.search("bbb", [])] == ["POL-BBB222"]
+        assert {p.numero for p in repo.search(None, ["cli-1"])} == {"POL-AAA111", "POL-CCC333"}
+        assert {p.numero for p in repo.search("BBB", ["cli-1"])} == {"POL-AAA111", "POL-BBB222", "POL-CCC333"}
+        assert len(repo.search(None, [])) == 3
+        assert repo.search("no-existe", []) == []
+
+
+def test_el_portal_consulta_por_numero_o_cliente_y_muestra_vencida_y_cancelada():
+    memoria, _ = _repos()
+    wire(memoria, _Source(), _Source())
+
+    por_numero = client.get("/polizas", params={"q": "BBB"}).json()
+    por_cliente = client.get("/polizas", params={"cliente_id": ["cli-1"]}).json()
+    todas = client.get("/polizas").json()
+
+    assert [(p["numero"], p["estado"]) for p in por_numero] == [("POL-BBB222", "vencida")]
+    assert {(p["numero"], p["estado"]) for p in por_cliente} == {("POL-AAA111", "activa"), ("POL-CCC333", "cancelada")}
+    assert len(todas) == 3
+
+
+def test_el_detalle_devuelve_la_poliza_o_404():
+    for repo in _repos():
+        wire(repo, _Source(), _Source())
+        existente = repo.search("AAA", [])[0]
+
+        assert client.get(f"/polizas/{existente.id}").json()["numero"] == "POL-AAA111"
+        respuesta = client.get("/polizas/no-existe")
+        assert respuesta.status_code == 404
+        assert respuesta.json()["detail"]["codigo"] == "poliza_no_encontrada"
+
+
+def test_lee_polizas_sembradas_con_estado_capitalizado_y_coberturas_name():
+    from datetime import UTC, date, datetime
+
+    from sqlalchemy import insert
+
+    engine = _engine()
+    repo = PostgresPolicyRepository(engine)
+    repo.create_schema()
+    with engine.begin() as conn:
+        conn.execute(
+            insert(policies_table).values(
+                id="POL-1",
+                numero="SLV-2026-00901",
+                estado="Vencida",
+                cotizacion_id="c",
+                cobro_id="p",
+                producto_id="viaje-internacional",
+                prima=270000,
+                coberturas=[{"name": "Asistencia médica", "included": True}],
+                vigencia_desde=date(2026, 4, 10),
+                vigencia_hasta=date(2026, 4, 24),
+                canal="web",
+                socio_id="Aerolínea Andina",
+                cliente_id="CLI-CC-79800123",
+                idempotency_key="k",
+                emitida_en=datetime(2026, 4, 10, 8, tzinfo=UTC),
+            )
+        )
+    wire(repo, _Source(), _Source())
+
+    data = client.get("/polizas").json()[0]
+
+    assert data["estado"] == "vencida"
+    assert data["coberturas"] == [{"id": "Asistencia médica", "nombre": "Asistencia médica"}]
+
+
+def test_lista_los_beneficiarios_de_la_poliza_o_404():
+    from polizas.ciclo_vida.adapters.repository import beneficiaries as beneficiaries_table
+    from sqlalchemy import insert
+
+    memoria, postgres = _repos()
+    with postgres.engine.begin() as conn:
+        poliza = postgres.search("AAA", [])[0]
+        conn.execute(
+            insert(beneficiaries_table).values(
+                id="B1",
+                poliza_id=poliza.id,
+                nombre="Banco Aurora",
+                parentesco="Acreedor",
+                porcentaje=80,
+            )
+        )
+
+    wire(postgres, _Source(), _Source())
+    data = client.get(f"/polizas/{poliza.id}/beneficiarios").json()
+    assert data == [{"nombre": "Banco Aurora", "parentesco": "Acreedor", "porcentaje": "80.00"}]
+    assert client.get("/polizas/no-existe/beneficiarios").status_code == 404
+
+    wire(memoria, _Source(), _Source())
+    assert client.get(f"/polizas/{memoria.search('AAA', [])[0].id}/beneficiarios").json() == []

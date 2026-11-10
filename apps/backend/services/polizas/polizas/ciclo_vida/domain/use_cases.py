@@ -11,6 +11,7 @@ from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from polizas.ciclo_vida.domain.models import (
     AppliedRenewal,
+    Beneficiary,
     ClientPolicy,
     Coverage,
     IssuePolicyRequest,
@@ -131,10 +132,14 @@ class GetPolicyUseCase:
 
     def execute(self, policy_id: str) -> Policy:
         self.policies.expire_ended(self.today())
-        policy = self.policies.get_by_id(policy_id)
+        policy = self.policies.get_by_id(policy_id) or self.policies.get(policy_id)
         if policy is None:
-            raise PolicyNotFound
+            raise PolicyNotFound(policy_id)
         return policy
+
+    def beneficiaries(self, policy_id: str) -> list[Beneficiary]:
+        self.execute(policy_id)
+        return self.policies.list_beneficiaries(policy_id)
 
 
 class ListRecentPoliciesUseCase:
@@ -217,6 +222,23 @@ def vigencia_propuesta(actual: Validity) -> Validity:
 
 def coberturas_propuestas(coberturas: list[Coverage]) -> list[Coverage]:
     return [cobertura.model_copy() for cobertura in coberturas]
+
+
+def with_effective_status(policy: Policy, today: date) -> Policy:
+    """Una póliza activa cuya vigencia ya terminó se muestra como VENCIDA."""
+    if policy.estado is PolicyStatus.ACTIVE and policy.vigencia.hasta < today:
+        return policy.model_copy(update={"estado": PolicyStatus.EXPIRED})
+    return policy
+
+
+class SearchPoliciesUseCase:
+    def __init__(self, policies: PolicyRepository, today: Callable[[], date] = date.today) -> None:
+        self.policies = policies
+        self.today = today
+
+    def execute(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        found = self.policies.search((text or "").strip() or None, cliente_ids)
+        return [with_effective_status(policy, self.today()) for policy in found]
 
 
 def _same_owner(quote: dict, request: IssuePolicyRequest) -> bool:

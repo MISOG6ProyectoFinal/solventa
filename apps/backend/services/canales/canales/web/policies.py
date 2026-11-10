@@ -57,4 +57,10 @@ def policy_detail(poliza_id: str) -> dict:
     [view] = _summaries([call_upstream(polizas.get, f"/polizas/{policy_id}")])
     payment = _optional(pagos.get, f"/pagos/cobros/{quote(view['cobro_id'], safe='')}")
     claims = _optional(siniestros.get, f"/siniestros/polizas/{policy_id}/avisos")
-    return {**view, "pagos": [payment] if isinstance(payment, dict) else [], "siniestros": claims or []}
+    beneficiaries = _optional(polizas.get, f"/polizas/{policy_id}/beneficiarios")
+    return {
+        **view,
+        "pagos": [payment] if isinstance(payment, dict) else [],
+        "siniestros": claims or [],
+        "beneficiarios": beneficiaries or [],
+    }

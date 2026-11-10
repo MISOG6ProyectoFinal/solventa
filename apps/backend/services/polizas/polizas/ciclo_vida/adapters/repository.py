@@ -4,11 +4,25 @@ import threading
 from datetime import UTC, date, datetime, timedelta
 
 from solventa_common.events import Event
-from sqlalchemy import JSON, Column, Date, DateTime, MetaData, Numeric, String, Table, insert, select, update
+from sqlalchemy import (
+    JSON,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    insert,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Renewal, Validity
+from polizas.ciclo_vida.domain.models import Beneficiary, Policy, PolicyStatus, Renewal, Validity
 from polizas.ciclo_vida.domain.ports import DuplicatePolicy, DuplicateRenewal
 
 metadata = MetaData()
@@ -60,6 +74,17 @@ outbox_events = Table(
     Column("payload", JSON, nullable=False),
     Column("estado", String(16), nullable=False),
     Column("publicado_en", DateTime(timezone=True), nullable=True),
+)
+
+
+beneficiaries = Table(
+    "beneficiarios",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("poliza_id", String(36), ForeignKey("polizas.id", ondelete="CASCADE"), nullable=False),
+    Column("nombre", String(120), nullable=False),
+    Column("parentesco", String(60), nullable=False),
+    Column("porcentaje", Numeric(5, 2), nullable=False),
 )
 
 
@@ -138,7 +163,7 @@ def _policy(row) -> Policy:
     return Policy(
         id=row["id"],
         numero=row["numero"],
-        estado=PolicyStatus(row["estado"]),
+        estado=PolicyStatus(row["estado"].lower()),
         cotizacion_id=row["cotizacion_id"],
         cobro_id=row["cobro_id"],
         producto_id=row["producto_id"],
@@ -191,6 +216,26 @@ class PostgresPolicyRepository:
                 .all()
             )
         return [_policy(row) for row in rows]
+
+    def get(self, policy_id: str) -> Policy | None:
+        return self._first(policies.c.id == policy_id)
+
+    def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]:
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(beneficiaries).where(beneficiaries.c.poliza_id == policy_id)).mappings().all()
+        return [Beneficiary(nombre=r["nombre"], parentesco=r["parentesco"], porcentaje=r["porcentaje"]) for r in rows]
+
+    def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        conditions = []
+        if text:
+            conditions.append(policies.c.numero.ilike(f"%{text}%"))
+        if cliente_ids:
+            conditions.append(policies.c.cliente_id.in_(cliente_ids))
+        query = select(policies).order_by(policies.c.emitida_en)
+        if text or cliente_ids:
+            query = query.where(or_(*conditions))
+        with self.engine.connect() as conn:
+            return [_policy(row) for row in conn.execute(query).mappings().all()]
 
     def list_recent(self, limit: int) -> list[Policy]:
         with self.engine.connect() as conn:
@@ -327,6 +372,26 @@ class InMemoryPolicyRepository:
                 policy
                 for policy in self.items
                 if policy.cliente_id == cliente_id and policy.estado in (PolicyStatus.ACTIVE, PolicyStatus.EXPIRED)
+            ]
+            return sorted(found, key=lambda policy: policy.emitida_en)
+
+    def get(self, policy_id: str) -> Policy | None:
+        return self.get_by_id(policy_id)
+
+    def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]:
+        with self._lock:
+            if not any(p.id == policy_id for p in self.items):
+                return []
+            return []
+
+    def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        with self._lock:
+            found = [
+                p
+                for p in self.items
+                if not (text or cliente_ids)
+                or (text and text.lower() in p.numero.lower())
+                or p.cliente_id in cliente_ids
             ]
             return sorted(found, key=lambda policy: policy.emitida_en)
 

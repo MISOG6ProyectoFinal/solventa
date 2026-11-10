@@ -41,6 +41,7 @@ export interface PolicyDto {
   readonly ramo_id: string | null;
   readonly pagos?: readonly PolicyPaymentDto[];
   readonly siniestros?: readonly PolicyClaimDto[];
+  readonly beneficiarios?: readonly { readonly nombre: string; readonly parentesco: string; readonly porcentaje: number | string }[];
 }
 
 const NONE = '-';
@@ -89,7 +90,11 @@ export function toPolicy(dto: PolicyDto): Policy {
       deducible: NONE,
       included: true,
     })),
-    beneficiaries: [],
+    beneficiaries: (dto.beneficiarios ?? []).map((b) => ({
+      name: b.nombre,
+      parentesco: b.parentesco,
+      porcentaje: Number(b.porcentaje),
+    })),
     payments: (dto.pagos ?? []).map(toPayment),
     claims: (dto.siniestros ?? []).map(toClaim),
     endorsements: [],

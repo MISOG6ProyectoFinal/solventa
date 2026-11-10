@@ -15,8 +15,8 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
   standalone: true,
   imports: [
     CommonModule,
-    TabsComponent,
     AlertComponent,
+    TabsComponent,
     QuoteTabComponent,
     PolicyListComponent,
     PolicyDetailComponent,
@@ -55,6 +55,10 @@ export class OpsPageComponent {
   showEndosoModal = signal(false);
   showCancelModal = signal(false);
 
+  searchPolicies(_text: string): void {
+    // Filtrado manejado reactivamente en PolicyListComponent
+  }
+
   openPolicy(id: string): void {
     this.selectedPolicyId.set(id);
     this.opsService.open(id);
@@ -72,7 +76,7 @@ export class OpsPageComponent {
   }
 
   onCancellationConfirmed(cause: string): void {
-    const id = this.selectedPolicyId();
+    const id = this.selectedPolicy()?.id;
     if (id) {
       this.opsService.cancel(id, cause);
     }

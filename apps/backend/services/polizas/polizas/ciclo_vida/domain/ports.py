@@ -3,7 +3,7 @@ from typing import Protocol
 
 from solventa_common.events import Event
 
-from polizas.ciclo_vida.domain.models import Policy, Renewal
+from polizas.ciclo_vida.domain.models import Beneficiary, Policy, Renewal
 
 
 class QuoteNotFound(LookupError):
@@ -22,11 +22,11 @@ class IdempotencyKeyReused(ValueError):
     pass
 
 
-class DuplicatePolicy(Exception):
+class PolicyNotFound(LookupError):
     pass
 
 
-class PolicyNotFound(LookupError):
+class DuplicatePolicy(Exception):
     pass
 
 
@@ -64,6 +64,14 @@ class PolicyRepository(Protocol):
     def get_by_id(self, policy_id: str) -> Policy | None: ...
 
     def list_by_client(self, cliente_id: str) -> list[Policy]: ...
+
+    def get(self, policy_id: str) -> Policy | None: ...
+
+    def list_beneficiaries(self, policy_id: str) -> list[Beneficiary]: ...
+
+    def search(self, text: str | None, cliente_ids: list[str]) -> list[Policy]:
+        """Pólizas cuyo número contiene  o que son de alguno de . Sin filtros, todas."""
+        ...
 
     def list_recent(self, limit: int) -> list[Policy]: ...
 

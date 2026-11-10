@@ -3,8 +3,8 @@ export const CANCELLED_STATUS = 'cancelada';
 
 export interface PolicyCoverage {
   name: string;
-  sumaAsegurada: string;
-  deducible: string;
+  sumaAsegurada?: string;
+  deducible?: string;
   umbral?: string;
   included: boolean;
 }
@@ -19,7 +19,7 @@ export interface PolicyPayment {
   ref: string;
   date: string;
   tipo: 'Prima' | 'Indemnización' | 'Devolución';
-  medio: string;
+  medio?: string;
   amount: number;
   status: string;
 }
@@ -28,7 +28,7 @@ export interface PolicyClaim {
   id: string;
   tipo: string;
   fechaOcurrencia: string;
-  fechaAviso: string;
+  fechaAviso?: string;
   status: string;
   montoEstimado?: number;
   montoAprobado?: number;

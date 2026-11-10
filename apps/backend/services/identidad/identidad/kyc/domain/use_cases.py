@@ -418,16 +418,26 @@ class BuscarClientePorDocumento:
 
 
 class GetClient:
-    """Lectura interna por id, para que el back-office muestre al asegurado de una póliza."""
+    """Lectura interna por id o número de documento, para que el back-office muestre al asegurado."""
 
     def __init__(self, clients: ClientRepository) -> None:
         self.clients = clients
 
-    def execute(self, client_id: str) -> RespuestaCliente:
-        cliente = self.clients.get(client_id.strip())
+    def execute(self, client_id: str | None = None, numero_documento: str | None = None) -> RespuestaCliente:
+        if client_id:
+            cliente = self.clients.get(client_id.strip())
+            missing_msg = f"Cliente {client_id} no encontrado"
+        elif numero_documento:
+            cliente = self.clients.get_by_numero_documento(numero_documento.strip())
+            missing_msg = f"Cliente con documento {numero_documento} no encontrado"
+        else:
+            raise ClienteNoEncontrado("Debe especificar client_id o numero_documento")
         if cliente is None:
-            raise ClienteNoEncontrado(f"Cliente {client_id} no encontrado")
+            raise ClienteNoEncontrado(missing_msg)
         return _cliente_a_respuesta(cliente)
+
+
+ConsultarCliente = GetClient
 
 
 class AsegurarCliente:

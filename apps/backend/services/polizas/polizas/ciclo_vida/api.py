@@ -13,6 +13,7 @@ from polizas.ciclo_vida.domain.models import (
     CANCELLATION_CAUSE_NAMES,
     NON_REFUNDABLE_CAUSES,
     STATUS_NAMES,
+    Beneficiary,
     CancellationCauseOption,
     CatalogOption,
     ClientPolicy,
@@ -42,6 +43,7 @@ from polizas.ciclo_vida.domain.use_cases import (
     IssuePolicyUseCase,
     ListClientPoliciesUseCase,
     ListRecentPoliciesUseCase,
+    SearchPoliciesUseCase,
 )
 from polizas.config import settings
 
@@ -62,9 +64,10 @@ def wire(
     use_cases["publisher"] = bus
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
     use_cases["list"] = ListClientPoliciesUseCase(policies)
-    use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
-    use_cases["get"] = GetPolicyUseCase(policies)
     use_cases["recent"] = ListRecentPoliciesUseCase(policies)
+    use_cases["renewal_offer"] = GetRenewalOfferUseCase(policies)
+    use_cases["search"] = SearchPoliciesUseCase(policies)
+    use_cases["get"] = GetPolicyUseCase(policies)
     use_cases["apply"] = ApplyRenewalUseCase(policies, payments, bus)
 
 
@@ -118,6 +121,12 @@ def list_client_policies(cliente_id: str) -> list[ClientPolicy]:
     return use_cases["list"].execute(token)
 
 
+@router.get("", response_model=list[Policy])
+def search_policies(q: str | None = None, cliente_id: Annotated[list[str] | None, Query()] = None) -> list[Policy]:
+    """Consulta del portal: número de póliza (parcial) o clientes ya resueltos por el BFF."""
+    return use_cases["search"].execute(q, cliente_id or [])
+
+
 @router.get("/recientes", response_model=list[Policy])
 def list_recent_policies(limite: Annotated[int, Query(ge=1, le=200)] = 100) -> list[Policy]:
     """Lectura interna para el back-office: las últimas pólizas de todos los canales."""
@@ -129,6 +138,14 @@ def get_policy(poliza_id: str) -> Policy:
     """Lectura interna. El canal decide si quien pregunta es dueño de la póliza."""
     try:
         return use_cases["get"].execute(poliza_id)
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+
+
+@router.get("/{poliza_id}/beneficiarios", response_model=list[Beneficiary])
+def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
+    try:
+        return use_cases["get"].beneficiaries(poliza_id)
     except PolicyNotFound as exc:
         raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
 

@@ -15,7 +15,7 @@ export class OpsPoliciesService {
 
   readonly policies = this.state.asReadonly();
   readonly selected = this.detail.asReadonly();
-  readonly partners = computed(() => [...new Set(this.state().map((policy) => policy.socioOrigen))]);
+  readonly partners = computed(() => [...new Set(this.state().map((policy) => policy.socioOrigen).filter(Boolean))]);
   readonly loading = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly detailLoading = signal(false);
@@ -47,6 +47,10 @@ export class OpsPoliciesService {
       },
       error: () => this.detailLoading.set(false),
     });
+  }
+
+  close(): void {
+    this.open(null);
   }
 
   /** Pólizas no expone la cancelación: el cambio se refleja solo en esta vista. */

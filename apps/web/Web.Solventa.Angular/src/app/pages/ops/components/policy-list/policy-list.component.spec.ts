@@ -48,13 +48,20 @@ describe('PolicyListComponent', () => {
 
   it('filters by policy number or identification', async () => {
     await type('01820');
-
     expect(rows().length).toBe(1);
     expect(rows()[0].textContent).toContain('SLV-2025-01820');
   });
 
-  it('shows an empty message when nothing matches', async () => {
-    await type('no-existe');
+  it('notifies search change when typing', async () => {
+    const searched = vi.fn();
+    fixture.componentInstance.searchChange.subscribe(searched);
+    await type('1020304050');
+    expect(searched).toHaveBeenLastCalledWith('1020304050');
+  });
+
+  it('shows an empty message when there are no results', async () => {
+    fixture.componentRef.setInput('policies', []);
+    await fixture.whenStable();
 
     expect(rows().length).toBe(1);
     expect(rows()[0].textContent).toContain('No se encontraron pólizas');
@@ -67,5 +74,21 @@ describe('PolicyListComponent', () => {
     rows()[1].querySelector('button')!.click();
 
     expect(emitted).toHaveBeenCalledWith('p2');
+  });
+
+  it('renders the HU005 data-testid hooks', () => {
+    ['policy-search', 'policy-filter-estado', 'policy-filter-socio', 'hu005-policy-results', 'btn-abrir-poliza-SLV-2024-00391'].forEach(
+      (id) => expect(el.querySelector(`[data-testid="${id}"]`), id).not.toBeNull(),
+    );
+  });
+
+  it('filters by status Vencida and shows only the VENCIDA badge', async () => {
+    const select = el.querySelector<HTMLSelectElement>('[data-testid="policy-filter-estado"]')!;
+    select.value = 'vencida';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(rows().length).toBeGreaterThan(0);
+    rows().forEach((row) => expect(row.querySelector('slv-badge')!.textContent).toContain('VENCIDA'));
   });
 });

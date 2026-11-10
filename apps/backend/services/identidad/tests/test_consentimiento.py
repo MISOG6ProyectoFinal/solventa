@@ -440,6 +440,15 @@ def test_solicitar_consentimiento_ignora_cliente_id_enviado_con_documento():
     assert container.clients.get("CLI-7770006") is None
 
 
+def test_consultar_cliente_por_id_y_por_numero_de_documento():
+    _asegurar("CC", "7770099", "consulta.7770099@test.com")
+
+    assert client.get("/identidad/clientes/CLI-CC-7770099").json()["numero_documento"] == "7770099"
+    assert client.get("/identidad/clientes/por-numero/7770099").json()["id"] == "CLI-CC-7770099"
+    assert client.get("/identidad/clientes/CLI-NO-EXISTE").status_code == 404
+    assert client.get("/identidad/clientes/por-numero/0000000").status_code == 404
+
+
 def test_la_consulta_dice_si_el_consentimiento_incluye_open_finance():
     def consent_with(scope: list[str]) -> dict:
         solicitud = client.post(

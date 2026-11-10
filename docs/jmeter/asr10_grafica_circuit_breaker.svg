@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" style="background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <defs>
+        <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#0284c7"/>
+        </linearGradient>
+        <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34d399"/>
+            <stop offset="100%" stop-color="#059669"/>
+        </linearGradient>
+        <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fb7185"/>
+            <stop offset="100%" stop-color="#e11d48"/>
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fbbf24"/>
+            <stop offset="100%" stop-color="#d97706"/>
+        </linearGradient>
+        <linearGradient id="violetGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#a78bfa"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+        </filter>
+    </defs>
+    
+    <!-- Header -->
+    <rect x="30" y="25" width="840" height="70" rx="12" fill="#1e293b" filter="url(#shadow)"/>
+    <text x="50" y="55" fill="#f8fafc" font-size="20" font-weight="bold">ASR-10: Efectividad de la Arquitectura Fail-Fast con Circuit Breaker</text>
+    <text x="50" y="78" fill="#94a3b8" font-size="14">Latencia con Fallback Inmediato (ms) vs Timeout Evitado por Petición (3.000 ms)</text>
+    <rect x="710" y="40" width="140" height="40" rx="8" fill="#065f46" stroke="#34d399" stroke-width="1.5"/>
+    <text x="780" y="65" fill="#34d399" font-size="14" font-weight="bold" text-anchor="middle">157x MÁS RÁPIDO</text>
+
+    <!-- Chart Body -->
+    <rect x="30" y="110" width="840" height="380" rx="12" fill="#1e293b" filter="url(#shadow)"/>
+
+    <!-- Grid lines (0, 1000, 2000, 3000 ms) -->
+    <!-- Scale: 3000ms = 260px (0.0866 px/ms). y0=400, y3000=140 -->
+    <line x1="100" y1="400" x2="800" y2="400" stroke="#334155" stroke-width="1.5"/>
+    <line x1="100" y1="313" x2="800" y2="313" stroke="#334155" stroke-dasharray="4,4"/>
+    <line x1="100" y1="226" x2="800" y2="226" stroke="#334155" stroke-dasharray="4,4"/>
+    <line x1="100" y1="140" x2="800" y2="140" stroke="#334155" stroke-dasharray="4,4"/>
+
+    <text x="85" y="405" fill="#64748b" font-size="12" text-anchor="end">0 ms</text>
+    <text x="85" y="318" fill="#64748b" font-size="12" text-anchor="end">1.000 ms</text>
+    <text x="85" y="231" fill="#64748b" font-size="12" text-anchor="end">2.000 ms</text>
+    <text x="85" y="145" fill="#64748b" font-size="12" text-anchor="end">3.000 ms</text>
+
+    <!-- Bar 1: Promedio (19 ms) -> 19 * 0.0866 = 1.6px, visually min 8px -->
+    <rect x="150" y="385" width="90" height="15" rx="4" fill="url(#emeraldGrad)"/>
+    <text x="195" y="375" fill="#34d399" font-size="15" font-weight="bold" text-anchor="middle">19 ms</text>
+    <text x="195" y="425" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">Promedio</text>
+    <text x="195" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">(Circuit Breaker)</text>
+
+    <!-- Bar 2: p95 (22 ms) -->
+    <rect x="270" y="383" width="90" height="17" rx="4" fill="url(#emeraldGrad)"/>
+    <text x="315" y="373" fill="#34d399" font-size="15" font-weight="bold" text-anchor="middle">22 ms</text>
+    <text x="315" y="425" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">Percentil 95</text>
+    <text x="315" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">(Circuit Breaker)</text>
+
+    <!-- Bar 3: Maximo (59 ms) -->
+    <rect x="390" y="375" width="90" height="25" rx="4" fill="url(#amberGrad)"/>
+    <text x="435" y="365" fill="#fbbf24" font-size="15" font-weight="bold" text-anchor="middle">59 ms</text>
+    <text x="435" y="425" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">Pico Máximo</text>
+    <text x="435" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">(1 muestra)</text>
+
+    <!-- Bar 4: Timeout Evitado (3000 ms) -->
+    <rect x="580" y="140" width="160" height="260" rx="8" fill="url(#roseGrad)" opacity="0.9"/>
+    <text x="660" y="175" fill="#ffffff" font-size="22" font-weight="bold" text-anchor="middle">3.000 ms</text>
+    <text x="660" y="198" fill="#fecdd3" font-size="12" text-anchor="middle">Timeout Bloqueante</text>
+    <text x="660" y="215" fill="#fecdd3" font-size="11" text-anchor="middle">(Sin Circuit Breaker)</text>
+    <text x="660" y="425" fill="#f87171" font-size="13" font-weight="bold" text-anchor="middle">Colapso Tradicional</text>
+    <text x="660" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">(Hilos retenidos)</text>
+
+    <!-- Arrow or badge showing saved time -->
+    <rect x="130" y="458" width="620" height="22" rx="6" fill="#0f172a"/>
+    <text x="440" y="473" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">🛡️ Ahorro de latencia: 2.981 ms por solicitud | Evitó retener 50 hilos por 3 segundos continuos</text>
+    
+</svg>

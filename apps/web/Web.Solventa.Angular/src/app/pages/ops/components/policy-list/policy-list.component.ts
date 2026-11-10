@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
@@ -25,6 +25,8 @@ export class PolicyListComponent {
   readonly policies = input.required<readonly Policy[]>();
   readonly partners = input.required<readonly string[]>();
   readonly opened = output<string>();
+  /** El texto lo resuelve el backend o el filtro local. */
+  readonly searchChange = output<string>();
 
   protected readonly allFilter = OPS_FILTER_ALL;
   protected readonly statusOptions = toSignal(inject(CatalogService).policyStatuses$.pipe(catchError(() => of([]))), {
@@ -35,6 +37,10 @@ export class PolicyListComponent {
   protected readonly query = signal('');
   protected readonly statusFilter = signal(OPS_FILTER_ALL);
   protected readonly partnerFilter = signal(OPS_FILTER_ALL);
+
+  constructor() {
+    effect(() => this.searchChange.emit(this.query().trim()));
+  }
 
   protected readonly filteredPolicies = computed(() => {
     const text = this.query().trim().toLowerCase();
