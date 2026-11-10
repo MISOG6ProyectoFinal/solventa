@@ -8,7 +8,7 @@ from solventa_common.operator_session import ADMIN, ADVISOR
 
 from canales.clients import cotizacion, identidad, polizas
 from canales.web.auth import Operator, require_operator, require_roles
-from canales.web.policies import policy_detail, recent_policies
+from canales.web.policies import policy_detail, recent_policies, register_endorsement
 
 CONSENT_GRANTED = "OTORGADO"
 
@@ -247,6 +247,12 @@ def listar_causas_cancelacion() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/causas-cancelacion")
 
 
+@readers.get("/polizas/tipos-endoso")
+def listar_tipos_endoso(ramo_id: str | None = None) -> list:
+    params = {"ramo_id": ramo_id} if ramo_id else {}
+    return call_upstream(polizas.get, "/polizas/catalogos/tipos-endoso", params=params)
+
+
 @readers.get("/polizas")
 def listar_polizas() -> list[dict]:
     """Últimas pólizas de todos los canales con el asegurado, el socio y el ramo."""
@@ -257,6 +263,12 @@ def listar_polizas() -> list[dict]:
 def obtener_poliza(poliza_id: str) -> dict:
     """La póliza con el asegurado, el socio, el ramo, sus cobros y sus siniestros."""
     return policy_detail(poliza_id)
+
+
+@writers.post("/polizas/{poliza_id}/endosos", status_code=status.HTTP_201_CREATED)
+def registrar_endoso(poliza_id: str, body: dict, operator: Operator) -> dict:
+    """Endoso de datos del asegurado. El usuario sale del token, no del cuerpo."""
+    return register_endorsement(poliza_id, body, operator.operator_id)
 
 
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---

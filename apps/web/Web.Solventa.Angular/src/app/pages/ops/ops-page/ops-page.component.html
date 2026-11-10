@@ -41,8 +41,9 @@
 @if (showEndosoModal() && selectedPolicy()) {
   <slv-endorsement-modal 
     [policy]="selectedPolicy()!" 
-    (closed)="showEndosoModal.set(false)" 
-    (continued)="onEndorsementContinued($event)" />
+    (closed)="showEndosoModal.set(false); endorsementError.set(null)" 
+    [error]="endorsementError()"
+    (saved)="onEndorsementSaved($event)" />
 }
 
 @if (showCancelModal() && selectedPolicy()) {

@@ -188,3 +188,51 @@ def test_consent_without_open_finance_does_not_send_it(monkeypatch):
     )
 
     assert "consentimiento_open_finance" not in cotizacion.calls[0][1]["json"]
+
+
+def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
+    previo = {"nombre": "Lina D.", "telefono": "300", "correo": "l@x.co", "direccion": "Calle 1"}
+    nuevo = {**previo, "direccion": "Calle 2"}
+    posts: list[dict] = []
+
+    class _Polizas(_Service):
+        def post(self, path: str, **kwargs):
+            posts.append({"path": path, **kwargs})
+            return {"id": "end-1"}
+
+    services = _wire(monkeypatch, {})
+    monkeypatch.setattr(
+        "canales.web.policies.polizas",
+        _Polizas({"/polizas/pol-1": POLICY, "/polizas/pol-1/endosos": [{"version_nueva": previo}]}),
+    )
+
+    response = client.post(
+        "/web/polizas/pol-1/endosos",
+        json={"fecha_efectiva": "2026-12-01", "motivo": "Mudanza", "version_nueva": nuevo},
+        headers=web_auth.advisor(),
+    )
+
+    assert response.status_code == 201
+    assert posts[0]["json"]["version_anterior"] == previo
+    assert posts[0]["json"]["usuario_id"] == "op-1"
+    assert services["identidad"].calls == ["/identidad/clientes/CLI-CC-1020"]
+
+
+def test_catalogo_tipos_endoso_bff(monkeypatch):
+    class _PolizasClient:
+        def get(self, path: str, **kwargs):
+            if path == "/polizas/catalogos/tipos-endoso":
+                ramo = kwargs.get("params", {}).get("ramo_id")
+                if ramo == "ramo-vida":
+                    return [
+                        {"id": "datos-asegurado", "nombre": "Datos del asegurado"},
+                        {"id": "beneficiarios", "nombre": "Beneficiarios"},
+                        {"id": "suma-asegurada", "nombre": "Suma asegurada"},
+                    ]
+                return [{"id": "datos-asegurado", "nombre": "Datos del asegurado"}]
+            raise ValueError(f"Unexpected path {path}")
+
+    monkeypatch.setattr("canales.web.api.polizas", _PolizasClient())
+    resp = client.get("/web/polizas/tipos-endoso", params={"ramo_id": "ramo-vida"}, headers=web_auth.viewer())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 3

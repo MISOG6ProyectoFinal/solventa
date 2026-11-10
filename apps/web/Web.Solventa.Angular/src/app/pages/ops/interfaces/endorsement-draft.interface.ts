@@ -1,7 +1,7 @@
-/** Datos capturados en el paso de edición del endoso. */
+/** Datos capturados en el formulario de endoso de datos del asegurado. */
 export interface EndorsementDraft {
-  readonly type: string;
   readonly effectiveDate: string;
+  readonly name: string;
   readonly phone: string;
   readonly email: string;
   readonly address: string;

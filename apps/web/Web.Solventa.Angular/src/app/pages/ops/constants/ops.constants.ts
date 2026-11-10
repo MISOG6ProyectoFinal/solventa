@@ -4,13 +4,6 @@ import { SimulatorMode } from '../services/simulator.service';
 
 export const OPS_FILTER_ALL = '';
 
-export interface EndorsementType {
-  readonly id: string;
-  readonly labelKey: TextKey;
-}
-
-export const ENDORSEMENT_TYPES: readonly EndorsementType[] = [{ id: 'contacto', labelKey: 'endorsement.type.contacto' }];
-
 export const CONSENT_CHANNELS: readonly { id: 'sms' | 'email'; labelKey: TextKey }[] = [
   { id: 'sms', labelKey: 'consent.channel.sms' },
   { id: 'email', labelKey: 'consent.channel.email' },

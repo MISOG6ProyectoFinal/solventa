@@ -88,4 +88,19 @@ describe('OpsPoliciesService', () => {
     expect(service.detailLoading()).toBe(false);
     expect(service.selected()?.number).toBe('POL-ABC123');
   });
+
+  it('registers an endorsement and reloads the policy detail', () => {
+    const draft = { effectiveDate: '2026-12-01', name: 'Lina D.', phone: '300', email: 'l@x.co', address: 'Calle 1', reason: 'Mudanza' };
+
+    service.registerEndorsement('pol-1', draft).subscribe();
+
+    const post = http.expectOne({ method: 'POST', url: API_ENDPOINTS.policyEndorsements('pol-1') });
+    expect(post.request.body).toEqual({
+      fecha_efectiva: '2026-12-01',
+      motivo: 'Mudanza',
+      version_nueva: { nombre: 'Lina D.', telefono: '300', correo: 'l@x.co', direccion: 'Calle 1' },
+    });
+    post.flush({ id: 'end-1' });
+    http.expectOne({ method: 'GET', url: API_ENDPOINTS.policy('pol-1') }).flush(POLICY_DTO);
+  });
 });

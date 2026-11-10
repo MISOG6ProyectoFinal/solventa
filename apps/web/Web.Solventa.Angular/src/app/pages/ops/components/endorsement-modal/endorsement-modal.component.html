@@ -1,44 +1,61 @@
 <slv-modal [open]="true" [title]="locale.t('endorsement.title')" [wide]="true" (closed)="closed.emit()">
   <div class="space-y-4">
     <slv-alert tone="info">{{ locale.t('endorsement.info') }}</slv-alert>
+    @if (error()) {
+      <slv-alert tone="error">{{ locale.t('endorsement.error', { message: error()! }) }}</slv-alert>
+    }
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <slv-field [label]="locale.t('endorsement.type')" [required]="true">
-        <select slvInput [(ngModel)]="type">
-          @for (option of types; track option.id) {
-            <option [value]="option.id">{{ locale.t(option.labelKey) }}</option>
-          }
-        </select>
-      </slv-field>
+      <div class="space-y-3" data-testid="endorsement-before">
+        <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('endorsement.before') }}</p>
+        <slv-field [label]="locale.t('endorsement.name')">
+          <input slvInput type="text" [value]="before().name" readonly />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.phone')">
+          <input slvInput type="text" [value]="before().phone" readonly />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.email')">
+          <input slvInput type="text" [value]="before().email" readonly />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.address')">
+          <input slvInput type="text" [value]="before().address" readonly />
+        </slv-field>
+      </div>
 
-      <slv-field [label]="locale.t('endorsement.date')" [required]="true" [error]="dateError()">
-        <input slvInput type="date" [invalid]="!!dateError()" [(ngModel)]="effectiveDate" />
-      </slv-field>
-
-      <slv-field [label]="locale.t('endorsement.phone')">
-        <input slvInput type="text" [(ngModel)]="phone" />
-      </slv-field>
-
-      <slv-field [label]="locale.t('endorsement.email')">
-        <input slvInput type="email" [(ngModel)]="email" />
-      </slv-field>
+      <div class="space-y-3" data-testid="endorsement-after">
+        <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('endorsement.after') }}</p>
+        <slv-field [label]="locale.t('endorsement.name')">
+          <input slvInput type="text" data-testid="endorsement-name" [(ngModel)]="name" />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.phone')">
+          <input slvInput type="text" [(ngModel)]="phone" />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.email')">
+          <input slvInput type="email" [(ngModel)]="email" />
+        </slv-field>
+        <slv-field [label]="locale.t('endorsement.address')">
+          <input slvInput type="text" [(ngModel)]="address" />
+        </slv-field>
+      </div>
     </div>
 
-    <slv-field [label]="locale.t('endorsement.address')">
-      <input slvInput type="text" [(ngModel)]="address" />
-    </slv-field>
-
     <slv-field [label]="locale.t('endorsement.reason')" [required]="true" [error]="reasonError()">
-      <input
+      <textarea
         slvInput
-        type="text"
+        rows="3"
         [placeholder]="locale.t('endorsement.reasonPlaceholder')"
         [invalid]="!!reasonError()"
         [(ngModel)]="reason"
-      />
+      ></textarea>
+    </slv-field>
+
+    <slv-field [label]="locale.t('endorsement.date')" [required]="true" [error]="dateError()">
+      <input slvInput type="date" [invalid]="!!dateError()" [(ngModel)]="effectiveDate" />
     </slv-field>
   </div>
 
   <button slot="footer" slv-button type="button" variant="outline" (click)="closed.emit()">{{ locale.t('common.cancel') }}</button>
-  <button slot="footer" slv-button type="button" variant="primary" (click)="submit()">{{ locale.t('common.continue') }}</button>
+  <button slot="footer" slv-button type="button" variant="primary" [disabled]="!changed()" (click)="submit()">
+    {{ locale.t('endorsement.save') }}
+  </button>
 </slv-modal>

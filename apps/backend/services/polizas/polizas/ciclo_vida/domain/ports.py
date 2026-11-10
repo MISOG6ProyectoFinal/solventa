@@ -3,7 +3,7 @@ from typing import Protocol
 
 from solventa_common.events import Event
 
-from polizas.ciclo_vida.domain.models import Beneficiary, Policy, Renewal
+from polizas.ciclo_vida.domain.models import Beneficiary, Endorsement, Policy, Renewal
 
 
 class QuoteNotFound(LookupError):
@@ -46,6 +46,17 @@ class DuplicateRenewal(Exception):
     pass
 
 
+class PolicyNotEndorsable(ValueError):
+    pass
+
+
+class InvalidEndorsement(ValueError):
+    def __init__(self, codigo: str, mensaje: str) -> None:
+        super().__init__(mensaje)
+        self.codigo = codigo
+        self.mensaje = mensaje
+
+
 class QuoteSource(Protocol):
     def get(self, quote_id: str) -> dict | None: ...
 
@@ -86,6 +97,10 @@ class PolicyRepository(Protocol):
     def list_renewals(self, poliza_ids: list[str]) -> list[Renewal]: ...
 
     def save_renewal(self, renewal: Renewal, event: Event) -> None: ...
+
+    def save_endorsement(self, endorsement: Endorsement, event: Event) -> None: ...
+
+    def list_endorsements(self, policy_id: str) -> list[Endorsement]: ...
 
     def pending_events(self) -> list[Event]: ...
 

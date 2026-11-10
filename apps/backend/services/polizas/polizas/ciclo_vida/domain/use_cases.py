@@ -14,6 +14,8 @@ from polizas.ciclo_vida.domain.models import (
     Beneficiary,
     ClientPolicy,
     Coverage,
+    Endorsement,
+    EndorsementRequest,
     IssuePolicyRequest,
     Policy,
     PolicyStatus,
@@ -26,9 +28,11 @@ from polizas.ciclo_vida.domain.ports import (
     DuplicatePolicy,
     DuplicateRenewal,
     IdempotencyKeyReused,
+    InvalidEndorsement,
     PaymentDoesNotMatch,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotEndorsable,
     PolicyNotFound,
     PolicyNotRenewable,
     PolicyRepository,
@@ -41,6 +45,7 @@ from polizas.ciclo_vida.domain.ports import (
 logger = logging.getLogger(__name__)
 
 POLIZA_RENOVADA = "poliza.renovada"
+POLIZA_ENDOSADA = "poliza.endosada"
 SOURCE = "polizas"
 MONEDA = "COP"
 
@@ -272,6 +277,61 @@ def _policy(request: IssuePolicyRequest, quote: dict) -> Policy:
     )
 
 
+def publish_pending(policies: PolicyRepository, publisher: EventPublisher) -> int:
+    """Publica los eventos ya confirmados en la base. Un fallo deja el evento pendiente."""
+    published = 0
+    for event in policies.pending_events():
+        try:
+            publisher.publish(event)
+        except Exception:
+            logger.exception("No se pudo publicar el evento %s", event.event_id)
+            continue
+        policies.mark_published(event.event_id)
+        published += 1
+    return published
+
+
+class RegisterEndorsementUseCase:
+    """Endoso de datos del asegurado: guarda versión anterior y nueva en Pólizas y publica el evento de auditoría."""
+
+    def __init__(
+        self, policies: PolicyRepository, publisher: EventPublisher, today: Callable[[], date] | None = None
+    ) -> None:
+        self.policies = policies
+        self.publisher = publisher
+        self.today = today or _today
+
+    def execute(self, poliza_id: str, request: EndorsementRequest) -> Endorsement:
+        self.policies.expire_ended(self.today())
+        policy = self.policies.get(poliza_id)
+        if policy is None:
+            raise PolicyNotFound(poliza_id)
+        if policy.estado is not PolicyStatus.ACTIVE:
+            raise PolicyNotEndorsable(poliza_id)
+        if not policy.vigencia.desde <= request.fecha_efectiva <= policy.vigencia.hasta:
+            raise InvalidEndorsement(
+                "fecha_efectiva_fuera_de_vigencia", "La fecha efectiva debe estar dentro de la vigencia de la póliza."
+            )
+        if request.version_nueva == request.version_anterior:
+            raise InvalidEndorsement("endoso_sin_cambios", "El endoso debe cambiar al menos un dato del asegurado.")
+        endorsement = Endorsement(
+            poliza_id=policy.id,
+            fecha_efectiva=request.fecha_efectiva,
+            motivo=request.motivo,
+            usuario_id=request.usuario_id,
+            version_anterior=request.version_anterior.model_dump(),
+            version_nueva=request.version_nueva.model_dump(),
+        )
+        self.policies.save_endorsement(endorsement, _endorsement_event(endorsement))
+        publish_pending(self.policies, self.publisher)
+        return endorsement
+
+    def list(self, poliza_id: str) -> list[Endorsement]:
+        if self.policies.get(poliza_id) is None:
+            raise PolicyNotFound(poliza_id)
+        return self.policies.list_endorsements(poliza_id)
+
+
 class ApplyRenewalUseCase:
     """Aplica un ciclo ya cobrado. No emite otra póliza ni vuelve a cobrar."""
 
@@ -337,17 +397,7 @@ class ApplyRenewalUseCase:
         return _confirmation(policy, renewal), True
 
     def publish_pending(self) -> int:
-        """Publica los eventos ya confirmados en la base. Un fallo deja el evento pendiente."""
-        published = 0
-        for event in self.policies.pending_events():
-            try:
-                self.publisher.publish(event)
-            except Exception:
-                logger.exception("No se pudo publicar el evento %s", event.event_id)
-                continue
-            self.policies.mark_published(event.event_id)
-            published += 1
-        return published
+        return publish_pending(self.policies, self.publisher)
 
     def _policy(self, poliza_id: str, cliente_id: str) -> Policy:
         policy = self.policies.get_by_id(poliza_id)
@@ -382,6 +432,25 @@ def _payment_matches(payment: dict, cliente_id: str, ciclo: str, prima: Decimal)
         and payment.get("referencia_id") == ciclo
         and payment.get("moneda") == MONEDA
         and monto == prima.quantize(Decimal("0.01"))
+    )
+
+
+def _endorsement_event(endorsement: Endorsement) -> Event:
+    return Event(
+        event_type=POLIZA_ENDOSADA,
+        source=SOURCE,
+        idempotency_key=f"{POLIZA_ENDOSADA}:{endorsement.id}",
+        occurred_at=endorsement.creado_en,
+        payload={
+            "poliza_id": endorsement.poliza_id,
+            "endoso_id": endorsement.id,
+            "tipo": endorsement.tipo,
+            "usuario_id": endorsement.usuario_id,
+            "fecha_efectiva": endorsement.fecha_efectiva.isoformat(),
+            "motivo": endorsement.motivo,
+            "version_anterior": endorsement.version_anterior,
+            "version_nueva": endorsement.version_nueva,
+        },
     )
 
 
