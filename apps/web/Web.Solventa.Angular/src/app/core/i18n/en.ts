@@ -173,7 +173,7 @@ export const EN: Record<TextKey, string> = {
   'policies.source.socios': 'Partner API',
 
   'policy.back': 'Back to the list',
-  'policy.endorse': 'Create endorsement',
+  'policy.endorse': 'Register endorsement',
   'policy.cancel': 'Cancel policy',
   'policy.inactive': 'The policy is {status} and cannot be endorsed or cancelled.',
   'policy.inactiveCause': 'Reason: {cause} ({date}).',
@@ -216,7 +216,7 @@ export const EN: Record<TextKey, string> = {
   'payment.type.Indemnización': 'Payout',
   'payment.type.Devolución': 'Refund',
 
-  'endorsement.title': 'Create endorsement',
+  'endorsement.title': 'Register endorsement',
   'endorsement.info': 'Only active policies accept endorsements. Review the changes before confirming.',
   'endorsement.before': 'Before',
   'endorsement.after': 'After',
@@ -232,6 +232,14 @@ export const EN: Record<TextKey, string> = {
   'endorsement.reasonPlaceholder': 'E.g. Data update requested by the insured',
   'endorsement.reasonRequired': 'The endorsement reason is required.',
   'endorsement.dateRequired': 'The effective date is required.',
+  'endorsement.history': 'Endorsement history',
+  'endorsement.versionBefore': 'Previous version',
+  'endorsement.versionAfter': 'New version',
+  'endorsement.effectiveFrom': 'Effective from',
+  'endorsement.registeredAt': 'Registered',
+  'endorsement.by': 'by',
+  'endorsement.reasonLabel': 'Reason',
+  'endorsement.noHistory': 'This policy has no registered endorsements.',
 
   'cancel.title': 'Cancel policy',
   'cancel.cause': 'Cancellation reason',

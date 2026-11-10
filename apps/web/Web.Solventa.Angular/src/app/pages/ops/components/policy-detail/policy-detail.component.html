@@ -162,4 +162,43 @@
     </div>
   </slv-card>
   </div>
+
+  @if (policy().endorsements.length) {
+    <slv-card data-testid="hu006-endorsement-history">
+      <p class="text-xs uppercase tracking-wider mb-3 text-muted-foreground">{{ locale.t('endorsement.history') }}</p>
+      <div class="space-y-4">
+        @for (endorsement of policy().endorsements; track endorsement.id) {
+          <div class="rounded-xl border border-border p-4 text-sm space-y-3" data-testid="hu006-endorsement-item">
+            <div class="flex flex-wrap justify-between gap-2">
+              <p class="font-medium text-foreground">{{ endorsement.id }} · {{ endorsement.tipo }}</p>
+              <p class="text-xs text-muted-foreground">
+                {{ locale.t('endorsement.effectiveFrom') }} {{ endorsement.fechaEfectiva }} · {{ locale.t('endorsement.registeredAt') }} {{ endorsement.registrado }} {{ locale.t('endorsement.by') }} {{ endorsement.usuario }}
+              </p>
+            </div>
+            <p class="text-xs text-muted-foreground">{{ locale.t('endorsement.reasonLabel') }}: {{ endorsement.motivo }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="rounded-xl border border-border p-3 bg-muted/30 space-y-2">
+                <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('endorsement.versionBefore') }}</p>
+                @for (item of endorsement.antes; track item[0]) {
+                  <div>
+                    <p class="text-xs text-muted-foreground">{{ item[0] }}</p>
+                    <p class="text-foreground">{{ item[1] }}</p>
+                  </div>
+                }
+              </div>
+              <div class="rounded-xl border border-teal-400 p-3 bg-teal-50 space-y-2">
+                <p class="text-xs uppercase tracking-wider text-teal-700">{{ locale.t('endorsement.versionAfter') }}</p>
+                @for (item of endorsement.despues; track item[0]) {
+                  <div>
+                    <p class="text-xs text-muted-foreground">{{ item[0] }}</p>
+                    <p class="text-foreground">{{ item[1] }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </slv-card>
+  }
 </div>

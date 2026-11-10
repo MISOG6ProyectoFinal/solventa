@@ -247,6 +247,12 @@ def listar_causas_cancelacion() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/causas-cancelacion")
 
 
+@readers.get("/polizas/tipos-endoso")
+def listar_tipos_endoso(ramo_id: str | None = None) -> list:
+    params = {"ramo_id": ramo_id} if ramo_id else {}
+    return call_upstream(polizas.get, "/polizas/catalogos/tipos-endoso", params=params)
+
+
 @readers.get("/polizas")
 def listar_polizas() -> list[dict]:
     """Últimas pólizas de todos los canales con el asegurado, el socio y el ramo."""

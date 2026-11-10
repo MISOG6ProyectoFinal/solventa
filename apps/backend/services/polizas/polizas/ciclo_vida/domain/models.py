@@ -179,9 +179,32 @@ class ClientPolicy(Policy):
 
 
 TIPO_ENDOSO_DATOS_ASEGURADO = "datos-asegurado"
+TIPO_ENDOSO_BENEFICIARIOS = "beneficiarios"
+TIPO_ENDOSO_SUMA_ASEGURADA = "suma-asegurada"
 
-# shortcut: mismos tipos para todos los ramos; Producto aún no define diferencias, cambiar este mapa cuando lo haga.
-ENDORSEMENT_TYPES: dict[str, str] = {TIPO_ENDOSO_DATOS_ASEGURADO: "Datos del asegurado"}
+_RAMOS_VIDA = frozenset({"ramo-vida", "ramo-microseguro-vida", "ramo-vida-hipotecario"})
+_RAMOS_PATRIMONIAL = frozenset({"ramo-hogar", "ramo-auto", "ramo-dispositivos"})
+
+_TYPES_BASE: dict[str, str] = {TIPO_ENDOSO_DATOS_ASEGURADO: "Datos del asegurado"}
+_TYPES_VIDA: dict[str, str] = {
+    TIPO_ENDOSO_DATOS_ASEGURADO: "Datos del asegurado",
+    TIPO_ENDOSO_BENEFICIARIOS: "Beneficiarios",
+    TIPO_ENDOSO_SUMA_ASEGURADA: "Suma asegurada",
+}
+_TYPES_PATRIMONIAL: dict[str, str] = {
+    TIPO_ENDOSO_DATOS_ASEGURADO: "Datos del asegurado",
+    TIPO_ENDOSO_SUMA_ASEGURADA: "Suma asegurada",
+}
+
+ENDORSEMENT_TYPES: dict[str, str] = _TYPES_BASE
+
+
+def endorsement_types_for_ramo(ramo_id: str | None = None) -> dict[str, str]:
+    if ramo_id in _RAMOS_VIDA:
+        return _TYPES_VIDA
+    if ramo_id in _RAMOS_PATRIMONIAL:
+        return _TYPES_PATRIMONIAL
+    return _TYPES_BASE
 
 
 class InsuredData(BaseModel):

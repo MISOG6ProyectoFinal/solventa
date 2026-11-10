@@ -120,7 +120,22 @@ def test_poliza_inexistente_responde_404(bus):
     assert client.post("/polizas/nope/endosos", json=_body()).status_code == 404
 
 
-def test_catalogo_de_tipos_de_endoso(bus):
-    assert client.get("/polizas/catalogos/tipos-endoso", params={"ramo_id": "x"}).json() == [
+def test_catalogo_de_tipos_de_endoso_ramo_vida(bus):
+    resp = client.get("/polizas/catalogos/tipos-endoso", params={"ramo_id": "ramo-vida"}).json()
+    ids = [t["id"] for t in resp]
+    assert ids == ["datos-asegurado", "beneficiarios", "suma-asegurada"]
+
+
+def test_catalogo_de_tipos_de_endoso_ramo_patrimonial(bus):
+    resp = client.get("/polizas/catalogos/tipos-endoso", params={"ramo_id": "ramo-hogar"}).json()
+    ids = [t["id"] for t in resp]
+    assert ids == ["datos-asegurado", "suma-asegurada"]
+
+
+def test_catalogo_de_tipos_de_endoso_por_defecto(bus):
+    assert client.get("/polizas/catalogos/tipos-endoso", params={"ramo_id": "ramo-viaje"}).json() == [
+        {"id": "datos-asegurado", "nombre": "Datos del asegurado"}
+    ]
+    assert client.get("/polizas/catalogos/tipos-endoso").json() == [
         {"id": "datos-asegurado", "nombre": "Datos del asegurado"}
     ]

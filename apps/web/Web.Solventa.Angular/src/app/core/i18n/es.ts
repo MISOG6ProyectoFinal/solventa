@@ -172,7 +172,7 @@ export const ES = {
   'policies.source.socios': 'API de socios',
 
   'policy.back': 'Volver al listado',
-  'policy.endorse': 'Crear endoso',
+  'policy.endorse': 'Registrar endoso',
   'policy.cancel': 'Cancelar póliza',
   'policy.inactive': 'La póliza está {status} y no admite endosos ni cancelación.',
   'policy.inactiveCause': 'Causa: {cause} ({date}).',
@@ -215,7 +215,7 @@ export const ES = {
   'payment.type.Indemnización': 'Indemnización',
   'payment.type.Devolución': 'Devolución',
 
-  'endorsement.title': 'Crear endoso',
+  'endorsement.title': 'Registrar endoso',
   'endorsement.info': 'Solo pólizas activas admiten endosos. Revise los cambios antes de confirmar.',
   'endorsement.before': 'Antes',
   'endorsement.after': 'Después',
@@ -231,6 +231,14 @@ export const ES = {
   'endorsement.reasonPlaceholder': 'Ej: Actualización de datos solicitada por el asegurado',
   'endorsement.reasonRequired': 'El motivo del endoso es obligatorio.',
   'endorsement.dateRequired': 'La fecha efectiva es obligatoria.',
+  'endorsement.history': 'Historial de endosos',
+  'endorsement.versionBefore': 'Versión anterior',
+  'endorsement.versionAfter': 'Versión nueva',
+  'endorsement.effectiveFrom': 'Efectivo desde',
+  'endorsement.registeredAt': 'Registrado',
+  'endorsement.by': 'por',
+  'endorsement.reasonLabel': 'Motivo',
+  'endorsement.noHistory': 'Esta póliza no tiene endosos registrados.',
 
   'cancel.title': 'Cancelar póliza',
   'cancel.cause': 'Causa de cancelación',

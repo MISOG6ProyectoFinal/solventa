@@ -11,7 +11,6 @@ from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, Pos
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
 from polizas.ciclo_vida.domain.models import (
     CANCELLATION_CAUSE_NAMES,
-    ENDORSEMENT_TYPES,
     NON_REFUNDABLE_CAUSES,
     STATUS_NAMES,
     Beneficiary,
@@ -25,6 +24,7 @@ from polizas.ciclo_vida.domain.models import (
     RenewalConfirmation,
     RenewalOffer,
     RenewalRequest,
+    endorsement_types_for_ramo,
 )
 from polizas.ciclo_vida.domain.ports import (
     IdempotencyKeyReused,
@@ -121,8 +121,8 @@ def list_cancellation_causes() -> list[CancellationCauseOption]:
 
 @router.get("/catalogos/tipos-endoso", response_model=list[CatalogOption])
 def list_endorsement_types(ramo_id: str | None = None) -> list[CatalogOption]:
-    """Tipos de endoso del ramo. Por ahora iguales para todos (ver ENDORSEMENT_TYPES)."""
-    return [CatalogOption(id=type_id, nombre=name) for type_id, name in ENDORSEMENT_TYPES.items()]
+    """Tipos de endoso permitidos según el ramo de la póliza."""
+    return [CatalogOption(id=type_id, nombre=name) for type_id, name in endorsement_types_for_ramo(ramo_id).items()]
 
 
 @router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])

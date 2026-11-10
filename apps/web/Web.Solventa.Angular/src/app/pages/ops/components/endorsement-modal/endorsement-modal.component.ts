@@ -13,7 +13,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 /** El mapper rellena con "-" lo que no tiene; en el formulario eso es un campo vacío. */
 const clean = (value: string | undefined): string => (!value || value === '-' ? '' : value);
 
-/** Modal "Crear endoso": Antes (solo lectura) y Después (editable) de los datos del asegurado. */
+/** Modal "Registrar endoso": Antes (solo lectura) y Después (editable) de los datos del asegurado. */
 @Component({
   selector: 'slv-endorsement-modal',
   imports: [FormsModule, ModalComponent, AlertComponent, FieldComponent, InputDirective, ButtonComponent],

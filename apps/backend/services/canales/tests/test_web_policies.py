@@ -216,3 +216,23 @@ def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
     assert posts[0]["json"]["version_anterior"] == previo
     assert posts[0]["json"]["usuario_id"] == "op-1"
     assert services["identidad"].calls == ["/identidad/clientes/CLI-CC-1020"]
+
+
+def test_catalogo_tipos_endoso_bff(monkeypatch):
+    class _PolizasClient:
+        def get(self, path: str, **kwargs):
+            if path == "/polizas/catalogos/tipos-endoso":
+                ramo = kwargs.get("params", {}).get("ramo_id")
+                if ramo == "ramo-vida":
+                    return [
+                        {"id": "datos-asegurado", "nombre": "Datos del asegurado"},
+                        {"id": "beneficiarios", "nombre": "Beneficiarios"},
+                        {"id": "suma-asegurada", "nombre": "Suma asegurada"},
+                    ]
+                return [{"id": "datos-asegurado", "nombre": "Datos del asegurado"}]
+            raise ValueError(f"Unexpected path {path}")
+
+    monkeypatch.setattr("canales.web.api.polizas", _PolizasClient())
+    resp = client.get("/web/polizas/tipos-endoso", params={"ramo_id": "ramo-vida"}, headers=web_auth.viewer())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 3

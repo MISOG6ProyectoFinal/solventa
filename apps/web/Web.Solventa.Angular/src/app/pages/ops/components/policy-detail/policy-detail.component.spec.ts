@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Policy } from '../../../../core/models/policy.model';
 import { OPS_POLICIES } from '../../testing/policy.fixtures';
 import { PolicyDetailComponent } from './policy-detail.component';
 
@@ -31,10 +32,10 @@ describe('PolicyDetailComponent', () => {
 
   it('enables the actions only for active policies', async () => {
     await render('p1');
-    expect(actionButton('Crear endoso').disabled).toBe(false);
+    expect(actionButton('Registrar endoso').disabled).toBe(false);
 
     await render('p4');
-    expect(actionButton('Crear endoso').disabled).toBe(true);
+    expect(actionButton('Registrar endoso').disabled).toBe(true);
     expect(actionButton('Cancelar póliza').disabled).toBe(true);
     expect(el.textContent).toContain('no admite endosos ni cancelación');
   });
@@ -49,7 +50,7 @@ describe('PolicyDetailComponent', () => {
     fixture.componentInstance.cancellationRequested.subscribe(cancel);
 
     actionButton('Volver al listado').click();
-    actionButton('Crear endoso').click();
+    actionButton('Registrar endoso').click();
     actionButton('Cancelar póliza').click();
 
     expect(back).toHaveBeenCalledOnce();
@@ -99,5 +100,52 @@ describe('PolicyDetailComponent', () => {
     el.querySelector<HTMLButtonElement>('[data-testid="policy-tab-siniestros"]')!.click();
     await fixture.whenStable();
     expect(el.textContent).toContain('SIN-4412');
+  });
+
+  it('renders endorsement history with before and after comparisons when endorsements exist', async () => {
+    const policyWithEndorsements: Policy = {
+      ...OPS_POLICIES[0],
+      endorsements: [
+        {
+          id: 'END-0001',
+          tipo: 'Datos del asegurado',
+          fechaEfectiva: '2026-06-01',
+          motivo: 'Actualización de teléfono',
+          usuario: 'op-1',
+          registrado: '2026-05-30',
+          antes: [
+            ['Nombre', 'María Rodríguez'],
+            ['Teléfono', '+57 300 123 4567'],
+            ['Correo', 'maria.rodriguez@email.com'],
+            ['Dirección', 'Calle 85 #12-34, Bogotá'],
+          ],
+          despues: [
+            ['Nombre', 'María Rodríguez'],
+            ['Teléfono', '+57 311 000 1122'],
+            ['Correo', 'maria.rodriguez@email.com'],
+            ['Dirección', 'Calle 85 #12-34, Bogotá'],
+          ],
+        },
+      ],
+    };
+
+    fixture.componentRef.setInput('policy', policyWithEndorsements);
+    await fixture.whenStable();
+    el = fixture.nativeElement;
+
+    const historyCard = el.querySelector('[data-testid="hu006-endorsement-history"]');
+    expect(historyCard).not.toBeNull();
+    if (historyCard) {
+      expect(historyCard.textContent).toContain('END-0001 · Datos del asegurado');
+      expect(historyCard.textContent).toContain('Actualización de teléfono');
+      expect(historyCard.textContent).toContain('op-1');
+      expect(historyCard.textContent).toContain('+57 300 123 4567');
+      expect(historyCard.textContent).toContain('+57 311 000 1122');
+    }
+  });
+
+  it('does not render endorsement history when policy has no endorsements', async () => {
+    await render('p1');
+    expect(el.querySelector('[data-testid="hu006-endorsement-history"]')).toBeNull();
   });
 });
