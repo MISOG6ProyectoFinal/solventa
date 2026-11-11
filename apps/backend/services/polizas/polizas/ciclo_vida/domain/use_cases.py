@@ -10,8 +10,12 @@ from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from polizas.ciclo_vida.domain.models import (
+    NON_REFUNDABLE_CAUSES,
     AppliedRenewal,
     Beneficiary,
+    CancellationCause,
+    CancellationQuote,
+    CancellationRequest,
     ClientPolicy,
     Coverage,
     Endorsement,
@@ -32,6 +36,7 @@ from polizas.ciclo_vida.domain.ports import (
     PaymentDoesNotMatch,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotCancellable,
     PolicyNotEndorsable,
     PolicyNotFound,
     PolicyNotRenewable,
@@ -39,6 +44,7 @@ from polizas.ciclo_vida.domain.ports import (
     QuoteExpired,
     QuoteNotFound,
     QuoteSource,
+    RefundCalculator,
     RenewalAlreadyApplied,
 )
 
@@ -46,6 +52,7 @@ logger = logging.getLogger(__name__)
 
 POLIZA_RENOVADA = "poliza.renovada"
 POLIZA_ENDOSADA = "poliza.endosada"
+POLIZA_CANCELADA = "poliza.cancelada"
 SOURCE = "polizas"
 MONEDA = "COP"
 
@@ -332,6 +339,48 @@ class RegisterEndorsementUseCase:
         return self.policies.list_endorsements(poliza_id)
 
 
+class CancelPolicyUseCase:
+    """Cancelación definitiva. La devolución la calcula Cotización y Rating; Pagos y Auditoría reaccionan al evento."""
+
+    def __init__(
+        self,
+        policies: PolicyRepository,
+        refunds: RefundCalculator,
+        publisher: EventPublisher,
+        today: Callable[[], date] | None = None,
+    ) -> None:
+        self.policies = policies
+        self.refunds = refunds
+        self.publisher = publisher
+        self.today = today or _today
+
+    def quote(self, poliza_id: str, cause: CancellationCause) -> CancellationQuote:
+        policy = self._cancellable(poliza_id)
+        return self._refund(policy, cause)
+
+    def execute(self, poliza_id: str, request: CancellationRequest) -> CancellationQuote:
+        policy = self._cancellable(poliza_id)
+        refund = self._refund(policy, request.causa)  # se recalcula: no se confía en el monto del cliente
+        event = _cancellation_event(policy, request, refund)
+        if not self.policies.cancel(policy.id, request.causa.value, self.today(), event):
+            raise PolicyNotCancellable(poliza_id)
+        publish_pending(self.policies, self.publisher)
+        return refund
+
+    def _cancellable(self, poliza_id: str) -> Policy:
+        self.policies.expire_ended(self.today())
+        policy = self.policies.get(poliza_id)
+        if policy is None:
+            raise PolicyNotFound(poliza_id)
+        if policy.estado is not PolicyStatus.ACTIVE:
+            raise PolicyNotCancellable(poliza_id)
+        return policy
+
+    def _refund(self, policy: Policy, cause: CancellationCause) -> CancellationQuote:
+        data = self.refunds.calculate(policy, self.today(), cause not in NON_REFUNDABLE_CAUSES)
+        return CancellationQuote(**data)
+
+
 class ApplyRenewalUseCase:
     """Aplica un ciclo ya cobrado. No emite otra póliza ni vuelve a cobrar."""
 
@@ -450,6 +499,20 @@ def _endorsement_event(endorsement: Endorsement) -> Event:
             "motivo": endorsement.motivo,
             "version_anterior": endorsement.version_anterior,
             "version_nueva": endorsement.version_nueva,
+        },
+    )
+
+
+def _cancellation_event(policy: Policy, request: CancellationRequest, refund: CancellationQuote) -> Event:
+    return Event(
+        event_type=POLIZA_CANCELADA,
+        source=SOURCE,
+        idempotency_key=f"{POLIZA_CANCELADA}:{policy.id}",
+        payload={
+            "poliza_id": policy.id,
+            "causa_cancelacion": request.causa.value,
+            "usuario_id": request.usuario_id,
+            "monto_reintegro": str(refund.monto_reintegro),
         },
     )
 

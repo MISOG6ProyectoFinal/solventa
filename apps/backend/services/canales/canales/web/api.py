@@ -271,6 +271,20 @@ def registrar_endoso(poliza_id: str, body: dict, operator: Operator) -> dict:
     return register_endorsement(poliza_id, body, operator.operator_id)
 
 
+@writers.post("/polizas/{poliza_id}/cancelacion/calculo")
+def calcular_cancelacion(poliza_id: str, body: dict) -> dict:
+    """Recálculo de la devolución: Pólizas consulta a Cotización y no cambia nada."""
+    path = f"/polizas/{quote(poliza_id, safe='')}/cancelacion/calculo"
+    return call_upstream(polizas.post, path, json={"causa": body.get("causa")})
+
+
+@writers.post("/polizas/{poliza_id}/cancelacion")
+def cancelar_poliza(poliza_id: str, body: dict, operator: Operator) -> dict:
+    """Cancelación definitiva. El usuario sale del token, no del cuerpo."""
+    path = f"/polizas/{quote(poliza_id, safe='')}/cancelacion"
+    return call_upstream(polizas.post, path, json={"causa": body.get("causa"), "usuario_id": operator.operator_id})
+
+
 # --- HU002: Proxy de Consentimiento Digital hacia identidad ---
 
 

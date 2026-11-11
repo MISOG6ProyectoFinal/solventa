@@ -65,17 +65,31 @@ describe('OpsPoliciesService', () => {
     expect(service.selected()).toBeNull();
   });
 
-  it('cancels a policy in this view keeping the reason and date', () => {
-    service.load();
-    http.expectOne(API_ENDPOINTS.policies).flush([POLICY_DTO]);
-    service.open('pol-1');
-    http.expectOne(API_ENDPOINTS.policy('pol-1')).flush(POLICY_DTO);
+  it('asks the backend for the refund without changing the policy', () => {
+    let quote: unknown;
+    service.quoteCancellation('pol-1', 'retracto').subscribe((value) => (quote = value));
 
-    service.cancel('pol-1', 'retracto');
+    const request = http.expectOne({ method: 'POST', url: API_ENDPOINTS.policyCancellationQuote('pol-1') });
+    expect(request.request.body).toEqual({ causa: 'retracto' });
+    request.flush({ dias_vigencia: 365, dias_no_devengados: 100, monto_reintegro: '27397' });
+
+    expect(quote).toEqual({ termDays: 365, unearnedDays: 100, refund: 27397 });
+  });
+
+  it('cancels in the backend and reloads the list and the detail', () => {
+    service.cancel('pol-1', 'retracto').subscribe();
+
+    const request = http.expectOne({ method: 'POST', url: API_ENDPOINTS.policyCancellation('pol-1') });
+    expect(request.request.body).toEqual({ causa: 'retracto' });
+    request.flush({ dias_vigencia: 365, dias_no_devengados: 100, monto_reintegro: '27397' });
+
+    const cancelled = { ...POLICY_DTO, estado: 'cancelada', causa_cancelacion: 'retracto', fecha_cancelacion: '2026-11-10' };
+    http.expectOne(API_ENDPOINTS.policies).flush([cancelled]);
+    http.expectOne(API_ENDPOINTS.policy('pol-1')).flush(cancelled);
 
     expect(service.selected()?.status).toBe('cancelada');
     expect(service.selected()?.cancelReason).toBe('retracto');
-    expect(service.policies()[0].cancelDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(service.selected()?.cancelDate).toBe('2026-11-10');
   });
 
   it('keeps the summary when the detail fails', () => {

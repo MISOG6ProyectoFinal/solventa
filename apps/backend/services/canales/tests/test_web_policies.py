@@ -218,6 +218,31 @@ def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
     assert services["identidad"].calls == ["/identidad/clientes/CLI-CC-1020"]
 
 
+def test_cancelacion_envia_el_usuario_del_token_y_el_calculo_no_lo_necesita(monkeypatch):
+    posts: list[dict] = []
+
+    class _Polizas(_Service):
+        def post(self, path: str, **kwargs):
+            posts.append({"path": path, **kwargs})
+            return {"monto_reintegro": "1000"}
+
+    monkeypatch.setattr("canales.web.api.polizas", _Polizas({}))
+
+    calculo = client.post(
+        "/web/polizas/pol-1/cancelacion/calculo", json={"causa": "retracto"}, headers=web_auth.advisor()
+    )
+    cancelacion = client.post(
+        "/web/polizas/pol-1/cancelacion",
+        json={"causa": "retracto", "usuario_id": "falso"},
+        headers=web_auth.advisor(),
+    )
+
+    assert calculo.status_code == 200
+    assert posts[0] == {"path": "/polizas/pol-1/cancelacion/calculo", "json": {"causa": "retracto"}}
+    assert cancelacion.status_code == 200
+    assert posts[1]["json"] == {"causa": "retracto", "usuario_id": "op-1"}
+
+
 def test_catalogo_tipos_endoso_bff(monkeypatch):
     class _PolizasClient:
         def get(self, path: str, **kwargs):
