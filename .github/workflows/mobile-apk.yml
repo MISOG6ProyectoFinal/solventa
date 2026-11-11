@@ -85,6 +85,15 @@ jobs:
       - name: Setup Android
         uses: ./.ci/.github/actions/setup-android
 
+      - name: Verificar la clave de Google Maps
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "::error::GOOGLE_MAPS_API_KEY está vacío. Sin la clave el mapa del APK queda en blanco."
+            exit 1
+          fi
+
       - name: Build APK
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
