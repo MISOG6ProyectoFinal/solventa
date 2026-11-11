@@ -57,6 +57,7 @@ export class OpsPageComponent {
   showEndosoModal = signal(false);
   endorsementError = signal<string | null>(null);
   showCancelModal = signal(false);
+  cancellationError = signal<string | null>(null);
 
   searchPolicies(_text: string): void {
     // Filtrado manejado reactivamente en PolicyListComponent
@@ -69,6 +70,8 @@ export class OpsPageComponent {
 
   closePolicy(): void {
     this.selectedPolicyId.set(null);
+    this.cancellationError.set(null);
+    this.endorsementError.set(null);
     this.opsService.open(null);
   }
 
@@ -84,9 +87,14 @@ export class OpsPageComponent {
 
   onCancellationConfirmed(cause: string): void {
     const id = this.selectedPolicy()?.id;
-    if (id) {
-      this.opsService.cancel(id, cause);
-    }
-    this.showCancelModal.set(false);
+    if (!id) return;
+    this.cancellationError.set(null);
+    this.opsService.cancel(id, cause).subscribe({
+      next: () => {
+        this.showCancelModal.set(false);
+        this.cancellationError.set(null);
+      },
+      error: (error: ApiError) => this.cancellationError.set(error.message),
+    });
   }
 }

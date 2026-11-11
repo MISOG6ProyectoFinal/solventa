@@ -1,11 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
-import { CANCELLED_STATUS, Policy } from '../../../core/models/policy.model';
+import { Policy } from '../../../core/models/policy.model';
+import { CancellationQuote } from '../interfaces/cancellation-quote.interface';
 import { EndorsementDraft } from '../interfaces/endorsement-draft.interface';
-import { todayIso } from '../utils/today.utils';
 import { PolicyDto, toPolicy } from './ops-policies-api.mapper';
 
 /** Pólizas del módulo Ops: las últimas de todos los canales, leídas del BFF Web. */
@@ -65,11 +65,29 @@ export class OpsPoliciesService {
     this.open(null);
   }
 
-  /** Pólizas no expone la cancelación: el cambio se refleja solo en esta vista. */
-  cancel(id: string, cause: string): void {
-    const cancelled = (policy: Policy): Policy =>
-      policy.id === id ? { ...policy, status: CANCELLED_STATUS, cancelReason: cause, cancelDate: todayIso() } : policy;
-    this.state.update((policies) => policies.map(cancelled));
-    this.detail.update((policy) => (policy ? cancelled(policy) : policy));
+  /** Pide a Pólizas (que consulta a Cotización) el valor a reintegrar. No cambia la póliza. */
+  quoteCancellation(id: string, cause: string): Observable<CancellationQuote> {
+    return this.http
+      .post<{ dias_vigencia: number; dias_no_devengados: number; monto_reintegro: string | number }>(
+        API_ENDPOINTS.policyCancellationQuote(id),
+        { causa: cause },
+      )
+      .pipe(
+        map((dto) => ({
+          termDays: dto.dias_vigencia,
+          unearnedDays: dto.dias_no_devengados,
+          refund: Number(dto.monto_reintegro),
+        })),
+      );
+  }
+
+  /** Cancela de forma definitiva en Pólizas y recarga el listado y el detalle ya cancelados. */
+  cancel(id: string, cause: string): Observable<unknown> {
+    return this.http.post(API_ENDPOINTS.policyCancellation(id), { causa: cause }).pipe(
+      tap(() => {
+        this.load();
+        this.open(id);
+      }),
+    );
   }
 }

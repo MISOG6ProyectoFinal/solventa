@@ -57,6 +57,8 @@ export interface PolicyDto {
   readonly socio: { id: string; nombre: string } | null;
   readonly producto: { id: string; nombre: string } | null;
   readonly ramo_id: string | null;
+  readonly causa_cancelacion?: string | null;
+  readonly fecha_cancelacion?: string | null;
   /** Datos vigentes del asegurado: el último endoso sobre Identidad. Solo viene en el detalle. */
   readonly asegurado?: InsuredDto;
   readonly endosos?: readonly PolicyEndorsementDto[];
@@ -127,6 +129,8 @@ export function toPolicy(dto: PolicyDto): Policy {
     startDate: dto.vigencia.desde,
     endDate: dto.vigencia.hasta,
     premium: Number(dto.prima),
+    cancelReason: dto.causa_cancelacion ?? undefined,
+    cancelDate: dto.fecha_cancelacion ?? undefined,
     address: insured?.direccion || undefined,
     phone: insured?.telefono || customer?.telefono || NONE,
     email: insured?.correo || customer?.email || NONE,

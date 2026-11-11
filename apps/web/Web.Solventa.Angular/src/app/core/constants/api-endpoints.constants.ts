@@ -12,6 +12,10 @@ export const API_ENDPOINTS = {
   policy: (policyId: string) => `${environment.apiBaseUrl}/web/polizas/${encodeURIComponent(policyId)}`,
   policyEndorsements: (policyId: string) =>
     `${environment.apiBaseUrl}/web/polizas/${encodeURIComponent(policyId)}/endosos`,
+  policyCancellation: (policyId: string) =>
+    `${environment.apiBaseUrl}/web/polizas/${encodeURIComponent(policyId)}/cancelacion`,
+  policyCancellationQuote: (policyId: string) =>
+    `${environment.apiBaseUrl}/web/polizas/${encodeURIComponent(policyId)}/cancelacion/calculo`,
   simulator: (provider: string) => `${environment.apiBaseUrl}/simuladores/${provider}`,
   webPolicies: `${environment.apiBaseUrl}/web/polizas`,
   quotes: `${environment.apiBaseUrl}/web/cotizaciones`,

@@ -33,7 +33,7 @@
         [policy]="selectedPolicy()!"
         (backRequested)="closePolicy()"
         (endorsementRequested)="showEndosoModal.set(true)"
-        (cancellationRequested)="showCancelModal.set(true)" />
+        (cancellationRequested)="showCancelModal.set(true); cancellationError.set(null)" />
     }
   }
 </div>
@@ -49,6 +49,7 @@
 @if (showCancelModal() && selectedPolicy()) {
   <slv-cancel-policy-modal 
     [policy]="selectedPolicy()!" 
-    (closed)="showCancelModal.set(false)" 
+    [error]="cancellationError()"
+    (closed)="showCancelModal.set(false); cancellationError.set(null)" 
     (confirmed)="onCancellationConfirmed($event)" />
 }

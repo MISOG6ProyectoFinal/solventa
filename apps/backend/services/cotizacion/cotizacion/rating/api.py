@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from solventa_common.validation import invalid_data_detail, invalid_fields
 
 from cotizacion.container import container
+from cotizacion.rating.domain.devolucion import Devolucion, SolicitudDevolucion, calcular_devolucion
 from cotizacion.rating.domain.models import Cotizacion, parse_rating_request
 from cotizacion.rating.domain.rating import ProductoNoTarifado, ReglasRating, RulesVersionAlreadyPublished
 
@@ -48,3 +49,9 @@ def calcular(solicitud: Annotated[dict, Body()]) -> Cotizacion:
         raise HTTPException(status_code=422, detail=invalid_data_detail(invalid_fields(exc))) from exc
     except ProductoNoTarifado as exc:
         raise HTTPException(status_code=422, detail=f"Producto sin tarifa: {exc}") from exc
+
+
+@router.post("/devolucion", response_model=Devolucion)
+def devolucion(solicitud: SolicitudDevolucion) -> Devolucion:
+    """Prima no devengada (prorrateo por días) que se reintegra al cancelar una póliza."""
+    return calcular_devolucion(solicitud)

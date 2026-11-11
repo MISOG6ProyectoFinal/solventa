@@ -108,6 +108,8 @@ class Policy(BaseModel):
     cliente_id: str | None = None
     idempotency_key: str
     emitida_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    causa_cancelacion: CancellationCause | None = None
+    fecha_cancelacion: date | None = None
 
 
 class RenewalOffer(BaseModel):
@@ -253,3 +255,21 @@ class Endorsement(BaseModel):
     version_anterior: dict = Field(default_factory=dict)
     version_nueva: dict = Field(default_factory=dict)
     creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class CancellationQuoteRequest(BaseModel):
+    causa: CancellationCause
+
+
+class CancellationRequest(CancellationQuoteRequest):
+    """El BFF pone el usuario desde el token del operador."""
+
+    usuario_id: str = Field(min_length=1, max_length=64)
+
+
+class CancellationQuote(BaseModel):
+    """Devolución calculada por Cotización y Rating. Pólizas no calcula el prorrateo."""
+
+    dias_vigencia: int
+    dias_no_devengados: int
+    monto_reintegro: Decimal

@@ -8,13 +8,16 @@ from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.bus import build_publisher
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
-from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader
+from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader, RefundCalculatorClient
 from polizas.ciclo_vida.domain.models import (
     CANCELLATION_CAUSE_NAMES,
     NON_REFUNDABLE_CAUSES,
     STATUS_NAMES,
     Beneficiary,
     CancellationCauseOption,
+    CancellationQuote,
+    CancellationQuoteRequest,
+    CancellationRequest,
     CatalogOption,
     ClientPolicy,
     Endorsement,
@@ -32,6 +35,7 @@ from polizas.ciclo_vida.domain.ports import (
     PaymentDoesNotMatch,
     PaymentNotApproved,
     PaymentSource,
+    PolicyNotCancellable,
     PolicyNotEndorsable,
     PolicyNotFound,
     PolicyNotRenewable,
@@ -39,10 +43,13 @@ from polizas.ciclo_vida.domain.ports import (
     QuoteExpired,
     QuoteNotFound,
     QuoteSource,
+    RefundCalculator,
+    RefundUnavailable,
     RenewalAlreadyApplied,
 )
 from polizas.ciclo_vida.domain.use_cases import (
     ApplyRenewalUseCase,
+    CancelPolicyUseCase,
     GetPolicyUseCase,
     GetRenewalOfferUseCase,
     IssuePolicyUseCase,
@@ -63,6 +70,7 @@ def wire(
     quotes: QuoteSource,
     payments: PaymentSource,
     publisher: EventPublisher | None = None,
+    refunds: RefundCalculator | None = None,
 ) -> None:
     if hasattr(policies, "create_schema"):
         policies.create_schema()
@@ -76,6 +84,9 @@ def wire(
     use_cases["get"] = GetPolicyUseCase(policies)
     use_cases["endorse"] = RegisterEndorsementUseCase(policies, bus)
     use_cases["apply"] = ApplyRenewalUseCase(policies, payments, bus)
+    use_cases.pop("cancel", None)
+    if refunds is not None:
+        use_cases["cancel"] = CancelPolicyUseCase(policies, refunds, bus)
 
 
 def _default_wire() -> None:
@@ -85,7 +96,8 @@ def _default_wire() -> None:
         policies = InMemoryPolicyRepository()
     quotes = QuoteReader(ServiceClient("cotizacion", settings.cotizacion_url))
     payments = PaymentReader(ServiceClient("pagos", settings.pagos_url))
-    wire(policies, quotes, payments, build_publisher())
+    refunds = RefundCalculatorClient(ServiceClient("cotizacion", settings.cotizacion_url))
+    wire(policies, quotes, payments, build_publisher(), refunds)
 
 
 _default_wire()
@@ -182,6 +194,29 @@ def register_endorsement(poliza_id: str, request: EndorsementRequest) -> Endorse
         raise _error(409, "poliza_no_endosable", "La póliza no está activa y no admite endosos.") from exc
     except InvalidEndorsement as exc:
         raise _error(422, exc.codigo, exc.mensaje) from exc
+
+
+def _cancellation(action):
+    try:
+        return action()
+    except PolicyNotFound as exc:
+        raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+    except PolicyNotCancellable as exc:
+        raise _error(409, "poliza_no_cancelable", "La póliza no está activa y no se puede cancelar.") from exc
+    except RefundUnavailable as exc:
+        raise _error(503, "devolucion_no_disponible", "No se pudo calcular la devolución. Intente de nuevo.") from exc
+
+
+@router.post("/{poliza_id}/cancelacion/calculo", response_model=CancellationQuote)
+def quote_cancellation(poliza_id: str, request: CancellationQuoteRequest) -> CancellationQuote:
+    """Recálculo de la devolución sin cambiar la póliza."""
+    return _cancellation(lambda: use_cases["cancel"].quote(poliza_id, request.causa))
+
+
+@router.post("/{poliza_id}/cancelacion", response_model=CancellationQuote)
+def cancel_policy(poliza_id: str, request: CancellationRequest) -> CancellationQuote:
+    """Cancela de forma definitiva y publica PolizaCanceladaEvent."""
+    return _cancellation(lambda: use_cases["cancel"].execute(poliza_id, request))
 
 
 @router.get("/{poliza_id}/renovacion/oferta", response_model=RenewalOffer)

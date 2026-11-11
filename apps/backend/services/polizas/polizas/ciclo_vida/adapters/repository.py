@@ -14,9 +14,12 @@ from sqlalchemy import (
     Numeric,
     String,
     Table,
+    func,
     insert,
+    inspect,
     or_,
     select,
+    text,
     update,
 )
 from sqlalchemy.engine import Engine
@@ -45,6 +48,8 @@ policies = Table(
     Column("cliente_id", String(64), nullable=True),
     Column("idempotency_key", String(255), nullable=False, unique=True),
     Column("emitida_en", DateTime(timezone=True), nullable=False),
+    Column("causa_cancelacion", String(64), nullable=True),
+    Column("fecha_cancelacion", Date, nullable=True),
 )
 
 renewals = Table(
@@ -104,13 +109,14 @@ beneficiaries = Table(
 
 
 def _row_values(policy: Policy) -> dict:
-    values = policy.model_dump(mode="json", exclude={"vigencia", "emitida_en", "prima"})
+    values = policy.model_dump(mode="json", exclude={"vigencia", "emitida_en", "prima", "fecha_cancelacion"})
     return {
         **values,
         "prima": policy.prima,
         "vigencia_desde": policy.vigencia.desde,
         "vigencia_hasta": policy.vigencia.hasta,
         "emitida_en": policy.emitida_en,
+        "fecha_cancelacion": policy.fecha_cancelacion,
     }
 
 
@@ -190,6 +196,8 @@ def _policy(row) -> Policy:
         cliente_id=row["cliente_id"],
         idempotency_key=row["idempotency_key"],
         emitida_en=row["emitida_en"],
+        causa_cancelacion=row.get("causa_cancelacion"),
+        fecha_cancelacion=row.get("fecha_cancelacion"),
     )
 
 
@@ -199,6 +207,25 @@ class PostgresPolicyRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
+        # create_all no agrega columnas a una tabla que ya existe (HU007).
+        existing = {c["name"] for c in inspect(self.engine).get_columns(policies.name)}
+        with self.engine.begin() as conn:
+            for column in (policies.c.causa_cancelacion, policies.c.fecha_cancelacion):
+                if column.name not in existing:
+                    col_type = column.type.compile(self.engine.dialect)
+                    conn.execute(text(f"ALTER TABLE {policies.name} ADD COLUMN {column.name} {col_type}"))
+
+    def cancel(self, policy_id: str, cause: str, cancelled_on: date, event: Event) -> bool:
+        with self.engine.begin() as conn:
+            result = conn.execute(
+                update(policies)
+                .where(policies.c.id == policy_id, func.lower(policies.c.estado) == PolicyStatus.ACTIVE.value)
+                .values(estado=PolicyStatus.CANCELLED.value, causa_cancelacion=cause, fecha_cancelacion=cancelled_on)
+            )
+            if result.rowcount == 0:
+                return False
+            conn.execute(insert(outbox_events).values(**_event_values(event)))
+        return True
 
     def add(self, policy: Policy) -> None:
         try:
@@ -223,7 +250,7 @@ class PostgresPolicyRepository:
                     select(policies)
                     .where(
                         policies.c.cliente_id == cliente_id,
-                        policies.c.estado.in_([PolicyStatus.ACTIVE.value, PolicyStatus.EXPIRED.value]),
+                        func.lower(policies.c.estado).in_([PolicyStatus.ACTIVE.value, PolicyStatus.EXPIRED.value]),
                     )
                     .order_by(policies.c.emitida_en)
                 )
@@ -262,7 +289,7 @@ class PostgresPolicyRepository:
         with self.engine.begin() as conn:
             result = conn.execute(
                 update(policies)
-                .where(policies.c.estado == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today)
+                .where(func.lower(policies.c.estado) == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today)
                 .values(estado=PolicyStatus.EXPIRED.value)
             )
         return result.rowcount
@@ -279,7 +306,9 @@ class PostgresPolicyRepository:
                         renewals.c.prima_nueva,
                     )
                     .join(renewals, renewals.c.poliza_id == policies.c.id)
-                    .where(policies.c.estado == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today)
+                    .where(
+                        func.lower(policies.c.estado) == PolicyStatus.ACTIVE.value, policies.c.vigencia_hasta < today
+                    )
                 )
                 .mappings()
                 .all()
@@ -507,6 +536,17 @@ class InMemoryPolicyRepository:
     def list_endorsements(self, policy_id: str) -> list[Endorsement]:
         with self._lock:
             return [e for e in self.endorsements if e.poliza_id == policy_id]
+
+    def cancel(self, policy_id: str, cause: str, cancelled_on: date, event: Event) -> bool:
+        with self._lock:
+            policy = next((p for p in self.items if p.id == policy_id), None)
+            if policy is None or policy.estado is not PolicyStatus.ACTIVE:
+                return False
+            policy.estado = PolicyStatus.CANCELLED
+            policy.causa_cancelacion = cause
+            policy.fecha_cancelacion = cancelled_on
+            self.events.append((event, False))
+            return True
 
     def pending_events(self) -> list[Event]:
         with self._lock:

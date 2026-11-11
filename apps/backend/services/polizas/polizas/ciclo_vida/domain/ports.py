@@ -50,6 +50,14 @@ class PolicyNotEndorsable(ValueError):
     pass
 
 
+class PolicyNotCancellable(ValueError):
+    pass
+
+
+class RefundUnavailable(RuntimeError):
+    pass
+
+
 class InvalidEndorsement(ValueError):
     def __init__(self, codigo: str, mensaje: str) -> None:
         super().__init__(mensaje)
@@ -63,6 +71,10 @@ class QuoteSource(Protocol):
 
 class PaymentSource(Protocol):
     def get(self, payment_id: str) -> dict | None: ...
+
+
+class RefundCalculator(Protocol):
+    def calculate(self, policy: Policy, cancellation_date: date, refundable: bool) -> dict: ...
 
 
 class PolicyRepository(Protocol):
@@ -101,6 +113,10 @@ class PolicyRepository(Protocol):
     def save_endorsement(self, endorsement: Endorsement, event: Event) -> None: ...
 
     def list_endorsements(self, policy_id: str) -> list[Endorsement]: ...
+
+    def cancel(self, policy_id: str, cause: str, cancelled_on: date, event: Event) -> bool:
+        """Pasa una póliza activa a cancelada y guarda el evento. False si ya no estaba activa."""
+        ...
 
     def pending_events(self) -> list[Event]: ...
 
