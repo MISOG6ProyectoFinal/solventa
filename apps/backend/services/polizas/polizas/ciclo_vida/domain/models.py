@@ -181,36 +181,13 @@ class ClientPolicy(Policy):
 
 
 TIPO_ENDOSO_DATOS_ASEGURADO = "datos-asegurado"
-TIPO_ENDOSO_BENEFICIARIOS = "beneficiarios"
-TIPO_ENDOSO_SUMA_ASEGURADA = "suma-asegurada"
-
-NOMBRE_ENDOSO_DATOS_ASEGURADO = "Datos del asegurado"
-NOMBRE_ENDOSO_BENEFICIARIOS = "Beneficiarios"
-NOMBRE_ENDOSO_SUMA_ASEGURADA = "Suma asegurada"
-
-_RAMOS_VIDA = frozenset({"ramo-vida", "ramo-microseguro-vida", "ramo-vida-hipotecario"})
-_RAMOS_PATRIMONIAL = frozenset({"ramo-hogar", "ramo-auto", "ramo-dispositivos"})
-
-_TYPES_BASE: dict[str, str] = {TIPO_ENDOSO_DATOS_ASEGURADO: NOMBRE_ENDOSO_DATOS_ASEGURADO}
-_TYPES_VIDA: dict[str, str] = {
-    TIPO_ENDOSO_DATOS_ASEGURADO: NOMBRE_ENDOSO_DATOS_ASEGURADO,
-    TIPO_ENDOSO_BENEFICIARIOS: NOMBRE_ENDOSO_BENEFICIARIOS,
-    TIPO_ENDOSO_SUMA_ASEGURADA: NOMBRE_ENDOSO_SUMA_ASEGURADA,
-}
-_TYPES_PATRIMONIAL: dict[str, str] = {
-    TIPO_ENDOSO_DATOS_ASEGURADO: NOMBRE_ENDOSO_DATOS_ASEGURADO,
-    TIPO_ENDOSO_SUMA_ASEGURADA: NOMBRE_ENDOSO_SUMA_ASEGURADA,
-}
-
-ENDORSEMENT_TYPES: dict[str, str] = _TYPES_BASE
 
 
-def endorsement_types_for_ramo(ramo_id: str | None = None) -> dict[str, str]:
-    if ramo_id in _RAMOS_VIDA:
-        return _TYPES_VIDA
-    if ramo_id in _RAMOS_PATRIMONIAL:
-        return _TYPES_PATRIMONIAL
-    return _TYPES_BASE
+class EndorsementType(CatalogOption):
+    ramos: list[str] = Field(default_factory=list)
+
+    def applies_to(self, ramo_id: str | None) -> bool:
+        return not self.ramos or ramo_id in self.ramos
 
 
 class InsuredData(BaseModel):
@@ -255,6 +232,10 @@ class Endorsement(BaseModel):
     version_anterior: dict = Field(default_factory=dict)
     version_nueva: dict = Field(default_factory=dict)
     creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class NamedEndorsement(Endorsement):
+    tipo_nombre: str
 
 
 class CancellationQuoteRequest(BaseModel):

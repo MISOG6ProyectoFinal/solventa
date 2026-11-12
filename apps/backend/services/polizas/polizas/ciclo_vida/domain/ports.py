@@ -3,7 +3,7 @@ from typing import Protocol
 
 from solventa_common.events import Event
 
-from polizas.ciclo_vida.domain.models import Beneficiary, Endorsement, Policy, Renewal
+from polizas.ciclo_vida.domain.models import Beneficiary, Endorsement, EndorsementType, Policy, Renewal
 
 
 class QuoteNotFound(LookupError):
@@ -63,6 +63,10 @@ class InvalidEndorsement(ValueError):
         super().__init__(mensaje)
         self.codigo = codigo
         self.mensaje = mensaje
+
+
+class EndorsementTypeRepository(Protocol):
+    def list_types(self) -> list[EndorsementType]: ...
 
 
 class QuoteSource(Protocol):

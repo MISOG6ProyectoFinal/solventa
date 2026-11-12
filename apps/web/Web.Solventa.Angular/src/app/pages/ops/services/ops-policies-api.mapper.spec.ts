@@ -61,6 +61,7 @@ describe('ops policies mapper', () => {
         {
           id: 'end-1',
           tipo: 'datos-asegurado',
+          tipo_nombre: 'Datos del asegurado',
           fecha_efectiva: '2026-11-06',
           motivo: 'Cambio de celular',
           usuario_id: 'op-1',
@@ -71,6 +72,7 @@ describe('ops policies mapper', () => {
       ],
     });
 
+    expect(policy.endorsements[0].tipo).toBe('Datos del asegurado');
     expect(policy.endorsements[0].despues).toEqual([
       ['endorsement.name', 'Lina Díaz'],
       ['endorsement.phone', '3119876543'],
