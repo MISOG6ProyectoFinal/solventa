@@ -43,30 +43,34 @@ sequenceDiagram
     Banco->>Cot: POST /gobierno-socios/cotizaciones (vida-hipotecario + consentimiento)
     activate Cot
     Cot->>Cache: Consultar perfil (cache_key: cliente_id + consentimiento_id)
-    alt Acierto en Caché (< 5 ms)
-        Cache-->>Cot: Score de riesgo previo (last-known-good)
-    else Falla de Caché (Miss)
+    alt Perfil obtenido hace menos de 300 s
+        Cache-->>Cot: Score de riesgo reciente
+    else Sin perfil reciente
         Cot->>OF: GET /customers/{id}/profile (timeout: 300 ms)
         alt Responde a tiempo (< 300 ms)
             OF-->>Cot: Score de riesgo (ej: 0.70)
-            Cot->>Cache: Guardar en caché (TTL: 3600s)
+            Cot->>Cache: Guardar en caché (TTL: 86 400 s)
         else Supera 300 ms (Timeout)
-            Cot-->>Cot: Fallback a score por defecto neutral (0.50)
+            Cot-->>Cot: Último valor bueno de la caché o score neutral (0.50)
         end
     end
+    Cot->>Cot: Fan-out a 3 réplicas con el tiempo restante del presupuesto (350 ms)
     Cot->>Cot: Motor de Rating: Cálculo actuarial de prima (vida hipotecario)
     Cot-->>Banco: HTTP 200: Oferta personalizada (Latencia total p95 <= 400 ms)
     deactivate Cot
 ```
 
 ### 3.1 Presupuesto de Latencia por Dependencia (Táctica: Limitar tiempo de espera)
-- La llamada externa al proveedor de Open Finance tiene un **timeout duro de 300 ms** configurado en `open_finance_timeout_s = 0.3` (`CotizacionSettings`).
-- Esto reserva un margen de **100 ms** para el enrutamiento HTTP, la validación del esquema Pydantic, la búsqueda en caché local y la ejecución de las fórmulas actuariales del motor de rating.
+- Toda la cotización comparte un presupuesto de **350 ms** (`quote_budget_s = 0.35`). Lo que tarde Open Finance se descuenta del tiempo que recibe el fan-out a las réplicas, con un tope de `consenso_timeout_s = 0.3` y un piso de 50 ms.
+- La llamada externa al proveedor de Open Finance tiene un **timeout de 300 ms** configurado en `open_finance_timeout_s = 0.3` (`CotizacionSettings`).
+- El fan-out responde en cuanto dos réplicas coinciden en la prima y cancela la tercera. Si llegan menos respuestas que el quórum dentro del plazo, la cotización se calcula en el propio pod.
+- Los **50 ms** restantes hasta los 400 ms cubren el enrutamiento HTTP, la validación del esquema Pydantic y la persistencia de la oferta.
 
 ### 3.2 Caché de Perfil y Cotización (Patrón: Cache-Aside / Táctica: Múltiples copias de datos)
 - Una vez consultado el perfil de un cliente, su score se indexa bajo la clave:
-  `perfil:open-finance:{referencia_cliente}:{consentimiento_id}` con un TTL de 1 hora.
-- Las cotizaciones secundarias o recálculos (ej. cambio en el plazo o en el monto del crédito) recuperan el perfil de la caché en menos de **2 ms**, reduciendo drásticamente la latencia promedio a niveles de $\approx 8\text{ ms}$.
+  `perfil:open-finance:{referencia_cliente}:{consentimiento_id}` con un TTL de 24 horas (`signal_cache_ttl_s = 86400`).
+- Si el perfil se obtuvo hace menos de **300 s** (`signal_fresh_s`), los recálculos (ej. cambio en el plazo o en el monto del crédito) lo toman de la caché sin llamar al proveedor.
+- Pasados esos 300 s se vuelve a consultar al proveedor, y el valor guardado queda como último valor bueno si el proveedor falla.
 
 ### 3.3 Concurrencia y Desacoplamiento de Escritura
 - El cálculo de la prima no realiza bloqueos transaccionales de base de datos síncronos en el camino de ida y vuelta.
@@ -83,7 +87,7 @@ Los componentes clave que materializan el ASR-02 en el repositorio son:
    - Parámetro: `open_finance_timeout_s: float = 0.3` (300 ms). Techo inquebrantable validado en arranque.
 2. **Caso de Uso de Resolución de Perfil:**
    - Archivo: `apps/backend/services/cotizacion/cotizacion/signals/domain/use_cases.py` (`ResolveRiskProfileUseCase`).
-   - Implementa la consulta primero a la caché `cache.get(key)`. Si no existe, invoca al proveedor bajo timeout y persiste en caché `cache.set(key, score, ttl_s)`.
+   - Consulta primero la caché `cache.get(key)` y usa el valor si tiene menos de `signal_fresh_s`. Si no, invoca al proveedor bajo timeout y persiste el resultado con `cache.set(key, score, ttl_s)`.
 3. **Adaptador HTTP con Timeout Estricto:**
    - Archivo: `apps/backend/services/cotizacion/cotizacion/signals/adapters/open_finance.py` (`OpenFinanceQuoteAdapter`).
    - Utiliza `httpx.Client(timeout=timeout_s)` para abortar cualquier petición que supere el presupuesto.

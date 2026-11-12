@@ -9,7 +9,7 @@
 | **Historia de usuario asociada** | **HU002** (Consentimiento Open Finance) y **HU003** (Desglose de cotización en tiempo real - Modo Degradado) |
 | **Atributo de calidad** | **Disponibilidad** |
 | **Fuente** | Proveedor de Open Finance o de Open Data |
-| **Estímulo** | El proveedor supera el timeout duro de 3000 ms o deja de responder (errores 500/503, caídas de red o latencia excesiva). |
+| **Estímulo** | El proveedor supera su timeout (300 ms por defecto, techo de 3000 ms) o deja de responder (errores 500/503, caídas de red o latencia excesiva). |
 | **Artefacto** | Adaptador de Open Finance (`OpenFinanceQuoteAdapter`), cortacircuitos (`CircuitBreaker`), caché de perfil (`KeyValueCache`), y microservicio de Cotización y Rating (`cotizacion`). |
 | **Ambiente** | Producción con el proveedor externo degradado o inoperativo. |
 | **Medida de respuesta** | **Disponibilidad del flujo de venta mayor o igual a 99,9%** ($\ge 99.9\%$). |
@@ -39,12 +39,12 @@ flowchart TD
     CB -- "OPEN (Circuito Abierto)" --> CacheCheck{"¿Existe Score en Caché?"}
     CB -- "CLOSED (Circuito Cerrado)" --> CallExt["Invocar Proveedor Externo Open Finance"]
     
-    CallExt --> EvalCall{"¿Respuesta en < 3000 ms y HTTP 200?"}
+    CallExt --> EvalCall{"¿Respuesta dentro del timeout y HTTP 200?"}
     
     EvalCall -- Sí --> SaveCache["Guardar en Caché + Registrar Éxito en CB"]
     SaveCache --> QuoteFresh["Cotización Normal (degradada = false, origen = proveedor)"]
     
-    EvalCall -- "No (Timeout > 3000 ms / Error 5xx)" --> RecordFail["Registrar Fallo en CB"]
+    EvalCall -- "No (Timeout / Error 5xx)" --> RecordFail["Registrar Fallo en CB"]
     RecordFail --> TripCheck{"¿Fallos >= Umbral (5)?"}
     TripCheck -- Sí --> TripCB["Abrir Circuito (OPEN)"]
     TripCheck -- No --> CacheCheck
@@ -86,7 +86,7 @@ Cuando el proveedor no responde o el circuito está abierto:
    - Clases: `CircuitBreaker`, `CircuitOpenError`, `InMemoryCache`, `RedisCache`, función `call_with_fallback`.
 2. **Adaptador Open Finance con Resiliencia:**
    - Archivo: `apps/backend/services/cotizacion/cotizacion/signals/adapters/open_finance.py`
-   - Función `build_provider()`: Asocia el `CircuitBreaker` y el timeout máximo de 3000 ms.
+   - Función `build_provider()`: Asocia el `CircuitBreaker` y el timeout configurado (`open_finance_timeout_s`, techo de 3000 ms).
 3. **Manejo de Señales y Motivos de Degradación:**
    - Archivo: `apps/backend/services/cotizacion/cotizacion/signals/domain/models.py`
    - Enums: `DegradationReason` (`TIMEOUT`, `CIRCUIT_OPEN`, `PROVIDER_ERROR`) y `SignalOrigin` (`PROVIDER`, `CACHE`, `DEFAULT`).
