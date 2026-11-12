@@ -100,7 +100,7 @@ def test_viaje_pasa_por_consenso_sin_datos_personales():
     captured: dict = {}
     original = container.cotizar_con_consenso.fanout
 
-    async def fanout(body: dict) -> list[dict]:
+    async def fanout(body: dict, _timeout_s: float) -> list[dict]:
         captured["body"] = body
         return await original(body)
 
@@ -123,7 +123,7 @@ def test_viaje_pasa_por_consenso_sin_datos_personales():
 
 
 def test_consenso_sin_quorum_en_viaje_responde_503():
-    async def fanout(body: dict) -> list[dict]:
+    async def fanout(body: dict, _timeout_s: float) -> list[dict]:
         return [
             {"prima": "1.00", "version_reglas": "2026.10.0"},
             {"prima": "2.00", "version_reglas": "2026.10.0"},
@@ -185,7 +185,7 @@ def test_consenso_exige_canal():
 def test_el_canal_no_se_envia_al_calculo_de_rating():
     captured: dict = {}
 
-    async def fanout(body: dict) -> list[dict]:
+    async def fanout(body: dict, _timeout_s: float) -> list[dict]:
         captured["body"] = body
         payload = {"prima": "900.00", "version_reglas": "2026.10.0"}
         return [payload, payload, payload]
@@ -254,7 +254,7 @@ def test_cotizacion_se_recupera_por_id():
 def test_movil_persiste_el_cliente_sin_enviarlo_al_rating():
     captured: dict = {}
 
-    async def fanout(body: dict) -> list[dict]:
+    async def fanout(body: dict, _timeout_s: float) -> list[dict]:
         captured["body"] = body
         payload = {"prima": "149940.00", "version_reglas": "2026.10.0"}
         return [payload, payload, payload]

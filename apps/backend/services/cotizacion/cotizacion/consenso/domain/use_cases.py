@@ -26,7 +26,8 @@ from cotizacion.rating.domain.models import (
 )
 from cotizacion.signals.domain.models import AppliedSignal
 
-FanoutFn = Callable[[dict], Awaitable[list[dict]]]
+FanoutFn = Callable[[dict, float], Awaitable[list[dict]]]
+MIN_FANOUT_TIMEOUT_S = 0.05
 
 VIGENCIA_DIAS_DEFAULT = 365
 
@@ -51,12 +52,14 @@ class CotizarConConsensoUseCase:
         fanout: FanoutFn,
         quorum: int,
         vigencia_dias: int = VIGENCIA_DIAS_DEFAULT,
+        fanout_timeout_s: float = 0.3,
     ) -> None:
         self.catalogo = catalogo
         self.cotizaciones = cotizaciones
         self.fanout = fanout
         self.quorum = quorum
         self.vigencia_dias = vigencia_dias
+        self.fanout_timeout_s = fanout_timeout_s
 
     async def execute(
         self,
@@ -67,6 +70,7 @@ class CotizarConConsensoUseCase:
         signals: list[AppliedSignal] | None = None,
         allowed_coverages: set[str] | None = None,
         partner_id: str | None = None,
+        budget_s: float | None = None,
     ) -> OfertaCotizacion:
         """El producto ya viene validado para el canal. allowed_coverages limita la oferta a lo que
         el socio puede vender; None ofrece todas.
@@ -75,7 +79,8 @@ class CotizarConConsensoUseCase:
         """
         signals = signals or []
         body = solicitud.model_dump(mode="json", exclude={"cliente_id"})
-        respuestas = await self.fanout(body)
+        timeout_s = self.fanout_timeout_s if budget_s is None else min(self.fanout_timeout_s, budget_s)
+        respuestas = await self.fanout(body, max(MIN_FANOUT_TIMEOUT_S, timeout_s))
         prima_ganadora = votar([Decimal(str(r["prima"])) for r in respuestas], self.quorum)
         elegida = next(r for r in respuestas if Decimal(str(r["prima"])) == prima_ganadora)
         coberturas = [
