@@ -247,9 +247,21 @@ def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudP
     }
 
 
+QUOTE_FIELDS = (
+    "id",
+    "producto_id",
+    "prima",
+    "coberturas",
+    "vigencia_propuesta",
+    "vigente_hasta",
+    "version_reglas",
+    "estado",
+)
+
+
 @authenticated.post("/cotizaciones")
 def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
-    """Valida el titular, delega la cotización sin PII y devuelve la oferta completa."""
+    """Valida el titular, delega la cotización sin PII y devuelve solo lo que el teléfono muestra."""
     try:
         MobileQuoteHolder.model_validate(solicitud)
     except ValidationError as exc:
@@ -260,9 +272,7 @@ def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
         json={key: value for key, value in solicitud.items() if key not in MobileQuoteHolder.model_fields},
         headers={"X-Canal": "mobile", "X-Cliente-Id": session.client_id},
     )
-    if isinstance(oferta, dict):
-        oferta.pop("cliente_id", None)
-    return oferta
+    return {key: oferta[key] for key in QUOTE_FIELDS if key in oferta}
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/polizas")
