@@ -48,7 +48,8 @@ class _Service:
 def core(monkeypatch):
     services = {"polizas": _Service(POLICY), "pagos": _Service({}), "siniestros": _Service({})}
     for name, service in services.items():
-        monkeypatch.setattr(f"canales.socios.api.{name}", service)
+        module = "canales.quote_payment" if name == "pagos" else "canales.socios.api"
+        monkeypatch.setattr(f"{module}.{name}", service)
     return services
 
 

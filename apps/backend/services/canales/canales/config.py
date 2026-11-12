@@ -14,6 +14,7 @@ class CanalesSettings(ServiceSettings):
     pagos_timeout_s: float = 4.0
     # Mayor que el presupuesto de Pólizas, que lee Cotización y Pagos con 1 s cada uno.
     polizas_timeout_s: float = 3.0
+    payment_simulation_enabled: bool = False
 
 
 settings = CanalesSettings()

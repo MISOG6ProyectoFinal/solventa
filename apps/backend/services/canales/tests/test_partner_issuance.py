@@ -58,8 +58,10 @@ def _quotes(quote: dict = QUOTE) -> _Upstream:
 def test_partner_pays_with_the_server_premium_and_a_scoped_key(monkeypatch):
     payments = _Upstream({"/pagos/cobros": PAYMENT})
     quotes = _quotes()
-    monkeypatch.setattr("canales.socios.api.cotizacion", quotes)
-    monkeypatch.setattr("canales.socios.api.pagos", payments)
+    quotes_service = quotes
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.pagos", payments)
 
     response = client.post("/socios/v1/cotizaciones/cot-1/pagos", json={"medio_token": "demo-4242"}, headers=HEADERS)
 
@@ -75,8 +77,10 @@ def test_partner_pays_with_the_server_premium_and_a_scoped_key(monkeypatch):
 
 def test_partner_cannot_pay_another_partner_quote(monkeypatch):
     payments = _Upstream({"/pagos/cobros": PAYMENT})
-    monkeypatch.setattr("canales.socios.api.cotizacion", _quotes(QUOTE | {"socio_id": "otro"}))
-    monkeypatch.setattr("canales.socios.api.pagos", payments)
+    quotes_service = _quotes(QUOTE | {"socio_id": "otro"})
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.pagos", payments)
 
     response = client.post("/socios/v1/cotizaciones/cot-1/pagos", json={"medio_token": "demo-4242"}, headers=HEADERS)
 
@@ -87,10 +91,10 @@ def test_partner_cannot_pay_another_partner_quote(monkeypatch):
 
 def test_expired_quote_is_not_charged(monkeypatch):
     payments = _Upstream({"/pagos/cobros": PAYMENT})
-    monkeypatch.setattr(
-        "canales.socios.api.cotizacion", _quotes(QUOTE | {"vigente_hasta": "2000-01-01T23:59:59-05:00"})
-    )
-    monkeypatch.setattr("canales.socios.api.pagos", payments)
+    quotes_service = _quotes(QUOTE | {"vigente_hasta": "2000-01-01T23:59:59-05:00"})
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.pagos", payments)
 
     response = client.post("/socios/v1/cotizaciones/cot-1/pagos", json={"medio_token": "demo-4242"}, headers=HEADERS)
 
@@ -101,7 +105,9 @@ def test_expired_quote_is_not_charged(monkeypatch):
 
 def test_partner_issues_policy_with_scoped_key(monkeypatch):
     policies = _Upstream({"/polizas/emisiones": POLICY})
-    monkeypatch.setattr("canales.socios.api.cotizacion", _quotes())
+    quotes_service = _quotes()
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", policies)
 
     response = client.post(
@@ -125,7 +131,9 @@ def test_partner_issues_policy_with_scoped_key(monkeypatch):
 
 def test_issuance_keeps_the_business_error(monkeypatch):
     detail = {"codigo": "pago_no_aprobado", "mensaje": "El pago no está aprobado para esta cotización."}
-    monkeypatch.setattr("canales.socios.api.cotizacion", _quotes())
+    quotes_service = _quotes()
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", _Upstream(error=_http_error(409, detail)))
 
     response = client.post(
@@ -139,7 +147,9 @@ def test_issuance_keeps_the_business_error(monkeypatch):
 def test_scope_without_issuance_is_rejected_before_issuing(monkeypatch):
     detail = {"codigo": "alcance_no_autorizado", "mensaje": "El alcance del socio no incluye la operación 'emision'."}
     policies = _Upstream({"/polizas/emisiones": POLICY})
-    monkeypatch.setattr("canales.socios.api.cotizacion", _Upstream(error=_http_error(403, detail)))
+    quotes_service = _Upstream(error=_http_error(403, detail))
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", policies)
 
     response = client.post(

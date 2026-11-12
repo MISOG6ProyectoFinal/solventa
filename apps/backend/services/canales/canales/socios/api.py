@@ -3,11 +3,11 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Response, status
 from pydantic import BaseModel, Field
-from solventa_common.errors import error_detail
+from solventa_common.errors import api_error, error_detail
 from solventa_common.integration.base import call_upstream
-from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
-from canales.clients import cotizacion, pagos, polizas, siniestros
+from canales.clients import cotizacion, polizas, siniestros
+from canales.quote_payment import charge_quote, payable_quote
 
 ClientId = Annotated[str, Header(alias="X-Client-Id")]
 ApiKey = Annotated[str, Header(alias="X-Api-Key")]
@@ -119,14 +119,6 @@ class PartnerIssueRequest(BaseModel):
     cobro_id: str = Field(min_length=1, max_length=64)
 
 
-def _partner_quote(quote_id: str, partner_id: str) -> dict:
-    quote = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{quote_id}")
-    if not isinstance(quote, dict) or quote.get("socio_id") != partner_id:
-        detail = error_detail("cotizacion_no_encontrada", "La cotización no existe.")
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
-    return quote
-
-
 @router.post("/v1/cotizaciones/{cotizacion_id}/pagos")
 def pay_quote(
     cotizacion_id: str,
@@ -135,23 +127,15 @@ def pay_quote(
     idempotency_key: IdempotencyKey,
 ) -> dict:
     """Cobra la prima de una cotización vigente del socio. El monto sale de Cotización, no del socio."""
-    quote = _partner_quote(cotizacion_id, partner["socio_id"])
-    if not oferta_se_puede_cobrar(quote.get("vigente_hasta")):
-        detail = {
-            "codigo": "cotizacion_vencida",
-            "mensaje": "La cotización ya no está vigente. No se realizó ningún cobro; vuelva a cotizar.",
-        }
-        raise HTTPException(status.HTTP_409_CONFLICT, detail)
-    payment = call_upstream(
-        pagos.post,
-        "/pagos/cobros",
-        json={
-            "cotizacion_id": cotizacion_id,
-            "cliente_id": f"socio:{partner['socio_id']}",
-            "monto": str(quote["prima"]),
-            "idempotency_key": f"socios:{partner['socio_id']}:{idempotency_key}",
-            "medio_token": request.medio_token,
-        },
+    partner_id = partner["socio_id"]
+    offer = payable_quote(
+        cotizacion_id,
+        lambda offer: offer.get("socio_id") == partner_id,
+        api_error(status.HTTP_404_NOT_FOUND, "cotizacion_no_encontrada", "La cotización no existe."),
+        "La cotización ya no está vigente. No se realizó ningún cobro; vuelva a cotizar.",
+    )
+    payment = charge_quote(
+        cotizacion_id, offer, f"socio:{partner_id}", f"socios:{partner_id}:{idempotency_key}", request.medio_token
     )
     return {key: payment[key] for key in ("id", "cotizacion_id", "estado", "monto", "moneda")}
 
