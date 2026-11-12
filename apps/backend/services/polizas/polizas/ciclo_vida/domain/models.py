@@ -205,12 +205,12 @@ class InsuredData(BaseModel):
 
 
 class EndorsementRequest(BaseModel):
-    """El BFF arma la versión anterior (Identidad + endosos previos) y el usuario desde el token del operador."""
+    """El BFF envía lo que dice Identidad y el usuario del token. Pólizas decide la versión vigente del asegurado."""
 
     usuario_id: str = Field(min_length=1, max_length=64)
     fecha_efectiva: date
     motivo: str = Field(max_length=255)
-    version_anterior: InsuredData
+    datos_identidad: InsuredData
     version_nueva: InsuredData
 
     @field_validator("motivo")
@@ -220,6 +220,12 @@ class EndorsementRequest(BaseModel):
         if not token:
             raise ValueError("El motivo del endoso es obligatorio")
         return token
+
+
+class CurrentInsured(BaseModel):
+    """Datos del asegurado según el último endoso. None si nunca se endosó: valen los de Identidad."""
+
+    asegurado: InsuredData | None
 
 
 class Endorsement(BaseModel):

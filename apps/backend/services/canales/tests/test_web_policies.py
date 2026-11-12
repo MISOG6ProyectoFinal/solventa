@@ -238,7 +238,7 @@ def test_without_a_customer_document_the_quote_belongs_to_the_consent_customer(m
     assert cotizacion.calls[0][1]["headers"] == {"X-Canal": "web", "X-Cliente-Id": "CLI-CC-1020"}
 
 
-def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
+def test_endoso_envia_lo_que_dice_identidad_y_el_usuario_del_token(monkeypatch):
     previo = {"nombre": "Lina D.", "telefono": "300", "correo": "l@x.co", "direccion": "Calle 1"}
     nuevo = {**previo, "direccion": "Calle 2"}
     posts: list[dict] = []
@@ -261,7 +261,13 @@ def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
     )
 
     assert response.status_code == 201
-    assert posts[0]["json"]["version_anterior"] == previo
+    assert posts[0]["json"]["datos_identidad"] == {
+        "nombre": "Lina Díaz",
+        "telefono": "3001234567",
+        "correo": "lina@solventa.test",
+        "direccion": "",
+    }
+    assert "version_anterior" not in posts[0]["json"]
     assert posts[0]["json"]["usuario_id"] == "op-1"
     assert services["identidad"].calls == ["/identidad/clientes"]
 
@@ -309,3 +315,20 @@ def test_catalogo_tipos_endoso_bff(monkeypatch):
     resp = client.get("/web/polizas/tipos-endoso", params={"ramo_id": "ramo-vida"}, headers=web_auth.viewer())
     assert resp.status_code == 200
     assert len(resp.json()) == 3
+
+
+def test_the_detail_shows_the_insured_data_policies_says_is_current(monkeypatch):
+    endorsed = {"nombre": "Lina Díaz", "telefono": "311", "correo": "lina@solventa.test", "direccion": "Calle 2"}
+    _wire(monkeypatch, {"/polizas/pol-1": POLICY, "/polizas/pol-1/asegurado": {"asegurado": endorsed}})
+
+    response = client.get("/web/polizas/pol-1", headers=web_auth.viewer())
+
+    assert response.json()["asegurado"] == endorsed
+
+
+def test_without_endorsements_the_detail_shows_identidad_data(monkeypatch):
+    _wire(monkeypatch, {"/polizas/pol-1": POLICY, "/polizas/pol-1/asegurado": {"asegurado": None}})
+
+    response = client.get("/web/polizas/pol-1", headers=web_auth.viewer())
+
+    assert response.json()["asegurado"]["telefono"] == "3001234567"
