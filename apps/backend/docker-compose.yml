@@ -64,6 +64,7 @@ services:
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-solventa-evidencias}
       RED_ASISTENCIA_URL: http://simuladores:8000/red-asistencia
+      POLIZAS_URL: http://polizas:8000
     depends_on:
       postgres:
         condition: service_healthy

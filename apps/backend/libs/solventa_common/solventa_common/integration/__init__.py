@@ -10,11 +10,12 @@ from solventa_common.integration.adapters import (
     RedAsistenciaAdapter,
 )
 from solventa_common.integration.base import ExternalAdapter, ServiceClient
-from solventa_common.integration.simulators import simulated_provider
+from solventa_common.integration.simulators import cluster_service, simulated_provider
 
 __all__ = [
     "AcordReaseguroAdapter",
     "ExternalAdapter",
+    "cluster_service",
     "FirmaNotificacionAdapter",
     "KycAmlAdapter",
     "OpenDataAdapter",

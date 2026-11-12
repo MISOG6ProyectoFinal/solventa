@@ -136,14 +136,14 @@ const otherPlace = {
   longitude: -74.0721,
 };
 
-function mockCreateFailure() {
+function mockCreateFailure(status = 503, detail = 'Sin conexión.') {
   return jest.fn(async (url: string, init?: { method?: string }) => {
     if (String(url).startsWith('file://')) {
       return jsonResponse(null);
     }
 
     if (init?.method === 'POST' && String(url).endsWith('/movil/siniestros')) {
-      return jsonResponse({ detail: 'Sin conexión.' }, 503);
+      return jsonResponse({ detail }, status);
     }
 
     return jsonResponse({ detail: 'No se pudo enviar el reporte.' }, 500);
@@ -394,6 +394,23 @@ describe('ReportClaimScreen', () => {
     expect(restored.getByText('1/10')).toBeTruthy();
     expect(restored.queryByText('Foto 2')).toBeNull();
     expect(restored.getByTestId('evidence-photo')).toBeTruthy();
+  });
+
+  it('shows the rejection and keeps nothing on the phone when the policy is not valid', async () => {
+    const rejection = 'La póliza no existe, no es del cliente o no está activa.';
+    global.fetch = mockCreateFailure(422, rejection) as typeof fetch;
+    useClaimsStore.getState().addPhoto({ filePath: '/tmp/foto.jpg', bytes: 1536 });
+    const form = await render(<ReportClaimScreen />);
+
+    await waitFor(() => {
+      expect(form.getByText(currentPlace.address)).toBeTruthy();
+    });
+    await fireEvent.changeText(form.getByPlaceholderText('Describe lo ocurrido'), 'Golpe en la puerta');
+    await fireEvent.press(form.getByText('Enviar reporte'));
+
+    expect(await form.findByText(rejection)).toBeTruthy();
+    expect(useNavigation().navigate).not.toHaveBeenCalled();
+    expect(await listReports()).toEqual([]);
   });
 
   it('shows the saved photo once when that picture is still in memory', async () => {

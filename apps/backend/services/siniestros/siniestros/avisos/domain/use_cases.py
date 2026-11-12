@@ -12,7 +12,7 @@ from siniestros.avisos.domain.models import (
     Evidencia,
     EvidenciaLista,
 )
-from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
+from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore, PolicyDirectory
 
 MAX_BYTES = 52_428_800
 MAX_EVIDENCIAS = 10
@@ -49,9 +49,21 @@ def header_matches(content_type: str, header: bytes) -> bool:
     return False
 
 
+ACTIVE_POLICY = "activa"
+MSG_POLIZA_NO_VALIDA = "La póliza no existe, no es del cliente o no está activa."
+
+
 class CrearAvisoUseCase:
-    def __init__(self, repository: AvisoRepository) -> None:
+    def __init__(self, repository: AvisoRepository, policies: PolicyDirectory | None = None) -> None:
         self.repository = repository
+        self.policies = policies
+
+    def _check_policy(self, poliza_id: str, cliente_id: str) -> None:
+        if self.policies is None:
+            return
+        policy = self.policies.get(poliza_id)
+        if policy is None or policy.get("cliente_id") != cliente_id or policy.get("estado") != ACTIVE_POLICY:
+            raise ReglaEvidencia(422, MSG_POLIZA_NO_VALIDA)
 
     def execute(
         self,
@@ -63,6 +75,7 @@ class CrearAvisoUseCase:
         *,
         cliente_id: str,
     ) -> Aviso:
+        self._check_policy(poliza_id, cliente_id)
         aviso = Aviso(
             id=str(uuid.uuid4()),
             cliente_id=cliente_id,

@@ -2,13 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 from solventa_common.db import build_engine
+from solventa_common.integration import ServiceClient
+from solventa_common.integration.base import call_upstream
 
 from siniestros.avisos.adapters.memory import InMemoryAvisoRepository, InMemoryObjectStore
 from siniestros.avisos.adapters.object_store import S3ObjectStore
+from siniestros.avisos.adapters.policies import PolizasDirectory
 from siniestros.avisos.adapters.repository import PostgresAvisoRepository
 from siniestros.avisos.domain.errors import ReglaEvidencia
 from siniestros.avisos.domain.models import Aviso, Evidencia, NuevaCarga, NuevoAviso
-from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore
+from siniestros.avisos.domain.ports import AvisoRepository, ObjectStore, PolicyDirectory
 from siniestros.avisos.domain.use_cases import (
     ConfirmarCargaUseCase,
     CrearAvisoUseCase,
@@ -26,14 +29,19 @@ repository: AvisoRepository
 object_store: ObjectStore
 
 
-def wire(avisos: AvisoRepository, almacen: ObjectStore, bucket: str | None = None) -> None:
+def wire(
+    avisos: AvisoRepository,
+    almacen: ObjectStore,
+    bucket: str | None = None,
+    policies: PolicyDirectory | None = None,
+) -> None:
     global repository, object_store
     if hasattr(avisos, "create_schema"):
         avisos.create_schema()
     repository = avisos
     object_store = almacen
     name = bucket or settings.evidencias_bucket
-    casos["crear"] = CrearAvisoUseCase(avisos)
+    casos["crear"] = CrearAvisoUseCase(avisos, policies)
     casos["listar_avisos"] = ListarAvisosUseCase(avisos)
     casos["radicar"] = RadicarAvisoUseCase(avisos)
     casos["solicitar"] = SolicitarCargaUseCase(avisos, almacen, name)
@@ -48,7 +56,8 @@ def _default_wire() -> None:
     else:
         repository = InMemoryAvisoRepository()
         almacen = InMemoryObjectStore()
-    wire(repository, almacen)
+    policies = PolizasDirectory(ServiceClient("polizas", settings.polizas_url))
+    wire(repository, almacen, policies=policies)
 
 
 def _http(exc: ReglaEvidencia) -> HTTPException:
@@ -84,7 +93,8 @@ def info() -> dict:
 @router.post("/avisos", status_code=201)
 def abrir_aviso(body: NuevoAviso) -> dict:
     try:
-        created = casos["crear"].execute(
+        created = call_upstream(
+            casos["crear"].execute,
             poliza_id=body.poliza_id,
             tipo=body.tipo,
             ocurrido_en=body.ocurrido_en,

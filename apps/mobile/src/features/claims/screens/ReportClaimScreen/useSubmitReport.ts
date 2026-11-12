@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StackActions, useNavigation } from '@react-navigation/native';
 
-import { errorMessage } from '../../../../shared/api/client';
+import { ApiError, errorMessage } from '../../../../shared/api/client';
 import { SubmitAvisoError, submitAviso } from '../../api/submitAviso';
 import { toEvidenceFiles } from '../../evidenceFiles';
 import { deleteReport } from '../../offline/deleteReport';
@@ -16,6 +16,10 @@ type ReportFields = {
   description: string;
   address: string;
 };
+
+function rejectedByServer(error: SubmitAvisoError): boolean {
+  return error.cause instanceof ApiError && error.cause.status >= 400 && error.cause.status < 500;
+}
 
 // Files the report, or keeps it on the device when the aviso could not even be created.
 export function useSubmitReport(fields: ReportFields) {
@@ -49,7 +53,7 @@ export function useSubmitReport(fields: ReportFields) {
       await deleteReport();
       navigation.dispatch(StackActions.replace('AvisoDetail', { aviso: filed }));
     } catch (error) {
-      if (error instanceof SubmitAvisoError && !error.avisoCreated) {
+      if (error instanceof SubmitAvisoError && !error.avisoCreated && !rejectedByServer(error)) {
         try {
           await saveReport(report);
           navigation.navigate('Main', { screen: 'Claims' });
