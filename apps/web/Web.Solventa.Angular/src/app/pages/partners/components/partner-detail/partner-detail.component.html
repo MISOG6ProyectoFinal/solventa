@@ -24,6 +24,8 @@
       </div>
     </div>
 
+    <slv-partner-credential [partner]="partner()" />
+
     <slv-partner-quota [partner]="partner()" />
 
     @if (partner().apiContractStatus === 'Suspendido') {

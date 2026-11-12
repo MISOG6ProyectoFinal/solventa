@@ -251,6 +251,29 @@ def update_partner_quota(socio_id: str, body: dict) -> dict:
     )
 
 
+@admins.post("/socios/{socio_id}/credencial/rotacion")
+def rotate_partner_credential(socio_id: str, body: dict, operator: Operator) -> dict:
+    return call_upstream(
+        cotizacion.post,
+        f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/rotacion",
+        json={"actor": operator.name, "gracia_minutos": body.get("gracia_minutos")},
+    )
+
+
+@admins.post("/socios/{socio_id}/credencial/revocacion")
+def revoke_partner_credential(socio_id: str, operator: Operator) -> dict:
+    return call_upstream(
+        cotizacion.post,
+        f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/revocacion",
+        json={"actor": operator.name},
+    )
+
+
+@readers.get("/socios/{socio_id}/credencial/eventos")
+def partner_credential_events(socio_id: str) -> list:
+    return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/eventos")
+
+
 @readers.get("/polizas/estados")
 def listar_estados_poliza() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/estados")

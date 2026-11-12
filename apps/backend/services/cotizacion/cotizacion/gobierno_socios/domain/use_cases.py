@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from cotizacion.gobierno_socios.domain import credenciales
+from cotizacion.gobierno_socios.domain.credential_lifecycle import accepts_secret
 from cotizacion.gobierno_socios.domain.models import (
     Alcance,
     AlcanceNoAutorizado,
@@ -10,7 +11,6 @@ from cotizacion.gobierno_socios.domain.models import (
     ContratoSuspendido,
     CredencialInvalida,
     EstadoContrato,
-    EstadoCredencial,
     Socio,
     SocioNoEncontrado,
 )
@@ -60,16 +60,13 @@ class ConsultarSociosUseCase:
 class AutorizarSocioUseCase:
     """Reconoce las credenciales de una llamada del socio y verifica su alcance."""
 
-    def __init__(self, socios: SocioRepository) -> None:
+    def __init__(self, socios: SocioRepository, now: Callable[[], datetime] = _ahora) -> None:
         self.socios = socios
+        self.now = now
 
     def execute(self, client_id: str, secreto: str, alcance: Alcance) -> Socio:
         socio = self.socios.get_by_client_id(client_id)
-        if (
-            socio is None
-            or socio.estado_credencial != EstadoCredencial.ACTIVA
-            or not credenciales.secreto_coincide(secreto, socio.secreto_hash)
-        ):
+        if socio is None or not accepts_secret(socio, secreto, self.now()):
             raise CredencialInvalida(client_id)
         if socio.estado_contrato != EstadoContrato.ACTIVO:
             raise ContratoSuspendido(socio.identificador)

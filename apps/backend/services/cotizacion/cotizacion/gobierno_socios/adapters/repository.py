@@ -1,10 +1,10 @@
 """Repositorio de socios: Postgres (fuente de verdad) e InMemory (tests/local sin DB)."""
 
-from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table, insert, select, update
+from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table, insert, inspect, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from cotizacion.gobierno_socios.domain.models import IdentificadorDuplicado, Socio
+from cotizacion.gobierno_socios.domain.models import CredentialEvent, IdentificadorDuplicado, Socio
 
 metadata = MetaData()
 
@@ -27,7 +27,22 @@ socios = Table(
     Column("cuota_consumo", Integer, nullable=False),
     Column("alta_fecha", DateTime(timezone=True), nullable=False),
     Column("alta_usuario", String(120), nullable=False),
+    Column("secreto_anterior_hash", String(64), nullable=True),
+    Column("secreto_anterior_vence", DateTime(timezone=True), nullable=True),
 )
+
+credential_events = Table(
+    "eventos_credencial",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("socio_id", String(36), nullable=False, index=True),
+    Column("tipo", String(16), nullable=False),
+    Column("actor", String(120), nullable=False),
+    Column("fecha", DateTime(timezone=True), nullable=False),
+    Column("gracia_hasta", DateTime(timezone=True), nullable=True),
+)
+
+_ADDED_COLUMNS = (socios.c.secreto_anterior_hash, socios.c.secreto_anterior_vence)
 
 
 class PostgresSocioRepository:
@@ -36,6 +51,12 @@ class PostgresSocioRepository:
 
     def create_schema(self) -> None:
         metadata.create_all(self.engine)
+        existing = {column["name"] for column in inspect(self.engine).get_columns(socios.name)}
+        with self.engine.begin() as conn:
+            for column in _ADDED_COLUMNS:
+                if column.name not in existing:
+                    column_type = column.type.compile(self.engine.dialect)
+                    conn.execute(text(f"ALTER TABLE {socios.name} ADD COLUMN {column.name} {column_type}"))
 
     def add(self, socio: Socio) -> None:
         # La unicidad la garantiza la base: dos altas simultáneas no pasan ambas.
@@ -56,6 +77,25 @@ class PostgresSocioRepository:
     def get_by_client_id(self, client_id: str) -> Socio | None:
         return self._first(socios.c.client_id == client_id)
 
+    def update_credential(self, socio: Socio, event: CredentialEvent) -> None:
+        values = socio.model_dump(
+            include={
+                "secreto_hash",
+                "secreto_enmascarado",
+                "estado_credencial",
+                "secreto_anterior_hash",
+                "secreto_anterior_vence",
+            }
+        )
+        with self.engine.begin() as conn:
+            conn.execute(update(socios).where(socios.c.id == socio.id).values(**values))
+            conn.execute(insert(credential_events).values(**event.model_dump()))
+
+    def credential_events(self, socio_id: str) -> list[CredentialEvent]:
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(credential_events).where(credential_events.c.socio_id == socio_id)).mappings()
+            return [CredentialEvent(**row) for row in rows]
+
     def update_quota(self, socio_id: str, quota: int) -> Socio | None:
         with self.engine.begin() as conn:
             conn.execute(update(socios).where(socios.c.id == socio_id).values(cuota_consumo=quota))
@@ -70,6 +110,14 @@ class PostgresSocioRepository:
 class InMemorySocioRepository:
     def __init__(self) -> None:
         self.socios: dict[str, Socio] = {}
+        self.events: list[CredentialEvent] = []
+
+    def update_credential(self, socio: Socio, event: CredentialEvent) -> None:
+        self.socios[socio.id] = socio
+        self.events.append(event)
+
+    def credential_events(self, socio_id: str) -> list[CredentialEvent]:
+        return [event for event in self.events if event.socio_id == socio_id]
 
     def add(self, socio: Socio) -> None:
         if any(s.identificador == socio.identificador for s in self.socios.values()):

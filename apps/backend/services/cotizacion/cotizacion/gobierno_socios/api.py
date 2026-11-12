@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Header, HTTPException, status
@@ -16,6 +17,11 @@ from cotizacion.gobierno_socios.domain.configuracion import (
     RamoHabilitado,
     RamoNoHabilitado,
 )
+from cotizacion.gobierno_socios.domain.credential_lifecycle import (
+    RevocationRequest,
+    RotatedCredentialResponse,
+    RotationRequest,
+)
 from cotizacion.gobierno_socios.domain.embedded_quote import QuotableProduct
 from cotizacion.gobierno_socios.domain.models import (
     Alcance,
@@ -24,6 +30,7 @@ from cotizacion.gobierno_socios.domain.models import (
     AltaSocioRequest,
     ContratoSuspendido,
     CredencialInvalida,
+    CredentialEvent,
     IdentificadorDuplicado,
     RamoResumen,
     Socio,
@@ -171,6 +178,36 @@ def update_quota(socio_id: str, solicitud: QuotaUpdateRequest) -> SocioResponse:
     except SocioNoEncontrado as exc:
         raise _socio_no_encontrado() from exc
     return _vistas([socio])[0]
+
+
+@router.post("/socios/{socio_id}/credencial/rotacion", response_model=RotatedCredentialResponse)
+def rotate_credential(socio_id: str, solicitud: RotationRequest) -> RotatedCredentialResponse:
+    """Emite un secreto nuevo; el anterior sigue válido hasta gracia_hasta. Única vez que el secreto viaja en claro."""
+    grace = None if solicitud.gracia_minutos is None else timedelta(minutes=solicitud.gracia_minutos)
+    try:
+        socio, secreto = container.rotate_credential.execute(socio_id, solicitud.actor, grace)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+    vista = _vistas([socio])[0]
+    return RotatedCredentialResponse(**vista.model_dump(), secreto=secreto, gracia_hasta=socio.secreto_anterior_vence)
+
+
+@router.post("/socios/{socio_id}/credencial/revocacion", response_model=SocioResponse)
+def revoke_credential(socio_id: str, solicitud: RevocationRequest) -> SocioResponse:
+    """Desde este momento toda llamada con la credencial del socio responde 401."""
+    try:
+        socio = container.revoke_credential.execute(socio_id, solicitud.actor)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+    return _vistas([socio])[0]
+
+
+@router.get("/socios/{socio_id}/credencial/eventos", response_model=list[CredentialEvent])
+def credential_events(socio_id: str) -> list[CredentialEvent]:
+    try:
+        return container.credential_events.execute(socio_id)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
 
 
 @router.get("/autorizacion", response_model=PartnerAuthorization)

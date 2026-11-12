@@ -294,6 +294,34 @@ def test_web_bff_reads_usage_and_adjusts_the_partner_quota(monkeypatch):
     assert upstream.calls[1] == ("/gobierno-socios/socios/s-1/cuota", {"json": {"cuota_consumo": 50}})
 
 
+def test_web_bff_rotates_and_revokes_the_partner_credential_as_the_operator(monkeypatch):
+    upstream = _Upstream(response={"id": "s-1"})
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+    headers = web_auth.admin()
+
+    client.post("/web/socios/s-1/credencial/rotacion", json={"gracia_minutos": 30, "actor": "otro"}, headers=headers)
+    client.post("/web/socios/s-1/credencial/revocacion", json={"actor": "otro"}, headers=headers)
+
+    assert upstream.calls == [
+        (
+            "/gobierno-socios/socios/s-1/credencial/rotacion",
+            {"json": {"actor": web_auth.OPERATOR_NAME, "gracia_minutos": 30}},
+        ),
+        ("/gobierno-socios/socios/s-1/credencial/revocacion", {"json": {"actor": web_auth.OPERATOR_NAME}}),
+    ]
+
+
+def test_web_bff_lists_the_partner_credential_events(monkeypatch):
+    events = [{"tipo": "rotada", "actor": "Ana", "fecha": "2026-11-11T10:00:00Z"}]
+    upstream = _Upstream(response=events)
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+
+    response = client.get("/web/socios/s-1/credencial/eventos", headers=web_auth.viewer())
+
+    assert response.json() == events
+    assert upstream.calls == [("/gobierno-socios/socios/s-1/credencial/eventos", {})]
+
+
 def test_bff_web_consulta_y_actualiza_la_configuracion_del_socio(monkeypatch):
     vigente = {"socio_id": "s-1", "ramos": [{"id": "ramo-viaje", "habilitado": True, "coberturas": []}]}
     upstream = _Upstream(response=vigente)

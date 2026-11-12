@@ -3,6 +3,7 @@
 import asyncio
 import socket
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 
 from solventa_common.resilience import CircuitBreaker, InMemoryCache, KeyValueCache, RedisCache
 from sqlalchemy.engine import Engine
@@ -27,6 +28,11 @@ from cotizacion.gobierno_socios.adapters.configuracion_repository import (
 )
 from cotizacion.gobierno_socios.adapters.quota_repository import InMemoryQuotaCounter, PostgresQuotaCounter
 from cotizacion.gobierno_socios.adapters.repository import InMemorySocioRepository, PostgresSocioRepository
+from cotizacion.gobierno_socios.domain.credential_lifecycle import (
+    CredentialEventsQuery,
+    RevokeCredentialUseCase,
+    RotateCredentialUseCase,
+)
 from cotizacion.gobierno_socios.domain.quota import ConsumeQuotaUseCase, QuotaUsageQuery, UpdateQuotaUseCase
 from cotizacion.gobierno_socios.domain.use_cases import (
     AutorizarSocioUseCase,
@@ -123,6 +129,11 @@ class Container:
         self.consume_quota = ConsumeQuotaUseCase(self.quota_counter)
         self.quota_usage = QuotaUsageQuery(self.socios, self.quota_counter)
         self.update_quota = UpdateQuotaUseCase(self.socios)
+        self.rotate_credential = RotateCredentialUseCase(
+            self.socios, timedelta(minutes=settings.credential_grace_minutes)
+        )
+        self.revoke_credential = RevokeCredentialUseCase(self.socios)
+        self.credential_events = CredentialEventsQuery(self.socios)
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)

@@ -39,6 +39,20 @@ export interface Partner {
   enabledRamos: PartnerRamo[];
   altaFecha: string;
   altaUsuario: string;
+  previousSecretExpiresAt: string | null;
+}
+
+export interface RotatedCredential {
+  partner: Partner;
+  secret: string;
+}
+
+export interface CredentialEvent {
+  id: string;
+  type: string;
+  actor: string;
+  date: string;
+  graceUntil: string | null;
 }
 
 export interface PartnerQuotaUsage {
