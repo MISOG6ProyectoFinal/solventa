@@ -1,3 +1,5 @@
+import { TextKey } from '../i18n/es';
+
 export const ACTIVE_STATUS = 'activa';
 export const CANCELLED_STATUS = 'cancelada';
 
@@ -42,8 +44,8 @@ export interface Endorsement {
   motivo: string;
   usuario: string;
   registrado: string;
-  antes: [string, string][];
-  despues: [string, string][];
+  antes: [TextKey, string][];
+  despues: [TextKey, string][];
   primaAjustada?: number;
 }
 
