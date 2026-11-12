@@ -1,6 +1,8 @@
 import httpx
 import pytest
+from fastapi import HTTPException
 from solventa_common.integration import ServiceClient
+from solventa_common.integration.base import RETRY_AFTER_S, call_upstream
 from solventa_common.resilience import (
     CircuitBreaker,
     CircuitOpenError,
@@ -213,3 +215,26 @@ def test_only_idempotent_requests_are_retried():
 def test_clients_to_the_same_destination_share_one_breaker():
     assert ServiceClient("compartido", "https://a").breaker is ServiceClient("compartido", "https://b").breaker
     assert ServiceClient("compartido", "https://a").breaker is not ServiceClient("otro-destino", "https://a").breaker
+
+
+def test_the_memory_cache_keeps_at_most_its_limit_and_drops_the_least_used():
+    cache = InMemoryCache(max_entries=2)
+    cache.set("a", 1, 60)
+    cache.set("b", 2, 60)
+    assert cache.get("a") == 1
+
+    cache.set("c", 3, 60)
+
+    assert cache.get("b") is None
+    assert (cache.get("a"), cache.get("c")) == (1, 3)
+
+
+def test_an_unavailable_service_tells_the_caller_when_to_retry():
+    def down():
+        raise CircuitOpenError("cotizacion")
+
+    with pytest.raises(HTTPException) as caught:
+        call_upstream(down)
+
+    assert caught.value.status_code == 503
+    assert caught.value.headers == {"Retry-After": RETRY_AFTER_S}

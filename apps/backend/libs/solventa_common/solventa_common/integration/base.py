@@ -7,6 +7,7 @@ import httpx
 from solventa_common.resilience import CircuitBreaker, shared_breaker
 
 IDEMPOTENT_METHODS = frozenset({"GET", "HEAD", "PUT", "DELETE"})
+RETRY_AFTER_S = "5"
 
 
 class ExternalAdapter:
@@ -81,11 +82,12 @@ def call_upstream(fn, *args: Any, **kwargs: Any) -> Any:
 
     from solventa_common.resilience import CircuitOpenError
 
+    retry = {"Retry-After": RETRY_AFTER_S}
     try:
         return fn(*args, **kwargs)
     except CircuitOpenError as exc:
-        raise HTTPException(status_code=503, detail=f"{exc} no disponible (circuito abierto)") from exc
+        raise HTTPException(status_code=503, detail=f"{exc} no disponible (circuito abierto)", headers=retry) from exc
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=_upstream_detail(exc.response)) from exc
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail="Servicio interno no disponible") from exc
+        raise HTTPException(status_code=503, detail="Servicio interno no disponible", headers=retry) from exc
