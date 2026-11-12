@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from solventa_common.integration.base import call_upstream
 from solventa_common.operator_session import ADMIN, ADVISOR
 
+from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, polizas
 from canales.web.auth import Operator, require_operator, require_roles
 from canales.web.policies import policy_detail, recent_policies, register_endorsement
@@ -68,12 +69,12 @@ def listar_ramos() -> list:
 
 @readers.get("/productos/{producto_id}/contrato")
 def contrato_producto(producto_id: str) -> dict:
-    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
+    return product_contract(producto_id)
 
 
 @readers.get("/tipos-documento")
 def listar_tipos_documento() -> list:
-    return call_upstream(identidad.get, "/identidad/tipos-documento")
+    return document_types()
 
 
 def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:

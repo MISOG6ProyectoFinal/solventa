@@ -655,10 +655,10 @@ def test_an_unknown_product_is_left_for_cotizacion_to_reject(monkeypatch):
         ("/web/ramos", "/catalogo/canales/web/ramos", "canales.web.api.cotizacion"),
         ("/web/socios/tipos", "/gobierno-socios/tipos", "canales.web.api.cotizacion"),
         ("/web/socios/alcances", "/gobierno-socios/alcances", "canales.web.api.cotizacion"),
-        ("/web/tipos-documento", "/identidad/tipos-documento", "canales.web.api.identidad"),
+        ("/web/tipos-documento", "/identidad/tipos-documento", "canales.catalog.identidad"),
         ("/web/polizas/estados", "/polizas/catalogos/estados", "canales.web.api.polizas"),
         ("/web/polizas/causas-cancelacion", "/polizas/catalogos/causas-cancelacion", "canales.web.api.polizas"),
-        ("/movil/tipos-documento", "/identidad/tipos-documento", "canales.movil.api.identidad"),
+        ("/movil/tipos-documento", "/identidad/tipos-documento", "canales.catalog.identidad"),
     ],
 )
 def test_the_bff_serves_what_the_owner_service_publishes(monkeypatch, path, upstream_path, service):
@@ -675,7 +675,7 @@ def test_the_bff_serves_what_the_owner_service_publishes(monkeypatch, path, upst
 
 def test_mobile_reads_the_product_contract_with_its_session(monkeypatch):
     upstream = _Upstream(response={"properties": {}})
-    monkeypatch.setattr("canales.movil.api.cotizacion", upstream)
+    monkeypatch.setattr("canales.catalog.cotizacion", upstream)
 
     response = client.get("/movil/productos/viaje-internacional/contrato", headers=authorization())
 
@@ -686,7 +686,7 @@ def test_mobile_reads_the_product_contract_with_its_session(monkeypatch):
 
 def test_the_bff_serves_the_product_contract_to_the_portal(monkeypatch):
     upstream = _Upstream(response={"properties": {}})
-    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+    monkeypatch.setattr("canales.catalog.cotizacion", upstream)
 
     response = client.get("/web/productos/viaje-internacional/contrato", headers=web_auth.viewer())
 
