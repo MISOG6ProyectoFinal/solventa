@@ -66,7 +66,7 @@ export const ES = {
   'quote.field.fechaSalida': 'Fecha de salida',
   'quote.field.fechaRegreso': 'Fecha de regreso',
   'quote.field.viajeros': 'Número de viajeros',
-  'quote.field.fechaNacimientoTitular': 'Fecha de nacimiento del titular',
+  'quote.field.edad': 'Edad del asegurado',
   'quote.field.fechaNacimiento': 'Fecha de nacimiento',
   'quote.field.sumaAsegurada': 'Suma asegurada (COP)',
   'quote.field.beneficiario': 'Beneficiario',

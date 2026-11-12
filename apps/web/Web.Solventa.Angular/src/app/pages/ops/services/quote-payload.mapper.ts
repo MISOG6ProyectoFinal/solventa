@@ -1,15 +1,5 @@
-import { ContractProperty, ProductContract } from '../interfaces/product-contract.interface';
-
-const NUMERIC_TYPES = ['integer', 'number'];
-
-function isNumeric(property: ContractProperty | undefined): boolean {
-  const types = [property?.type, ...(property?.anyOf ?? []).map((option) => option.type)];
-  return types.some((type) => type !== undefined && NUMERIC_TYPES.includes(type));
-}
-
-function toSnakeCase(key: string): string {
-  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-}
+import { ProductContract } from '../interfaces/product-contract.interface';
+import { isNumeric, toSnakeCase } from '../utils/contract-fields';
 
 export function mapFormValuesToQuotePayload(
   productId: string,

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InputDirective } from '../../../../shared/directives/input.directive';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
@@ -17,6 +17,11 @@ export class QuoteFieldComponent {
   readonly definition = input.required<QuoteFieldDef>();
   readonly value = model('');
   readonly error = input('');
+
+  protected readonly label = computed(() => {
+    const { label, labelKey, key } = this.definition();
+    return label ?? (labelKey ? this.locale.t(labelKey) : key);
+  });
 
   protected blockNonNumeric(event: KeyboardEvent): void {
     if (!this.definition().numeric) return;
