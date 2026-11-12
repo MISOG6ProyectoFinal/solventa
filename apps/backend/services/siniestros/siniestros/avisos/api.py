@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 from solventa_common.db import build_engine
+from solventa_common.errors import error_detail
 from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
@@ -132,7 +133,7 @@ def get_notice(aviso_id: str) -> Aviso:
     """Lectura interna. El canal decide si quien pregunta es dueño del aviso."""
     notice = repository.get_aviso(aviso_id)
     if notice is None:
-        raise HTTPException(404, {"codigo": "siniestro_no_encontrado", "mensaje": "El siniestro no existe."})
+        raise HTTPException(404, error_detail("siniestro_no_encontrado", "El siniestro no existe."))
     return notice
 
 

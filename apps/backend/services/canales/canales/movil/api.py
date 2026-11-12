@@ -4,6 +4,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
+from solventa_common.errors import error_detail
 from solventa_common.integration.base import call_upstream
 from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
@@ -115,7 +116,7 @@ class SolicitudPagoMovil(BaseModel):
 def _cotizacion_vencida() -> HTTPException:
     return HTTPException(
         status.HTTP_409_CONFLICT,
-        {"codigo": "cotizacion_vencida", "mensaje": MENSAJE_COTIZACION_VENCIDA},
+        error_detail("cotizacion_vencida", MENSAJE_COTIZACION_VENCIDA),
     )
 
 

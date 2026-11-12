@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Header, HTTPException, status
+from solventa_common.errors import error_detail
 from starlette.concurrency import run_in_threadpool
 
 from cotizacion.catalogo.domain.models import Canal, Producto, ProductoNoEncontrado
@@ -44,26 +45,22 @@ from cotizacion.gobierno_socios.domain.quota import PartnerAuthorization, QuotaU
 router = APIRouter(prefix="/gobierno-socios", tags=["Socios y Gobierno de API"])
 
 
-def _error(codigo: str, mensaje: str) -> dict:
-    return {"codigo": codigo, "mensaje": mensaje}
-
-
 def autorizar_socio(client_id: str, secreto: str, alcance: Alcance) -> Socio:
     try:
         return container.autorizar_socio.execute(client_id, secreto, alcance)
     except CredencialInvalida as exc:
-        detail = _error("credencial_invalida", "Las credenciales del socio no son válidas.")
+        detail = error_detail("credencial_invalida", "Las credenciales del socio no son válidas.")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail) from exc
     except ContratoSuspendido as exc:
-        detail = _error("contrato_suspendido", "El contrato de API del socio está suspendido.")
+        detail = error_detail("contrato_suspendido", "El contrato de API del socio está suspendido.")
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail) from exc
     except AlcanceNoAutorizado as exc:
-        detail = _error("alcance_no_autorizado", f"El alcance del socio no incluye la operación '{alcance}'.")
+        detail = error_detail("alcance_no_autorizado", f"El alcance del socio no incluye la operación '{alcance}'.")
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail) from exc
 
 
 def _socio_no_encontrado() -> HTTPException:
-    return HTTPException(status.HTTP_404_NOT_FOUND, _error("socio_no_encontrado", "El socio no existe."))
+    return HTTPException(status.HTTP_404_NOT_FOUND, error_detail("socio_no_encontrado", "El socio no existe."))
 
 
 def _vistas(socios: list[Socio]) -> list[SocioResponse]:
@@ -90,7 +87,7 @@ def autorizar_ramo(socio: Socio, producto_id: str) -> RamoHabilitado:
     except RamoNoHabilitado as exc:
         ramo = container.catalogo.get_ramo(producto.ramo_id)
         nombre = ramo.nombre if ramo else producto.ramo_id
-        detail = _error("ramo_no_habilitado", f"El ramo '{nombre}' no está habilitado para este socio.")
+        detail = error_detail("ramo_no_habilitado", f"El ramo '{nombre}' no está habilitado para este socio.")
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail) from exc
 
 
@@ -117,7 +114,7 @@ def dar_de_alta(solicitud: AltaSocioRequest) -> SocioCreadoResponse:
     try:
         socio, secreto = container.dar_de_alta_socio.execute(alta, solicitud.autorizado_por)
     except IdentificadorDuplicado as exc:
-        detail = _error(
+        detail = error_detail(
             "identificador_duplicado",
             "Ya existe un socio con este identificador. No es posible crearlo de nuevo.",
         )
@@ -153,10 +150,10 @@ def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRe
     except SocioNoEncontrado as exc:
         raise _socio_no_encontrado() from exc
     except RamoFueraDelCanal as exc:
-        detail = _error("ramo_fuera_del_canal", f"El ramo '{exc}' no pertenece al canal de socios.")
+        detail = error_detail("ramo_fuera_del_canal", f"El ramo '{exc}' no pertenece al canal de socios.")
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail) from exc
     except CoberturaFueraDelRamo as exc:
-        detail = _error("cobertura_fuera_del_ramo", f"La cobertura '{exc}' no pertenece al ramo indicado.")
+        detail = error_detail("cobertura_fuera_del_ramo", f"La cobertura '{exc}' no pertenece al ramo indicado.")
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail) from exc
     return container.consultar_configuracion.presentar(configuracion)
 

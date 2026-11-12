@@ -1,13 +1,14 @@
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
+from solventa_common.errors import error_detail
 from solventa_common.operator_session import OperatorToken, verify_operator_token
 from solventa_common.sesion import InvalidToken
 
 from canales.config import settings
 
-INVALID_SESSION = {"codigo": "sesion_invalida", "mensaje": "Inicia sesión para continuar."}
-PERMISSION_DENIED = {"codigo": "permiso_denegado", "mensaje": "Tu rol no permite esta operación."}
+INVALID_SESSION = error_detail("sesion_invalida", "Inicia sesión para continuar.")
+PERMISSION_DENIED = error_detail("permiso_denegado", "Tu rol no permite esta operación.")
 
 
 def _bearer(authorization: str | None) -> str:

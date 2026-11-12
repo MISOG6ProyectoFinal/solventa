@@ -3,6 +3,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Response, status
 from pydantic import BaseModel, Field
+from solventa_common.errors import error_detail
 from solventa_common.integration.base import call_upstream
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
@@ -121,7 +122,7 @@ class PartnerIssueRequest(BaseModel):
 def _partner_quote(quote_id: str, partner_id: str) -> dict:
     quote = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{quote_id}")
     if not isinstance(quote, dict) or quote.get("socio_id") != partner_id:
-        detail = {"codigo": "cotizacion_no_encontrada", "mensaje": "La cotización no existe."}
+        detail = error_detail("cotizacion_no_encontrada", "La cotización no existe.")
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
     return quote
 
@@ -177,7 +178,7 @@ def issue_policy(
 
 
 def _out_of_scope() -> HTTPException:
-    detail = {"codigo": "recurso_fuera_de_alcance", "mensaje": "El recurso no pertenece al socio."}
+    detail = error_detail("recurso_fuera_de_alcance", "El recurso no pertenece al socio.")
     return HTTPException(status.HTTP_403_FORBIDDEN, detail)
 
 

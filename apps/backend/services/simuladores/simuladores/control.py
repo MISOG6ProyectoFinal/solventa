@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+from solventa_common.errors import error_detail
 
 from simuladores.config import settings
 
@@ -68,7 +69,7 @@ router = APIRouter(prefix="/simuladores", tags=["Control de simuladores"])
 def _provider(name: str) -> Provider:
     provider = PROVIDERS.get(name)
     if provider is None:
-        detail = {"codigo": "proveedor_no_encontrado", "mensaje": f"No hay simulador para '{name}'."}
+        detail = error_detail("proveedor_no_encontrado", f"No hay simulador para '{name}'.")
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
     return provider
 

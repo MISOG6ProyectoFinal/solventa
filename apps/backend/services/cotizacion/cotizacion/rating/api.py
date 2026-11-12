@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import ValidationError
+from solventa_common.errors import error_detail
 from solventa_common.validation import invalid_data_detail, invalid_fields
 
 from cotizacion.container import container
@@ -36,7 +37,7 @@ def publish_rules(reglas: ReglasRating) -> ReglasRating:
     try:
         container.rules.publish(reglas)
     except RulesVersionAlreadyPublished as exc:
-        detail = {"codigo": "version_repetida", "mensaje": f"La versión de reglas ya existe: {reglas.version}"}
+        detail = error_detail("version_repetida", f"La versión de reglas ya existe: {reglas.version}")
         raise HTTPException(status.HTTP_409_CONFLICT, detail) from exc
     return reglas
 
