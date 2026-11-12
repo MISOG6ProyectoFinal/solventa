@@ -47,15 +47,18 @@ def _quota_exceeded(usage: dict, headers: dict[str, str]) -> HTTPException:
     return HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail, headers=headers | retry)
 
 
-def _admit(scope: str, response: Response, client_id: str, api_key: str) -> dict:
-    partner = _authorize(client_id, api_key, scope)
-    usage = partner.get("consumo")
+def _enforce_quota(usage: dict | None, response: Response) -> None:
     if usage is None:
-        return partner
+        return
     headers = _rate_limit_headers(usage)
     if not usage["permitido"]:
         raise _quota_exceeded(usage, headers)
     response.headers.update(headers)
+
+
+def _admit(scope: str, response: Response, client_id: str, api_key: str) -> dict:
+    partner = _authorize(client_id, api_key, scope)
+    _enforce_quota(partner.get("consumo"), response)
     return partner
 
 
