@@ -134,4 +134,27 @@ describe('PartnersService', () => {
     expect(failed).toBe(true);
     expect(service.findById('s-1')?.enabledRamos).toEqual([]);
   });
+
+  it('loads the usage of the partner in the current minute', () => {
+    let usage: unknown;
+    service.loadUsage('s-1').subscribe((value) => (usage = value));
+
+    http
+      .expectOne({ method: 'GET', url: API_ENDPOINTS.partnerUsage('s-1') })
+      .flush({ socio_id: 's-1', cuota_consumo: 1000, consumidas: 850, reinicia_en_s: 12, cerca_del_limite: true });
+
+    expect(usage).toEqual({ quota: 1000, used: 850, resetInSeconds: 12, nearLimit: true });
+  });
+
+  it('updates the quota and the partner in the list', () => {
+    service.load();
+    http.expectOne(API_ENDPOINTS.partners).flush([PARTNER_DTO]);
+
+    service.updateQuota('s-1', 50).subscribe();
+    const request = http.expectOne({ method: 'PUT', url: API_ENDPOINTS.partnerQuota('s-1') });
+    request.flush({ ...PARTNER_DTO, cuota_consumo: 50 });
+
+    expect(request.request.body).toEqual({ cuota_consumo: 50 });
+    expect(service.findById('s-1')?.cuotaConsumo).toBe(50);
+  });
 });

@@ -9,6 +9,7 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { RamosConfigComponent } from '../ramos-config/ramos-config.component';
 import { OperacionesCanalComponent } from '../operaciones-canal/operaciones-canal.component';
+import { PartnerQuotaComponent } from '../partner-quota/partner-quota.component';
 import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
@@ -22,7 +23,8 @@ import { LocaleService } from '../../../../core/services/locale.service';
     AlertComponent,
     ButtonComponent,
     RamosConfigComponent,
-    OperacionesCanalComponent
+    OperacionesCanalComponent,
+    PartnerQuotaComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './partner-detail.component.html'

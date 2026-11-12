@@ -29,6 +29,8 @@ export const API_ENDPOINTS = {
   partnerScopes: `${environment.apiBaseUrl}/web/socios/alcances`,
   partners: `${environment.apiBaseUrl}/web/socios`,
   partnerConfig: (partnerId: string) => `${environment.apiBaseUrl}/web/socios/${partnerId}/configuracion`,
+  partnerUsage: (partnerId: string) => `${environment.apiBaseUrl}/web/socios/${partnerId}/consumo`,
+  partnerQuota: (partnerId: string) => `${environment.apiBaseUrl}/web/socios/${partnerId}/cuota`,
   consentimientos: {
     solicitar: `${environment.apiBaseUrl}/web/consentimientos/solicitar`,
     validar: `${environment.apiBaseUrl}/web/consentimientos/validar`,

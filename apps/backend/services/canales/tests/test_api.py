@@ -282,6 +282,18 @@ def test_bff_web_conserva_el_motivo_del_identificador_duplicado(monkeypatch):
     assert response.json()["detail"] == detalle
 
 
+def test_web_bff_reads_usage_and_adjusts_the_partner_quota(monkeypatch):
+    usage = {"socio_id": "s-1", "cuota_consumo": 50, "consumidas": 12, "cerca_del_limite": False}
+    upstream = _Upstream(response=usage)
+    monkeypatch.setattr("canales.web.api.cotizacion", upstream)
+
+    assert client.get("/web/socios/s-1/consumo", headers=web_auth.viewer()).json() == usage
+    assert client.put("/web/socios/s-1/cuota", json={"cuota_consumo": 50}, headers=web_auth.admin()).json() == usage
+
+    assert upstream.calls[0][0] == "/gobierno-socios/socios/s-1/consumo"
+    assert upstream.calls[1] == ("/gobierno-socios/socios/s-1/cuota", {"json": {"cuota_consumo": 50}})
+
+
 def test_bff_web_consulta_y_actualiza_la_configuracion_del_socio(monkeypatch):
     vigente = {"socio_id": "s-1", "ramos": [{"id": "ramo-viaje", "habilitado": True, "coberturas": []}]}
     upstream = _Upstream(response=vigente)
