@@ -147,3 +147,69 @@ def test_fallback_does_not_use_expired_value():
     clock.now = 10
     with pytest.raises(TimeoutError):
         call_with_fallback(breaker, cache, "k", boom, ttl_s=10)
+
+
+def test_half_open_lets_a_single_probe_through():
+    clock = FakeClock()
+    breaker = CircuitBreaker("prueba", failure_threshold=1, reset_timeout_s=10, clock=clock)
+    with pytest.raises(TimeoutError):
+        breaker.call(boom)
+    clock.now = 10
+    concurrent: list[type[Exception]] = []
+
+    def probe():
+        try:
+            breaker.call(lambda: "otro")
+        except CircuitOpenError as exc:
+            concurrent.append(type(exc))
+        return "ok"
+
+    assert breaker.call(probe) == "ok"
+    assert concurrent == [CircuitOpenError]
+    assert breaker.state is CircuitState.CLOSED
+
+
+def test_an_interrupted_probe_frees_the_half_open_slot():
+    clock = FakeClock()
+    breaker = CircuitBreaker("prueba", failure_threshold=1, reset_timeout_s=10, clock=clock)
+    with pytest.raises(TimeoutError):
+        breaker.call(boom)
+    clock.now = 10
+
+    def interrupted():
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        breaker.call(interrupted)
+
+    assert breaker.call(lambda: "ok") == "ok"
+
+
+def _client(name: str, attempts: list[str], status: int = 200) -> ServiceClient:
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request.method)
+        if status == 0:
+            raise httpx.ConnectTimeout("lento", request=request)
+        return httpx.Response(status, json={"ok": True})
+
+    client = ServiceClient(name, "http://destino")
+    client.retries = 1
+    client.client = httpx.Client(base_url="http://destino", transport=httpx.MockTransport(handler))
+    return client
+
+
+def test_only_idempotent_requests_are_retried():
+    attempts: list[str] = []
+    client = _client("reintentos", attempts, status=0)
+
+    with pytest.raises(httpx.ConnectTimeout):
+        client.get("/recurso")
+    with pytest.raises(httpx.ConnectTimeout):
+        client.post("/cobros")
+
+    assert attempts == ["GET", "GET", "POST"]
+
+
+def test_clients_to_the_same_destination_share_one_breaker():
+    assert ServiceClient("compartido", "http://a").breaker is ServiceClient("compartido", "http://b").breaker
+    assert ServiceClient("compartido", "http://a").breaker is not ServiceClient("otro-destino", "http://a").breaker
