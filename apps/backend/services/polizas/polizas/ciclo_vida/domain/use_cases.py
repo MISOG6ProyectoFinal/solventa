@@ -20,6 +20,7 @@ from polizas.ciclo_vida.domain.models import (
     Coverage,
     Endorsement,
     EndorsementRequest,
+    InsuredData,
     IssuePolicyRequest,
     Policy,
     PolicyStatus,
@@ -319,14 +320,15 @@ class RegisterEndorsementUseCase:
             raise InvalidEndorsement(
                 "fecha_efectiva_fuera_de_vigencia", "La fecha efectiva debe estar dentro de la vigencia de la póliza."
             )
-        if request.version_nueva == request.version_anterior:
+        previous = self.current_insured(policy.id) or request.datos_identidad
+        if request.version_nueva == previous:
             raise InvalidEndorsement("endoso_sin_cambios", "El endoso debe cambiar al menos un dato del asegurado.")
         endorsement = Endorsement(
             poliza_id=policy.id,
             fecha_efectiva=request.fecha_efectiva,
             motivo=request.motivo,
             usuario_id=request.usuario_id,
-            version_anterior=request.version_anterior.model_dump(),
+            version_anterior=previous.model_dump(),
             version_nueva=request.version_nueva.model_dump(),
         )
         self.policies.save_endorsement(endorsement, _endorsement_event(endorsement))
@@ -337,6 +339,12 @@ class RegisterEndorsementUseCase:
         if self.policies.get(poliza_id) is None:
             raise PolicyNotFound(poliza_id)
         return self.policies.list_endorsements(poliza_id)
+
+    def current_insured(self, poliza_id: str) -> InsuredData | None:
+        """El último endoso gana sobre Identidad, que un endoso nunca modifica."""
+        endorsements = sorted(self.policies.list_endorsements(poliza_id), key=lambda item: item.creado_en)
+        latest = next((item.version_nueva for item in reversed(endorsements) if item.version_nueva), None)
+        return InsuredData(**latest) if latest else None
 
 
 class CancelPolicyUseCase:

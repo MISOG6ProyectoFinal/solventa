@@ -25,6 +25,7 @@ from polizas.ciclo_vida.domain.models import (
     CancellationRequest,
     CatalogOption,
     ClientPolicy,
+    CurrentInsured,
     Endorsement,
     EndorsementRequest,
     IssuePolicyRequest,
@@ -194,6 +195,16 @@ def list_endorsements(poliza_id: str) -> list[NamedEndorsement]:
         raise api_error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
     names = {item.id: item.nombre for item in use_cases["endorsement_types"].list_types()}
     return [NamedEndorsement(**item.model_dump(), tipo_nombre=names.get(item.tipo, item.tipo)) for item in endorsements]
+
+
+@router.get("/{poliza_id}/asegurado", response_model=CurrentInsured)
+def current_insured(poliza_id: str) -> CurrentInsured:
+    """Datos vigentes del asegurado según los endosos de la póliza."""
+    try:
+        use_cases["endorse"].list(poliza_id)
+    except PolicyNotFound as exc:
+        raise api_error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+    return CurrentInsured(asegurado=use_cases["endorse"].current_insured(poliza_id))
 
 
 @router.post("/{poliza_id}/endosos", response_model=Endorsement, status_code=status.HTTP_201_CREATED)

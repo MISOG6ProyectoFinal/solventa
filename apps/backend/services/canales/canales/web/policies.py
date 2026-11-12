@@ -62,11 +62,8 @@ def recent_policies() -> list[dict]:
     return _summaries(call_upstream(polizas.get, "/polizas/recientes", params={"limite": RECENT_LIMIT}))
 
 
-def _insured(view: dict, endorsements: list[dict]) -> dict:
-    """Datos vigentes del asegurado: el último endoso gana sobre Identidad, que un endoso nunca modifica."""
-    for endorsement in reversed(endorsements):
-        if endorsement.get("version_nueva"):
-            return endorsement["version_nueva"]
+def _identity_snapshot(view: dict) -> dict:
+    """Lo que dice Identidad del cliente, en la forma de los datos de un endoso."""
     customer = view.get("cliente") or {}
     return {
         "nombre": " ".join(filter(None, [customer.get("nombre"), customer.get("apellido")])),
@@ -79,7 +76,6 @@ def _insured(view: dict, endorsements: list[dict]) -> dict:
 def register_endorsement(poliza_id: str, body: dict, operator_id: str) -> dict:
     policy_id = quote(poliza_id, safe="")
     [view] = _summaries([call_upstream(polizas.get, f"/polizas/{policy_id}")])
-    endorsements = call_upstream(polizas.get, f"/polizas/{policy_id}/endosos")
     return call_upstream(
         polizas.post,
         f"/polizas/{policy_id}/endosos",
@@ -87,7 +83,7 @@ def register_endorsement(poliza_id: str, body: dict, operator_id: str) -> dict:
             "usuario_id": operator_id,
             "fecha_efectiva": body.get("fecha_efectiva"),
             "motivo": body.get("motivo", ""),
-            "version_anterior": _insured(view, endorsements),
+            "datos_identidad": _identity_snapshot(view),
             "version_nueva": body.get("version_nueva"),
         },
     )
@@ -100,9 +96,11 @@ def policy_detail(poliza_id: str) -> dict:
     claims = _optional(siniestros.get, f"/siniestros/polizas/{policy_id}/avisos")
     beneficiaries = _optional(polizas.get, f"/polizas/{policy_id}/beneficiarios")
     endorsements = _optional(polizas.get, f"/polizas/{policy_id}/endosos") or []
+    current = _optional(polizas.get, f"/polizas/{policy_id}/asegurado")
+    insured = current.get("asegurado") if isinstance(current, dict) else None
     return {
         **view,
-        "asegurado": _insured(view, endorsements),
+        "asegurado": insured or _identity_snapshot(view),
         "endosos": endorsements,
         "pagos": [payment] if isinstance(payment, dict) else [],
         "siniestros": claims or [],

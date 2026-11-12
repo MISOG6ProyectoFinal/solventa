@@ -69,7 +69,7 @@ def _body(**changes) -> dict:
         "usuario_id": "op-1",
         "fecha_efectiva": "2090-06-01",
         "motivo": "Actualización de teléfono",
-        "version_anterior": ANTES,
+        "datos_identidad": ANTES,
         "version_nueva": {**ANTES, "telefono": "+57 311 000 1122"},
     }
     return {**data, **changes}
@@ -153,3 +153,29 @@ def test_los_tipos_de_endoso_se_siembran_una_vez_en_la_base():
     assert [t.id for t in types] == ["datos-asegurado", "beneficiarios", "suma-asegurada"]
     assert types[0].applies_to("ramo-viaje")
     assert not types[1].applies_to("ramo-hogar")
+
+
+def test_la_version_anterior_es_la_del_ultimo_endoso_aunque_identidad_diga_otra_cosa(bus):
+    primero = {**ANTES, "telefono": "+57 311 000 1122"}
+    segundo = {**ANTES, "telefono": "+57 322 999 0000"}
+    client.post("/polizas/poliza-1/endosos", json={**_body(), "version_nueva": primero})
+
+    response = client.post("/polizas/poliza-1/endosos", json={**_body(), "version_nueva": segundo})
+
+    assert response.status_code == 201
+    assert response.json()["version_anterior"]["telefono"] == "+57 311 000 1122"
+    assert client.get("/polizas/poliza-1/asegurado").json()["asegurado"]["telefono"] == "+57 322 999 0000"
+
+
+def test_sin_endosos_el_asegurado_vigente_es_el_de_identidad(bus):
+    assert client.get("/polizas/poliza-1/asegurado").json() == {"asegurado": None}
+    assert client.get("/polizas/nope/asegurado").status_code == 404
+
+
+def test_un_endoso_igual_a_la_version_vigente_no_cambia_nada(bus):
+    client.post("/polizas/poliza-1/endosos", json=_body())
+
+    response = client.post("/polizas/poliza-1/endosos", json=_body())
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["codigo"] == "endoso_sin_cambios"

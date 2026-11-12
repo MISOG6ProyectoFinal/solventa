@@ -154,7 +154,7 @@ def test_una_poliza_cancelada_ya_no_admite_endosos(setup):
             "usuario_id": "op-1",
             "fecha_efectiva": "2090-06-01",
             "motivo": "cambio",
-            "version_anterior": anterior,
+            "datos_identidad": anterior,
             "version_nueva": {**anterior, "telefono": "2"},
         },
     )
