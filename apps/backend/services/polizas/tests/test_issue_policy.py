@@ -3,7 +3,8 @@
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.repository import policies as policies_table
 from polizas.ciclo_vida.adapters.upstream import QuoteReader
 from polizas.ciclo_vida.api import wire

@@ -7,12 +7,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import (
-    InMemoryPolicyRepository,
-    PostgresPolicyRepository,
-    outbox_events,
-    renewals,
-)
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository, outbox_events, renewals
 from polizas.ciclo_vida.adapters.repository import policies as policies_table
 from polizas.ciclo_vida.api import use_cases, wire
 from polizas.ciclo_vida.domain.models import Coverage, Policy, PolicyStatus, Validity

@@ -3,7 +3,8 @@
 import threading
 
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.repository import policies as policies_table
 from polizas.ciclo_vida.api import router, wire
 from polizas.ciclo_vida.domain.models import IssuePolicyRequest
