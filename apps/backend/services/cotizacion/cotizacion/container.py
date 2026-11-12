@@ -25,7 +25,9 @@ from cotizacion.gobierno_socios.adapters.configuracion_repository import (
     InMemoryConfiguracionRepository,
     PostgresConfiguracionRepository,
 )
+from cotizacion.gobierno_socios.adapters.quota_repository import InMemoryQuotaCounter, PostgresQuotaCounter
 from cotizacion.gobierno_socios.adapters.repository import InMemorySocioRepository, PostgresSocioRepository
+from cotizacion.gobierno_socios.domain.quota import ConsumeQuotaUseCase, QuotaUsageQuery, UpdateQuotaUseCase
 from cotizacion.gobierno_socios.domain.use_cases import (
     AutorizarSocioUseCase,
     ConsultarSociosUseCase,
@@ -52,6 +54,7 @@ class Container:
         self.cotizaciones = InMemoryCotizacionRepository()
         self.socios = InMemorySocioRepository()
         self.configuraciones = InMemoryConfiguracionRepository()
+        self.quota_counter = InMemoryQuotaCounter()
         seed_catalogo(self.catalogo)
         seed_rules(self.rules)
         self.signal_cache: KeyValueCache = RedisCache(settings.redis_url) if settings.redis_url else InMemoryCache()
@@ -75,6 +78,7 @@ class Container:
         self.cotizaciones = PostgresCotizacionRepository(engine)
         self.socios = PostgresSocioRepository(engine)
         self.configuraciones = PostgresConfiguracionRepository(engine)
+        self.quota_counter = PostgresQuotaCounter(engine)
         self._wire()
 
     def use_local_fanout(self) -> None:
@@ -116,6 +120,9 @@ class Container:
         self.dar_de_alta_socio = DarDeAltaSocioUseCase(self.socios)
         self.consultar_socios = ConsultarSociosUseCase(self.socios)
         self.autorizar_socio = AutorizarSocioUseCase(self.socios)
+        self.consume_quota = ConsumeQuotaUseCase(self.quota_counter)
+        self.quota_usage = QuotaUsageQuery(self.socios, self.quota_counter)
+        self.update_quota = UpdateQuotaUseCase(self.socios)
         self.consultar_configuracion = ConsultarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.actualizar_configuracion = ActualizarConfiguracionUseCase(self.socios, self.configuraciones, self.catalogo)
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)

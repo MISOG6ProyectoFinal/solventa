@@ -22,7 +22,6 @@ from cotizacion.gobierno_socios.domain.models import (
     AlcanceNoAutorizado,
     AltaSocio,
     AltaSocioRequest,
-    AuthorizedPartner,
     ContratoSuspendido,
     CredencialInvalida,
     IdentificadorDuplicado,
@@ -33,6 +32,7 @@ from cotizacion.gobierno_socios.domain.models import (
     SocioResponse,
     TipoSocio,
 )
+from cotizacion.gobierno_socios.domain.quota import PartnerAuthorization, QuotaUpdateRequest, QuotaUsage
 
 router = APIRouter(prefix="/gobierno-socios", tags=["Socios y Gobierno de API"])
 
@@ -154,15 +154,39 @@ def actualizar_configuracion(socio_id: str, solicitud: ActualizarConfiguracionRe
     return container.consultar_configuracion.presentar(configuracion)
 
 
-@router.get("/autorizacion", response_model=AuthorizedPartner)
+@router.get("/socios/{socio_id}/consumo", response_model=QuotaUsage)
+def quota_usage(socio_id: str) -> QuotaUsage:
+    """Consumo del socio en la ventana actual frente a su cuota, para monitoreo."""
+    try:
+        return container.quota_usage.execute(socio_id)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+
+
+@router.put("/socios/{socio_id}/cuota", response_model=SocioResponse)
+def update_quota(socio_id: str, solicitud: QuotaUpdateRequest) -> SocioResponse:
+    """La nueva cuota aplica desde la siguiente llamada del socio."""
+    try:
+        socio = container.update_quota.execute(socio_id, solicitud.cuota_consumo)
+    except SocioNoEncontrado as exc:
+        raise _socio_no_encontrado() from exc
+    return _vistas([socio])[0]
+
+
+@router.get("/autorizacion", response_model=PartnerAuthorization)
 def authorize_partner(
     alcance: Alcance,
     client_id: Annotated[str, Header(alias="X-Client-Id")],
     secreto: Annotated[str, Header(alias="X-Api-Key")],
-) -> AuthorizedPartner:
-    """Canales autoriza aquí al socio antes de cobrar o emitir en su nombre."""
+) -> PartnerAuthorization:
+    """Credencial, contrato y alcance; cuenta la llamada contra la cuota. Pasada la cuota, permitido es falso."""
     socio = autorizar_socio(client_id, secreto, alcance)
-    return AuthorizedPartner(socio_id=socio.id, identificador=socio.identificador, nombre=socio.nombre)
+    return PartnerAuthorization(
+        socio_id=socio.id,
+        identificador=socio.identificador,
+        nombre=socio.nombre,
+        consumo=container.consume_quota.execute(socio),
+    )
 
 
 @router.get("/catalogo", response_model=list[QuotableProduct])

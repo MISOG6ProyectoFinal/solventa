@@ -454,7 +454,14 @@ def test_authorization_returns_the_partner_for_a_granted_scope():
     response = _authorize(partner, "cotizacion")
 
     assert response.status_code == 200
-    assert response.json() == {"socio_id": partner["id"], "identificador": "BANCO-AURORA", "nombre": "Banco Aurora"}
+    body = response.json()
+    assert {key: body[key] for key in ("socio_id", "identificador", "nombre")} == {
+        "socio_id": partner["id"],
+        "identificador": "BANCO-AURORA",
+        "nombre": "Banco Aurora",
+    }
+    assert body["consumo"]["permitido"] is True
+    assert body["consumo"]["consumidas"] == 1
 
 
 def test_authorization_rejects_a_scope_not_granted():

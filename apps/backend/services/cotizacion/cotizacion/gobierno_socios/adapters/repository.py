@@ -1,6 +1,6 @@
 """Repositorio de socios: Postgres (fuente de verdad) e InMemory (tests/local sin DB)."""
 
-from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table, insert, select
+from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -56,6 +56,11 @@ class PostgresSocioRepository:
     def get_by_client_id(self, client_id: str) -> Socio | None:
         return self._first(socios.c.client_id == client_id)
 
+    def update_quota(self, socio_id: str, quota: int) -> Socio | None:
+        with self.engine.begin() as conn:
+            conn.execute(update(socios).where(socios.c.id == socio_id).values(cuota_consumo=quota))
+        return self.get(socio_id)
+
     def _first(self, condition) -> Socio | None:
         with self.engine.connect() as conn:
             row = conn.execute(select(socios).where(condition)).mappings().first()
@@ -79,3 +84,10 @@ class InMemorySocioRepository:
 
     def get_by_client_id(self, client_id: str) -> Socio | None:
         return next((s for s in self.socios.values() if s.client_id == client_id), None)
+
+    def update_quota(self, socio_id: str, quota: int) -> Socio | None:
+        socio = self.socios.get(socio_id)
+        if socio is None:
+            return None
+        self.socios[socio_id] = socio.model_copy(update={"cuota_consumo": quota})
+        return self.socios[socio_id]
