@@ -51,9 +51,6 @@ export const EN: Record<TextKey, string> = {
   'quote.form.requiresConsent': ' (requires consent)',
   'quote.form.client': 'Customer details',
   'quote.form.risk': 'Risk details · {ramo}',
-  'quote.simulation': 'Open Finance simulation (demo)',
-  'quote.simulationHint': 'Changes the mode of the simulated Open Finance. It applies to mortgage life quotes with Open Finance consent.',
-  'quote.simulationError': 'The Open Finance simulator could not be changed.',
   'quote.calculate': 'Calculate quote',
   'quote.readOnly': 'Your role is read only: you can review the form, but you cannot calculate quotes or request consents.',
   'quote.calculating': 'Calculating quote...',
@@ -95,9 +92,6 @@ export const EN: Record<TextKey, string> = {
   'quote.option.Retraso de vuelo': 'Flight delay',
   'quote.option.Lluvia excesiva': 'Heavy rain',
 
-  'quote.scenario.normal': 'Open Finance responds normally',
-  'quote.scenario.degradado': 'Open Finance slow (uses the last cached profile)',
-  'quote.scenario.caida': 'Open Finance down',
 
   'breakdown.title': 'Quote breakdown',
   'breakdown.calculating': 'Calculating premium in real time...',

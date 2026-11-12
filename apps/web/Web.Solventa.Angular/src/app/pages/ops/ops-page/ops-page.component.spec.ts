@@ -27,7 +27,6 @@ describe('OpsPageComponent', () => {
     fixture = TestBed.createComponent(OpsPageComponent);
     el = fixture.nativeElement;
     await fixture.whenStable();
-    http.expectOne(API_ENDPOINTS.simulator('open-finance')).flush({ proveedor: 'open-finance', modo: 'normal' });
     http.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
     await fixture.whenStable();
     http.expectOne(API_ENDPOINTS.productContract('viaje-internacional')).flush(CONTRACTS['viaje-internacional']);

@@ -50,9 +50,6 @@ export const ES = {
   'quote.form.requiresConsent': ' (requiere consentimiento)',
   'quote.form.client': 'Datos del cliente',
   'quote.form.risk': 'Datos del riesgo · {ramo}',
-  'quote.simulation': 'Simulación de Open Finance (demo)',
-  'quote.simulationHint': 'Cambia el modo del Open Finance simulado. Aplica a la cotización de vida hipotecario con consentimiento Open Finance.',
-  'quote.simulationError': 'No fue posible cambiar el simulador de Open Finance.',
   'quote.calculate': 'Calcular cotización',
   'quote.readOnly': 'Su rol es de consulta: puede revisar el formulario, pero no calcular cotizaciones ni solicitar consentimientos.',
   'quote.calculating': 'Calculando cotización...',
@@ -94,9 +91,6 @@ export const ES = {
   'quote.option.Retraso de vuelo': 'Retraso de vuelo',
   'quote.option.Lluvia excesiva': 'Lluvia excesiva',
 
-  'quote.scenario.normal': 'Open Finance responde con normalidad',
-  'quote.scenario.degradado': 'Open Finance lento (usa el último perfil en caché)',
-  'quote.scenario.caida': 'Open Finance caído',
 
   'breakdown.title': 'Desglose de cotización',
   'breakdown.calculating': 'Calculando prima en tiempo real...',
