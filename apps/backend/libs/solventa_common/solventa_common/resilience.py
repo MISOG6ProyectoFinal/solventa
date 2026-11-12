@@ -7,6 +7,7 @@ circuito está abierto o la llamada falla, se sirve el último valor bueno de la
 import json
 import threading
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Protocol, TypeVar
@@ -118,22 +119,32 @@ class KeyValueCache(Protocol):
 
 
 class InMemoryCache:
-    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+    """Caché del propio pod con tope de entradas: al llenarse descarta la menos usada."""
+
+    def __init__(self, clock: Callable[[], float] = time.monotonic, max_entries: int = 10_000) -> None:
         self._clock = clock
-        self._data: dict[str, tuple[Any, float]] = {}
+        self._max_entries = max_entries
+        self._data: OrderedDict[str, tuple[Any, float]] = OrderedDict()
+        self._lock = threading.Lock()
 
     def get(self, key: str) -> Any | None:
-        item = self._data.get(key)
-        if item is None:
-            return None
-        value, expires_at = item
-        if self._clock() >= expires_at:
-            del self._data[key]
-            return None
-        return value
+        with self._lock:
+            item = self._data.get(key)
+            if item is None:
+                return None
+            value, expires_at = item
+            if self._clock() >= expires_at:
+                del self._data[key]
+                return None
+            self._data.move_to_end(key)
+            return value
 
     def set(self, key: str, value: Any, ttl_s: int) -> None:
-        self._data[key] = (value, self._clock() + ttl_s)
+        with self._lock:
+            self._data[key] = (value, self._clock() + ttl_s)
+            self._data.move_to_end(key)
+            while len(self._data) > self._max_entries:
+                self._data.popitem(last=False)
 
 
 class RedisCache:
