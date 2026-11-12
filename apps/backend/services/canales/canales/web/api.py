@@ -7,6 +7,7 @@ from solventa_common.operator_session import ADMIN, ADVISOR
 
 from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, polizas
+from canales.paths import ResourceId
 from canales.web.auth import Operator, require_operator, require_roles
 from canales.web.policies import policy_detail, recent_policies, register_endorsement
 
@@ -68,7 +69,7 @@ def listar_ramos() -> list:
 
 
 @readers.get("/productos/{producto_id}/contrato")
-def contrato_producto(producto_id: str) -> dict:
+def contrato_producto(producto_id: ResourceId) -> dict:
     return product_contract(producto_id)
 
 
@@ -184,7 +185,7 @@ def cotizar(solicitud: dict) -> dict:
 
 
 @readers.get("/cotizaciones/{cotizacion_id}")
-def obtener_cotizacion(cotizacion_id: str) -> dict:
+def obtener_cotizacion(cotizacion_id: ResourceId) -> dict:
     return call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
 
 
@@ -209,17 +210,17 @@ def listar_alcances() -> list:
 
 
 @readers.get("/socios/{socio_id}")
-def obtener_socio(socio_id: str) -> dict:
+def obtener_socio(socio_id: ResourceId) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}")
 
 
 @readers.get("/socios/{socio_id}/configuracion")
-def consultar_configuracion_socio(socio_id: str) -> dict:
+def consultar_configuracion_socio(socio_id: ResourceId) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{socio_id}/configuracion")
 
 
 @admins.put("/socios/{socio_id}/configuracion")
-def actualizar_configuracion_socio(socio_id: str, configuracion: dict, operator: Operator) -> dict:
+def actualizar_configuracion_socio(socio_id: ResourceId, configuracion: dict, operator: Operator) -> dict:
     return call_upstream(
         cotizacion.put,
         f"/gobierno-socios/socios/{socio_id}/configuracion",
@@ -228,12 +229,12 @@ def actualizar_configuracion_socio(socio_id: str, configuracion: dict, operator:
 
 
 @readers.get("/socios/{socio_id}/consumo")
-def partner_quota_usage(socio_id: str) -> dict:
+def partner_quota_usage(socio_id: ResourceId) -> dict:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{quote(socio_id, safe='')}/consumo")
 
 
 @admins.put("/socios/{socio_id}/cuota")
-def update_partner_quota(socio_id: str, body: dict) -> dict:
+def update_partner_quota(socio_id: ResourceId, body: dict) -> dict:
     return call_upstream(
         cotizacion.put,
         f"/gobierno-socios/socios/{quote(socio_id, safe='')}/cuota",
@@ -242,7 +243,7 @@ def update_partner_quota(socio_id: str, body: dict) -> dict:
 
 
 @admins.post("/socios/{socio_id}/credencial/rotacion")
-def rotate_partner_credential(socio_id: str, body: dict, operator: Operator) -> dict:
+def rotate_partner_credential(socio_id: ResourceId, body: dict, operator: Operator) -> dict:
     return call_upstream(
         cotizacion.post,
         f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/rotacion",
@@ -251,7 +252,7 @@ def rotate_partner_credential(socio_id: str, body: dict, operator: Operator) -> 
 
 
 @admins.post("/socios/{socio_id}/credencial/revocacion")
-def revoke_partner_credential(socio_id: str, operator: Operator) -> dict:
+def revoke_partner_credential(socio_id: ResourceId, operator: Operator) -> dict:
     return call_upstream(
         cotizacion.post,
         f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/revocacion",
@@ -260,7 +261,7 @@ def revoke_partner_credential(socio_id: str, operator: Operator) -> dict:
 
 
 @readers.get("/socios/{socio_id}/credencial/eventos")
-def partner_credential_events(socio_id: str) -> list:
+def partner_credential_events(socio_id: ResourceId) -> list:
     return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{quote(socio_id, safe='')}/credencial/eventos")
 
 
@@ -287,26 +288,26 @@ def listar_polizas() -> list[dict]:
 
 
 @readers.get("/polizas/{poliza_id}")
-def obtener_poliza(poliza_id: str) -> dict:
+def obtener_poliza(poliza_id: ResourceId) -> dict:
     """La póliza con el asegurado, el socio, el ramo, sus cobros y sus siniestros."""
     return policy_detail(poliza_id)
 
 
 @writers.post("/polizas/{poliza_id}/endosos", status_code=status.HTTP_201_CREATED)
-def registrar_endoso(poliza_id: str, body: dict, operator: Operator) -> dict:
+def registrar_endoso(poliza_id: ResourceId, body: dict, operator: Operator) -> dict:
     """Endoso de datos del asegurado. El usuario sale del token, no del cuerpo."""
     return register_endorsement(poliza_id, body, operator.operator_id)
 
 
 @writers.post("/polizas/{poliza_id}/cancelacion/calculo")
-def calcular_cancelacion(poliza_id: str, body: dict) -> dict:
+def calcular_cancelacion(poliza_id: ResourceId, body: dict) -> dict:
     """Recálculo de la devolución: Pólizas consulta a Cotización y no cambia nada."""
     path = f"/polizas/{quote(poliza_id, safe='')}/cancelacion/calculo"
     return call_upstream(polizas.post, path, json={"causa": body.get("causa")})
 
 
 @writers.post("/polizas/{poliza_id}/cancelacion")
-def cancelar_poliza(poliza_id: str, body: dict, operator: Operator) -> dict:
+def cancelar_poliza(poliza_id: ResourceId, body: dict, operator: Operator) -> dict:
     """Cancelación definitiva. El usuario sale del token, no del cuerpo."""
     path = f"/polizas/{quote(poliza_id, safe='')}/cancelacion"
     return call_upstream(polizas.post, path, json={"causa": body.get("causa"), "usuario_id": operator.operator_id})
@@ -326,7 +327,7 @@ def validar_consentimiento(solicitud: dict) -> dict:
 
 
 @readers.get("/consentimientos/{consentimiento_id}")
-def consultar_consentimiento(consentimiento_id: str) -> dict:
+def consultar_consentimiento(consentimiento_id: ResourceId) -> dict:
     return call_upstream(identidad.get, f"/identidad/{consentimiento_id}")
 
 
@@ -341,7 +342,7 @@ def create_operator(payload: dict) -> dict:
 
 
 @admins.patch("/operadores/{operator_id}")
-def update_operator(operator_id: str, changes: dict) -> dict:
+def update_operator(operator_id: ResourceId, changes: dict) -> dict:
     return call_upstream(identidad.patch, f"/identidad/operadores/{quote(operator_id, safe='')}", json=changes)
 
 

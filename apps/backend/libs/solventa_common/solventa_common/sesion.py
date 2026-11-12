@@ -89,3 +89,10 @@ def verify_token(token: str, secret: str, *, now: datetime | None = None) -> Ses
     ):
         raise InvalidToken
     return SessionToken(client_id=client_id, email=email, first_name=first_name, last_name=last_name)
+
+
+def bearer_token(authorization: str | None) -> str | None:
+    """El token de un encabezado `Authorization: Bearer …`, o None si falta o viene mal formado."""
+    if authorization is None or not authorization.startswith("Bearer "):
+        return None
+    return authorization.removeprefix("Bearer ").strip() or None

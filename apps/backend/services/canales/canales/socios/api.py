@@ -1,18 +1,18 @@
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from solventa_common.errors import api_error, error_detail
 from solventa_common.integration.base import call_upstream
 
 from canales.clients import cotizacion, polizas, siniestros
+from canales.paths import ResourceId
 from canales.quote_payment import charge_quote, payable_quote
 
 ClientId = Annotated[str, Header(alias="X-Client-Id")]
 ApiKey = Annotated[str, Header(alias="X-Api-Key")]
 IdempotencyKey = Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=100)]
-ResourceId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 
 SUPPORTED_VERSIONS = ("v1",)
 POLICY_FIELDS = ("id", "numero", "estado", "cotizacion_id", "producto_id", "prima", "coberturas", "vigencia")
@@ -121,7 +121,7 @@ class PartnerIssueRequest(BaseModel):
 
 @router.post("/v1/cotizaciones/{cotizacion_id}/pagos")
 def pay_quote(
-    cotizacion_id: str,
+    cotizacion_id: ResourceId,
     request: PartnerPaymentRequest,
     partner: IssuingPartner,
     idempotency_key: IdempotencyKey,

@@ -331,12 +331,13 @@ def test_administrador_actualiza_roles_y_estado(identidad):
     assert identidad.calls == [("/identidad/operadores/op-1", {"json": cambio})]
 
 
-def test_el_identificador_del_operador_se_codifica_en_la_ruta(identidad):
+def test_an_operator_id_with_route_characters_never_reaches_identidad(identidad):
     identidad.response = OPERATOR_VIEW
 
-    client.patch("/web/operadores/a%3Fb%23c", json={"activo": True}, headers=web_auth.admin())
+    response = client.patch("/web/operadores/a%3Fb%23c", json={"activo": True}, headers=web_auth.admin())
 
-    assert identidad.calls[0][0] == "/identidad/operadores/a%3Fb%23c"
+    assert response.status_code == 422
+    assert identidad.calls == []
 
 
 def test_operador_inexistente_conserva_el_404(monkeypatch):
