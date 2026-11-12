@@ -10,10 +10,11 @@ import { applyRenewal } from '../../api/applyRenewal';
 import { getRenewalOffer } from '../../api/getRenewalOffer';
 import { payRenewal } from '../../api/payRenewal';
 import { getTexts, useTexts } from '../../texts';
-import { Policy, RenewalOffer, RenewalResult } from '../../types';
+import { POLICY_STATUS, Policy, RenewalOffer, RenewalResult } from '../../types';
 import { policyDate } from '../../utils';
 import RenewalConfirmation from '../RenewalConfirmation';
 import styles from './styles';
+import { PAYMENT_STATUS } from '../../../../shared/payments/paymentStatus';
 
 type Props = StaticScreenProps<{
   policyId: string;
@@ -101,12 +102,12 @@ export default function RenewalPaymentScreen({ route }: Readonly<Props>) {
 
     try {
       const resultado = await payRenewal(policyId, intento, simulateRejected ? 'rechazado' : undefined);
-      if (resultado.estado === 'aprobado') {
+      if (resultado.estado === PAYMENT_STATUS.approved) {
         paymentId.current = resultado.id;
         await apply(resultado.id);
         return;
       }
-      if (resultado.estado === 'rechazado') {
+      if (resultado.estado === PAYMENT_STATUS.rejected) {
         setStatus('rejected');
         return;
       }
@@ -204,7 +205,7 @@ function policyFromRenewal(renewal: RenewalResult): Policy {
     cobro_id: renewal.cobro_id,
     producto_id: renewal.producto_id,
     prima: '',
-    estado: 'activa',
+    estado: POLICY_STATUS.active,
     vigencia: renewal.vigencia_anterior,
     coberturas: renewal.coberturas,
     renovable: false,

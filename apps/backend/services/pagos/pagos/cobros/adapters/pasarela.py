@@ -3,6 +3,7 @@
 PASARELA_URL apunta al proveedor. Mientras no hay acceso al real, apunta al servicio simuladores.
 """
 
+from solventa_common.cobros import EstadoCobro
 from solventa_common.integration import PasarelaPagosAdapter
 
 from pagos.cobros.domain.ports import PasarelaNoDisponible
@@ -27,9 +28,9 @@ class PasarelaPagosGateway:
             raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
         marca = str(raw.get("estado", raw.get("status", ""))).lower()
         if marca in _APROBADO:
-            return {"estado": "aprobado"}
+            return {"estado": EstadoCobro.APROBADO}
         if marca in _RECHAZADO:
-            return {"estado": "rechazado"}
+            return {"estado": EstadoCobro.RECHAZADO}
         raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
 
 

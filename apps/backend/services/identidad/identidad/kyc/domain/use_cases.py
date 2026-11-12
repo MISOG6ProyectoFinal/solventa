@@ -9,6 +9,7 @@ from identidad.kyc.domain.models import (
     DEFAULT_TIPO_DOCUMENTO,
     OPEN_DATA,
     OPEN_FINANCE,
+    OTP_TTL,
     Account,
     CanalOtp,
     Client,
@@ -213,7 +214,7 @@ class SolicitarConsentimiento:
 
     def execute(self, solicitud: SolicitudConsentimiento) -> RespuestaSolicitud:
         ahora = datetime.now(UTC)
-        expira_en = ahora + timedelta(minutes=5)
+        expira_en = ahora + OTP_TTL
 
         # 1. Identificar o Registrar el Cliente según el Modelo de Dominio
         cliente_id = _resolve_cliente_id(solicitud)

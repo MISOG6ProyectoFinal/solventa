@@ -15,6 +15,8 @@ import { useTexts } from '../../texts';
 import { SimulacionPago } from '../../types';
 import { formatMoney, formatVigenteHasta } from '../../utils';
 import styles from './styles';
+import { POLICY_STATUS } from '../../../policies/types';
+import { PAYMENT_STATUS } from '../../../../shared/payments/paymentStatus';
 
 type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'expired' | 'issued' | 'issueFailed';
 
@@ -61,7 +63,7 @@ export default function QuotePaymentScreen() {
   const emitir = async (pagoId: string) => {
     try {
       const emitida = await issuePolicy(oferta.id, pagoId);
-      if (emitida.estado !== 'activa') {
+      if (emitida.estado !== POLICY_STATUS.active) {
         setPolicy(null);
         setStatus('issueFailed');
         setError(policyTexts.policies.issueFailed);
@@ -89,11 +91,11 @@ export default function QuotePaymentScreen() {
       setPolicy(null);
       setStatus('processing');
       const resultado = await payQuote(oferta.id, intento, simulacion());
-      if (resultado.estado === 'rechazado') {
+      if (resultado.estado === PAYMENT_STATUS.rejected) {
         setStatus('rejected');
         return;
       }
-      if (resultado.estado !== 'aprobado') {
+      if (resultado.estado !== PAYMENT_STATUS.approved) {
         setStatus('ready');
         setError(texts.payment.failed);
         inFlight.current = false;

@@ -6,14 +6,9 @@ from enum import StrEnum
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+from solventa_common.cobros import MONEDA_COP, EstadoCobro
 
 _REFERENCIA_COBRO_OBLIGATORIA = "La referencia del cobro es obligatoria"
-
-
-class EstadoCobro(StrEnum):
-    PROCESANDO = "procesando"
-    APROBADO = "aprobado"
-    RECHAZADO = "rechazado"
 
 
 class TipoReferencia(StrEnum):
@@ -29,7 +24,7 @@ class SolicitudCobro(BaseModel):
     referencia_id: str | None = None
     cliente_id: str
     monto: Decimal
-    moneda: str = "COP"
+    moneda: str = MONEDA_COP
     idempotency_key: str
     medio_token: str
 

@@ -1,3 +1,11 @@
+import { PaymentStatus } from '../../shared/payments/paymentStatus';
+
+export const POLICY_STATUS = {
+  active: 'activa',
+  expired: 'vencida',
+  cancelled: 'cancelada',
+} as const;
+
 export type PolicyCoverage = {
   id: string;
   nombre: string;
@@ -50,7 +58,7 @@ export type RenewalOffer = {
   coberturas_propuestas: PolicyCoverage[];
 };
 
-export type RenewalPaymentStatus = 'aprobado' | 'rechazado' | 'procesando';
+export type RenewalPaymentStatus = PaymentStatus;
 
 export type RenewalPaymentResult = {
   id: string;

@@ -1,3 +1,5 @@
+import { PaymentStatus } from '../../shared/payments/paymentStatus';
+
 export type CoberturaMovil = {
   id: string;
   nombre: string;
@@ -34,7 +36,7 @@ export type SimulacionPago = 'rechazado' | 'vencida';
 export type ResultadoPago = {
   id: string;
   cotizacion_id: string;
-  estado: 'aprobado' | 'rechazado' | 'procesando';
+  estado: PaymentStatus;
   monto: string;
   moneda: string;
 };

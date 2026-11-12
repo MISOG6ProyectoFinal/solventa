@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import StrEnum
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -20,6 +20,15 @@ class EstadoConsentimiento(StrEnum):
 
 
 MIN_PASSWORD_LENGTH = 8
+OTP_TTL = timedelta(minutes=5)
+
+
+def check_password(value: str) -> str:
+    if len(value) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
+    return value
+
+
 # The domain labels cannot contain dots, so the pattern never backtracks across the same characters twice.
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$")
 

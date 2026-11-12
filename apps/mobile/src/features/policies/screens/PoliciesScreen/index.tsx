@@ -10,7 +10,7 @@ import { ProductoMovil } from '../../../quote/types';
 import { listPolicies } from '../../api/listPolicies';
 import { PolicyCard } from '../../components/PolicyCard';
 import { useTexts } from '../../texts';
-import { Policy } from '../../types';
+import { POLICY_STATUS, Policy } from '../../types';
 import styles from './styles';
 
 export default function PoliciesScreen() {
@@ -37,7 +37,7 @@ export default function PoliciesScreen() {
         if (requestId.current !== id) {
           return;
         }
-        setPolicies(items.filter((policy) => policy.estado === 'activa'));
+        setPolicies(items.filter((policy) => policy.estado === POLICY_STATUS.active));
         setProductNames(Object.fromEntries(products.map((product) => [product.id, product.nombre])));
         setError(null);
       })
