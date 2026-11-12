@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
 from polizas.ciclo_vida.api import wire
 from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Validity
 from polizas.ciclo_vida.domain.ports import PolicyNotFound

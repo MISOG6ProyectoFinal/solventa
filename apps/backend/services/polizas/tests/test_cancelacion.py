@@ -7,7 +7,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import RefundCalculatorClient
 from polizas.ciclo_vida.api import wire
 from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Validity

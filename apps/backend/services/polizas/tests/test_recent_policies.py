@@ -3,7 +3,8 @@
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi.testclient import TestClient
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository
 from polizas.ciclo_vida.api import wire
 from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Validity
 from polizas.ciclo_vida.domain.use_cases import ListClientPoliciesUseCase, ListRecentPoliciesUseCase

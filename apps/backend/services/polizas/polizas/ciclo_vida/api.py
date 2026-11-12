@@ -12,7 +12,8 @@ from polizas.ciclo_vida.adapters.endorsement_types import (
     InMemoryEndorsementTypeRepository,
     PostgresEndorsementTypeRepository,
 )
-from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
+from polizas.ciclo_vida.adapters.memory import InMemoryPolicyRepository
+from polizas.ciclo_vida.adapters.repository import PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader, RefundCalculatorClient
 from polizas.ciclo_vida.domain.models import (
     CANCELLATION_CAUSE_NAMES,
