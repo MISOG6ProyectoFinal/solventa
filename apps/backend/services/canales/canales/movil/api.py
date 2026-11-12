@@ -1,9 +1,8 @@
 from datetime import date
 from typing import Annotated, Literal
-from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 from solventa_common.errors import error_detail
 from solventa_common.integration.base import call_upstream
 from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
@@ -11,6 +10,7 @@ from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.validation import invalid_data_detail, invalid_fields
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
+from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
@@ -97,20 +97,29 @@ authenticated = APIRouter(dependencies=[Depends(require_session)])
 Session = Annotated[SessionToken, Depends(require_session)]
 
 
+MAX_TOKEN_LENGTH = 64
+
+
+def _token(message: str):
+    def check(value: str) -> str:
+        token = value.strip()
+        if not token or len(token) > MAX_TOKEN_LENGTH:
+            raise ValueError(message)
+        return token
+
+    return check
+
+
+PaymentAttemptId = Annotated[str, AfterValidator(_token("El intento de pago no es válido"))]
+ChargeId = Annotated[str, AfterValidator(_token("El pago es obligatorio"))]
+
+
 class SolicitudPagoMovil(BaseModel):
     """El monto no forma parte del contrato: se lee de la cotización persistida."""
 
     model_config = ConfigDict(extra="ignore")
-    intento_id: str
+    intento_id: PaymentAttemptId
     simulacion: Literal["rechazado", "vencida"] | None = None
-
-    @field_validator("intento_id")
-    @classmethod
-    def _intento(cls, value: str) -> str:
-        token = value.strip()
-        if not token or len(token) > 64:
-            raise ValueError("El intento de pago no es válido")
-        return token
 
 
 def _cotizacion_vencida() -> HTTPException:
@@ -124,46 +133,15 @@ class SolicitudPagoRenovacion(BaseModel):
     """El monto sale de la oferta vigente. El teléfono solo identifica el intento."""
 
     model_config = ConfigDict(extra="ignore")
-    intento_id: str
+    intento_id: PaymentAttemptId
     simulacion: Literal["rechazado"] | None = None
 
-    @field_validator("intento_id")
-    @classmethod
-    def _intento(cls, value: str) -> str:
-        token = value.strip()
-        if not token or len(token) > 64:
-            raise ValueError("El intento de pago no es válido")
-        return token
 
-
-class SolicitudAplicarRenovacion(BaseModel):
-    """El teléfono identifica el cobro aprobado. Pólizas valida el pago, el ciclo y la vigencia."""
+class ChargeReference(BaseModel):
+    """El teléfono solo identifica el cobro aprobado. Pólizas valida el pago y arma o renueva la póliza."""
 
     model_config = ConfigDict(extra="ignore")
-    cobro_id: str
-
-    @field_validator("cobro_id")
-    @classmethod
-    def _cobro(cls, value: str) -> str:
-        token = value.strip()
-        if not token or len(token) > 64:
-            raise ValueError("El pago es obligatorio")
-        return token
-
-
-class SolicitudEmisionMovil(BaseModel):
-    """Mobile solo identifica el cobro. Pólizas valida el pago y arma la póliza desde la cotización."""
-
-    model_config = ConfigDict(extra="ignore")
-    cobro_id: str
-
-    @field_validator("cobro_id")
-    @classmethod
-    def _cobro(cls, value: str) -> str:
-        token = value.strip()
-        if not token or len(token) > 64:
-            raise ValueError("El pago es obligatorio")
-        return token
+    cobro_id: ChargeId
 
 
 def _cliente(session: SessionToken) -> dict[str, str]:
@@ -186,7 +164,7 @@ def iniciar_sesion(solicitud: SolicitudSesion) -> dict:
 
 @router.get("/tipos-documento")
 def listar_tipos_documento() -> list:
-    return call_upstream(identidad.get, "/identidad/tipos-documento")
+    return document_types()
 
 
 @router.post("/registros", status_code=status.HTTP_201_CREATED)
@@ -212,7 +190,7 @@ def listar_productos() -> list:
 
 @authenticated.get("/productos/{producto_id}/contrato")
 def contrato_producto(producto_id: str) -> dict:
-    return call_upstream(cotizacion.get, f"/catalogo/productos/{quote(producto_id, safe='')}/contrato")
+    return product_contract(producto_id)
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
@@ -277,7 +255,7 @@ def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/polizas")
-def emitir_poliza(cotizacion_id: str, session: Session, solicitud: SolicitudEmisionMovil) -> dict:
+def emitir_poliza(cotizacion_id: str, session: Session, solicitud: ChargeReference) -> dict:
     """Delega la emisión en Pólizas. El teléfono no declara el pago, el dueño ni los datos de la póliza."""
     return call_upstream(
         polizas.post,
@@ -340,7 +318,7 @@ def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoR
 
 
 @authenticated.post("/polizas/{poliza_id}/renovaciones")
-def aplicar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudAplicarRenovacion) -> dict:
+def aplicar_renovacion(poliza_id: str, session: Session, solicitud: ChargeReference) -> dict:
     """Delega la aplicación en Pólizas. El teléfono no declara vigencia, monto ni cliente."""
     return call_upstream(
         polizas.post,
