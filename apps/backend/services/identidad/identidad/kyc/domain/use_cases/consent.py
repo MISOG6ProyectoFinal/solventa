@@ -1,8 +1,6 @@
-import secrets
-from datetime import UTC, date, datetime, timedelta
-from uuid import uuid4
+"""Consentimiento digital Open Finance / Open Data con OTP."""
 
-from solventa_common.sesion import sign_token
+from datetime import UTC, datetime
 
 from identidad.kyc.domain.models import (
     DEFAULT_ALCANCE,
@@ -10,135 +8,22 @@ from identidad.kyc.domain.models import (
     OPEN_DATA,
     OPEN_FINANCE,
     OTP_TTL,
-    Account,
     CanalOtp,
     Client,
-    ClienteNoEncontrado,
     CodigoOtpInvalido,
     Consentimiento,
     ConsentimientoExpirado,
     ConsentimientoNoEncontrado,
-    DocumentAlreadyRegistered,
     EmailAlreadyRegistered,
     EstadoConsentimiento,
-    InvalidCredentials,
-    RespuestaCliente,
     RespuestaConsulta,
     RespuestaSolicitud,
     RespuestaValidacion,
-    Session,
-    SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
 from identidad.kyc.domain.otp import generar_codigo, hash_codigo, verificar_codigo
-from identidad.kyc.domain.ports import AccountRepository, ClientRepository, ConsentimientoRepository, OtpSender
-from identidad.kyc.domain.sesion import hash_password, new_salt, password_matches
-
-SESSION_DAYS = 7
-_DUMMY_SALT = "00" * 16
-_DUMMY_HASH = hash_password("not-a-client-password", _DUMMY_SALT)
-
-
-def issue_session(client: Client, secret: str) -> Session:
-    expires_at = datetime.now(UTC) + timedelta(days=SESSION_DAYS)
-    token = sign_token(
-        client.id,
-        client.email,
-        secret,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        expires_at=expires_at,
-    )
-    return Session(token=token, client_id=client.id)
-
-
-class StartSession:
-    def __init__(self, clients: ClientRepository, accounts: AccountRepository, secret: str) -> None:
-        self.clients = clients
-        self.accounts = accounts
-        self.secret = secret
-
-    def execute(self, email: str, password: str) -> Session:
-        client = self.clients.get_by_email(email.lower())
-        account = self.accounts.get(client.id) if client else None
-        # A missing account still runs the slow check, so the response time does not reveal which case it was.
-        if client is None or account is None:
-            password_matches(password, _DUMMY_HASH, _DUMMY_SALT)
-            raise InvalidCredentials
-        if not password_matches(password, account.password_hash, account.salt):
-            raise InvalidCredentials
-        return issue_session(client, self.secret)
-
-
-class RegisterClient:
-    def __init__(self, clients: ClientRepository, accounts: AccountRepository, secret: str) -> None:
-        self.clients = clients
-        self.accounts = accounts
-        self.secret = secret
-
-    def execute(
-        self,
-        email: str,
-        password: str,
-        first_name: str,
-        last_name: str,
-        *,
-        tipo_documento: str,
-        numero_documento: str,
-        telefono: str,
-        fecha_nacimiento: date,
-    ) -> Session:
-        normalized = email.lower()
-        by_email = self.clients.get_by_email(normalized)
-        by_numero = self.clients.get_by_numero_documento(numero_documento)
-        if by_email is not None and self.accounts.get(by_email.id) is not None:
-            raise EmailAlreadyRegistered
-        if by_numero is not None and self.accounts.get(by_numero.id) is not None:
-            raise DocumentAlreadyRegistered
-        # A client from consent is linked only when the email and the document both point to it.
-        if by_numero is not None and (by_email is None or by_email.id != by_numero.id):
-            raise DocumentAlreadyRegistered
-        if by_email is not None and by_email.numero_documento not in ("", numero_documento):
-            raise EmailAlreadyRegistered
-
-        if by_email is None:
-            client = Client(
-                id=str(uuid4()),
-                email=normalized,
-                first_name=first_name,
-                last_name=last_name,
-                tipo_documento=tipo_documento,
-                numero_documento=numero_documento,
-                telefono=telefono,
-                fecha_nacimiento=fecha_nacimiento,
-            )
-            try:
-                self.clients.add(client)
-            except ValueError as exc:
-                raise EmailAlreadyRegistered from exc
-        else:
-            client = by_email
-            client.tipo_documento = tipo_documento
-            client.numero_documento = numero_documento
-            client.telefono = client.telefono or telefono
-            client.fecha_nacimiento = client.fecha_nacimiento or fecha_nacimiento
-            self.clients.update(client)
-
-        salt = new_salt()
-        self.accounts.add(Account(client_id=client.id, password_hash=hash_password(password, salt), salt=salt))
-        return issue_session(client, self.secret)
-
-
-# --- HU002: Casos de uso de Consentimiento Digital ---
-
-
-def _generate_random_id(prefix: str) -> str:
-    n = secrets.randbelow(90000) + 10000
-    return f"{prefix}-{n}"
-
-
-def id_cliente(tipo_documento: str, numero_documento: str) -> str:
-    return f"CLI-{tipo_documento.strip().upper()}-{numero_documento.strip()}"
+from identidad.kyc.domain.ports import ClientRepository, ConsentimientoRepository, OtpSender
+from identidad.kyc.domain.use_cases.clients import _generate_random_id, id_cliente
 
 
 def _resolve_cliente_id(solicitud: SolicitudConsentimiento) -> str:
@@ -382,96 +267,3 @@ class ConsultarConsentimiento:
             alcance_lista=consentimiento.alcance,
             open_finance=OPEN_FINANCE in consentimiento.alcance,
         )
-
-
-def _cliente_a_respuesta(cliente: Client) -> RespuestaCliente:
-    fecha_nac = None
-    if cliente.fecha_nacimiento:
-        fecha_nac = (
-            cliente.fecha_nacimiento.isoformat()
-            if hasattr(cliente.fecha_nacimiento, "isoformat")
-            else str(cliente.fecha_nacimiento)
-        )
-    return RespuestaCliente(
-        id=cliente.id,
-        tipo_documento=cliente.tipo_documento,
-        numero_documento=cliente.numero_documento,
-        nombre=cliente.nombre,
-        apellido=cliente.last_name,
-        email=cliente.email,
-        telefono=cliente.telefono,
-        pais=getattr(cliente, "pais", "Colombia"),
-        fecha_nacimiento=fecha_nac,
-    )
-
-
-class BuscarClientePorDocumento:
-    def __init__(self, clients: ClientRepository) -> None:
-        self.clients = clients
-
-    def execute(self, tipo_documento: str, numero_documento: str) -> RespuestaCliente:
-        cliente = self.clients.get_by_documento(tipo_documento.strip(), numero_documento.strip())
-        if cliente is None:
-            raise ClienteNoEncontrado(f"Cliente con {tipo_documento} {numero_documento} no encontrado")
-        return _cliente_a_respuesta(cliente)
-
-
-class GetClient:
-    """Lectura interna por id o número de documento, para que el back-office muestre al asegurado."""
-
-    def __init__(self, clients: ClientRepository) -> None:
-        self.clients = clients
-
-    def execute(self, client_id: str | None = None, numero_documento: str | None = None) -> RespuestaCliente:
-        if client_id:
-            cliente = self.clients.get(client_id.strip())
-            missing_msg = f"Cliente {client_id} no encontrado"
-        elif numero_documento:
-            cliente = self.clients.get_by_numero_documento(numero_documento.strip())
-            missing_msg = f"Cliente con documento {numero_documento} no encontrado"
-        else:
-            raise ClienteNoEncontrado("Debe especificar client_id o numero_documento")
-        if cliente is None:
-            raise ClienteNoEncontrado(missing_msg)
-        return _cliente_a_respuesta(cliente)
-
-
-ConsultarCliente = GetClient
-
-MAX_CLIENTS_PER_LOOKUP = 100
-
-
-class ListClients:
-    """Lectura interna por lote, para que el back-office no pida un cliente a la vez."""
-
-    def __init__(self, clients: ClientRepository) -> None:
-        self.clients = clients
-
-    def execute(self, client_ids: list[str]) -> list[RespuestaCliente]:
-        unique = list(dict.fromkeys(client_id.strip() for client_id in client_ids if client_id.strip()))
-        return [_cliente_a_respuesta(cliente) for cliente in self.clients.get_many(unique)]
-
-
-class AsegurarCliente:
-    def __init__(self, clients: ClientRepository) -> None:
-        self.clients = clients
-
-    def execute(self, solicitud: SolicitudAsegurarCliente) -> RespuestaCliente:
-        tipo = solicitud.tipo_documento.strip().upper()
-        numero = solicitud.numero_documento.strip()
-        existente = self.clients.get_by_documento(tipo, numero)
-        if existente is not None:
-            return _cliente_a_respuesta(existente)
-
-        nuevo_cliente = Client(
-            id=id_cliente(tipo, numero),
-            tipo_documento=tipo,
-            numero_documento=numero,
-            nombre=solicitud.nombre.strip() or "Cliente",
-            last_name=solicitud.apellido.strip(),
-            email=solicitud.email,
-            telefono=solicitud.telefono.strip(),
-            fecha_nacimiento=solicitud.fecha_nacimiento,
-        )
-        guardado = self.clients.upsert(nuevo_cliente)
-        return _cliente_a_respuesta(guardado)
