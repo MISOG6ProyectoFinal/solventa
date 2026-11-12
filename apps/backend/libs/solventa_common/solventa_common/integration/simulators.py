@@ -7,5 +7,9 @@ CLUSTER_SCHEME = "http"
 SIMULATORS_HOST = "simuladores"
 
 
+def cluster_service(name: str) -> str:
+    return f"{CLUSTER_SCHEME}://{name}"
+
+
 def simulated_provider(provider: str) -> str:
     return f"{CLUSTER_SCHEME}://{SIMULATORS_HOST}/{provider}"
