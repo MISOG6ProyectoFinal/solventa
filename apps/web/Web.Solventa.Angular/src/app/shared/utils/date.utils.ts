@@ -10,10 +10,3 @@ export function formatDate(iso: string, locale: Locale = 'es'): string {
     year: 'numeric',
   }).format(new Date(y, m - 1, d));
 }
-
-const MS_PER_DAY = 86_400_000;
-
-/** Días enteros entre dos fechas ISO (`YYYY-MM-DD`). Negativo si `to` es anterior a `from`. */
-export function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(to) - Date.parse(from)) / MS_PER_DAY);
-}
