@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from polizas.ciclo_vida.adapters.endorsement_types import PostgresEndorsementTypeRepository
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.api import wire
 from polizas.ciclo_vida.domain.models import Policy, PolicyStatus, Validity
@@ -81,6 +82,7 @@ def test_guarda_ambas_versiones_y_publica_el_evento(bus):
     saved = client.get("/polizas/poliza-1/endosos").json()
     assert saved[0]["version_anterior"]["telefono"] == "+57 300 123 4567"
     assert saved[0]["version_nueva"]["telefono"] == "+57 311 000 1122"
+    assert (saved[0]["tipo"], saved[0]["tipo_nombre"]) == ("datos-asegurado", "Datos del asegurado")
     [event] = bus.events
     assert event.event_type == "poliza.endosada"
     assert event.payload["usuario_id"] == "op-1"
@@ -139,3 +141,15 @@ def test_catalogo_de_tipos_de_endoso_por_defecto(bus):
     assert client.get("/polizas/catalogos/tipos-endoso").json() == [
         {"id": "datos-asegurado", "nombre": "Datos del asegurado"}
     ]
+
+
+def test_los_tipos_de_endoso_se_siembran_una_vez_en_la_base():
+    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+    repository = PostgresEndorsementTypeRepository(engine)
+    repository.create_schema()
+    repository.create_schema()
+
+    types = repository.list_types()
+    assert [t.id for t in types] == ["datos-asegurado", "beneficiarios", "suma-asegurada"]
+    assert types[0].applies_to("ramo-viaje")
+    assert not types[1].applies_to("ramo-hogar")

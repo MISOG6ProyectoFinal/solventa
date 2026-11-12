@@ -7,6 +7,10 @@ from solventa_common.integration import ServiceClient
 from solventa_common.integration.base import call_upstream
 
 from polizas.ciclo_vida.adapters.bus import build_publisher
+from polizas.ciclo_vida.adapters.endorsement_types import (
+    InMemoryEndorsementTypeRepository,
+    PostgresEndorsementTypeRepository,
+)
 from polizas.ciclo_vida.adapters.repository import InMemoryPolicyRepository, PostgresPolicyRepository
 from polizas.ciclo_vida.adapters.upstream import PaymentReader, QuoteReader, RefundCalculatorClient
 from polizas.ciclo_vida.domain.models import (
@@ -23,13 +27,14 @@ from polizas.ciclo_vida.domain.models import (
     Endorsement,
     EndorsementRequest,
     IssuePolicyRequest,
+    NamedEndorsement,
     Policy,
     RenewalConfirmation,
     RenewalOffer,
     RenewalRequest,
-    endorsement_types_for_ramo,
 )
 from polizas.ciclo_vida.domain.ports import (
+    EndorsementTypeRepository,
     IdempotencyKeyReused,
     InvalidEndorsement,
     PaymentDoesNotMatch,
@@ -71,9 +76,14 @@ def wire(
     payments: PaymentSource,
     publisher: EventPublisher | None = None,
     refunds: RefundCalculator | None = None,
+    endorsement_types: EndorsementTypeRepository | None = None,
 ) -> None:
     if hasattr(policies, "create_schema"):
         policies.create_schema()
+    types = endorsement_types or InMemoryEndorsementTypeRepository()
+    if hasattr(types, "create_schema"):
+        types.create_schema()
+    use_cases["endorsement_types"] = types
     bus = publisher or InMemoryEventPublisher()
     use_cases["publisher"] = bus
     use_cases["issue"] = IssuePolicyUseCase(policies, quotes, payments)
@@ -90,14 +100,17 @@ def wire(
 
 
 def _default_wire() -> None:
+    endorsement_types: EndorsementTypeRepository | None = None
     if settings.database_url:
-        policies: PolicyRepository = PostgresPolicyRepository(build_engine(settings.database_url))
+        engine = build_engine(settings.database_url)
+        policies: PolicyRepository = PostgresPolicyRepository(engine)
+        endorsement_types = PostgresEndorsementTypeRepository(engine)
     else:
         policies = InMemoryPolicyRepository()
     quotes = QuoteReader(ServiceClient("cotizacion", settings.cotizacion_url))
     payments = PaymentReader(ServiceClient("pagos", settings.pagos_url))
     refunds = RefundCalculatorClient(ServiceClient("cotizacion", settings.cotizacion_url))
-    wire(policies, quotes, payments, build_publisher(), refunds)
+    wire(policies, quotes, payments, build_publisher(), refunds, endorsement_types)
 
 
 _default_wire()
@@ -134,7 +147,8 @@ def list_cancellation_causes() -> list[CancellationCauseOption]:
 @router.get("/catalogos/tipos-endoso", response_model=list[CatalogOption])
 def list_endorsement_types(ramo_id: str | None = None) -> list[CatalogOption]:
     """Tipos de endoso permitidos según el ramo de la póliza."""
-    return [CatalogOption(id=type_id, nombre=name) for type_id, name in endorsement_types_for_ramo(ramo_id).items()]
+    types = use_cases["endorsement_types"].list_types()
+    return [CatalogOption(id=item.id, nombre=item.nombre) for item in types if item.applies_to(ramo_id)]
 
 
 @router.get("/clientes/{cliente_id}", response_model=list[ClientPolicy])
@@ -175,12 +189,14 @@ def list_beneficiaries(poliza_id: str) -> list[Beneficiary]:
         raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
 
 
-@router.get("/{poliza_id}/endosos", response_model=list[Endorsement])
-def list_endorsements(poliza_id: str) -> list[Endorsement]:
+@router.get("/{poliza_id}/endosos", response_model=list[NamedEndorsement])
+def list_endorsements(poliza_id: str) -> list[NamedEndorsement]:
     try:
-        return use_cases["endorse"].list(poliza_id)
+        endorsements = use_cases["endorse"].list(poliza_id)
     except PolicyNotFound as exc:
         raise _error(404, "poliza_no_encontrada", _POLIZA_NO_EXISTE) from exc
+    names = {item.id: item.nombre for item in use_cases["endorsement_types"].list_types()}
+    return [NamedEndorsement(**item.model_dump(), tipo_nombre=names.get(item.tipo, item.tipo)) for item in endorsements]
 
 
 @router.post("/{poliza_id}/endosos", response_model=Endorsement, status_code=status.HTTP_201_CREATED)

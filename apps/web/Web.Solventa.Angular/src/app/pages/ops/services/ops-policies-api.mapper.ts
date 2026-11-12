@@ -20,6 +20,7 @@ export interface InsuredDto {
 export interface PolicyEndorsementDto {
   readonly id: string;
   readonly tipo: string;
+  readonly tipo_nombre?: string;
   readonly fecha_efectiva: string;
   readonly motivo: string;
   readonly usuario_id: string;
@@ -103,7 +104,7 @@ function toEndorsement(dto: PolicyEndorsementDto): Endorsement {
     INSURED_LABELS.map(([key, label]): [TextKey, string] => [label, version[key] ?? NONE]);
   return {
     id: dto.id,
-    tipo: dto.tipo,
+    tipo: dto.tipo_nombre ?? dto.tipo,
     fechaEfectiva: dto.fecha_efectiva,
     motivo: dto.motivo,
     usuario: dto.usuario_id,
