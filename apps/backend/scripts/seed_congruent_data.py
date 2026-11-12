@@ -2,7 +2,6 @@
 """Seed script: Poblar las bases de datos con datos congruentes de Solventa.
 
 Entidades pobladas:
-- Ramo y Producto (cotizacion.ramos, cotizacion.productos, cotizacion.coberturas)
 - Socio Aliado (cotizacion.socios)
 - Cliente (identidad.clientes)
 - Consentimiento (identidad.consentimientos)
@@ -38,28 +37,12 @@ def get_engine(db_name: str):
 
 
 def seed_catalogo_y_cotizacion():
-    print("-> Poblando base de datos 'cotizacion' (Ramos, Productos, Coberturas, Socios, Cotizaciones)...")
+    print("-> Poblando base de datos 'cotizacion' (Socios, Cotizaciones)...")
     engine = get_engine("cotizacion")
     with engine.begin() as conn:
-        # 1. Esquema base de Catálogo
+        # 1. Esquema de socios y cotizaciones
         conn.execute(
             text("""
-        CREATE TABLE IF NOT EXISTS ramos (
-            id VARCHAR(64) PRIMARY KEY,
-            nombre VARCHAR(255) NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS productos (
-            id VARCHAR(64) PRIMARY KEY,
-            nombre VARCHAR(255) NOT NULL,
-            ramo_id VARCHAR(64) NOT NULL REFERENCES ramos(id),
-            activo BOOLEAN NOT NULL DEFAULT TRUE,
-            disponible_mobile BOOLEAN NOT NULL DEFAULT FALSE
-        );
-        CREATE TABLE IF NOT EXISTS coberturas (
-            id VARCHAR(64) PRIMARY KEY,
-            nombre VARCHAR(255) NOT NULL,
-            producto_id VARCHAR(64) NOT NULL REFERENCES productos(id)
-        );
         CREATE TABLE IF NOT EXISTS socios (
             id VARCHAR(36) PRIMARY KEY,
             nombre VARCHAR(120) NOT NULL,
@@ -101,83 +84,7 @@ def seed_catalogo_y_cotizacion():
         """)
         )
 
-        # 2. Ramos Oficiales de Solventa
-        ramos_data = [
-            ("ramo-viaje", "Viaje"),
-            ("ramo-microseguro-vida", "Microseguro de vida"),
-            ("ramo-parametrico", "Paramétrico (clima / vuelo)"),
-            ("ramo-vida-hipotecario", "Vida hipotecario"),
-            ("ramo-dispositivos", "Protección de dispositivos"),
-            ("ramo-proteccion-pagos", "Protección de pagos"),
-            ("ramo-hogar", "Hogar"),
-            ("ramo-auto", "Automóviles"),
-            ("ramo-vida", "Vida"),
-        ]
-        for r_id, r_nom in ramos_data:
-            conn.execute(
-                text(
-                    "INSERT INTO ramos (id, nombre) VALUES (:id, :nom) ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;"
-                ),
-                {"id": r_id, "nom": r_nom},
-            )
-
-        # 3. Productos Oficiales
-        productos_data = [
-            ("viaje-internacional", "Viaje Internacional", "ramo-viaje", True, True),
-            ("vida-esencial", "Vida Esencial", "ramo-microseguro-vida", True, True),
-            ("parametrico-clima-vuelo", "Paramétrico Clima y Vuelo", "ramo-parametrico", True, False),
-            ("vida-hipotecario", "Vida Hipotecario", "ramo-vida-hipotecario", True, False),
-            ("proteccion-celular", "Protección Celular", "ramo-dispositivos", True, False),
-            ("proteccion-pagos", "Protección de Pagos", "ramo-proteccion-pagos", True, False),
-            ("hogar", "Seguro Hogar", "ramo-hogar", True, True),
-            ("auto", "Seguro Auto", "ramo-auto", True, True),
-            ("vida-temporal", "Vida Temporal", "ramo-vida", True, False),
-        ]
-        for p_id, p_nom, r_id, act, mob in productos_data:
-            conn.execute(
-                text("""
-                INSERT INTO productos (id, nombre, ramo_id, activo, disponible_mobile)
-                VALUES (:id, :nom, :rid, :act, :mob)
-                ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, activo = EXCLUDED.activo;
-                """),
-                {"id": p_id, "nom": p_nom, "rid": r_id, "act": act, "mob": mob},
-            )
-
-        # 4. Coberturas (23 coberturas oficiales de Solventa)
-        coberturas_data = [
-            ("hogar-incendio", "Incendio", "hogar"),
-            ("hogar-robo", "Robo", "hogar"),
-            ("auto-rc", "Responsabilidad civil", "auto"),
-            ("auto-danos", "Daños materiales", "auto"),
-            ("vida-fallecimiento", "Fallecimiento", "vida-temporal"),
-            ("viaje-gastos-medicos", "Gastos médicos en el exterior", "viaje-internacional"),
-            ("viaje-cancelacion", "Cancelación de viaje", "viaje-internacional"),
-            ("viaje-equipaje", "Pérdida de equipaje", "viaje-internacional"),
-            ("viaje-asistencia", COB_ASISTENCIA_VIAJE, "viaje-internacional"),
-            ("celular-dano-accidental", COB_DANO_ACCIDENTAL, "proteccion-celular"),
-            ("celular-robo", "Robo", "proteccion-celular"),
-            ("celular-liquidos", "Daño por líquidos", "proteccion-celular"),
-            ("vida-esencial-fallecimiento", "Fallecimiento", "vida-esencial"),
-            ("vida-esencial-auxilio", "Auxilio funerario", "vida-esencial"),
-            ("parametrico-retraso-vuelo", COB_RETRASO_VUELO, "parametrico-clima-vuelo"),
-            ("parametrico-lluvia", "Lluvia excesiva", "parametrico-clima-vuelo"),
-            ("parametrico-sequia", "Sequía", "parametrico-clima-vuelo"),
-            ("pagos-desempleo", COB_DESEMPLEO_INVOLUNTARIO, "proteccion-pagos"),
-            ("pagos-incapacidad-temporal", "Incapacidad temporal", "proteccion-pagos"),
-            ("pagos-fallecimiento", "Fallecimiento (saldo de la deuda)", "proteccion-pagos"),
-            ("hipotecario-fallecimiento", COB_FALLECIMIENTO_CREDITO, "vida-hipotecario"),
-            ("hipotecario-incapacidad", "Incapacidad total y permanente", "vida-hipotecario"),
-            ("hipotecario-enfermedades", "Enfermedades graves", "vida-hipotecario"),
-        ]
-        for c_id, c_nom, p_id in coberturas_data:
-            conn.execute(
-                text(
-                    "INSERT INTO coberturas (id, nombre, producto_id) VALUES (:id, :nom, :pid) ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;"
-                ),
-                {"id": c_id, "nom": c_nom, "pid": p_id},
-            )
-
-        # 5. Socios Comerciales
+        # 2. Socios Comerciales
         now_utc = datetime(2025, 10, 1, 10, 0, tzinfo=UTC)
         socios_data = [
             (
@@ -266,7 +173,7 @@ def seed_catalogo_y_cotizacion():
                 },
             )
 
-        # 6. Cotizaciones Congruentes
+        # 3. Cotizaciones Congruentes
         cotizaciones = [
             (
                 "COT-2025-00391",
