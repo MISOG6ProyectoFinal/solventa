@@ -5,7 +5,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { issuePolicy } from '../../../policies/api/issuePolicy';
 import { PolicyCard } from '../../../policies/components/PolicyCard';
 import { useTexts as usePolicyTexts } from '../../../policies/texts';
-import { Policy } from '../../../policies/types';
+import { POLICY_STATUS, Policy } from '../../../policies/types';
 import { ApiError } from '../../../../shared/api/client';
 import { crearIntentoId } from '../../../../shared/payments/crearIntentoId';
 import { AppText, Banner, Button, Card, CheckboxField, Screen } from '../../../../shared/ui';
@@ -15,7 +15,6 @@ import { useTexts } from '../../texts';
 import { SimulacionPago } from '../../types';
 import { formatMoney, formatVigenteHasta } from '../../utils';
 import styles from './styles';
-import { POLICY_STATUS } from '../../../policies/types';
 import { PAYMENT_STATUS } from '../../../../shared/payments/paymentStatus';
 
 type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'expired' | 'issued' | 'issueFailed';
