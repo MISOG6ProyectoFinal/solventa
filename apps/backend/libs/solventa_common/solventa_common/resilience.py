@@ -47,6 +47,7 @@ class CircuitBreaker:
         self._clock = clock
         self._failures = 0
         self._opened_at: float | None = None
+        self._probe_in_flight = False
         self._lock = threading.Lock()
 
     @property
@@ -58,8 +59,7 @@ class CircuitBreaker:
         return CircuitState.OPEN
 
     def call(self, fn: Callable[[], T]) -> T:
-        if self.state is CircuitState.OPEN:
-            raise CircuitOpenError(self.name)
+        self._admit()
         try:
             result = fn()
         except Exception as exc:
@@ -68,11 +68,27 @@ class CircuitBreaker:
             else:
                 self._record_success()
             raise
+        except BaseException:
+            self._release_probe()
+            raise
         self._record_success()
         return result
 
+    def _admit(self) -> None:
+        with self._lock:
+            if self._opened_at is None:
+                return
+            if self._probe_in_flight or self._clock() - self._opened_at < self.reset_timeout_s:
+                raise CircuitOpenError(self.name)
+            self._probe_in_flight = True
+
+    def _release_probe(self) -> None:
+        with self._lock:
+            self._probe_in_flight = False
+
     def _record_failure(self) -> None:
         with self._lock:
+            self._probe_in_flight = False
             self._failures += 1
             # En half-open un solo fallo vuelve a abrir el circuito.
             if self._failures >= self.failure_threshold or self._opened_at is not None:
@@ -80,8 +96,20 @@ class CircuitBreaker:
 
     def _record_success(self) -> None:
         with self._lock:
+            self._probe_in_flight = False
             self._failures = 0
             self._opened_at = None
+
+
+_breakers: dict[str, CircuitBreaker] = {}
+_breakers_lock = threading.Lock()
+
+
+def shared_breaker(name: str, failure_threshold: int = 5, reset_timeout_s: float = 30.0) -> CircuitBreaker:
+    with _breakers_lock:
+        if name not in _breakers:
+            _breakers[name] = CircuitBreaker(name, failure_threshold, reset_timeout_s)
+        return _breakers[name]
 
 
 class KeyValueCache(Protocol):

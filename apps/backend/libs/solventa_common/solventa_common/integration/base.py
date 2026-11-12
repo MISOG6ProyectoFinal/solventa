@@ -4,7 +4,9 @@ from typing import Any
 
 import httpx
 
-from solventa_common.resilience import CircuitBreaker
+from solventa_common.resilience import CircuitBreaker, shared_breaker
+
+IDEMPOTENT_METHODS = frozenset({"GET", "HEAD", "PUT", "DELETE"})
 
 
 class ExternalAdapter:
@@ -23,7 +25,8 @@ class ExternalAdapter:
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         def do() -> Any:
             last_error: Exception | None = None
-            for _ in range(self.retries + 1):
+            attempts = self.retries + 1 if method in IDEMPOTENT_METHODS else 1
+            for _ in range(attempts):
                 try:
                     response = self.client.request(method, path, **kwargs)
                     response.raise_for_status()
@@ -46,7 +49,7 @@ class ServiceClient(ExternalAdapter):
         self.name = name
         if timeout_s is not None:
             self.timeout_s = timeout_s
-        super().__init__(base_url, breaker=CircuitBreaker(name, failure_threshold=5, reset_timeout_s=10))
+        super().__init__(base_url, breaker=shared_breaker(name, failure_threshold=5, reset_timeout_s=10))
 
     def get(self, path: str, **kwargs: Any) -> Any:
         return self._request("GET", path, **kwargs)
