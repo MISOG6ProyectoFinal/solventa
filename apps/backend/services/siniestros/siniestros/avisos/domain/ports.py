@@ -36,3 +36,9 @@ class ObjectStore(Protocol):
     def read_header(self, key: str) -> bytes: ...
 
     def presign_get(self, key: str) -> str: ...
+
+
+class PolicyDirectory(Protocol):
+    def get(self, poliza_id: str) -> dict | None:
+        """La póliza tal como la expone Pólizas, o None si no existe."""
+        ...

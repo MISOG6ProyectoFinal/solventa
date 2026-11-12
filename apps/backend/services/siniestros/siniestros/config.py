@@ -7,6 +7,7 @@ class SiniestrosSettings(ServiceSettings):
     service_name: str = "siniestros"
     evidencias_bucket: str = "solventa-evidencias"
     red_asistencia_url: str = simulated_provider("red-asistencia")
+    polizas_url: str = "http://polizas"
     # Postgres and S3. Tests leave this off and use the in-memory adapters.
     persistent_stores: bool = False
 
