@@ -1,3 +1,4 @@
+import { TextKey } from '../../../core/i18n/es';
 import { Endorsement, Policy, PolicyClaim, PolicyPayment } from '../../../core/models/policy.model';
 
 export interface PolicyCustomerDto {
@@ -90,16 +91,16 @@ function toClaim(dto: PolicyClaimDto): PolicyClaim {
   };
 }
 
-const INSURED_LABELS: readonly [keyof InsuredDto, string][] = [
-  ['nombre', 'Nombre'],
-  ['telefono', 'Teléfono'],
-  ['correo', 'Correo'],
-  ['direccion', 'Dirección'],
+const INSURED_LABELS: readonly [keyof InsuredDto, TextKey][] = [
+  ['nombre', 'endorsement.name'],
+  ['telefono', 'endorsement.phone'],
+  ['correo', 'endorsement.email'],
+  ['direccion', 'endorsement.address'],
 ];
 
 function toEndorsement(dto: PolicyEndorsementDto): Endorsement {
-  const pairs = (version: Partial<InsuredDto>): [string, string][] =>
-    INSURED_LABELS.map(([key, label]): [string, string] => [label, version[key] ?? NONE]);
+  const pairs = (version: Partial<InsuredDto>): [TextKey, string][] =>
+    INSURED_LABELS.map(([key, label]): [TextKey, string] => [label, version[key] ?? NONE]);
   return {
     id: dto.id,
     tipo: dto.tipo,

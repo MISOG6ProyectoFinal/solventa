@@ -52,4 +52,30 @@ describe('ops policies mapper', () => {
     expect(policy.payments[0].status).toBe('procesando');
     expect(policy.claims[0]).toMatchObject({ id: 'aviso-2', status: 'borrador', fechaAviso: '' });
   });
+
+  it('labels the endorsement history with text keys', () => {
+    const insured = { nombre: 'Lina Díaz', telefono: '3001234567', correo: 'lina@solventa.test', direccion: '' };
+    const policy = toPolicy({
+      ...POLICY_DTO,
+      endosos: [
+        {
+          id: 'end-1',
+          tipo: 'datos-asegurado',
+          fecha_efectiva: '2026-11-06',
+          motivo: 'Cambio de celular',
+          usuario_id: 'op-1',
+          creado_en: '2026-11-06T10:00:00Z',
+          version_anterior: insured,
+          version_nueva: { ...insured, telefono: '3119876543' },
+        },
+      ],
+    });
+
+    expect(policy.endorsements[0].despues).toEqual([
+      ['endorsement.name', 'Lina Díaz'],
+      ['endorsement.phone', '3119876543'],
+      ['endorsement.email', 'lina@solventa.test'],
+      ['endorsement.address', ''],
+    ]);
+  });
 });

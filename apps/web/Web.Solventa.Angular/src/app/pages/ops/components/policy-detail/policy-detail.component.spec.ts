@@ -114,16 +114,16 @@ describe('PolicyDetailComponent', () => {
           usuario: 'op-1',
           registrado: '2026-05-30',
           antes: [
-            ['Nombre', 'María Rodríguez'],
-            ['Teléfono', '+57 300 123 4567'],
-            ['Correo', 'maria.rodriguez@email.com'],
-            ['Dirección', 'Calle 85 #12-34, Bogotá'],
+            ['endorsement.name', 'María Rodríguez'],
+            ['endorsement.phone', '+57 300 123 4567'],
+            ['endorsement.email', 'maria.rodriguez@email.com'],
+            ['endorsement.address', 'Calle 85 #12-34, Bogotá'],
           ],
           despues: [
-            ['Nombre', 'María Rodríguez'],
-            ['Teléfono', '+57 311 000 1122'],
-            ['Correo', 'maria.rodriguez@email.com'],
-            ['Dirección', 'Calle 85 #12-34, Bogotá'],
+            ['endorsement.name', 'María Rodríguez'],
+            ['endorsement.phone', '+57 311 000 1122'],
+            ['endorsement.email', 'maria.rodriguez@email.com'],
+            ['endorsement.address', 'Calle 85 #12-34, Bogotá'],
           ],
         },
       ],
@@ -141,6 +141,8 @@ describe('PolicyDetailComponent', () => {
       expect(historyCard.textContent).toContain('op-1');
       expect(historyCard.textContent).toContain('+57 300 123 4567');
       expect(historyCard.textContent).toContain('+57 311 000 1122');
+      expect(historyCard.textContent).toContain('Teléfono');
+      expect(historyCard.textContent).not.toContain('endorsement.phone');
     }
   });
 
