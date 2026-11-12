@@ -192,9 +192,9 @@ def _client(name: str, attempts: list[str], status: int = 200) -> ServiceClient:
             raise httpx.ConnectTimeout("lento", request=request)
         return httpx.Response(status, json={"ok": True})
 
-    client = ServiceClient(name, "http://destino")
+    client = ServiceClient(name, "https://destino")
     client.retries = 1
-    client.client = httpx.Client(base_url="http://destino", transport=httpx.MockTransport(handler))
+    client.client = httpx.Client(base_url="https://destino", transport=httpx.MockTransport(handler))
     return client
 
 
@@ -211,5 +211,5 @@ def test_only_idempotent_requests_are_retried():
 
 
 def test_clients_to_the_same_destination_share_one_breaker():
-    assert ServiceClient("compartido", "http://a").breaker is ServiceClient("compartido", "http://b").breaker
-    assert ServiceClient("compartido", "http://a").breaker is not ServiceClient("otro-destino", "http://a").breaker
+    assert ServiceClient("compartido", "https://a").breaker is ServiceClient("compartido", "https://b").breaker
+    assert ServiceClient("compartido", "https://a").breaker is not ServiceClient("otro-destino", "https://a").breaker
