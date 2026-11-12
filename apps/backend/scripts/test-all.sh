@@ -17,6 +17,7 @@ fi
 rm -rf "${JUNIT_PARTIALS}"
 mkdir -p "${JUNIT_PARTIALS}"
 
+# shellcheck disable=SC2329
 run_dir() {
   local dir="$1"
   local name
@@ -41,6 +42,7 @@ export -f run_dir
 export ROOT run_coverage JUNIT_PARTIALS LOGS
 
 dirs=(libs/solventa_common services/*/)
+# shellcheck disable=SC2016
 printf '%s\n' "${dirs[@]}" | xargs -P "${TEST_JOBS}" -I{} bash -c 'run_dir "$1"' _ {} || status=1
 
 for dir in "${dirs[@]}"; do
