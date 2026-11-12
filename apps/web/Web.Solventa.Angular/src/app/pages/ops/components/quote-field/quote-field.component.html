@@ -1,4 +1,4 @@
-<slv-field [label]="locale.t(definition().labelKey)" [required]="definition().required" [error]="error()">
+<slv-field [label]="label()" [required]="definition().required" [error]="error()">
   @if (definition().type === 'select') {
     <select slvInput [invalid]="!!error()" [(ngModel)]="value">
       <option value="">{{ locale.t('common.select') }}</option>

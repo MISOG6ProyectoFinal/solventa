@@ -4,9 +4,10 @@ import { InputDirective } from '../../../../shared/directives/input.directive';
 import { Ramo } from '../../../../core/models/ramo.model';
 import { CardComponent } from '../../../../ui/components/card/card.component';
 import { FieldComponent } from '../../../../ui/components/field/field.component';
-import { QUOTE_CLIENT_FIELDS, QUOTE_RISK_FIELDS } from '../../constants/quote-fields.constants';
+import { QUOTE_CLIENT_FIELDS } from '../../constants/quote-fields.constants';
 import { ProductContract } from '../../interfaces/product-contract.interface';
 import { QuoteFieldDef } from '../../interfaces/quote-field.interface';
+import { contractFields } from '../../utils/contract-fields';
 import { QuoteFieldComponent } from '../quote-field/quote-field.component';
 import { LocaleService } from '../../../../core/services/locale.service';
 
@@ -34,9 +35,11 @@ export class QuoteFormComponent {
   private readonly values = signal<FormValues>({});
   private readonly submitted = signal(false);
 
-  protected readonly riskFields = computed(() =>
-    (QUOTE_RISK_FIELDS[this.ramo()] ?? []).map((field) => this.withOptions(field)),
-  );
+  protected readonly riskFields = computed(() => {
+    const contract = this.contract();
+    if (!contract) return [];
+    return contractFields(contract, (key, title) => this.locale.label('quote.field', key, title));
+  });
 
   constructor() {
     effect(() => {
@@ -47,7 +50,7 @@ export class QuoteFormComponent {
 
   protected readonly errors = computed<Record<string, string>>(() => {
     if (!this.submitted()) return {};
-    const allFields = [...QUOTE_CLIENT_FIELDS, ...(QUOTE_RISK_FIELDS[this.ramo()] ?? [])];
+    const allFields = [...QUOTE_CLIENT_FIELDS, ...this.riskFields()];
     const result: Record<string, string> = {};
     for (const field of allFields) {
       const val = (this.values()[field.key] ?? '').trim();
@@ -62,7 +65,6 @@ export class QuoteFormComponent {
 
   private withOptions(field: QuoteFieldDef): QuoteFieldDef {
     if (field.optionsSource === 'documentTypes') return { ...field, options: this.documentTypes() };
-    if (field.optionsSource === 'contract') return { ...field, options: this.contract()?.properties[field.key]?.enum ?? [] };
     return field;
   }
 

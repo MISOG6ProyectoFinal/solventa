@@ -75,38 +75,54 @@ describe('QuoteFormComponent', () => {
     expect(selects.every((select) => !Array.from(select.options).some((option) => option.value === 'España'))).toBe(true);
   });
 
-  it('renders the 6 client fields plus the risk fields of the selected ramo', () => {
+  const show = async (ramo: string, product: string): Promise<void> => {
+    fixture.componentRef.setInput('ramo', ramo);
+    fixture.componentRef.setInput('contract', CONTRACTS[product]);
+    await fixture.whenStable();
+  };
+
+  const labels = (): string[] =>
+    Array.from(el.querySelectorAll('slv-quote-field label')).map((label) => label.textContent?.replace('*', '').trim() ?? '');
+
+  it('renders the 6 client fields plus the risk fields the product contract publishes', () => {
     expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
+    expect(labels()).toEqual(
+      expect.arrayContaining(['Fecha de nacimiento', 'Entidad financiera', 'Valor del crédito hipotecario (COP)']),
+    );
   });
 
   it('swaps the risk fields when the ramo changes', async () => {
-    fixture.componentRef.setInput('ramo', 'ramo-viaje');
-    await fixture.whenStable();
+    await show('ramo-viaje', 'viaje-internacional');
 
-    expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
+    expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
     expect(el.textContent).toContain('Datos del riesgo · Viaje');
+  });
+
+  it('builds the form of a product the portal never knew from its contract, with the title as label', async () => {
+    await show('ramo-hogar', 'hogar');
+
+    expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 2);
+    expect(labels()).toEqual(expect.arrayContaining(['Suma asegurada (COP)', 'Edad del asegurado']));
+  });
+
+  it('shows no risk fields while the contract is loading', async () => {
+    await show('ramo-viaje', 'missing');
+
+    expect(el.querySelectorAll('slv-quote-field').length).toBe(6);
   });
 
   describe('HU001: Pruebas esperadas del formulario dinámico', () => {
     it('P1: renderiza únicamente los campos correspondientes a los 4 ramos de la HU', async () => {
-      // Viaje: 6 cliente + 5 riesgo
-      fixture.componentRef.setInput('ramo', 'ramo-viaje');
-      await fixture.whenStable();
-      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 5);
-
-      // Microseguro: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'ramo-microseguro-vida');
-      await fixture.whenStable();
+      await show('ramo-viaje', 'viaje-internacional');
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
-      // Vida Hipotecario: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'ramo-vida-hipotecario');
-      await fixture.whenStable();
+      await show('ramo-microseguro-vida', 'vida-esencial');
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
 
-      // Paramétrico: 6 cliente + 4 riesgo
-      fixture.componentRef.setInput('ramo', 'ramo-parametrico');
-      await fixture.whenStable();
+      await show('ramo-vida-hipotecario', 'vida-hipotecario');
+      expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
+
+      await show('ramo-parametrico', 'parametrico-clima-vuelo');
       expect(el.querySelectorAll('slv-quote-field').length).toBe(6 + 4);
     });
 

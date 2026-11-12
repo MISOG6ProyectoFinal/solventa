@@ -67,7 +67,7 @@ export const EN: Record<TextKey, string> = {
   'quote.field.fechaSalida': 'Departure date',
   'quote.field.fechaRegreso': 'Return date',
   'quote.field.viajeros': 'Number of travelers',
-  'quote.field.fechaNacimientoTitular': 'Policyholder date of birth',
+  'quote.field.edad': 'Insured age',
   'quote.field.fechaNacimiento': 'Date of birth',
   'quote.field.sumaAsegurada': 'Sum insured (COP)',
   'quote.field.beneficiario': 'Beneficiary',
