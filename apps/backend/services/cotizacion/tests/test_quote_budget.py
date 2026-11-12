@@ -63,7 +63,7 @@ def test_without_quorum_from_the_replicas_the_quote_is_computed_locally(monkeypa
     async def one_answer(*_args, **_kwargs):
         return [{"prima": "1.00"}]
 
-    monkeypatch.setattr("cotizacion.container.resolver_replicas", lambda *_: ["10.0.0.1", "10.0.0.2", "10.0.0.3"])
+    monkeypatch.setattr("cotizacion.container.resolver_replicas", lambda *_: ["replica-a", "replica-b", "replica-c"])
     monkeypatch.setattr("cotizacion.container.cotizar_en_replicas", one_answer)
     body = {
         "producto_id": "viaje-internacional",

@@ -6,6 +6,7 @@ from collections import Counter
 from decimal import Decimal
 
 import httpx
+from solventa_common.integration.simulators import CLUSTER_SCHEME
 
 
 def resolver_replicas(host: str, port: int) -> list[str]:
@@ -29,7 +30,7 @@ async def cotizar_en_replicas(
     answers: list[dict] = []
     votes: Counter[Decimal] = Counter()
     async with httpx.AsyncClient(timeout=timeout_s, transport=transport) as client:
-        urls = [f"http://{ip}:{port}/cotizaciones/calcular" for ip in ips]
+        urls = [f"{CLUSTER_SCHEME}://{ip}:{port}/cotizaciones/calcular" for ip in ips]
         calls = [asyncio.ensure_future(client.post(url, json=body)) for url in urls]
         try:
             async with asyncio.timeout(timeout_s):
