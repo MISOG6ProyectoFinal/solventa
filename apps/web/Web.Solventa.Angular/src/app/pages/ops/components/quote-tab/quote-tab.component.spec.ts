@@ -24,9 +24,6 @@ describe('QuoteTabComponent', () => {
     fixture = TestBed.createComponent(QuoteTabComponent);
     await fixture.whenStable();
 
-    httpTesting
-      .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
-      .flush({ proveedor: 'open-finance', modo: 'normal' });
     httpTesting.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
     await fixture.whenStable();
     flushContract('viaje-internacional');
@@ -53,10 +50,10 @@ describe('QuoteTabComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('composes the form, the consent panel, the simulation and the breakdown', () => {
+  it('composes the form, the consent panel and the breakdown without the provider simulator', () => {
     expect(el.querySelector('slv-quote-form')).not.toBeNull();
     expect(el.querySelector('slv-consent-panel')).not.toBeNull();
-    expect(el.textContent).toContain('Simulación de Open Finance (demo)');
+    expect(el.textContent).not.toContain('Simulación de Open Finance');
     expect(el.textContent).toContain('Desglose de cotización');
   });
 
@@ -119,7 +116,6 @@ describe('QuoteTabComponent', () => {
   it('warns when the catalog cannot be loaded', async () => {
     const failing = TestBed.createComponent(QuoteTabComponent);
     await failing.whenStable();
-    httpTesting.expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') }).flush({ modo: 'normal' });
     httpTesting.expectOne(API_ENDPOINTS.ramos).flush(null, { status: 503, statusText: 'Unavailable' });
     await failing.whenStable();
 
@@ -267,36 +263,6 @@ describe('QuoteTabComponent', () => {
       'No es posible cotizar Vida hipotecario sin el consentimiento Open Finance / Open Data validado del cliente.',
     );
   });
-
-  it('changes the Open Finance simulator when another scenario is chosen', async () => {
-    const select = Array.from(el.querySelectorAll('select')).find((item) =>
-      Array.from(item.options).some((option) => option.value === 'caida'),
-    )!;
-    select.value = 'caida';
-    select.dispatchEvent(new Event('change'));
-
-    const req = httpTesting.expectOne({ method: 'PUT', url: `${API_ENDPOINTS.simulator('open-finance')}/modo` });
-    expect(req.request.body).toEqual({ modo: 'caido' });
-    req.flush({ proveedor: 'open-finance', modo: 'caido' });
-    await fixture.whenStable();
-
-    expect(el.textContent).not.toContain('No fue posible cambiar el simulador de Open Finance.');
-  });
-
-  it('tells the advisor when the simulator cannot be changed', async () => {
-    const select = Array.from(el.querySelectorAll('select')).find((item) =>
-      Array.from(item.options).some((option) => option.value === 'degradado'),
-    )!;
-    select.value = 'degradado';
-    select.dispatchEvent(new Event('change'));
-
-    const req = httpTesting.expectOne(`${API_ENDPOINTS.simulator('open-finance')}/modo`);
-    expect(req.request.body).toEqual({ modo: 'lento' });
-    req.flush(null, { status: 503, statusText: 'Unavailable' });
-    await fixture.whenStable();
-
-    expect(el.textContent).toContain('No fue posible cambiar el simulador de Open Finance.');
-  });
 });
 
 describe('QuoteTabComponent as a read-only operator', () => {
@@ -317,9 +283,6 @@ describe('QuoteTabComponent as a read-only operator', () => {
     httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(QuoteTabComponent);
     await fixture.whenStable();
-    httpTesting
-      .expectOne({ method: 'GET', url: API_ENDPOINTS.simulator('open-finance') })
-      .flush({ proveedor: 'open-finance', modo: 'normal' });
     httpTesting.expectOne(API_ENDPOINTS.ramos).flush(RAMOS_DTO);
     await fixture.whenStable();
     httpTesting.expectOne(API_ENDPOINTS.productContract('viaje-internacional')).flush(CONTRACTS['viaje-internacional']);

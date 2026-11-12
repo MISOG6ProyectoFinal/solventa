@@ -43,16 +43,6 @@
       (consentValidated)="onConsentValidated($event)"
     />
 
-    <slv-card>
-      <slv-field [label]="locale.t('quote.simulation')" [hint]="locale.t('quote.simulationHint')" [error]="simulatorError() ? locale.t('quote.simulationError') : ''">
-        <select slvInput [ngModel]="scenario()" (ngModelChange)="changeScenario($event)">
-          @for (option of scenarios; track option.id) {
-            <option [value]="option.id">{{ locale.t(option.labelKey) }}</option>
-          }
-        </select>
-      </slv-field>
-    </slv-card>
-
     <div class="flex justify-end">
       <button
         slv-button
