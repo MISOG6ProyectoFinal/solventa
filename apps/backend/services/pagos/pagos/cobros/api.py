@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from solventa_common.db import build_engine
+from solventa_common.errors import error_detail
 
 from pagos.cobros.adapters.pasarela import construir_pasarela
 from pagos.cobros.adapters.repository import InMemoryCobroRepository, PostgresCobroRepository
@@ -49,5 +50,5 @@ def get_payment(payment_id: str) -> Cobro:
     """Lectura interna: Pólizas confirma aquí que el cobro está aprobado antes de emitir."""
     payment = casos["repositorio"].get(payment_id)
     if payment is None:
-        raise HTTPException(status_code=404, detail={"codigo": "cobro_no_encontrado", "mensaje": "El cobro no existe."})
+        raise HTTPException(status_code=404, detail=error_detail("cobro_no_encontrado", "El cobro no existe."))
     return payment

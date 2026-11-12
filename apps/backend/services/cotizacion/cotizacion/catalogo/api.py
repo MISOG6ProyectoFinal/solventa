@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
+from solventa_common.errors import error_detail
 
 from cotizacion.catalogo.domain.models import Canal, ChannelLineResponse, Producto, ProductoMobileResponse, Ramo
 from cotizacion.consenso.domain.quote_contract import published_contract
@@ -46,7 +47,7 @@ def get_product(producto_id: str) -> Producto:
     """Producto con su ramo, para mostrar una póliza emitida en cualquier canal."""
     product = container.catalogo.get_producto(producto_id)
     if product is None:
-        detail = {"codigo": "producto_no_encontrado", "mensaje": f"Producto no encontrado: {producto_id}"}
+        detail = error_detail("producto_no_encontrado", f"Producto no encontrado: {producto_id}")
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail)
     return product
 

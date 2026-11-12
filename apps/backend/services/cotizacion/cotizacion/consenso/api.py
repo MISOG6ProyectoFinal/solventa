@@ -5,6 +5,7 @@ import time
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Header, HTTPException, status
+from solventa_common.errors import api_error
 from solventa_common.validation import invalid_data_detail
 from starlette.concurrency import run_in_threadpool
 
@@ -42,17 +43,13 @@ _PRODUCT_ERRORS: dict[type[Exception], tuple[int, str, str]] = {
 }
 
 
-def _error(status_code: int, codigo: str, mensaje: str) -> HTTPException:
-    return HTTPException(status_code, {"codigo": codigo, "mensaje": mensaje})
-
-
 def invalid_request(exc: InvalidRequest) -> HTTPException:
     return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, invalid_data_detail(exc.fields))
 
 
 def product_error(exc: Exception) -> HTTPException:
     status_code, codigo, prefix = _PRODUCT_ERRORS[type(exc)]
-    return _error(status_code, codigo, f"{prefix}: {exc}")
+    return api_error(status_code, codigo, f"{prefix}: {exc}")
 
 
 @router.get("/")
@@ -114,9 +111,9 @@ async def quote_request(
     except ProductoNoTarifado as exc:
         raise product_error(exc) from exc
     except SinConsenso as exc:
-        raise _error(status.HTTP_503_SERVICE_UNAVAILABLE, "sin_consenso", str(exc)) from exc
+        raise api_error(status.HTTP_503_SERVICE_UNAVAILABLE, "sin_consenso", str(exc)) from exc
     except OSError as exc:
-        raise _error(
+        raise api_error(
             status.HTTP_503_SERVICE_UNAVAILABLE, "replicas_no_disponibles", "Réplicas de cotización no disponibles"
         ) from exc
 

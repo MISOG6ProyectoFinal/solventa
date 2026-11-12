@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, field_validator
+from solventa_common.errors import error_detail
 
 from identidad.container import container
 from identidad.kyc.domain.models import (
@@ -187,7 +188,7 @@ def solicitar_consentimiento(solicitud: SolicitudConsentimiento) -> RespuestaSol
     except EmailAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, CORREO_DE_OTRO_DOCUMENTO) from exc
     except NotificationUnavailable as exc:
-        detail = {"codigo": "notificacion_no_disponible", "mensaje": str(exc)}
+        detail = error_detail("notificacion_no_disponible", str(exc))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from exc
 
 
