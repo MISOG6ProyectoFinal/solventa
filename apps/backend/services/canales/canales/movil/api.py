@@ -6,13 +6,14 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from solventa_common.errors import api_error, error_detail
 from solventa_common.integration.base import call_upstream
 from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
-from solventa_common.sesion import InvalidToken, SessionToken, verify_token
+from solventa_common.sesion import InvalidToken, SessionToken, bearer_token, verify_token
 from solventa_common.validation import invalid_data_detail, invalid_fields
 
 from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
+from canales.paths import ResourceId
 from canales.quote_payment import charge_quote, payable_quote
 
 INVALID_SESSION = "La sesión no es válida"
@@ -80,10 +81,8 @@ class SolicitudRegistro(SolicitudSesion):
 
 
 def _bearer(authorization: str | None) -> str:
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
+    token = bearer_token(authorization)
+    if token is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     return token
 
@@ -205,12 +204,12 @@ def listar_productos() -> list:
 
 
 @authenticated.get("/productos/{producto_id}/contrato")
-def contrato_producto(producto_id: str) -> dict:
+def contrato_producto(producto_id: ResourceId) -> dict:
     return product_contract(producto_id)
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
-def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil) -> dict:
+def pagar_cotizacion(cotizacion_id: ResourceId, session: Session, solicitud: SolicitudPagoMovil) -> dict:
     """Cobra la prima vigente. El valor sale de Cotización; la clave identifica el intento."""
     token = _payment_token(solicitud.simulacion, solicitud.medio_token)
     offer = payable_quote(
@@ -262,7 +261,7 @@ def cotizar(solicitud: Annotated[dict, Body()], session: Session) -> dict:
 
 
 @authenticated.post("/cotizaciones/{cotizacion_id}/polizas")
-def emitir_poliza(cotizacion_id: str, session: Session, solicitud: ChargeReference) -> dict:
+def emitir_poliza(cotizacion_id: ResourceId, session: Session, solicitud: ChargeReference) -> dict:
     """Delega la emisión en Pólizas. El teléfono no declara el pago, el dueño ni los datos de la póliza."""
     return call_upstream(
         polizas.post,
@@ -283,7 +282,7 @@ def listar_polizas(session: Session) -> list:
 
 
 @authenticated.get("/polizas/{poliza_id}/renovacion/oferta")
-def oferta_renovacion(poliza_id: str, session: Session) -> dict:
+def oferta_renovacion(poliza_id: ResourceId, session: Session) -> dict:
     """Delega la consulta en Pólizas. El teléfono no elige el cliente ni calcula la oferta."""
     return call_upstream(
         polizas.get,
@@ -293,7 +292,7 @@ def oferta_renovacion(poliza_id: str, session: Session) -> dict:
 
 
 @authenticated.post("/polizas/{poliza_id}/renovacion/pagos")
-def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoRenovacion) -> dict:
+def pagar_renovacion(poliza_id: ResourceId, session: Session, solicitud: SolicitudPagoRenovacion) -> dict:
     """Cobra la prima propuesta del ciclo vigente. No aplica la renovación sobre la póliza."""
     oferta = call_upstream(
         polizas.get,
@@ -325,7 +324,7 @@ def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoR
 
 
 @authenticated.post("/polizas/{poliza_id}/renovaciones")
-def aplicar_renovacion(poliza_id: str, session: Session, solicitud: ChargeReference) -> dict:
+def aplicar_renovacion(poliza_id: ResourceId, session: Session, solicitud: ChargeReference) -> dict:
     """Delega la aplicación en Pólizas. El teléfono no declara vigencia, monto ni cliente."""
     return call_upstream(
         polizas.post,
@@ -350,7 +349,7 @@ def reportar_siniestro(aviso: dict, session: Session) -> dict:
 
 
 @authenticated.post("/siniestros/{aviso_id}/radicar")
-def radicar_siniestro(aviso_id: str, session: Session) -> dict:
+def radicar_siniestro(aviso_id: ResourceId, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/radicar",
@@ -359,7 +358,7 @@ def radicar_siniestro(aviso_id: str, session: Session) -> dict:
 
 
 @authenticated.post("/siniestros/{aviso_id}/evidencias/cargas", status_code=201)
-def solicitar_carga(aviso_id: str, carga: dict, session: Session) -> dict:
+def solicitar_carga(aviso_id: ResourceId, carga: dict, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/evidencias/cargas",
@@ -369,7 +368,7 @@ def solicitar_carga(aviso_id: str, carga: dict, session: Session) -> dict:
 
 
 @authenticated.post("/siniestros/{aviso_id}/evidencias/{evidencia_id}/confirmar")
-def confirmar_carga(aviso_id: str, evidencia_id: str, session: Session) -> dict:
+def confirmar_carga(aviso_id: ResourceId, evidencia_id: ResourceId, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/evidencias/{evidencia_id}/confirmar",
@@ -378,7 +377,7 @@ def confirmar_carga(aviso_id: str, evidencia_id: str, session: Session) -> dict:
 
 
 @authenticated.get("/siniestros/{aviso_id}/evidencias")
-def listar_evidencias(aviso_id: str, session: Session):
+def listar_evidencias(aviso_id: ResourceId, session: Session):
     return call_upstream(
         siniestros.get,
         f"/siniestros/avisos/{aviso_id}/evidencias",
@@ -387,7 +386,7 @@ def listar_evidencias(aviso_id: str, session: Session):
 
 
 @authenticated.post("/siniestros/{aviso_id}/asistencias", status_code=201)
-def solicitar_asistencia(aviso_id: str, solicitud: dict, session: Session) -> dict:
+def solicitar_asistencia(aviso_id: ResourceId, solicitud: dict, session: Session) -> dict:
     return call_upstream(
         siniestros.post,
         f"/siniestros/avisos/{aviso_id}/asistencias",
@@ -397,7 +396,7 @@ def solicitar_asistencia(aviso_id: str, solicitud: dict, session: Session) -> di
 
 
 @authenticated.get("/siniestros/{aviso_id}/asistencias")
-def listar_asistencias(aviso_id: str, session: Session):
+def listar_asistencias(aviso_id: ResourceId, session: Session):
     return call_upstream(
         siniestros.get,
         f"/siniestros/avisos/{aviso_id}/asistencias",

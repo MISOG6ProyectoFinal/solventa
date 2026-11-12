@@ -692,3 +692,18 @@ def test_the_bff_serves_the_product_contract_to_the_portal(monkeypatch):
 
     assert response.status_code == 200
     assert upstream.calls[0][0] == "/catalogo/productos/viaje-internacional/contrato"
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/web/polizas/pol.1", "/web/socios/a%20b/consumo", "/web/cotizaciones/COT%3F1"],
+)
+def test_ids_with_route_characters_are_rejected_before_any_service(monkeypatch, path):
+    upstream = _Upstream(response={})
+    for name in ("cotizacion", "polizas", "identidad"):
+        monkeypatch.setattr(f"canales.web.api.{name}", upstream)
+
+    response = client.get(path, headers=web_auth.viewer())
+
+    assert response.status_code == 422
+    assert upstream.calls == []

@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, status
 from solventa_common.errors import error_detail
 from solventa_common.operator_session import OperatorToken, verify_operator_token
-from solventa_common.sesion import InvalidToken
+from solventa_common.sesion import InvalidToken, bearer_token
 
 from canales.config import settings
 
@@ -12,10 +12,8 @@ PERMISSION_DENIED = error_detail("permiso_denegado", "Tu rol no permite esta ope
 
 
 def _bearer(authorization: str | None) -> str:
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
+    token = bearer_token(authorization)
+    if token is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION)
     return token
 
