@@ -18,6 +18,7 @@ class CotizacionSettings(ServiceSettings):
     open_finance_breaker_failures: int = Field(default=5, ge=1)
     open_finance_breaker_reset_s: float = Field(default=30.0, gt=0)
     signal_cache_ttl_s: int = 86_400
+    credential_grace_minutes: int = Field(default=1440, ge=0, le=10_080)
 
 
 settings = CotizacionSettings()

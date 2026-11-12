@@ -3,6 +3,7 @@
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
+from uuid import uuid4
 
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
@@ -81,6 +82,22 @@ class Socio(BaseModel):
     cuota_consumo: int = CUOTA_CONSUMO_INICIAL
     alta_fecha: datetime
     alta_usuario: str
+    secreto_anterior_hash: str | None = None
+    secreto_anterior_vence: datetime | None = None
+
+
+class CredentialEventType(StrEnum):
+    ROTATED = "rotada"
+    REVOKED = "revocada"
+
+
+class CredentialEvent(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    socio_id: str
+    tipo: CredentialEventType
+    actor: str
+    fecha: datetime
+    gracia_hasta: datetime | None = None
 
 
 class AuthorizedPartner(BaseModel):
@@ -114,6 +131,7 @@ class SocioResponse(BaseModel):
     cuota_consumo: int
     alta_fecha: datetime
     alta_usuario: str
+    secreto_anterior_vence: datetime | None = None
     ramos_habilitados: list[RamoResumen] = Field(default_factory=list)
 
 
