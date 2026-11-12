@@ -5,7 +5,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { issuePolicy } from '../../../policies/api/issuePolicy';
 import { PolicyCard } from '../../../policies/components/PolicyCard';
 import { useTexts as usePolicyTexts } from '../../../policies/texts';
-import { Policy } from '../../../policies/types';
+import { POLICY_STATUS, Policy } from '../../../policies/types';
 import { ApiError } from '../../../../shared/api/client';
 import { crearIntentoId } from '../../../../shared/payments/crearIntentoId';
 import { AppText, Banner, Button, Card, CheckboxField, Screen } from '../../../../shared/ui';
@@ -15,6 +15,7 @@ import { useTexts } from '../../texts';
 import { SimulacionPago } from '../../types';
 import { formatMoney, formatVigenteHasta } from '../../utils';
 import styles from './styles';
+import { PAYMENT_STATUS } from '../../../../shared/payments/paymentStatus';
 
 type PaymentStatus = 'ready' | 'processing' | 'rejected' | 'expired' | 'issued' | 'issueFailed';
 
@@ -61,7 +62,7 @@ export default function QuotePaymentScreen() {
   const emitir = async (pagoId: string) => {
     try {
       const emitida = await issuePolicy(oferta.id, pagoId);
-      if (emitida.estado !== 'activa') {
+      if (emitida.estado !== POLICY_STATUS.active) {
         setPolicy(null);
         setStatus('issueFailed');
         setError(policyTexts.policies.issueFailed);
@@ -89,11 +90,11 @@ export default function QuotePaymentScreen() {
       setPolicy(null);
       setStatus('processing');
       const resultado = await payQuote(oferta.id, intento, simulacion());
-      if (resultado.estado === 'rechazado') {
+      if (resultado.estado === PAYMENT_STATUS.rejected) {
         setStatus('rejected');
         return;
       }
-      if (resultado.estado !== 'aprobado') {
+      if (resultado.estado !== PAYMENT_STATUS.approved) {
         setStatus('ready');
         setError(texts.payment.failed);
         inFlight.current = false;

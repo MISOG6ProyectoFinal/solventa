@@ -6,12 +6,14 @@ from decimal import ROUND_HALF_UP, Decimal
 from pydantic import BaseModel, Field
 
 from cotizacion.rating.domain.models import (
+    MIN_INSURED_AGE,
     DesgloseCotizacion,
     SolicitudCotizacionMicroseguroVida,
     SolicitudCotizacionParametrico,
     SolicitudCotizacionViaje,
     SolicitudCotizacionVidaHipotecario,
 )
+from cotizacion.signals.domain.models import NEUTRAL_RISK_SCORE
 
 
 class ReglasRating(BaseModel):
@@ -51,8 +53,14 @@ class RulesVersionAlreadyPublished(ValueError):
 
 
 def risk_factor(reglas: ReglasRating, score: Decimal) -> Decimal:
-    """Score neutral 0.5 deja el factor en 1."""
-    return Decimal(1) + (score - Decimal("0.5")) * reglas.peso_score
+    """El score neutral deja el factor en 1."""
+    return Decimal(1) + (score - NEUTRAL_RISK_SCORE) * reglas.peso_score
+
+
+def insured_age(birth: date, reference: date) -> int:
+    """Edad cumplida, nunca por debajo de la mínima que se asegura."""
+    years = reference.year - birth.year - ((reference.month, reference.day) < (birth.month, birth.day))
+    return max(MIN_INSURED_AGE, years)
 
 
 def calcular_desglose_generico(
@@ -118,7 +126,7 @@ def calcular_desglose_microseguro_vida(
 ) -> DesgloseCotizacion:
     """Suma asegurada / 1000 × tasa base × factor edad con desglose completo de 5 rubros."""
     ref = fecha_referencia or date.today()
-    edad = max(18, (ref - solicitud.fecha_nacimiento).days // 365)
+    edad = insured_age(solicitud.fecha_nacimiento, ref)
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
     monto_base = (solicitud.suma_asegurada / Decimal(1000)) * reglas.tasa_microseguro_por_mil * factor_edad
     prima_basica = monto_base.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -151,7 +159,7 @@ def calcular_desglose_vida_hipotecario(
 ) -> DesgloseCotizacion:
     """Valor crédito / 1000 × tasa anual × factor edad × plazo en años con desglose completo de 5 rubros."""
     ref = fecha_referencia or date.today()
-    edad = max(18, (ref - solicitud.fecha_nacimiento).days // 365)
+    edad = insured_age(solicitud.fecha_nacimiento, ref)
     factor_edad = next(f for limite, f in reglas.factor_edad if edad <= limite)
     prima_basica = (
         (solicitud.valor_credito / Decimal(1000))

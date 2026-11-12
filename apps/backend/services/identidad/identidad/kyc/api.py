@@ -8,7 +8,6 @@ from solventa_common.errors import error_detail
 from identidad.container import container
 from identidad.kyc.domain.models import (
     EMAIL_PATTERN,
-    MIN_PASSWORD_LENGTH,
     TIPOS_DOCUMENTO,
     ClienteNoEncontrado,
     CodigoOtpInvalido,
@@ -24,6 +23,7 @@ from identidad.kyc.domain.models import (
     RespuestaValidacion,
     SolicitudAsegurarCliente,
     SolicitudConsentimiento,
+    check_password,
 )
 from identidad.kyc.domain.use_cases import MAX_CLIENTS_PER_LOOKUP
 
@@ -76,9 +76,7 @@ class SolicitudRegistro(SolicitudSesion):
     @field_validator("contrasena")
     @classmethod
     def _largo_contrasena(cls, value: str) -> str:
-        if len(value) < MIN_PASSWORD_LENGTH:
-            raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
-        return value
+        return check_password(value)
 
     @field_validator("tipo_documento")
     @classmethod

@@ -4,12 +4,17 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
+from cotizacion.signals.domain.models import NEUTRAL_RISK_SCORE
+
+MIN_INSURED_AGE = 18
+MAX_INSURED_AGE = 99
+
 
 class SolicitudCotizacion(BaseModel):
     producto_id: str
     suma_asegurada: Decimal = Field(gt=0)
-    edad: int = Field(ge=18, le=99)
-    score_riesgo: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
+    edad: int = Field(ge=MIN_INSURED_AGE, le=MAX_INSURED_AGE)
+    score_riesgo: Decimal = Field(default=NEUTRAL_RISK_SCORE, ge=0, le=1)
     cliente_id: str | None = None
 
 
@@ -43,7 +48,7 @@ class SolicitudCotizacionVidaHipotecario(BaseModel):
     entidad: str
     valor_credito: Decimal = Field(gt=0)
     plazo_anios: int = Field(ge=1)
-    score_riesgo: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
+    score_riesgo: Decimal = Field(default=NEUTRAL_RISK_SCORE, ge=0, le=1)
     consentimiento_id: str | None = None
     cliente_id: str | None = None
 

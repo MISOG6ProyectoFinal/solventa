@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, field_validator
 from solventa_common.operator_session import ROLES
 
-from identidad.kyc.domain.models import EMAIL_PATTERN, MIN_PASSWORD_LENGTH
+from identidad.kyc.domain.models import EMAIL_PATTERN, check_password
 
 
 def _valid_roles(roles: list[str]) -> list[str]:
@@ -87,9 +87,7 @@ class NewOperator(BaseModel):
     @field_validator("contrasena")
     @classmethod
     def _password(cls, value: str) -> str:
-        if len(value) < MIN_PASSWORD_LENGTH:
-            raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
-        return value
+        return check_password(value)
 
 
 class OperatorUpdate(BaseModel):

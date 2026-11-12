@@ -4,7 +4,7 @@ import { DrawerActions, useFocusEffect, useNavigation } from '@react-navigation/
 
 import { AppText, Button, Card, Screen, StatusChip } from '../../../../shared/ui';
 import { listPolicies } from '../../../policies/api/listPolicies';
-import { Policy } from '../../../policies/types';
+import { POLICY_STATUS, Policy } from '../../../policies/types';
 import { policyDate } from '../../../policies/utils';
 import { getProducts } from '../../../quote/api/getProducts';
 import { ProductoMovil } from '../../../quote/types';
@@ -31,9 +31,9 @@ export default function HomeScreen() {
           if (cancelled) {
             return;
           }
-          const policy = policies.find((item) => item.estado === 'activa' && item.renovable === true) ?? null;
+          const policy = policies.find((item) => item.estado === POLICY_STATUS.active && item.renovable === true) ?? null;
           const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
-          setActiveCount(policies.filter((item) => item.estado === 'activa').length);
+          setActiveCount(policies.filter((item) => item.estado === POLICY_STATUS.active).length);
           setRenewablePolicy(policy);
           setProductName(policy ? names[policy.producto_id] : undefined);
         })

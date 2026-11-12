@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
+from solventa_common.cobros import MONEDA_COP, EstadoCobro
 from solventa_common.events import Event, EventPublisher
 from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
 from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
@@ -55,9 +56,8 @@ POLIZA_RENOVADA = "poliza.renovada"
 POLIZA_ENDOSADA = "poliza.endosada"
 POLIZA_CANCELADA = "poliza.cancelada"
 SOURCE = "polizas"
-MONEDA = "COP"
-
-APPROVED = "aprobado"
+MONEDA = MONEDA_COP
+APPROVED = EstadoCobro.APROBADO
 
 
 class IssuePolicyUseCase:

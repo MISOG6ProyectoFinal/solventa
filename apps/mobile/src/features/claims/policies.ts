@@ -4,6 +4,7 @@ import { listPolicies } from '../policies/api/listPolicies';
 import { getProducts } from '../quote/api/getProducts';
 import { ProductoMovil } from '../quote/types';
 import { ClaimChoice } from './types';
+import { POLICY_STATUS } from '../policies/types';
 
 export function useClaimPolicies(): ClaimChoice[] | null {
   const [choices, setChoices] = useState<ClaimChoice[] | null>(null);
@@ -18,7 +19,7 @@ export function useClaimPolicies(): ClaimChoice[] | null {
         const names = Object.fromEntries(products.map((product) => [product.id, product.nombre]));
         setChoices(
           policies
-            .filter((policy) => policy.estado === 'activa')
+            .filter((policy) => policy.estado === POLICY_STATUS.active)
             .map((policy) => ({
               value: policy.id,
               label: `${names[policy.producto_id] ?? policy.producto_id} · ${policy.numero}`,
