@@ -6,6 +6,7 @@ from solventa_common.db import optional_engine, readiness_checks
 from canales.config import settings
 from canales.movil.api import router as movil_router
 from canales.socios.api import router as socios_router
+from canales.socios.versioning import DeclaredVersionRouter
 from canales.web.api import router as web_router
 
 engine = optional_engine(settings.database_url)
@@ -16,3 +17,4 @@ app = create_app(
     routers=[web_router, movil_router, socios_router],
     readiness_checks=readiness_checks(engine),
 )
+app.add_middleware(DeclaredVersionRouter)

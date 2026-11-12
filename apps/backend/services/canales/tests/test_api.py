@@ -181,8 +181,12 @@ def test_bff_web_indica_canal_al_consenso(mock_client: MagicMock):
 CREDENCIALES = {"X-Client-Id": "sv_live_demo_ab12", "X-Api-Key": "sv_sec_demo"}
 
 
+PARTNER = {"socio_id": "socio-1", "identificador": "BANCO-AURORA", "nombre": "Banco Aurora"}
+
+
 @patch("canales.socios.api.cotizacion")
 def test_bff_socios_envia_las_credenciales_a_gobierno_de_api(mock_client: MagicMock):
+    mock_client.get.return_value = PARTNER
     mock_client.post.return_value = {"producto_id": "vida-temporal", "prima": "1800.00"}
     response = client.post("/socios/v1/cotizaciones", json=SOLICITUD, headers=CREDENCIALES)
     assert response.status_code == 200
@@ -193,7 +197,11 @@ def test_bff_socios_envia_las_credenciales_a_gobierno_de_api(mock_client: MagicM
 
 @patch("canales.socios.api.cotizacion")
 def test_partner_bff_lists_products_with_credentials(mock_client: MagicMock):
-    mock_client.get.return_value = [{"producto_id": "viaje-internacional"}]
+    mock_client.get.side_effect = (
+        lambda path, **_: PARTNER
+        if path == "/gobierno-socios/autorizacion"
+        else [{"producto_id": "viaje-internacional"}]
+    )
 
     response = client.get("/socios/v1/productos", headers=CREDENCIALES)
 
