@@ -88,6 +88,26 @@ def test_bff_movil_devuelve_oferta_completa(mock_client: MagicMock):
 
 
 @patch("canales.movil.api.cotizacion")
+def test_the_phone_gets_only_the_offer_it_shows(mock_client: MagicMock):
+    internal = {
+        "cliente_id": "cliente-demo",
+        "socio_id": None,
+        "canal": "mobile",
+        "datos_riesgo": {"edad": 40},
+        "senales": [{"tipo": "open_finance", "valor": 0.4}],
+        "degradada": True,
+        "desglose": {"prima_base": "100000.00"},
+        "consentimiento_id": "CNS-1",
+    }
+    mock_client.post.return_value = {**OFERTA, **internal}
+
+    data = client.post("/movil/cotizaciones", json=solicitud_viaje(), headers=authorization()).json()
+
+    assert data == OFERTA
+    assert not internal.keys() & data.keys()
+
+
+@patch("canales.movil.api.cotizacion")
 def test_bff_movil_no_propaga_pii_a_cotizacion(mock_client: MagicMock):
     mock_client.post.return_value = OFERTA
     response = client.post("/movil/cotizaciones", json=solicitud_viaje(), headers=authorization())
