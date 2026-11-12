@@ -1,4 +1,11 @@
-import { NewPartner, Partner, PartnerConfig, PartnerQuotaUsage } from '../../../core/models/partner.model';
+import {
+  CredentialEvent,
+  NewPartner,
+  Partner,
+  PartnerConfig,
+  PartnerQuotaUsage,
+  RotatedCredential,
+} from '../../../core/models/partner.model';
 
 /** Socio tal como lo entrega el BFF web (`/web/socios`). */
 export interface PartnerDto {
@@ -17,10 +24,23 @@ export interface PartnerDto {
   cuota_consumo: number;
   alta_fecha: string;
   alta_usuario: string;
+  secreto_anterior_vence?: string | null;
   ramos_habilitados: { id: string; nombre: string }[];
 }
 
-/** Configuración del socio tal como la entrega `/web/socios/{id}/configuracion`. */
+export interface RotatedCredentialDto extends PartnerDto {
+  secreto: string;
+  gracia_hasta: string | null;
+}
+
+export interface CredentialEventDto {
+  id: string;
+  tipo: string;
+  actor: string;
+  fecha: string;
+  gracia_hasta: string | null;
+}
+
 export interface PartnerQuotaUsageDto {
   cuota_consumo: number;
   consumidas: number;
@@ -28,6 +48,7 @@ export interface PartnerQuotaUsageDto {
   cerca_del_limite: boolean;
 }
 
+/** Configuración del socio tal como la entrega `/web/socios/{id}/configuracion`. */
 export interface PartnerConfigDto {
   socio_id: string;
   ramos: {
@@ -77,6 +98,21 @@ export function toPartner(dto: PartnerDto): Partner {
     enabledRamos: dto.ramos_habilitados.map((ramo) => ({ id: ramo.id, name: ramo.nombre })),
     altaFecha: formatTimestamp(dto.alta_fecha),
     altaUsuario: dto.alta_usuario,
+    previousSecretExpiresAt: dto.secreto_anterior_vence ? formatTimestamp(dto.secreto_anterior_vence) : null,
+  };
+}
+
+export function toRotatedCredential(dto: RotatedCredentialDto): RotatedCredential {
+  return { partner: toPartner(dto), secret: dto.secreto };
+}
+
+export function toCredentialEvent(dto: CredentialEventDto): CredentialEvent {
+  return {
+    id: dto.id,
+    type: dto.tipo,
+    actor: dto.actor,
+    date: formatTimestamp(dto.fecha),
+    graceUntil: dto.gracia_hasta ? formatTimestamp(dto.gracia_hasta) : null,
   };
 }
 

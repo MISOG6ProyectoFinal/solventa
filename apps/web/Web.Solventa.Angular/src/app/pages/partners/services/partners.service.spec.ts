@@ -157,4 +157,41 @@ describe('PartnersService', () => {
     expect(request.request.body).toEqual({ cuota_consumo: 50 });
     expect(service.findById('s-1')?.cuotaConsumo).toBe(50);
   });
+
+  it('rotates the credential and keeps the new secret only in the response', () => {
+    service.load();
+    http.expectOne(API_ENDPOINTS.partners).flush([PARTNER_DTO]);
+    let secret: string | undefined;
+
+    service.rotateCredential('s-1', 30).subscribe((rotated) => (secret = rotated.secret));
+    const request = http.expectOne({ method: 'POST', url: `${API_ENDPOINTS.partnerCredential('s-1')}/rotacion` });
+    request.flush({ ...PARTNER_DTO, secreto: 'sv_sec_nuevo', gracia_hasta: '2026-11-12T10:00:00', secreto_anterior_vence: '2026-11-12T10:00:00' });
+
+    expect(request.request.body).toEqual({ gracia_minutos: 30 });
+    expect(secret).toBe('sv_sec_nuevo');
+    expect(service.findById('s-1')?.previousSecretExpiresAt).toBe('2026-11-12 10:00');
+  });
+
+  it('revokes the credential and updates the partner in the list', () => {
+    service.load();
+    http.expectOne(API_ENDPOINTS.partners).flush([PARTNER_DTO]);
+
+    service.revokeCredential('s-1').subscribe();
+    http
+      .expectOne({ method: 'POST', url: `${API_ENDPOINTS.partnerCredential('s-1')}/revocacion` })
+      .flush({ ...PARTNER_DTO, estado_credencial: 'Revocada' });
+
+    expect(service.findById('s-1')?.credentialStatus).toBe('Revocada');
+  });
+
+  it('loads the credential events', () => {
+    let events: unknown;
+    service.loadCredentialEvents('s-1').subscribe((value) => (events = value));
+
+    http
+      .expectOne({ method: 'GET', url: `${API_ENDPOINTS.partnerCredential('s-1')}/eventos` })
+      .flush([{ id: 'e-1', tipo: 'rotada', actor: 'Ana', fecha: '2026-11-11T10:00:00', gracia_hasta: null }]);
+
+    expect(events).toEqual([{ id: 'e-1', type: 'rotada', actor: 'Ana', date: '2026-11-11 10:00', graceUntil: null }]);
+  });
 });

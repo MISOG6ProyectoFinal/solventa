@@ -123,6 +123,9 @@ PROTECTED = [
     ("PUT", "/web/socios/s-1/configuracion"),
     ("GET", "/web/socios/s-1/consumo"),
     ("PUT", "/web/socios/s-1/cuota"),
+    ("POST", "/web/socios/s-1/credencial/rotacion"),
+    ("POST", "/web/socios/s-1/credencial/revocacion"),
+    ("GET", "/web/socios/s-1/credencial/eventos"),
     ("POST", "/web/consentimientos/solicitar"),
     ("POST", "/web/consentimientos/validar"),
     ("GET", "/web/consentimientos/CNS-1"),
@@ -172,6 +175,7 @@ READ_ROUTES = [
     ("/web/socios/s-1", "cotizacion", {}),
     ("/web/socios/s-1/configuracion", "cotizacion", {}),
     ("/web/socios/s-1/consumo", "cotizacion", {}),
+    ("/web/socios/s-1/credencial/eventos", "cotizacion", []),
     ("/web/consentimientos/CNS-1", "identidad", {}),
 ]
 
@@ -204,6 +208,8 @@ def test_cotizar_y_consentir_lo_hacen_administrador_y_asesor(identidad, cotizaci
         ("POST", "/web/socios"),
         ("PUT", "/web/socios/s-1/configuracion"),
         ("PUT", "/web/socios/s-1/cuota"),
+        ("POST", "/web/socios/s-1/credencial/rotacion"),
+        ("POST", "/web/socios/s-1/credencial/revocacion"),
         ("GET", "/web/operadores"),
         ("POST", "/web/operadores"),
         ("PATCH", "/web/operadores/op-1"),

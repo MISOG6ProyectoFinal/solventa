@@ -3,18 +3,30 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
-import { NewPartner, Partner, PartnerConfig, PartnerCreated, PartnerQuotaUsage } from '../../../core/models/partner.model';
+import {
+  CredentialEvent,
+  NewPartner,
+  Partner,
+  PartnerConfig,
+  PartnerCreated,
+  PartnerQuotaUsage,
+  RotatedCredential,
+} from '../../../core/models/partner.model';
 import { SessionService } from '../../../core/services/session.service';
 import {
+  CredentialEventDto,
   PartnerConfigDto,
   PartnerCreatedDto,
   PartnerDto,
   PartnerQuotaUsageDto,
+  RotatedCredentialDto,
+  toCredentialEvent,
   toNewPartnerDto,
   toPartner,
   toPartnerConfig,
   toPartnerConfigUpdateDto,
   toPartnerQuotaUsage,
+  toRotatedCredential,
 } from './partners-api.mapper';
 
 @Injectable({ providedIn: 'root' })
@@ -78,8 +90,32 @@ export class PartnersService {
   updateQuota(partnerId: string, quota: number): Observable<Partner> {
     return this.http.put<PartnerDto>(API_ENDPOINTS.partnerQuota(partnerId), { cuota_consumo: quota }).pipe(
       map(toPartner),
-      tap((updated) => this.state.update((partners) => partners.map((p) => (p.id === partnerId ? updated : p)))),
+      tap((updated) => this.replace(updated)),
     );
+  }
+
+  /** Emite un secreto nuevo; el anterior sigue válido durante la ventana de gracia. */
+  rotateCredential(partnerId: string, graceMinutes: number): Observable<RotatedCredential> {
+    const url = `${API_ENDPOINTS.partnerCredential(partnerId)}/rotacion`;
+    return this.http.post<RotatedCredentialDto>(url, { gracia_minutos: graceMinutes }).pipe(
+      map(toRotatedCredential),
+      tap(({ partner }) => this.replace(partner)),
+    );
+  }
+
+  /** Desde este momento el socio no puede llamar la API con su credencial. */
+  revokeCredential(partnerId: string): Observable<Partner> {
+    const url = `${API_ENDPOINTS.partnerCredential(partnerId)}/revocacion`;
+    return this.http.post<PartnerDto>(url, {}).pipe(map(toPartner), tap((partner) => this.replace(partner)));
+  }
+
+  loadCredentialEvents(partnerId: string): Observable<CredentialEvent[]> {
+    const url = `${API_ENDPOINTS.partnerCredential(partnerId)}/eventos`;
+    return this.http.get<CredentialEventDto[]>(url).pipe(map((events) => events.map(toCredentialEvent)));
+  }
+
+  private replace(updated: Partner): void {
+    this.state.update((partners) => partners.map((p) => (p.id === updated.id ? updated : p)));
   }
 
   private setEnabledRamos(partnerId: string, config: PartnerConfig): void {
