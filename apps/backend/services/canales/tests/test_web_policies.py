@@ -190,6 +190,53 @@ def test_consent_without_open_finance_does_not_send_it(monkeypatch):
     assert "consentimiento_open_finance" not in cotizacion.calls[0][1]["json"]
 
 
+def test_a_consent_from_another_customer_is_rejected(monkeypatch):
+    consent = {"consentimiento_id": "CNS-1", "cliente_id": "CLI-CC-999", "estado": "OTORGADO", "open_finance": True}
+
+    class _Identidad(_Upstream):
+        def get(self, path: str, **kwargs):
+            return consent
+
+        def post(self, path: str, **kwargs):
+            self.calls.append((path, kwargs))
+            return {"id": "CLI-CC-1020"}
+
+    cotizacion = _Upstream({"id": "COT-1"})
+    monkeypatch.setattr("canales.web.api.identidad", _Identidad(consent))
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
+
+    response = client.post(
+        "/web/cotizaciones",
+        json={
+            "producto_id": "vida-hipotecario",
+            "consentimiento_id": "CNS-1",
+            "tipo_documento": "CC",
+            "numero_documento": "1020",
+        },
+        headers=web_auth.advisor(),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "El consentimiento digital no corresponde al cliente de la cotización"
+    assert cotizacion.calls == []
+
+
+def test_without_a_customer_document_the_quote_belongs_to_the_consent_customer(monkeypatch):
+    consent = {"consentimiento_id": "CNS-1", "cliente_id": "CLI-CC-1020", "estado": "OTORGADO", "open_finance": False}
+    cotizacion = _Upstream({"id": "COT-1"})
+    monkeypatch.setattr("canales.web.api.identidad", _Upstream(consent))
+    monkeypatch.setattr("canales.web.api.cotizacion", cotizacion)
+
+    response = client.post(
+        "/web/cotizaciones",
+        json={"producto_id": "vida-hipotecario", "consentimiento_id": "CNS-1"},
+        headers=web_auth.advisor(),
+    )
+
+    assert response.status_code == 200
+    assert cotizacion.calls[0][1]["headers"] == {"X-Canal": "web", "X-Cliente-Id": "CLI-CC-1020"}
+
+
 def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
     previo = {"nombre": "Lina D.", "telefono": "300", "correo": "l@x.co", "direccion": "Calle 1"}
     nuevo = {**previo, "direccion": "Calle 2"}

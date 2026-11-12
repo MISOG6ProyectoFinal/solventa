@@ -521,15 +521,10 @@ def test_web_cotizacion_asocia_cliente_existente_por_documento(monkeypatch):
         def __init__(self):
             self.calls = []
 
-        def get(self, path: str, **kwargs):
-            self.calls.append(("GET", path, kwargs))
-            if path == "/identidad/clientes/por-documento/CC/10203040":
-                return {"id": "CLI-10203040", "nombre": "Juan"}
-            raise RuntimeError(f"Unexpected get {path}")
-
         def post(self, path: str, **kwargs):
             self.calls.append(("POST", path, kwargs))
-            raise RuntimeError("Should not create client if it already exists")
+            assert path == "/identidad/clientes/asegurar"
+            return {"id": "CLI-10203040", "nombre": "Juan"}
 
     cotizacion_mock = _Upstream(response={"id": "COT-2026-0001", "prima": "100000.00"})
     monkeypatch.setattr("canales.web.api.identidad", RouterMock())

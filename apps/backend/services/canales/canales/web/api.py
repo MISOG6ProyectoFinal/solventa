@@ -1,6 +1,5 @@
 from urllib.parse import quote
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from solventa_common.integration.base import call_upstream
@@ -83,19 +82,8 @@ def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:
     return tipo_doc, num_doc
 
 
-def _buscar_cliente_por_documento(tipo_doc: str, num_doc: str) -> str | None:
-    try:
-        cliente = identidad.get(f"/identidad/clientes/por-documento/{tipo_doc}/{num_doc}")
-        if cliente and cliente.get("id"):
-            return cliente["id"]
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code != status.HTTP_404_NOT_FOUND:
-            raise
-    return None
-
-
-def _asegurar_nuevo_cliente(solicitud: dict, tipo_doc: str, num_doc: str) -> str | None:
-    nombre = str(solicitud.get("nombre") or "").strip() or "Cliente"
+def _ensure_customer(solicitud: dict, tipo_doc: str, num_doc: str) -> str | None:
+    nombre = str(solicitud.get("nombre") or "").strip()
     apellido = str(solicitud.get("apellido") or "").strip()
     email = str(solicitud.get("email") or "").strip()
     telefono = str(solicitud.get("telefono") or "").strip()
@@ -124,14 +112,7 @@ def _resolver_cliente_id(solicitud: dict) -> str | None:
     tipo_doc, num_doc = _extraer_identificacion(solicitud)
     if not (tipo_doc and num_doc):
         return solicitud.get("cliente_id")
-
-    # 1. Validar si el usuario existe por tipo de documento y número de documento
-    cliente_id = _buscar_cliente_por_documento(tipo_doc, num_doc)
-    if cliente_id:
-        return cliente_id
-
-    # 2. Si no existe, se debe crear el nuevo cliente
-    return _asegurar_nuevo_cliente(solicitud, tipo_doc, num_doc)
+    return _ensure_customer(solicitud, tipo_doc, num_doc)
 
 
 def _requires_consent(product_id: object) -> bool:
@@ -177,10 +158,18 @@ def _open_finance_consent(consentimiento: dict | None) -> dict | None:
 @writers.post("/cotizaciones")
 def cotizar(solicitud: dict) -> dict:
     """El portal resuelve el cliente y el consentimiento; la cotización es la de todos los canales."""
-    open_finance = _open_finance_consent(_validar_consentimiento_si_aplica(solicitud))
+    consentimiento = _validar_consentimiento_si_aplica(solicitud)
+    cliente_id = _resolver_cliente_id(solicitud)
+    if consentimiento is not None and cliente_id is None:
+        cliente_id = consentimiento.get("cliente_id")
+    if consentimiento is not None and consentimiento.get("cliente_id") != cliente_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El consentimiento digital no corresponde al cliente de la cotización",
+        )
+    open_finance = _open_finance_consent(consentimiento)
 
     headers = {"X-Canal": "web"}
-    cliente_id = _resolver_cliente_id(solicitud)
     if cliente_id:
         headers["X-Cliente-Id"] = cliente_id
 
