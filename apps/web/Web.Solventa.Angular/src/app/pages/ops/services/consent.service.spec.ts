@@ -30,7 +30,7 @@ describe('ConsentService', () => {
       cliente_id: 'CLI-001',
       ramo: 'ramo-vida-hipotecario',
       canal: 'sms',
-      contacto_mask: '***4567',
+      contacto: '3001234567',
       open_finance: true,
       open_data: true,
       asesor: 'Ana Gómez (asesor)',

@@ -155,7 +155,7 @@ describe('ConsentPanelComponent', () => {
     expect(el.textContent).toContain('Open Finance, Open Data');
   });
 
-  it('masks dynamically the client phone number when provided', async () => {
+  it('sends the phone and lets Identidad mask it', async () => {
     await render(true, '3176663766');
 
     el.querySelector('button')!.click();
@@ -163,7 +163,7 @@ describe('ConsentPanelComponent', () => {
 
     const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
     expect(req.request.body.contacto).toBe('3176663766');
-    expect(req.request.body.contacto_mask).toBe('***3766');
+    expect(req.request.body.contacto_mask).toBeUndefined();
     req.flush({
       consentimiento_id: 'CNS-51502',
       estado: 'PENDIENTE',
@@ -230,7 +230,7 @@ describe('ConsentPanelComponent', () => {
     expect(el.textContent).toContain('Error del servidor al emitir OTP');
   });
 
-  it('handles email channel selection and masking', async () => {
+  it('handles email channel selection and shows the mask Identidad returns', async () => {
     fixture.componentRef.setInput('required', true);
     fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
     fixture.componentRef.setInput('correo', 'juan.perez@solventa.com');
@@ -247,7 +247,7 @@ describe('ConsentPanelComponent', () => {
     const req = httpTesting.expectOne(API_ENDPOINTS.consentimientos.solicitar);
     expect(req.request.body.canal).toBe('email');
     expect(req.request.body.contacto).toBe('juan.perez@solventa.com');
-    expect(req.request.body.contacto_mask).toBe('ju***@solventa.com');
+    expect(req.request.body.contacto_mask).toBeUndefined();
     req.flush({
       consentimiento_id: 'CNS-EMAIL-1',
       estado: 'PENDIENTE',
@@ -291,7 +291,7 @@ describe('ConsentPanelComponent', () => {
     expect(el.textContent).toContain('Ingrese el código dictado por el cliente');
   });
 
-  it('uses fallback registry when consultar fails after validation', async () => {
+  it('does not invent the record when it cannot be read after validation', async () => {
     await render(true);
 
     el.querySelector('button')!.click();
@@ -325,7 +325,8 @@ describe('ConsentPanelComponent', () => {
     await fixture.whenStable();
 
     expect(el.textContent).toContain('Consentimiento validado.');
-    expect(el.textContent).toContain('CNS-51502');
+    expect(el.textContent).toContain('no se pudo consultar su registro');
+    expect(el.textContent).not.toContain('CLI-');
   });
 
   it('prevents non-numeric key events in blockNonNumeric', () => {
@@ -374,41 +375,6 @@ describe('ConsentPanelComponent', () => {
     await fixture.whenStable();
 
     expect(el.textContent).toContain('999888');
-  });
-
-  it('masks correctly when email username has 2 or fewer characters', async () => {
-    fixture.componentRef.setInput('required', true);
-    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
-    fixture.componentRef.setInput('correo', 'al@test.com');
-    await fixture.whenStable();
-    fixture.componentInstance['channel'].set('email');
-    await fixture.whenStable();
-
-    expect(fixture.componentInstance['contactoMask']()).toBe('a***@test.com');
-  });
-
-  it('handles invalid email and empty email fallbacks in mask', async () => {
-    fixture.componentRef.setInput('required', true);
-    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
-    fixture.componentRef.setInput('correo', 'sinarroba');
-    await fixture.whenStable();
-    fixture.componentInstance['channel'].set('email');
-    await fixture.whenStable();
-
-    expect(fixture.componentInstance['contactoMask']()).toBe('sinarroba');
-
-    fixture.componentRef.setInput('correo', '');
-    await fixture.whenStable();
-    expect(fixture.componentInstance['contactoMask']()).toBe('cliente@ejemplo.com');
-  });
-
-  it('handles short phone numbers in sms mask', async () => {
-    fixture.componentRef.setInput('required', true);
-    fixture.componentRef.setInput('ramoLabel', 'Vida hipotecario');
-    fixture.componentRef.setInput('celular', '123');
-    await fixture.whenStable();
-
-    expect(fixture.componentInstance['contactoMask']()).toBe('123');
   });
 
   it('builds payload with complete customer info and the scope flags', async () => {

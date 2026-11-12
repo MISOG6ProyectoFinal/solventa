@@ -25,7 +25,7 @@
               </select>
             </slv-field>
             <p class="text-xs text-muted-foreground mt-1.5">
-              {{ locale.t('consent.destination') }} <strong class="text-foreground">{{ contactoDestino() ? contactoMask() : (channel() === 'sms' ? locale.t('consent.destinationMissing.sms') : locale.t('consent.destinationMissing.email')) }}</strong>
+              {{ locale.t('consent.destination') }} <strong class="text-foreground">{{ contactoDestino() ? contactoDestino() : (channel() === 'sms' ? locale.t('consent.destinationMissing.sms') : locale.t('consent.destinationMissing.email')) }}</strong>
             </p>
           </div>
 
@@ -104,12 +104,16 @@
       <div class="space-y-4">
         <slv-alert tone="success">{{ locale.t('consent.validated') }}</slv-alert>
 
+        @if (recordUnavailable()) {
+          <slv-alert tone="warning">{{ locale.t('consent.recordUnavailable') }}</slv-alert>
+        }
+
         @if (registro(); as reg) {
           <div class="p-4 bg-muted/30 rounded-xl border border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.client') }}</p>
               <p class="text-sm font-bold text-foreground mt-0.5">
-                {{ reg.cliente_nombre ? reg.cliente_nombre + ' (' + (reg.cliente_documento || reg.cliente_id) + ')' : (reg.cliente_id || 'CLI-' + documento()) }}
+                {{ reg.cliente_nombre ? reg.cliente_nombre + ' (' + (reg.cliente_documento || reg.cliente_id) + ')' : reg.cliente_id }}
               </p>
             </div>
             <div>

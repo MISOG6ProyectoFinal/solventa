@@ -72,10 +72,11 @@ export class ConsentPanelComponent {
   protected readonly estado = signal<ConsentPanelState>('idle');
   protected readonly codigoInput = signal('');
   protected readonly codigoDemo = signal('');
-  private readonly contactoMaskBackend = signal<string | null>(null);
+  private readonly contactoMaskBackend = signal('');
   protected readonly consentimientoId = signal('');
   protected readonly errorMsg = signal<string | null>(null);
   protected readonly registro = signal<RespuestaConsultaConsentimiento | null>(null);
+  protected readonly recordUnavailable = signal(false);
 
   protected readonly contactoDestino = computed(() => {
     if (this.channel() === 'sms') {
@@ -85,37 +86,13 @@ export class ConsentPanelComponent {
     }
   });
 
-  protected readonly contactoMask = computed(() => {
-    const destino = this.contactoDestino();
-    if (this.channel() === 'sms') {
-      const digits = destino.replace(/\D/g, '');
-      if (digits.length >= 4) {
-        return `***${digits.slice(-4)}`;
-      }
-      return destino.length > 0 ? destino : '***4567';
-    } else {
-      if (destino?.includes('@')) {
-        const [user, domain] = destino.split('@');
-        const visible = user.length > 2 ? user.slice(0, 2) : user.slice(0, 1);
-        return `${visible}***@${domain}`;
-      }
-      return destino.length > 0 ? destino : 'cliente@ejemplo.com';
-    }
-  });
-
-  protected readonly contactoMaskDisplay = computed(() => {
-    return this.contactoMaskBackend() ?? this.contactoMask();
-  });
-
-  protected readonly demoHint = computed(() => {
-    const mask = this.contactoMaskDisplay();
-    const demoCode = this.codigoDemo().trim();
-    return this.locale.t('consent.hint', {
+  protected readonly demoHint = computed(() =>
+    this.locale.t('consent.hint', {
       channel: this.locale.t(this.channel() === 'sms' ? 'consent.hint.sms' : 'consent.hint.email'),
-      destination: mask,
-      code: demoCode.length > 0 ? demoCode : '123456',
-    });
-  });
+      destination: this.contactoMaskBackend(),
+      code: this.codigoDemo(),
+    }),
+  );
 
   private extractErrorMessage(err: unknown, fallback: string): string {
     if (err && typeof err === 'object') {
@@ -167,45 +144,17 @@ export class ConsentPanelComponent {
     return {
       tipo_documento: rawTipoDoc || undefined,
       numero_documento: doc ?? '',
-      nombre: rawNombre && rawNombre.length > 0 ? rawNombre : 'Cliente',
-      apellido: rawApellido && rawApellido.length > 0 ? rawApellido : '',
+      nombre: rawNombre ?? '',
+      apellido: rawApellido ?? '',
       email: this.resolveEmail(destino),
       telefono: this.resolveTelefono(destino),
       fecha_nacimiento: rawNacimiento && rawNacimiento.length > 0 ? rawNacimiento : undefined,
       ramo: this.ramoId(),
       canal: this.channel(),
       contacto: destino,
-      contacto_mask: this.contactoMask(),
       open_finance: this.openFinance(),
       open_data: this.openData(),
       asesor: this.advisor(),
-    };
-  }
-
-  private buildFallbackRegistro(): RespuestaConsultaConsentimiento {
-    const rawDoc = this.documento()?.trim();
-    const fallbackCliId = rawDoc && rawDoc.length > 0 ? `CLI-${this.tipoDocumento()}-${rawDoc}` : 'CLI-51502';
-    const rawNom = this.nombre()?.trim();
-    const rawApe = this.apellido()?.trim();
-    const fallbackNom = [rawNom, rawApe].filter(Boolean).join(' ') || 'Cliente';
-    const alcancesArr = [
-      this.openFinance() ? 'Open Finance' : '',
-      this.openData() ? 'Open Data' : '',
-    ].filter(Boolean);
-
-    return {
-      consentimiento_id: this.consentimientoId(),
-      cliente_id: fallbackCliId,
-      cliente_nombre: fallbackNom,
-      cliente_documento: `${this.tipoDocumento()} ${this.documento()}`.trim(),
-      estado: this.locale.t('consent.granted'),
-      fuente: `${this.locale.t(this.channel() === 'sms' ? 'consent.source.sms' : 'consent.source.email')}: ${this.contactoDestino()}`,
-      fecha_otorgamiento: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      fecha_hora: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      asesor: this.advisor(),
-      canal: this.locale.t(this.channel() === 'sms' ? 'consent.channelLabel.sms' : 'consent.channelLabel.email'),
-      contacto: this.contactoDestino(),
-      alcance: alcancesArr.length > 0 ? alcancesArr.join(', ') : this.locale.t('consent.noScope'),
     };
   }
 
@@ -227,9 +176,7 @@ export class ConsentPanelComponent {
       next: (resp) => {
         this.consentimientoId.set(resp.consentimiento_id);
         this.codigoDemo.set(resp.codigo_demo);
-        if (resp.contacto_mask) {
-          this.contactoMaskBackend.set(resp.contacto_mask);
-        }
+        this.contactoMaskBackend.set(resp.contacto_mask);
         this.codigoInput.set(resp.codigo_demo);
         this.estado.set('pending');
       },
@@ -248,6 +195,7 @@ export class ConsentPanelComponent {
 
     this.estado.set('validando');
     this.errorMsg.set(null);
+    this.recordUnavailable.set(false);
 
     this.consentService.validar(this.consentimientoId(), this.codigoInput().trim()).subscribe({
       next: () => {
@@ -258,7 +206,8 @@ export class ConsentPanelComponent {
             this.consentValidated.emit(this.consentimientoId());
           },
           error: () => {
-            this.registro.set(this.buildFallbackRegistro());
+            this.registro.set(null);
+            this.recordUnavailable.set(true);
             this.estado.set('validated');
             this.consentValidated.emit(this.consentimientoId());
           },

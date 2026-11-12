@@ -111,6 +111,7 @@ export const ES = {
 
   'consent.title': 'Consentimiento digital Open Finance / Open Data',
   'consent.required': 'Este ramo requiere autorización del cliente para consultar sus datos financieros en el perfilamiento de riesgo.',
+  'consent.recordUnavailable': 'El consentimiento quedó otorgado, pero no se pudo consultar su registro. Puede seguir con la cotización.',
   'consent.mustValidate': 'Debe solicitar y validar el consentimiento antes de cotizar.',
   'consent.sendBy': 'Enviar código por',
   'consent.channel.sms': 'SMS al celular registrado',
