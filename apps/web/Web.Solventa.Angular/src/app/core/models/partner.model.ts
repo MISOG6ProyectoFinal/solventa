@@ -41,6 +41,13 @@ export interface Partner {
   altaUsuario: string;
 }
 
+export interface PartnerQuotaUsage {
+  quota: number;
+  used: number;
+  resetInSeconds: number;
+  nearLimit: boolean;
+}
+
 /** Datos que captura el formulario de alta. */
 export interface NewPartner {
   name: string;

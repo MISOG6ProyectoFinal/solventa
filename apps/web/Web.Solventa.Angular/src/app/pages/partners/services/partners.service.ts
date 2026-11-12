@@ -3,16 +3,18 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.constants';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
-import { NewPartner, Partner, PartnerConfig, PartnerCreated } from '../../../core/models/partner.model';
+import { NewPartner, Partner, PartnerConfig, PartnerCreated, PartnerQuotaUsage } from '../../../core/models/partner.model';
 import { SessionService } from '../../../core/services/session.service';
 import {
   PartnerConfigDto,
   PartnerCreatedDto,
   PartnerDto,
+  PartnerQuotaUsageDto,
   toNewPartnerDto,
   toPartner,
   toPartnerConfig,
   toPartnerConfigUpdateDto,
+  toPartnerQuotaUsage,
 } from './partners-api.mapper';
 
 @Injectable({ providedIn: 'root' })
@@ -65,6 +67,18 @@ export class PartnersService {
     return this.http.put<PartnerConfigDto>(API_ENDPOINTS.partnerConfig(partnerId), body).pipe(
       map(toPartnerConfig),
       tap((saved) => this.setEnabledRamos(partnerId, saved)),
+    );
+  }
+
+  loadUsage(partnerId: string): Observable<PartnerQuotaUsage> {
+    return this.http.get<PartnerQuotaUsageDto>(API_ENDPOINTS.partnerUsage(partnerId)).pipe(map(toPartnerQuotaUsage));
+  }
+
+  /** La nueva cuota aplica desde la siguiente llamada del socio. */
+  updateQuota(partnerId: string, quota: number): Observable<Partner> {
+    return this.http.put<PartnerDto>(API_ENDPOINTS.partnerQuota(partnerId), { cuota_consumo: quota }).pipe(
+      map(toPartner),
+      tap((updated) => this.state.update((partners) => partners.map((p) => (p.id === partnerId ? updated : p)))),
     );
   }
 

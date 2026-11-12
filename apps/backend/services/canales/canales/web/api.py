@@ -237,6 +237,20 @@ def actualizar_configuracion_socio(socio_id: str, configuracion: dict, operator:
     )
 
 
+@readers.get("/socios/{socio_id}/consumo")
+def partner_quota_usage(socio_id: str) -> dict:
+    return call_upstream(cotizacion.get, f"/gobierno-socios/socios/{quote(socio_id, safe='')}/consumo")
+
+
+@admins.put("/socios/{socio_id}/cuota")
+def update_partner_quota(socio_id: str, body: dict) -> dict:
+    return call_upstream(
+        cotizacion.put,
+        f"/gobierno-socios/socios/{quote(socio_id, safe='')}/cuota",
+        json={"cuota_consumo": body.get("cuota_consumo")},
+    )
+
+
 @readers.get("/polizas/estados")
 def listar_estados_poliza() -> list:
     return call_upstream(polizas.get, "/polizas/catalogos/estados")

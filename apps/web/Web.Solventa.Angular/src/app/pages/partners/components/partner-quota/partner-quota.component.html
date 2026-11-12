@@ -1,0 +1,43 @@
+<section class="mb-4 space-y-3" data-testid="partner-quota">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h3 class="text-sm font-semibold text-foreground">{{ locale.t('partners.quota.title') }}</h3>
+    <button slv-button variant="ghost" type="button" data-testid="partner-quota-refresh" (click)="refresh()">
+      {{ locale.t('partners.quota.refresh') }}
+    </button>
+  </div>
+
+  @if (usage(); as current) {
+    <p class="text-sm text-muted-foreground" data-testid="partner-quota-usage">
+      {{ locale.t('partners.quota.usage', { used: (current.used | number) ?? '', quota: (current.quota | number) ?? '', seconds: current.resetInSeconds }) }}
+    </p>
+    @if (current.nearLimit) {
+      <slv-alert tone="warning">{{ locale.t('partners.quota.near') }}</slv-alert>
+    }
+  } @else if (loadError()) {
+    <slv-alert tone="error">{{ locale.t('partners.quota.loadError') }}</slv-alert>
+  }
+
+  @if (canEdit()) {
+    <form class="flex flex-wrap items-end gap-3" novalidate (ngSubmit)="save()">
+      <slv-field [label]="locale.t('partners.quota.label')" [error]="invalid() ? locale.t('partners.quota.invalid') : ''">
+        <input
+          slvInput
+          name="quota"
+          type="number"
+          min="1"
+          step="1"
+          data-testid="partner-quota-input"
+          [invalid]="invalid()"
+          [ngModel]="quota()"
+          (ngModelChange)="quota.set($event)"
+        />
+      </slv-field>
+      <button slv-button type="submit" data-testid="partner-quota-save" [disabled]="saving() || invalid()">
+        {{ locale.t('partners.quota.save') }}
+      </button>
+    </form>
+    @if (saveError(); as message) {
+      <slv-alert tone="error">{{ message }}</slv-alert>
+    }
+  }
+</section>

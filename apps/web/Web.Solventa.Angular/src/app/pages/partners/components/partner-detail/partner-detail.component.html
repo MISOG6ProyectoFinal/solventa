@@ -24,6 +24,8 @@
       </div>
     </div>
 
+    <slv-partner-quota [partner]="partner()" />
+
     @if (partner().apiContractStatus === 'Suspendido') {
       <div class="mb-4">
         <slv-alert tone="error">{{ locale.t('partners.suspended') }}</slv-alert>

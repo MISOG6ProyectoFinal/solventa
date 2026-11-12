@@ -29,6 +29,7 @@ describe('PartnersPageComponent', () => {
       return of({ partner, secret: PARTNER_CREATED_DTO.secreto });
     }),
     loadConfig: vi.fn(() => of(toPartnerConfig(PARTNER_CONFIG_DTO))),
+    loadUsage: vi.fn(() => of({ quota: 1000, used: 0, resetInSeconds: 60, nearLimit: false })),
   };
 
   const button = (text: string): HTMLButtonElement =>

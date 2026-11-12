@@ -1,4 +1,4 @@
-import { NewPartner, Partner, PartnerConfig } from '../../../core/models/partner.model';
+import { NewPartner, Partner, PartnerConfig, PartnerQuotaUsage } from '../../../core/models/partner.model';
 
 /** Socio tal como lo entrega el BFF web (`/web/socios`). */
 export interface PartnerDto {
@@ -21,6 +21,13 @@ export interface PartnerDto {
 }
 
 /** Configuración del socio tal como la entrega `/web/socios/{id}/configuracion`. */
+export interface PartnerQuotaUsageDto {
+  cuota_consumo: number;
+  consumidas: number;
+  reinicia_en_s: number;
+  cerca_del_limite: boolean;
+}
+
 export interface PartnerConfigDto {
   socio_id: string;
   ramos: {
@@ -118,4 +125,13 @@ export function formatTimestamp(iso: string): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   return `${day} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function toPartnerQuotaUsage(dto: PartnerQuotaUsageDto): PartnerQuotaUsage {
+  return {
+    quota: dto.cuota_consumo,
+    used: dto.consumidas,
+    resetInSeconds: dto.reinicia_en_s,
+    nearLimit: dto.cerca_del_limite,
+  };
 }
