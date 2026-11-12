@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from cotizacion.catalogo.domain.models import Canal, ChannelLineResponse, Producto, ProductoMobileResponse, Ramo
 from cotizacion.consenso.domain.quote_contract import published_contract
 from cotizacion.container import container
 
 router = APIRouter(prefix="/catalogo", tags=["Catálogo de Productos"])
+
+MAX_PRODUCTS_PER_LOOKUP = 100
 
 
 @router.get("/")
@@ -28,6 +32,13 @@ def listar_lines_in_channel(canal: Canal) -> list[ChannelLineResponse]:
 def listar_productos() -> list[ProductoMobileResponse]:
     """Productos activos habilitados para compra desde Mobile."""
     return container.listar_productos_mobile.execute()
+
+
+@router.get("/productos/lote", response_model=list[Producto])
+def get_products(ids: Annotated[list[str], Query(min_length=1, max_length=MAX_PRODUCTS_PER_LOOKUP)]) -> list[Producto]:
+    """Productos por lote, para que el back-office muestre muchas pólizas con una sola llamada."""
+    products = (container.catalogo.get_producto(producto_id) for producto_id in dict.fromkeys(ids))
+    return [product for product in products if product is not None]
 
 
 @router.get("/productos/{producto_id}", response_model=Producto)

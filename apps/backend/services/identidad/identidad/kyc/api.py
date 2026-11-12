@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, field_validator
 
 from identidad.container import container
@@ -23,6 +24,7 @@ from identidad.kyc.domain.models import (
     SolicitudAsegurarCliente,
     SolicitudConsentimiento,
 )
+from identidad.kyc.domain.use_cases import MAX_CLIENTS_PER_LOOKUP
 
 CORREO_DE_OTRO_DOCUMENTO = "El correo ya está registrado con otro documento"
 
@@ -135,6 +137,12 @@ def registrar_cliente(solicitud: SolicitudRegistro) -> dict:
     except DocumentAlreadyRegistered as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con este documento.") from exc
     return {"token": session.token, "cliente_id": session.client_id}
+
+
+@router.get("/clientes", response_model=list[RespuestaCliente])
+def list_clients(ids: Annotated[list[str], Query(min_length=1, max_length=MAX_CLIENTS_PER_LOOKUP)]) -> list:
+    """Lectura interna por lote para el back-office. Los ids que no existen no aparecen."""
+    return container.list_clients.execute(ids)
 
 
 @router.get("/clientes/por-documento/{tipo_documento}/{numero_documento}", response_model=RespuestaCliente)

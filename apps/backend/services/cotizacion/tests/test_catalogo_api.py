@@ -80,3 +80,18 @@ def test_product_is_read_with_its_line():
     assert response.json()["ramo_id"] == "ramo-vida-hipotecario"
     assert response.json()["nombre"] == "Vida Hipotecario"
     assert client.get("/catalogo/productos/no-existe").json()["detail"]["codigo"] == "producto_no_encontrado"
+
+
+def test_products_are_read_in_one_call_for_the_back_office():
+    ids = [("ids", "hogar"), ("ids", "auto"), ("ids", "hogar"), ("ids", "no-existe")]
+    response = client.get("/catalogo/productos/lote", params=ids)
+
+    assert response.status_code == 200
+    assert [product["id"] for product in response.json()] == ["hogar", "auto"]
+    assert response.json()[0]["ramo_id"] == "ramo-hogar"
+
+
+def test_the_product_batch_needs_ids_and_caps_them():
+    assert client.get("/catalogo/productos/lote").status_code == 422
+    too_many = [("ids", f"producto-{index}") for index in range(101)]
+    assert client.get("/catalogo/productos/lote", params=too_many).status_code == 422

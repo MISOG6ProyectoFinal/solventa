@@ -1,4 +1,5 @@
 from itertools import count
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from identidad.container import container
@@ -322,3 +323,23 @@ def test_los_tipos_de_documento_se_leen_del_servicio():
 
     assert response.status_code == 200
     assert response.json() == ["CC", "CE", "Pasaporte"]
+
+
+def test_back_office_reads_customers_in_one_call():
+    suffix = uuid4().hex[:8]
+    _cliente_de_consentimiento("CLI-LOTE-1", f"lote1-{suffix}@solventa.test", f"7{suffix}1")
+    _cliente_de_consentimiento("CLI-LOTE-2", f"lote2-{suffix}@solventa.test", f"7{suffix}2")
+
+    response = client.get(
+        "/identidad/clientes",
+        params=[("ids", "CLI-LOTE-1"), ("ids", "CLI-LOTE-2"), ("ids", "CLI-LOTE-1"), ("ids", "CLI-NO")],
+    )
+
+    assert response.status_code == 200
+    assert sorted(item["id"] for item in response.json()) == ["CLI-LOTE-1", "CLI-LOTE-2"]
+
+
+def test_the_batch_lookup_needs_ids_and_caps_them():
+    assert client.get("/identidad/clientes").status_code == 422
+    too_many = [("ids", f"CLI-{index}") for index in range(101)]
+    assert client.get("/identidad/clientes", params=too_many).status_code == 422

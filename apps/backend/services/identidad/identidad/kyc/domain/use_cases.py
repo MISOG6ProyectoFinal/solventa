@@ -439,6 +439,19 @@ class GetClient:
 
 ConsultarCliente = GetClient
 
+MAX_CLIENTS_PER_LOOKUP = 100
+
+
+class ListClients:
+    """Lectura interna por lote, para que el back-office no pida un cliente a la vez."""
+
+    def __init__(self, clients: ClientRepository) -> None:
+        self.clients = clients
+
+    def execute(self, client_ids: list[str]) -> list[RespuestaCliente]:
+        unique = list(dict.fromkeys(client_id.strip() for client_id in client_ids if client_id.strip()))
+        return [_cliente_a_respuesta(cliente) for cliente in self.clients.get_many(unique)]
+
 
 class AsegurarCliente:
     def __init__(self, clients: ClientRepository) -> None:
