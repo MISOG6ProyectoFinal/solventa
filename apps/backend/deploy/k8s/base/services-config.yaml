@@ -10,4 +10,5 @@ data:
   SINIESTROS_URL: http://siniestros
   IDENTIDAD_URL: http://identidad
   PAGOS_URL: http://pagos
+  PAYMENT_SIMULATION_ENABLED: "true"
   COTIZACION_REPLICAS_HOST: cotizacion-replicas

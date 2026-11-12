@@ -1,6 +1,7 @@
 """Pago móvil de una cotización: sesión, monto del servidor, vigencia e idempotencia."""
 
 import httpx
+from canales.config import settings
 from canales.main import app
 from fastapi.testclient import TestClient
 
@@ -68,8 +69,8 @@ def test_pagar_exige_sesion():
 def test_consulta_la_cotizacion_y_no_usa_el_monto_del_cliente(monkeypatch):
     cotizaciones = _Upstream(response=VIGENTE)
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", cotizaciones)
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", cotizaciones)
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({"monto": "1.00", "moneda": "USD"}, authorization())
 
@@ -88,8 +89,8 @@ def test_consulta_la_cotizacion_y_no_usa_el_monto_del_cliente(monkeypatch):
 
 def test_otro_cliente_no_paga_la_cotizacion(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response={**VIGENTE, "cliente_id": "cliente-b"}))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response={**VIGENTE, "cliente_id": "cliente-b"}))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar(headers=authorization())
 
@@ -100,8 +101,8 @@ def test_otro_cliente_no_paga_la_cotizacion(monkeypatch):
 
 def test_el_mismo_cliente_paga_su_cotizacion(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({"intento_id": "intento-propio"}, authorization())
 
@@ -113,8 +114,8 @@ def test_el_mismo_cliente_paga_su_cotizacion(monkeypatch):
 
 def test_un_intento_nuevo_usa_otra_clave_de_idempotencia(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     _pagar({"intento_id": "intento-1"}, authorization())
     _pagar({"intento_id": "intento-2"}, authorization())
@@ -125,8 +126,8 @@ def test_un_intento_nuevo_usa_otra_clave_de_idempotencia(monkeypatch):
 
 def test_cotizacion_vencida_no_invoca_pagos(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VENCIDA))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VENCIDA))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({"simulacion": "rechazado"}, authorization())
 
@@ -138,8 +139,8 @@ def test_cotizacion_vencida_no_invoca_pagos(monkeypatch):
 
 def test_cotizacion_vigente_invoca_pagos(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({}, authorization())
 
@@ -150,8 +151,8 @@ def test_cotizacion_vigente_invoca_pagos(monkeypatch):
 
 def test_simular_vencida_no_invoca_pagos_aunque_la_oferta_siga_vigente(monkeypatch):
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({"simulacion": "vencida"}, authorization())
 
@@ -162,8 +163,8 @@ def test_simular_vencida_no_invoca_pagos_aunque_la_oferta_siga_vigente(monkeypat
 
 def test_simular_rechazo_pide_el_alias_de_prototipo(monkeypatch):
     cobros = _Upstream(response={**COBRO, "estado": "rechazado"})
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({"simulacion": "rechazado"}, authorization())
 
@@ -175,8 +176,8 @@ def test_simular_rechazo_pide_el_alias_de_prototipo(monkeypatch):
 def test_conserva_el_error_estructurado_de_cotizacion(monkeypatch):
     detalle = {"codigo": "cotizacion_no_encontrada", "mensaje": "Cotización no encontrada: oferta-1"}
     cobros = _Upstream(response=COBRO)
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(error=_error_json(404, detalle)))
-    monkeypatch.setattr("canales.movil.api.pagos", cobros)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(error=_error_json(404, detalle)))
+    monkeypatch.setattr("canales.quote_payment.pagos", cobros)
 
     response = _pagar({}, authorization())
 
@@ -187,10 +188,40 @@ def test_conserva_el_error_estructurado_de_cotizacion(monkeypatch):
 
 def test_conserva_el_error_estructurado_de_pagos(monkeypatch):
     detalle = {"codigo": "pasarela_no_disponible", "mensaje": "Pasarela de pagos no disponible"}
-    monkeypatch.setattr("canales.movil.api.cotizacion", _Upstream(response=VIGENTE))
-    monkeypatch.setattr("canales.movil.api.pagos", _Upstream(error=_error_json(503, detalle)))
+    monkeypatch.setattr("canales.quote_payment.cotizacion", _Upstream(response=VIGENTE))
+    monkeypatch.setattr("canales.quote_payment.pagos", _Upstream(error=_error_json(503, detalle)))
 
     response = _pagar({}, authorization())
 
     assert response.status_code == 503
     assert response.json()["detail"] == detalle
+
+
+def _without_simulation(monkeypatch) -> tuple["_Upstream", "_Upstream"]:
+    monkeypatch.setattr(settings, "payment_simulation_enabled", False)
+    quotes, charges = _Upstream(response=VIGENTE), _Upstream(response=COBRO)
+    monkeypatch.setattr("canales.quote_payment.cotizacion", quotes)
+    monkeypatch.setattr("canales.quote_payment.pagos", charges)
+    return quotes, charges
+
+
+def test_outside_the_demo_the_prototype_controls_are_rejected(monkeypatch):
+    quotes, charges = _without_simulation(monkeypatch)
+
+    response = _pagar({"simulacion": "rechazado"}, authorization())
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["codigo"] == "simulacion_no_habilitada"
+    assert quotes.calls == [] and charges.calls == []
+
+
+def test_outside_the_demo_the_phone_must_send_the_payment_token(monkeypatch):
+    _quotes, charges = _without_simulation(monkeypatch)
+
+    missing = _pagar(headers=authorization())
+    paid = _pagar({"medio_token": "tok_real_123"}, authorization())
+
+    assert missing.status_code == 422
+    assert missing.json()["detail"]["codigo"] == "medio_de_pago_obligatorio"
+    assert paid.status_code == 200
+    assert charges.calls[0][1]["json"]["medio_token"] == "tok_real_123"

@@ -2,21 +2,23 @@ from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
-from pydantic import AfterValidator, BaseModel, ConfigDict, ValidationError, field_validator, model_validator
-from solventa_common.errors import error_detail
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from solventa_common.errors import api_error, error_detail
 from solventa_common.integration.base import call_upstream
 from solventa_common.referencia_renovacion import referencia_ciclo_renovacion
 from solventa_common.sesion import InvalidToken, SessionToken, verify_token
 from solventa_common.validation import invalid_data_detail, invalid_fields
-from solventa_common.vigencia_cotizacion import oferta_se_puede_cobrar
 
 from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, pagos, polizas, siniestros
 from canales.config import settings
 from canales.movil.simulacion_pago import forzar_cotizacion_vencida, token_prototipo
+from canales.quote_payment import charge_quote, payable_quote
 
 INVALID_SESSION = "La sesión no es válida"
 MENSAJE_COTIZACION_VENCIDA = "Esta cotización ya no está vigente. No se realizó ningún cobro; vuelve a cotizar."
+MSG_SIMULATION_OFF = "La simulación de pagos no está habilitada en este ambiente."
+MSG_TOKEN_REQUIRED = "El medio de pago es obligatorio."
 
 router = APIRouter(prefix="/movil", tags=["BFF Móvil"])
 
@@ -119,6 +121,7 @@ class SolicitudPagoMovil(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
     intento_id: PaymentAttemptId
+    medio_token: str | None = Field(default=None, max_length=255)
     simulacion: Literal["rechazado", "vencida"] | None = None
 
 
@@ -134,7 +137,20 @@ class SolicitudPagoRenovacion(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
     intento_id: PaymentAttemptId
+    medio_token: str | None = Field(default=None, max_length=255)
     simulacion: Literal["rechazado"] | None = None
+
+
+def _payment_token(simulacion: str | None, medio_token: str | None) -> str:
+    """El token de la pasarela. Los controles de prototipo solo existen donde la simulación está habilitada."""
+    token = (medio_token or "").strip()
+    if settings.payment_simulation_enabled:
+        return token or token_prototipo(simulacion)
+    if simulacion is not None:
+        raise api_error(status.HTTP_422_UNPROCESSABLE_ENTITY, "simulacion_no_habilitada", MSG_SIMULATION_OFF)
+    if not token:
+        raise api_error(status.HTTP_422_UNPROCESSABLE_ENTITY, "medio_de_pago_obligatorio", MSG_TOKEN_REQUIRED)
+    return token
 
 
 class ChargeReference(BaseModel):
@@ -196,26 +212,17 @@ def contrato_producto(producto_id: str) -> dict:
 @authenticated.post("/cotizaciones/{cotizacion_id}/pagos")
 def pagar_cotizacion(cotizacion_id: str, session: Session, solicitud: SolicitudPagoMovil) -> dict:
     """Cobra la prima vigente. El valor sale de Cotización; la clave identifica el intento."""
-    oferta = call_upstream(cotizacion.get, f"/consenso/cotizaciones/{cotizacion_id}")
-    if not isinstance(oferta, dict) or oferta.get("prima") is None:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "La cotización no tiene un valor a cobrar")
-    if oferta.get("cliente_id") != session.client_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cotización no encontrada")
-    # vigente_hasta persistido es la regla. El flag solo demuestra el mismo rechazo en el prototipo.
-    if not oferta_se_puede_cobrar(oferta.get("vigente_hasta")):
+    token = _payment_token(solicitud.simulacion, solicitud.medio_token)
+    offer = payable_quote(
+        cotizacion_id,
+        lambda quote: quote.get("cliente_id") == session.client_id,
+        HTTPException(status.HTTP_404_NOT_FOUND, "Cotización no encontrada"),
+        MENSAJE_COTIZACION_VENCIDA,
+    )
+    if settings.payment_simulation_enabled and forzar_cotizacion_vencida(solicitud.simulacion):
         raise _cotizacion_vencida()
-    if forzar_cotizacion_vencida(solicitud.simulacion):
-        raise _cotizacion_vencida()
-    resultado = call_upstream(
-        pagos.post,
-        "/pagos/cobros",
-        json={
-            "cotizacion_id": cotizacion_id,
-            "cliente_id": session.client_id,
-            "monto": str(oferta["prima"]),
-            "idempotency_key": f"movil:{cotizacion_id}:{solicitud.intento_id}",
-            "medio_token": token_prototipo(solicitud.simulacion),
-        },
+    resultado = charge_quote(
+        cotizacion_id, offer, session.client_id, f"movil:{cotizacion_id}:{solicitud.intento_id}", token
     )
     return {
         "id": resultado["id"],
@@ -305,7 +312,7 @@ def pagar_renovacion(poliza_id: str, session: Session, solicitud: SolicitudPagoR
             "cliente_id": session.client_id,
             "monto": str(oferta["prima_propuesta"]),
             "idempotency_key": f"movil:renovacion:{referencia}:{solicitud.intento_id}",
-            "medio_token": token_prototipo(solicitud.simulacion),
+            "medio_token": _payment_token(solicitud.simulacion, solicitud.medio_token),
         },
     )
     return {
