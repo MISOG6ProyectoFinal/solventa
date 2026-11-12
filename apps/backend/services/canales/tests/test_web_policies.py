@@ -47,26 +47,26 @@ def _wire(monkeypatch, polizas: dict) -> dict[str, _Service]:
         "polizas": _Service(polizas),
         "identidad": _Service(
             {
-                "/identidad/clientes/CLI-CC-1020": {
-                    "id": "CLI-CC-1020",
-                    "tipo_documento": "CC",
-                    "numero_documento": "1020",
-                    "nombre": "Lina",
-                    "apellido": "Díaz",
-                    "email": "lina@solventa.test",
-                    "telefono": "3001234567",
-                    "pais": "Colombia",
-                }
+                "/identidad/clientes": [
+                    {
+                        "id": "CLI-CC-1020",
+                        "tipo_documento": "CC",
+                        "numero_documento": "1020",
+                        "nombre": "Lina",
+                        "apellido": "Díaz",
+                        "email": "lina@solventa.test",
+                        "telefono": "3001234567",
+                        "pais": "Colombia",
+                    }
+                ]
             }
         ),
         "cotizacion": _Service(
             {
-                "/gobierno-socios/socios/socio-1": {"id": "socio-1", "nombre": "Banco Aurora", "secreto": "no"},
-                "/catalogo/productos/vida-hipotecario": {
-                    "id": "vida-hipotecario",
-                    "nombre": "Vida Hipotecario",
-                    "ramo_id": "ramo-vida-hipotecario",
-                },
+                "/gobierno-socios/socios": [{"id": "socio-1", "nombre": "Banco Aurora", "secreto": "no"}],
+                "/catalogo/productos/lote": [
+                    {"id": "vida-hipotecario", "nombre": "Vida Hipotecario", "ramo_id": "ramo-vida-hipotecario"}
+                ],
             }
         ),
         "pagos": _Service({"/pagos/cobros/cobro-1": {"id": "cobro-1", "estado": "aprobado", "monto": "3927000.00"}}),
@@ -97,7 +97,8 @@ def test_lists_recent_policies_with_customer_partner_and_line(monkeypatch):
     assert mobile["socio"] is None
     assert partner["socio"] == {"id": "socio-1", "nombre": "Banco Aurora"}
     assert partner["cliente"] is None
-    assert services["cotizacion"].calls.count("/catalogo/productos/vida-hipotecario") == 1
+    assert services["identidad"].calls == ["/identidad/clientes"]
+    assert sorted(services["cotizacion"].calls) == ["/catalogo/productos/lote", "/gobierno-socios/socios"]
 
 
 def test_detail_adds_payments_and_claims(monkeypatch):
@@ -262,7 +263,7 @@ def test_endoso_envia_la_version_vigente_y_el_usuario_del_token(monkeypatch):
     assert response.status_code == 201
     assert posts[0]["json"]["version_anterior"] == previo
     assert posts[0]["json"]["usuario_id"] == "op-1"
-    assert services["identidad"].calls == ["/identidad/clientes/CLI-CC-1020"]
+    assert services["identidad"].calls == ["/identidad/clientes"]
 
 
 def test_cancelacion_envia_el_usuario_del_token_y_el_calculo_no_lo_necesita(monkeypatch):

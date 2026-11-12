@@ -139,6 +139,11 @@ class PostgresClientRepository:
             row = conn.execute(select(clients).where(clients.c.id == client_id)).mappings().first()
         return _client(row) if row else None
 
+    def get_many(self, client_ids: list[str]) -> list[Client]:
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(clients).where(clients.c.id.in_(client_ids))).mappings().all()
+        return [_client(row) for row in rows]
+
     def get_by_numero_documento(self, numero: str) -> Client | None:
         with self.engine.connect() as conn:
             row = conn.execute(select(clients).where(clients.c.numero_documento == numero)).mappings().first()
@@ -187,6 +192,9 @@ class InMemoryClientRepository:
 
     def get(self, client_id: str) -> Client | None:
         return self.clients_by_id.get(client_id)
+
+    def get_many(self, client_ids: list[str]) -> list[Client]:
+        return [self.clients_by_id[client_id] for client_id in client_ids if client_id in self.clients_by_id]
 
     def get_by_numero_documento(self, numero: str) -> Client | None:
         if not numero:

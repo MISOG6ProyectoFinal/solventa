@@ -22,15 +22,25 @@ def _optional(read: Callable[[str], dict | list], path: str) -> dict | list | No
         return None
 
 
-def _lookup(read: Callable[[str], dict | list], template: str, ids: set[str]) -> dict[str, dict]:
-    found = {resource_id: _optional(read, template.format(resource_id)) for resource_id in ids}
-    return {resource_id: value for resource_id, value in found.items() if isinstance(value, dict)}
+def _by_id(items: object) -> dict[str, dict]:
+    return {item["id"]: item for item in items or [] if isinstance(item, dict) and "id" in item}
+
+
+def _batch(read: Callable[..., list], path: str, ids: set[str]) -> dict[str, dict]:
+    """Una sola llamada por servicio, sin importar cuántas pólizas haya."""
+    if not ids:
+        return {}
+    try:
+        return _by_id(read(path, params=[("ids", resource_id) for resource_id in sorted(ids)]))
+    except (httpx.HTTPError, CircuitOpenError):
+        return {}
 
 
 def _summaries(raw: list[dict]) -> list[dict]:
-    customers = _lookup(identidad.get, "/identidad/clientes/{}", {p["cliente_id"] for p in raw if p.get("cliente_id")})
-    partners = _lookup(cotizacion.get, "/gobierno-socios/socios/{}", {p["socio_id"] for p in raw if p.get("socio_id")})
-    products = _lookup(cotizacion.get, "/catalogo/productos/{}", {p["producto_id"] for p in raw})
+    customers = _batch(identidad.get, "/identidad/clientes", {p["cliente_id"] for p in raw if p.get("cliente_id")})
+    with_partner = any(p.get("socio_id") for p in raw)
+    partners = _by_id(_optional(cotizacion.get, "/gobierno-socios/socios")) if with_partner else {}
+    products = _batch(cotizacion.get, "/catalogo/productos/lote", {p["producto_id"] for p in raw})
     views = []
     for policy in raw:
         customer = customers.get(policy.get("cliente_id") or "")

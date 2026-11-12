@@ -14,6 +14,7 @@ from identidad.kyc.domain.use_cases import (
     BuscarClientePorDocumento,
     ConsultarConsentimiento,
     GetClient,
+    ListClients,
     RegisterClient,
     SolicitarConsentimiento,
     StartSession,
@@ -71,6 +72,7 @@ class Container:
         self.buscar_cliente_por_documento = BuscarClientePorDocumento(self.clients)
         self.asegurar_cliente = AsegurarCliente(self.clients)
         self.get_client = GetClient(self.clients)
+        self.list_clients = ListClients(self.clients)
         self.consultar_cliente = self.get_client
         self.start_operator_session = StartOperatorSession(self.operators, self.secret)
         self.create_operator = CreateOperator(self.operators)
