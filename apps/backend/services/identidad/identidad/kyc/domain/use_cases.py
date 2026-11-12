@@ -181,12 +181,10 @@ def _resolve_contacto_y_mascara(solicitud: SolicitudConsentimiento) -> tuple[str
     contacto = (solicitud.contacto or "").strip()
     contacto_mask = (solicitud.contacto_mask or "").strip()
 
-    if contacto and (not contacto_mask or contacto_mask == "***4567"):
+    if contacto:
         contacto_mask = _mask_contacto(solicitud.canal.lower(), contacto)
-    elif not contacto and contacto_mask:
+    elif contacto_mask:
         contacto = contacto_mask
-    elif not contacto and not contacto_mask:
-        contacto_mask = "***4567"
 
     return contacto, contacto_mask
 

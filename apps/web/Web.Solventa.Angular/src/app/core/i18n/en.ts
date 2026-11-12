@@ -118,6 +118,7 @@ export const EN: Record<TextKey, string> = {
 
   'consent.title': 'Open Finance / Open Data digital consent',
   'consent.required': 'This line needs the customer\'s authorization to check their financial data for risk profiling.',
+  'consent.recordUnavailable': "The consent was granted, but its record couldn't be loaded. You can go on with the quote.",
   'consent.mustValidate': 'Request and validate the consent before quoting.',
   'consent.sendBy': 'Send code by',
   'consent.channel.sms': 'SMS to the registered mobile phone',

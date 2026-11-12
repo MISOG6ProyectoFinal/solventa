@@ -472,3 +472,25 @@ def test_la_consulta_dice_si_el_consentimiento_incluye_open_finance():
 
     assert consent_with(["Open Finance", "Open Data"])["open_finance"] is True
     assert consent_with(["Open Data"])["open_finance"] is False
+
+
+def test_the_mask_always_comes_from_the_real_contact():
+    payload = {
+        "cliente_id": "CLI-200",
+        "canal": "sms",
+        "contacto": "3001119876",
+        "contacto_mask": "***4567",
+        "asesor": "Ana Gómez (asesor)",
+    }
+
+    data = client.post("/identidad/solicitar", json=payload).json()
+
+    assert data["contacto_mask"] == "***9876"
+
+
+def test_no_placeholder_mask_is_invented_without_a_contact():
+    payload = {"cliente_id": "CLI-201", "canal": "sms", "asesor": "Ana Gómez (asesor)"}
+
+    data = client.post("/identidad/solicitar", json=payload).json()
+
+    assert data["contacto_mask"] == ""
