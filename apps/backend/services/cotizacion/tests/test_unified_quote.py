@@ -191,7 +191,7 @@ def test_a_single_replica_reports_a_product_without_tariff():
 
 
 def test_unreachable_replicas_answer_503_with_a_code():
-    async def fanout(body: dict) -> list[dict]:
+    async def fanout(body: dict, _timeout_s: float) -> list[dict]:
         raise ConnectionRefusedError("sin réplicas")
 
     original = container.cotizar_con_consenso.fanout

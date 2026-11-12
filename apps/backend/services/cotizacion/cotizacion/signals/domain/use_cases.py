@@ -3,7 +3,7 @@
 import logging
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from cotizacion.signals.domain.models import (
@@ -23,7 +23,8 @@ def _utc_now() -> datetime:
 
 
 class ResolveRiskProfileUseCase:
-    """Proveedor si responde a tiempo; si no, el último valor bueno; si no hay, el valor neutral."""
+    """Un valor reciente de la caché sin llamar al proveedor; si no, el proveedor; si falla, el último valor bueno;
+    si no hay, el valor neutral."""
 
     def __init__(
         self,
@@ -32,16 +33,28 @@ class ResolveRiskProfileUseCase:
         ttl_s: int,
         clock: Callable[[], float] = time.perf_counter,
         now: Callable[[], datetime] = _utc_now,
+        fresh_s: int = 0,
     ) -> None:
         self.provider = provider
         self.cache = cache
         self.ttl_s = ttl_s
+        self.fresh = timedelta(seconds=fresh_s)
         self.clock = clock
         self.now = now
 
     def execute(self, consent: OpenFinanceConsent) -> AppliedSignal:
         key = f"perfil:{self.provider.source}:{consent.referencia_cliente}:{consent.consentimiento_id}"
         start = self.clock()
+        recent = self._recent(key)
+        if recent is not None:
+            score, obtained_at = recent
+            return AppliedSignal(
+                fuente=self.provider.source,
+                origen=SignalOrigin.CACHE,
+                score_riesgo=score,
+                latencia_ms=round((self.clock() - start) * 1000),
+                obtenido_en=obtained_at,
+            )
         reason: DegradationReason | None = None
         try:
             score = self.provider.risk_score(consent)
@@ -63,6 +76,20 @@ class ResolveRiskProfileUseCase:
             motivo=reason,
             obtenido_en=obtained_at,
         )
+
+    def _recent(self, key: str) -> tuple[Decimal, datetime] | None:
+        if not self.fresh:
+            return None
+        try:
+            cached = self.cache.get(key)
+        except Exception:
+            return None
+        if not isinstance(cached, dict) or not cached.get("obtenido_en"):
+            return None
+        obtained_at = datetime.fromisoformat(cached["obtenido_en"])
+        if self.now() - obtained_at > self.fresh:
+            return None
+        return Decimal(str(cached["score_riesgo"])), obtained_at
 
     def _fallback(self, key: str) -> tuple[Decimal, SignalOrigin, datetime | None]:
         try:

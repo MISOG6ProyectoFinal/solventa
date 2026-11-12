@@ -1,6 +1,7 @@
 """Validador de Consenso: la réplica que recibe la solicitud la reparte entre las
 tres réplicas (incluida ella misma) y responde con la oferta de negocio."""
 
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Header, HTTPException, status
@@ -79,7 +80,12 @@ async def quote_request(
     allowed_coverages: set[str] | None = None,
     partner_id: str | None = None,
 ) -> OfertaCotizacion:
-    """La misma cotización para todos los canales: producto, contrato, señales y consenso."""
+    """La misma cotización para todos los canales: producto, contrato, señales y consenso.
+
+    Todo comparte un solo presupuesto: lo que tarde Open Finance se descuenta del fan-out a las réplicas."""
+    from cotizacion.config import settings
+
+    started = time.monotonic()
     try:
         product: Producto = await run_in_threadpool(
             container.validar_producto_canal.execute, requested_product(data), canal
@@ -96,7 +102,14 @@ async def quote_request(
     rating = to_rating_request(contract, signals[0].score_riesgo if signals else None)
     try:
         return await container.cotizar_con_consenso.execute(
-            rating, product, canal, client_id, signals, allowed_coverages, partner_id
+            rating,
+            product,
+            canal,
+            client_id,
+            signals,
+            allowed_coverages,
+            partner_id,
+            budget_s=settings.quote_budget_s - (time.monotonic() - started),
         )
     except ProductoNoTarifado as exc:
         raise product_error(exc) from exc

@@ -1,6 +1,7 @@
 """Composición de dependencias del servicio de cotización."""
 
 import asyncio
+import secrets
 import socket
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
@@ -74,7 +75,7 @@ class Container:
                 reset_timeout_s=settings.open_finance_breaker_reset_s,
             ),
         )
-        self.fanout: Callable[[dict], Awaitable[list[dict]]] = self._fanout_produccion
+        self.fanout: Callable[[dict, float], Awaitable[list[dict]]] = self._fanout_produccion
         self._wire()
 
     def use_postgres(self, engine: Engine) -> None:
@@ -91,7 +92,7 @@ class Container:
         self.fanout = self._fanout_local
         self._wire()
 
-    async def _fanout_produccion(self, body: dict) -> list[dict]:
+    async def _fanout_produccion(self, body: dict, timeout_s: float) -> list[dict]:
         try:
             ips = await asyncio.to_thread(
                 resolver_replicas, settings.cotizacion_replicas_host, settings.puerto_replicas
@@ -99,14 +100,14 @@ class Container:
         except Exception:
             ips = []
         if not ips:
-            return await self._fanout_local(body)
-        ips = ips[: settings.replicas_esperadas]
-        respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, settings.consenso_timeout_s)
-        if respuestas:
+            return await self._fanout_local(body, timeout_s)
+        ips = secrets.SystemRandom().sample(ips, min(len(ips), settings.replicas_esperadas))
+        respuestas = await cotizar_en_replicas(ips, settings.puerto_replicas, body, timeout_s, settings.quorum)
+        if len(respuestas) >= settings.quorum:
             return respuestas
-        return await self._fanout_local(body)
+        return await self._fanout_local(body, timeout_s)
 
-    async def _fanout_local(self, body: dict) -> list[dict]:
+    async def _fanout_local(self, body: dict, _timeout_s: float = 0.0) -> list[dict]:
         """Simula tres réplicas locales (tests / entorno sin DNS headless)."""
         resultado = self.rate_quote.execute(parse_rating_request(body))
         payload = resultado.model_dump(mode="json")
@@ -122,6 +123,7 @@ class Container:
             cotizaciones=self.cotizaciones,
             fanout=self.fanout,
             quorum=settings.quorum,
+            fanout_timeout_s=settings.consenso_timeout_s,
         )
         self.dar_de_alta_socio = DarDeAltaSocioUseCase(self.socios)
         self.consultar_socios = ConsultarSociosUseCase(self.socios)
@@ -139,7 +141,10 @@ class Container:
         self.autorizar_ramo = AutorizarRamoUseCase(self.configuraciones)
         self.partner_catalog = PartnerCatalogUseCase(self.configuraciones, self.catalogo, self.rules)
         self.resolve_risk_profile = ResolveRiskProfileUseCase(
-            self.risk_profile_provider, self.signal_cache, settings.signal_cache_ttl_s
+            self.risk_profile_provider,
+            self.signal_cache,
+            settings.signal_cache_ttl_s,
+            fresh_s=settings.signal_fresh_s,
         )
 
 

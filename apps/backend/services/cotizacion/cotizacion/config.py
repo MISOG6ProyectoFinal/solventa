@@ -11,6 +11,7 @@ class CotizacionSettings(ServiceSettings):
     replicas_esperadas: int = 3
     quorum: int = 2
     consenso_timeout_s: float = 0.3
+    quote_budget_s: float = Field(default=0.35, gt=0, le=3.0)
     # Open Finance (ASR-03): presupuesto de 300 ms y techo duro de 3000 ms.
     open_finance_url: str = simulated_provider("open-finance")
     open_finance_api_key: str | None = None
@@ -18,6 +19,7 @@ class CotizacionSettings(ServiceSettings):
     open_finance_breaker_failures: int = Field(default=5, ge=1)
     open_finance_breaker_reset_s: float = Field(default=30.0, gt=0)
     signal_cache_ttl_s: int = 86_400
+    signal_fresh_s: int = Field(default=300, ge=0)
     credential_grace_minutes: int = Field(default=1440, ge=0, le=10_080)
 
 
