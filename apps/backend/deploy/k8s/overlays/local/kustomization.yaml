@@ -9,6 +9,10 @@ resources:
 components:
   - ../../components/k3s
 
+images:
+  - name: postgis/postgis
+    newName: imresamu/postgis
+
 generatorOptions:
   disableNameSuffixHash: true
 
