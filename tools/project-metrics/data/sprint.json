@@ -30,6 +30,27 @@
       {
         "day": 7,
         "completedStoryPoints": 5
+      },
+      { "day": 8, 
+        "completedStoryPoints": 0 
+      },
+      { "day": 9, 
+        "completedStoryPoints": 5 
+      },
+      { "day": 10,
+        "completedStoryPoints": 34 
+      },
+      { "day": 11, 
+        "completedStoryPoints": 0 
+      },
+      { "day": 12, 
+        "completedStoryPoints": 0 
+      },
+      { "day": 13, 
+        "completedStoryPoints": 5 
+      },
+      { "day": 14, 
+        "completedStoryPoints": 0 
       }
     ]
   },
@@ -62,7 +83,7 @@
     {
       "week": 6,
       "planned": 28,
-      "actual": 0
+      "actual": 44
     },
     {
       "week": 7,
@@ -218,6 +239,27 @@
       {
         "day": 35,
         "valueDelivered": 4
+      },
+      { "day": 36, 
+        "valueDelivered": 0 
+      },
+      { "day": 37, 
+        "valueDelivered": 4 
+      },
+      { "day": 38, 
+        "valueDelivered": 18 
+      },
+      { "day": 39, 
+        "valueDelivered": 0 
+      },
+      { "day": 40, 
+        "valueDelivered": 0 
+      },
+      { "day": 41, 
+        "valueDelivered": 4 
+      },
+      { "day": 42, 
+        "valueDelivered": 0 
       }
     ]
   },
@@ -238,7 +280,7 @@
       {
         "sprint": 3,
         "plannedStoryPoints": 83,
-        "completedStoryPoints": 24,
+        "completedStoryPoints": 83,
         "closed": false
       }
     ]
