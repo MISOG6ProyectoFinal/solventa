@@ -1,48 +1,48 @@
 <slv-card [padding]="false">
   <div class="px-5 py-4 border-b border-border">
-    <h2 class="text-sm font-semibold text-foreground">{{ locale.t('partners.list.title') }}</h2>
+    <h2 class="text-base font-semibold text-foreground">{{ locale.t('partners.list.title') }}</h2>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left border-b border-border text-muted-foreground">
-          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.partner') }}</th>
-          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.typeCountry') }}</th>
-          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.scopes') }}</th>
-          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.contract') }}</th>
-          <th class="px-5 py-3 font-medium">{{ locale.t('partners.col.ramos') }}</th>
-          <th class="px-5 py-3 font-medium"></th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap">{{ locale.t('partners.col.partner') }}</th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap">{{ locale.t('partners.col.typeCountry') }}</th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap">{{ locale.t('partners.col.scopes') }}</th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap">{{ locale.t('partners.col.contract') }}</th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap">{{ locale.t('partners.col.ramos') }}</th>
+          <th class="px-4 py-3 font-medium whitespace-nowrap"></th>
         </tr>
       </thead>
       <tbody>
         @if (partners().length === 0) {
           <tr>
-            <td colspan="6" class="px-5 py-10 text-center text-muted-foreground">
+            <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
               {{ locale.t('partners.empty') }}
             </td>
           </tr>
         }
         @for (p of partners(); track p.id) {
           <tr class="border-b border-border last:border-0 hover:bg-background">
-            <td class="px-5 py-3">
+            <td class="px-4 py-3">
               <p class="font-medium text-foreground">{{ p.name }}</p>
-              <p class="font-mono text-xs text-muted-foreground">{{ p.identifier }}</p>
+              <p class="font-mono text-xs text-muted-foreground whitespace-nowrap">{{ p.identifier }}</p>
             </td>
-            <td class="px-5 py-3 text-muted-foreground">
+            <td class="px-4 py-3 text-muted-foreground whitespace-nowrap">
               {{ locale.label('partnerType', p.tipo) }} · {{ p.pais }}
             </td>
-            <td class="px-5 py-3 text-muted-foreground">
+            <td class="px-4 py-3 text-muted-foreground">
               {{ getAlcancesLabel(p.alcances) }}
             </td>
-            <td class="px-5 py-3">
+            <td class="px-4 py-3">
               <slv-badge [tone]="getContractTone(p.apiContractStatus)">
                 {{ locale.label('contract', p.apiContractStatus) }} · {{ p.versionContratoApi }}
               </slv-badge>
             </td>
-            <td class="px-5 py-3 text-foreground">
+            <td class="px-4 py-3 text-foreground">
               {{ getRamosLabel(p.enabledRamos) }}
             </td>
-            <td class="px-5 py-3 text-right">
+            <td class="px-4 py-3 text-right">
               <button slv-button variant="ghost" (click)="opened.emit(p.id)">{{ locale.t('common.open') }}</button>
             </td>
           </tr>

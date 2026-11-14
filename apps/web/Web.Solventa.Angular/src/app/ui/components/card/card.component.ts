@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-/** Tarjeta base: `rounded-xl border bg-white` con padding opcional (`p-5`). */
+/** Tarjeta base: `rounded-lg border bg-white` con padding opcional (`p-5`). */
 @Component({
   selector: 'slv-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -11,6 +11,6 @@ export class CardComponent {
   readonly padding = input(true);
 
   protected readonly classes = computed(
-    () => `block rounded-xl border border-border bg-white ${this.padding() ? 'p-5' : ''}`,
+    () => `block rounded-lg border border-border bg-white ${this.padding() ? 'p-5' : ''}`,
   );
 }

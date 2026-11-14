@@ -1,4 +1,4 @@
-<label class="text-xs font-medium uppercase tracking-wider block text-muted-foreground">
+<label class="text-sm font-medium block text-foreground">
   {{ label() }}
   @if (required()) {
     <span class="text-error"> *</span>
@@ -6,7 +6,7 @@
 </label>
 <ng-content />
 @if (error(); as err) {
-  <p class="text-[11px] font-medium text-error">{{ err }}</p>
+  <p class="text-xs font-medium text-error">{{ err }}</p>
 } @else if (hint(); as h) {
-  <p class="text-[11px] text-muted-foreground">{{ h }}</p>
+  <p class="text-xs text-muted-foreground">{{ h }}</p>
 }

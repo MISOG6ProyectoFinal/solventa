@@ -11,6 +11,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-ramos-config',
+  host: { class: 'block' },
   standalone: true,
   imports: [CommonModule, AlertComponent, CardComponent, SwitchComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,

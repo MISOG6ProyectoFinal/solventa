@@ -7,6 +7,7 @@ import { TabsComponent } from '../../../../ui/components/tabs/tabs.component';
 import { BadgeComponent } from '../../../../ui/components/badge/badge.component';
 import { AlertComponent } from '../../../../ui/components/alert/alert.component';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
+import { IconComponent } from '../../../../ui/components/icon/icon.component';
 import { RamosConfigComponent } from '../ramos-config/ramos-config.component';
 import { OperacionesCanalComponent } from '../operaciones-canal/operaciones-canal.component';
 import { PartnerCredentialComponent } from '../partner-credential/partner-credential.component';
@@ -15,6 +16,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-partner-detail',
+  host: { class: 'block' },
   standalone: true,
   imports: [
     CommonModule, 
@@ -23,6 +25,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
     BadgeComponent, 
     AlertComponent,
     ButtonComponent,
+    IconComponent,
     RamosConfigComponent,
     OperacionesCanalComponent,
     PartnerQuotaComponent,

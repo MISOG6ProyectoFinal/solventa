@@ -19,6 +19,6 @@ export class AlertComponent {
   readonly tone = input.required<AlertTone>();
 
   protected readonly classes = computed(
-    () => `block rounded-xl px-4 py-3 text-sm border ${TONE_CLASSES[this.tone()]}`,
+    () => `block rounded-lg px-4 py-3 text-sm border ${TONE_CLASSES[this.tone()]}`,
   );
 }

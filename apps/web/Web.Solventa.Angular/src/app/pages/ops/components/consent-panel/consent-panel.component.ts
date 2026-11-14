@@ -34,6 +34,7 @@ function detailMessage(errorField: object): string | null {
 /** Consentimiento digital Open Finance / Open Data (solo obligatorio en ramos que lo requieren). */
 @Component({
   selector: 'slv-consent-panel',
+  host: { class: 'block' },
   imports: [
     FormsModule,
     CardComponent,

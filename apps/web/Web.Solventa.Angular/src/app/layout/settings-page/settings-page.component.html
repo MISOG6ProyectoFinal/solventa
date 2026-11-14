@@ -1,7 +1,8 @@
 <div class="space-y-6" data-testid="settings-page">
   <div class="flex items-center gap-3">
-    <a routerLink="/ops" data-testid="settings-back" class="text-sm font-medium hover:underline text-secondary">
-      ← {{ locale.t('settings.back') }}
+    <a routerLink="/ops" data-testid="settings-back" class="inline-flex items-center gap-1 text-sm font-medium hover:underline text-secondary">
+      <slv-icon name="volver" [size]="16" />
+      {{ locale.t('settings.back') }}
     </a>
   </div>
 
@@ -21,7 +22,7 @@
     <slv-card data-testid="settings-language-panel">
       <div class="space-y-4 max-w-md">
         <div>
-          <h2 class="text-sm font-semibold text-foreground font-sans">{{ locale.t('settings.language') }}</h2>
+          <h2 class="text-base font-semibold text-foreground">{{ locale.t('settings.language') }}</h2>
           <p class="text-sm mt-1 text-muted-foreground">{{ locale.t('settings.languageDesc') }}</p>
         </div>
         <slv-field [label]="locale.t('settings.languageLabel')">

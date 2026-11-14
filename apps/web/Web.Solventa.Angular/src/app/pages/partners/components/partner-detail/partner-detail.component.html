@@ -1,6 +1,9 @@
 <div class="space-y-5">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <button slv-button variant="outline" (click)="backRequested.emit()">{{ locale.t('partners.back') }}</button>
+    <button slv-button variant="outline" (click)="backRequested.emit()">
+      <slv-icon name="volver" [size]="16" />
+      {{ locale.t('partners.back') }}
+    </button>
     <slv-badge [tone]="getContractTone(partner().apiContractStatus)">
       {{ locale.t('partners.contract', { status: locale.label('contract', partner().apiContractStatus), version: partner().versionContratoApi }) }}
     </slv-badge>
@@ -9,7 +12,7 @@
   <slv-card>
     <div class="flex flex-wrap justify-between gap-4 mb-4">
       <div>
-        <h2 class="text-xl font-semibold text-foreground font-['Fraunces']">{{ partner().name }}</h2>
+        <h2 class="text-xl font-semibold text-foreground font-serif">{{ partner().name }}</h2>
         <p class="text-sm mt-1 text-muted-foreground">
           {{ partner().identifier }} · {{ locale.label('partnerType', partner().tipo) }} · {{ partner().pais }} · {{ partner().contactEmail }}
         </p>

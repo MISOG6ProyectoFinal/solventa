@@ -1,5 +1,5 @@
 <slv-card>
-  <h2 class="text-sm font-semibold mb-4 text-foreground">{{ locale.t('quote.form.title') }}</h2>
+  <h2 class="text-base font-semibold mb-4 text-foreground">{{ locale.t('quote.form.title') }}</h2>
 
   <slv-field [label]="locale.t('quote.form.ramo')" [required]="true">
     <select slvInput [ngModel]="ramo()" (ngModelChange)="changeRamo($event)">
@@ -9,7 +9,7 @@
     </select>
   </slv-field>
 
-  <p class="text-[11px] uppercase tracking-wider font-semibold mt-5 mb-3 text-muted-foreground">{{ locale.t('quote.form.client') }}</p>
+  <p class="text-sm font-medium mt-6 mb-3 pt-5 border-t border-border text-muted-foreground">{{ locale.t('quote.form.client') }}</p>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     @for (field of clientFields(); track field.key) {
       <slv-quote-field
@@ -21,7 +21,7 @@
     }
   </div>
 
-  <p class="text-[11px] uppercase tracking-wider font-semibold mt-5 mb-3 text-muted-foreground">
+  <p class="text-sm font-medium mt-6 mb-3 pt-5 border-t border-border text-muted-foreground">
     {{ locale.t('quote.form.risk', { ramo: locale.label('ramo', ramo()) }) }}
   </p>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

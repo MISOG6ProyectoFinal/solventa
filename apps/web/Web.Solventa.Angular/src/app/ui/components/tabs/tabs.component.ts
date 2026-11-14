@@ -9,7 +9,7 @@ export interface TabItem {
 @Component({
   selector: 'slv-tabs',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'flex gap-1 border-b border-border overflow-x-auto', role: 'tablist' },
+  host: { class: 'flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--color-border)]', role: 'tablist' },
   templateUrl: './tabs.component.html',
 })
 export class TabsComponent {

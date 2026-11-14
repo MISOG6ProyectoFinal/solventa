@@ -43,6 +43,7 @@ export function quoteErrorMessage(detail: unknown, fallback: string): string {
 /** Pestaña "Cotización": formulario por ramo, consentimiento, simulación de proveedores y desglose. */
 @Component({
   selector: 'slv-quote-tab',
+  host: { class: 'block' },
   imports: [
     FormsModule,
     CardComponent,

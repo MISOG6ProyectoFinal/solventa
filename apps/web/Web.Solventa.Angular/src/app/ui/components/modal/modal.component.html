@@ -5,7 +5,7 @@
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="title()"
-      class="relative bg-white rounded-2xl border border-border shadow-xl w-full max-h-[90vh] overflow-auto"
+      class="relative bg-white rounded-lg border border-border shadow-lg w-full max-h-[90vh] overflow-auto"
       [class]="wide() ? 'max-w-2xl' : 'max-w-lg'"
     >
       <div class="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -14,9 +14,9 @@
           type="button"
           [attr.aria-label]="locale.t('common.close')"
           (click)="closed.emit()"
-          class="w-8 h-8 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer"
+          class="w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted cursor-pointer"
         >
-          ✕
+          <slv-icon name="cerrar" [size]="16" />
         </button>
       </div>
       <div class="p-5"><ng-content /></div>

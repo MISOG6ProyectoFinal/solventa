@@ -47,7 +47,7 @@ describe('UI components', () => {
   it('button applies the variant classes from the mockup', () => {
     const cls = el.querySelector('#btn')!.className;
     expect(cls).toContain('bg-error');
-    expect(cls).toContain('rounded-xl');
+    expect(cls).toContain('rounded-lg');
     expect(cls).toContain('font-semibold');
   });
 

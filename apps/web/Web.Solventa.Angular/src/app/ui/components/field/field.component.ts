@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Contenedor de campo: etiqueta en mayúsculas, asterisco requerido, hint y error. */
+/** Contenedor de campo: etiqueta, asterisco requerido, hint y error. */
 @Component({
   selector: 'slv-field',
   changeDetection: ChangeDetectionStrategy.OnPush,

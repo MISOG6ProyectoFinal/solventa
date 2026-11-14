@@ -14,6 +14,7 @@ import { PartnersService } from '../../services/partners.service';
 
 @Component({
   selector: 'slv-partner-quota',
+  host: { class: 'block' },
   standalone: true,
   imports: [DecimalPipe, FormsModule, AlertComponent, ButtonComponent, FieldComponent, InputDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,

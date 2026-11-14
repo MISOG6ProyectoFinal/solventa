@@ -16,6 +16,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 /** Consulta de pólizas: filtros (texto, estado, socio) y tabla de resultados. */
 @Component({
   selector: 'slv-policy-list',
+  host: { class: 'block' },
   imports: [FormsModule, CardComponent, FieldComponent, InputDirective, BadgeComponent, ButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './policy-list.component.html',

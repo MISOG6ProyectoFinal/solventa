@@ -1,5 +1,5 @@
 <slv-card>
-  <h2 class="text-sm font-semibold mb-2 text-foreground">{{ locale.t('consent.title') }}</h2>
+  <h2 class="text-base font-semibold mb-2 text-foreground">{{ locale.t('consent.title') }}</h2>
 
   @if (required()) {
     <p class="text-xs mb-4 text-muted-foreground">
@@ -109,35 +109,35 @@
         }
 
         @if (registro(); as reg) {
-          <div class="p-4 bg-muted/30 rounded-xl border border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 bg-muted/30 rounded-lg border border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.client') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.record.client') }}</p>
               <p class="text-sm font-bold text-foreground mt-0.5">
                 {{ reg.cliente_nombre ? reg.cliente_nombre + ' (' + (reg.cliente_documento || reg.cliente_id) + ')' : reg.cliente_id }}
               </p>
             </div>
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.id') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.record.id') }}</p>
               <p class="text-sm font-bold text-foreground mt-0.5">{{ reg.consentimiento_id }}</p>
             </div>
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('common.status') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('common.status') }}</p>
               <p class="text-sm font-bold text-success mt-0.5">{{ reg.estado }}</p>
             </div>
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.date') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.record.date') }}</p>
               <p class="text-sm text-foreground mt-0.5">{{ reg.fecha_otorgamiento || reg.fecha_hora }}</p>
             </div>
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.source') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.record.source') }}</p>
               <p class="text-sm font-bold text-foreground mt-0.5">{{ reg.fuente || reg.canal }}</p>
             </div>
             <div>
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.record.advisor') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.record.advisor') }}</p>
               <p class="text-sm text-foreground mt-0.5">{{ reg.asesor }}</p>
             </div>
             <div class="sm:col-span-2">
-              <p class="text-muted-foreground font-semibold uppercase tracking-wider">{{ locale.t('consent.scope') }}</p>
+              <p class="font-medium text-muted-foreground">{{ locale.t('consent.scope') }}</p>
               <p class="text-sm text-foreground mt-0.5">{{ reg.alcance }}</p>
             </div>
           </div>

@@ -31,7 +31,7 @@ describe('PolicyListComponent', () => {
   it('lists every policy with its status badge', () => {
     expect(rows().length).toBe(OPS_POLICIES.length);
     expect(rows()[0].textContent).toContain('SLV-2024-00391');
-    expect(rows()[0].querySelector('slv-badge')!.textContent).toContain('ACTIVA');
+    expect(rows()[0].querySelector('slv-badge')!.textContent).toContain('Activa');
   });
 
   it('offers the statuses the policy service publishes and filters by one', async () => {
@@ -43,7 +43,7 @@ describe('PolicyListComponent', () => {
     await fixture.whenStable();
 
     expect(rows().length).toBeGreaterThan(0);
-    expect(rows().every((row) => row.querySelector('slv-badge')!.textContent!.includes('VENCIDA'))).toBe(true);
+    expect(rows().every((row) => row.querySelector('slv-badge')!.textContent!.includes('Vencida'))).toBe(true);
   });
 
   it('filters by policy number or identification', async () => {
@@ -82,13 +82,13 @@ describe('PolicyListComponent', () => {
     );
   });
 
-  it('filters by status Vencida and shows only the VENCIDA badge', async () => {
+  it('filters by status Vencida and shows only the Vencida badge', async () => {
     const select = el.querySelector<HTMLSelectElement>('[data-testid="policy-filter-estado"]')!;
     select.value = 'vencida';
     select.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
     expect(rows().length).toBeGreaterThan(0);
-    rows().forEach((row) => expect(row.querySelector('slv-badge')!.textContent).toContain('VENCIDA'));
+    rows().forEach((row) => expect(row.querySelector('slv-badge')!.textContent).toContain('Vencida'));
   });
 });

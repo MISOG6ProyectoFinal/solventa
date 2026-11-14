@@ -3,6 +3,7 @@ import { ApiError } from '../../../core/interfaces/api-response.interface';
 import { Operator } from '../../../core/models/operator.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { LocaleService } from '../../../core/services/locale.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { BadgeComponent } from '../../../ui/components/badge/badge.component';
 import { ButtonComponent } from '../../../ui/components/button/button.component';
@@ -15,6 +16,7 @@ import { OperatorsService } from '../services/operators.service';
 @Component({
   selector: 'slv-users-page',
   imports: [
+    PageHeaderComponent,
     CardComponent,
     BadgeComponent,
     ButtonComponent,
