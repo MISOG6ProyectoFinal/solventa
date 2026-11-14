@@ -31,26 +31,33 @@
         "day": 7,
         "completedStoryPoints": 5
       },
-      { "day": 8, 
-        "completedStoryPoints": 0 
+      {
+        "day": 8,
+        "completedStoryPoints": 8
       },
-      { "day": 9, 
-        "completedStoryPoints": 5 
+      {
+        "day": 9,
+        "completedStoryPoints": 8
       },
-      { "day": 10,
-        "completedStoryPoints": 34 
+      {
+        "day": 10,
+        "completedStoryPoints": 10
       },
-      { "day": 11, 
-        "completedStoryPoints": 0 
+      {
+        "day": 11,
+        "completedStoryPoints": 10
       },
-      { "day": 12, 
-        "completedStoryPoints": 0 
+      {
+        "day": 12,
+        "completedStoryPoints": 8
       },
-      { "day": 13, 
-        "completedStoryPoints": 5 
+      {
+        "day": 13,
+        "completedStoryPoints": 0
       },
-      { "day": 14, 
-        "completedStoryPoints": 0 
+      {
+        "day": 14,
+        "completedStoryPoints": 0
       }
     ]
   },
@@ -240,26 +247,33 @@
         "day": 35,
         "valueDelivered": 4
       },
-      { "day": 36, 
-        "valueDelivered": 0 
+      {
+        "day": 36,
+        "valueDelivered": 2
       },
-      { "day": 37, 
-        "valueDelivered": 4 
+      {
+        "day": 37,
+        "valueDelivered": 2
       },
-      { "day": 38, 
-        "valueDelivered": 18 
+      {
+        "day": 38,
+        "valueDelivered": 3
       },
-      { "day": 39, 
-        "valueDelivered": 0 
+      {
+        "day": 39,
+        "valueDelivered": 2
       },
-      { "day": 40, 
-        "valueDelivered": 0 
+      {
+        "day": 40,
+        "valueDelivered": 2
       },
-      { "day": 41, 
-        "valueDelivered": 4 
+      {
+        "day": 41,
+        "valueDelivered": 0
       },
-      { "day": 42, 
-        "valueDelivered": 0 
+      {
+        "day": 42,
+        "valueDelivered": 0
       }
     ]
   },
@@ -280,7 +294,7 @@
       {
         "sprint": 3,
         "plannedStoryPoints": 83,
-        "completedStoryPoints": 83,
+        "completedStoryPoints": 68,
         "closed": false
       }
     ]
