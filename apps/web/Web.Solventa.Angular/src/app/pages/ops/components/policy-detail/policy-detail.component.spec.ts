@@ -72,10 +72,10 @@ describe('PolicyDetailComponent', () => {
   });
 
   it.each([
-    ['p1', 'ACTIVA'],
-    ['p4', 'CANCELADA'],
-    ['p3', 'VENCIDA'],
-  ])('shows the status badge of %s in uppercase', async (id, label) => {
+    ['p1', 'Activa'],
+    ['p4', 'Cancelada'],
+    ['p3', 'Vencida'],
+  ])('shows the status badge of %s', async (id, label) => {
     await render(id);
 
     expect(el.querySelector('[data-testid="policy-status-badge"]')!.textContent).toContain(label);

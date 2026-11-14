@@ -5,6 +5,7 @@ import { PartnerListComponent } from '../components/partner-list/partner-list.co
 import { PartnerDetailComponent } from '../components/partner-detail/partner-detail.component';
 import { CreatePartnerModalComponent } from '../components/create-partner-modal/create-partner-modal.component';
 import { ButtonComponent } from '../../../ui/components/button/button.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { Partner } from '../../../core/models/partner.model';
 import { ADMIN_ROLES } from '../../../core/constants/roles.constants';
@@ -15,6 +16,7 @@ import { LocaleService } from '../../../core/services/locale.service';
   selector: 'slv-partners-page',
   standalone: true,
   imports: [
+    PageHeaderComponent,
     CommonModule,
     PartnerListComponent,
     PartnerDetailComponent,

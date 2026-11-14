@@ -8,6 +8,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-operaciones-canal',
+  host: { class: 'block' },
   standalone: true,
   imports: [CommonModule, CardComponent, TabsComponent, AlertComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,

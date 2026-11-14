@@ -25,7 +25,7 @@ export class ButtonComponent {
 
   protected readonly classes = computed(
     () =>
-      `inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity cursor-pointer ` +
+      `inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-opacity cursor-pointer ` +
       `hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ` +
       VARIANT_CLASSES[this.variant()],
   );

@@ -16,6 +16,7 @@ export type FormValues = Record<string, string>;
 /** Formulario dinámico por ramo: selector de ramo, datos del cliente y datos del riesgo. */
 @Component({
   selector: 'slv-quote-form',
+  host: { class: 'block' },
   imports: [FormsModule, CardComponent, FieldComponent, InputDirective, QuoteFieldComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-form.component.html',

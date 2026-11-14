@@ -16,6 +16,7 @@ const MAX_GRACE_MINUTES = 10_080;
 
 @Component({
   selector: 'slv-partner-credential',
+  host: { class: 'block' },
   standalone: true,
   imports: [FormsModule, AlertComponent, ButtonComponent, FieldComponent, InputDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -5,7 +5,7 @@
     [attr.aria-selected]="active() === item.id"
     [attr.data-testid]="testIdPrefix() ? testIdPrefix() + '-' + item.id : null"
     (click)="active.set(item.id)"
-    class="px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer"
+    class="px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors cursor-pointer"
     [class]="
       active() === item.id
         ? 'border-primary text-primary'

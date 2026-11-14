@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { LocaleService } from '../../../core/services/locale.service';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * Modal con overlay. Contenido proyectado; el pie se proyecta con `slot="footer"`:
@@ -7,6 +8,7 @@ import { LocaleService } from '../../../core/services/locale.service';
  */
 @Component({
   selector: 'slv-modal',
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown.escape)': 'open() && closed.emit()' },
   templateUrl: './modal.component.html',

@@ -1,13 +1,5 @@
 <div class="space-y-6">
-  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
-    <div>
-      <div class="flex items-center gap-3">
-        <div class="w-1 h-8 rounded-full bg-accent"></div>
-        <h1 class="text-2xl font-semibold text-foreground font-['Fraunces']">{{ locale.t('ops.title') }}</h1>
-      </div>
-      <p class="text-sm text-muted-foreground mt-1 ml-4 pl-1">{{ locale.t('ops.subtitle') }}</p>
-    </div>
-  </div>
+  <slv-page-header [title]="locale.t('ops.title')" [subtitle]="locale.t('ops.subtitle')" />
 
   <slv-tabs [items]="tabs()" [(active)]="activeTab" testIdPrefix="ops-tab"></slv-tabs>
 

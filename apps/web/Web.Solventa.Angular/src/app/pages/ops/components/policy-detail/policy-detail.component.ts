@@ -6,6 +6,7 @@ import { AlertComponent } from '../../../../ui/components/alert/alert.component'
 import { BadgeComponent } from '../../../../ui/components/badge/badge.component';
 import { ButtonComponent } from '../../../../ui/components/button/button.component';
 import { CardComponent } from '../../../../ui/components/card/card.component';
+import { IconComponent } from '../../../../ui/components/icon/icon.component';
 import { TabsComponent } from '../../../../ui/components/tabs/tabs.component';
 import { DETAIL_TABS } from '../../constants/ops.constants';
 import { LocaleService } from '../../../../core/services/locale.service';
@@ -18,7 +19,8 @@ interface InfoItem {
 /** Detalle de una póliza: acciones, resumen y pestañas (asegurado, coberturas, pagos, siniestros). */
 @Component({
   selector: 'slv-policy-detail',
-  imports: [AlertComponent, BadgeComponent, ButtonComponent, CardComponent, TabsComponent, CopCurrencyPipe],
+  host: { class: 'block' },
+  imports: [AlertComponent, BadgeComponent, ButtonComponent, CardComponent, IconComponent, TabsComponent, CopCurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './policy-detail.component.html',
 })

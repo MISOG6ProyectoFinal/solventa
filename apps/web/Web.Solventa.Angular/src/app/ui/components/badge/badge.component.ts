@@ -10,7 +10,7 @@ const TONE_CLASSES: Record<Tone, string> = {
   primary: 'bg-primary text-white border-primary',
 };
 
-/** Etiqueta de estado (pill). */
+/** Etiqueta de estado. */
 @Component({
   selector: 'slv-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +21,6 @@ export class BadgeComponent {
   readonly tone = input<Tone>('neutral');
 
   protected readonly classes = computed(
-    () => `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${TONE_CLASSES[this.tone()]}`,
+    () => `inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${TONE_CLASSES[this.tone()]}`,
   );
 }

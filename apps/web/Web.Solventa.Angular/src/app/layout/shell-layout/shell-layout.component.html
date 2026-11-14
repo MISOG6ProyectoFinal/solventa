@@ -19,7 +19,6 @@
         class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors relative text-foreground cursor-pointer"
       >
         <slv-icon name="notificacion" [size]="20" [title]="locale.t('web.header.notifications')" />
-        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full"></span>
       </button>
 
       <a
@@ -38,14 +37,14 @@
           [attr.aria-label]="locale.t('web.profile.menu')"
           [attr.aria-expanded]="layout.profileOpen()"
           (click)="layout.toggleProfile()"
-          class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs text-white font-semibold hover:ring-2 hover:ring-accent/40 transition cursor-pointer"
+          class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs text-white font-semibold hover:opacity-90 cursor-pointer"
         >
           {{ operatorInitials() }}
         </button>
         @if (layout.profileOpen()) {
           <div
             data-testid="web-profile-dropdown"
-            class="absolute right-0 mt-2 w-44 rounded-xl border border-border bg-white shadow-lg py-1 z-50"
+            class="absolute right-0 mt-2 w-44 rounded-lg border border-border bg-white shadow-md py-1 z-50"
           >
             <a
               routerLink="/settings"
@@ -79,10 +78,10 @@
               routerLinkActive
               #rla="routerLinkActive"
               [attr.data-testid]="remote.testId"
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               [class]="
                 rla.isActive
-                  ? 'bg-primary text-white'
+                  ? 'bg-muted text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               "
             >

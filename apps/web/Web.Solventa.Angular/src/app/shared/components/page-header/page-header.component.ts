@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Encabezado de página: barra turquesa, título Fraunces, subtítulo y slot de acciones. */
+/** Encabezado de página: título Fraunces, subtítulo y slot de acciones. */
 @Component({
   selector: 'slv-page-header',
   changeDetection: ChangeDetectionStrategy.OnPush,

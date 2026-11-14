@@ -1,6 +1,6 @@
 <div class="space-y-4">
   <div>
-    <h3 class="text-sm font-semibold text-foreground">{{ locale.t('ramosConfig.title') }}</h3>
+    <h3 class="text-base font-semibold text-foreground">{{ locale.t('ramosConfig.title') }}</h3>
     <p class="text-xs mt-1 text-muted-foreground">{{ locale.t('ramosConfig.subtitle') }}</p>
   </div>
 
@@ -17,14 +17,15 @@
   }
 
   @if (config(); as config) {
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
       @for (r of config.ramos; track r.id) {
         <div
-          class="rounded-xl border p-4 transition-colors"
+          class="rounded-lg border p-4 transition-colors"
           [attr.data-ramo]="r.id"
-          [class.border-secondary]="r.enabled"
+          [class.border-info-border]="r.enabled"
+          [class.bg-info-surface]="r.enabled"
           [class.border-border]="!r.enabled"
-          [style.background]="r.enabled ? '#EAF3FA' : '#FFFFFF'">
+          [class.bg-white]="!r.enabled">
 
           <div class="flex items-center justify-between mb-3">
             <div>
@@ -36,7 +37,7 @@
 
           @if (r.enabled) {
             <div class="space-y-2 pt-2 border-t border-border">
-              <p class="text-[11px] uppercase tracking-wider text-muted-foreground">{{ locale.t('common.coverages') }}</p>
+              <p class="text-xs font-medium text-muted-foreground">{{ locale.t('common.coverages') }}</p>
               @for (cov of r.coverages; track cov.id) {
                 <label class="flex items-center gap-2 text-sm cursor-pointer text-foreground">
                   <input type="checkbox" [checked]="cov.enabled" [disabled]="!canEdit()" (change)="toggleCoverage(r, cov.id)" class="rounded border-border" />
@@ -49,9 +50,9 @@
       }
     </div>
 
-    <slv-card class="!bg-[#F5F8FA]" data-testid="config-summary">
+    <slv-card class="!bg-background" data-testid="config-summary">
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('ramosConfig.current') }}</p>
+        <p class="text-xs font-medium text-muted-foreground">{{ locale.t('ramosConfig.current') }}</p>
         <output class="block text-xs text-muted-foreground">
           @if (saving()) {
             {{ locale.t('ramosConfig.saving') }}

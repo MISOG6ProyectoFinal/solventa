@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ApiError } from '../../../core/interfaces/api-response.interface';
 import { EndorsementDraft } from '../interfaces/endorsement-draft.interface';
 import { LocaleService } from '../../../core/services/locale.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AlertComponent } from '../../../ui/components/alert/alert.component';
 import { TabsComponent } from '../../../ui/components/tabs/tabs.component';
 import { OpsPoliciesService } from '../services/ops-policies.service';
@@ -16,6 +17,7 @@ import { CancelPolicyModalComponent } from '../components/cancel-policy-modal/ca
   selector: 'slv-ops-page',
   standalone: true,
   imports: [
+    PageHeaderComponent,
     CommonModule,
     AlertComponent,
     TabsComponent,

@@ -7,7 +7,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="space-y-3" data-testid="endorsement-before">
-        <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('endorsement.before') }}</p>
+        <p class="text-sm font-semibold text-foreground pb-2 border-b border-border">{{ locale.t('endorsement.before') }}</p>
         <slv-field [label]="locale.t('endorsement.name')">
           <input slvInput type="text" [value]="before().name" readonly />
         </slv-field>
@@ -23,7 +23,7 @@
       </div>
 
       <div class="space-y-3" data-testid="endorsement-after">
-        <p class="text-xs uppercase tracking-wider text-muted-foreground">{{ locale.t('endorsement.after') }}</p>
+        <p class="text-sm font-semibold text-foreground pb-2 border-b border-border">{{ locale.t('endorsement.after') }}</p>
         <slv-field [label]="locale.t('endorsement.name')">
           <input slvInput type="text" data-testid="endorsement-name" [(ngModel)]="name" />
         </slv-field>

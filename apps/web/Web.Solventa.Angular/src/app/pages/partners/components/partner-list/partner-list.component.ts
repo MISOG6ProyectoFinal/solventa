@@ -8,6 +8,7 @@ import { LocaleService } from '../../../../core/services/locale.service';
 
 @Component({
   selector: 'slv-partner-list',
+  host: { class: 'block' },
   standalone: true,
   imports: [CommonModule, CardComponent, BadgeComponent, ButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
