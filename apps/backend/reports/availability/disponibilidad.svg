@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="860" viewBox="0 0 1240 860">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>text { font-family: "Segoe UI", sans-serif; fill: #111827; }</style>
+  <text x="24" y="28" font-size="20" font-weight="700">Disponibilidad HTTP durante el experimento ARQ-12</text>
+<text x="24" y="50" font-size="13" fill="#374151">Rolling update de canales. Zonas simuladas en el mismo equipo.</text>
+<circle cx="24" cy="72" r="5" fill="#0d7a45"/><text x="34" y="76" font-size="12">Venta exitosa</text>
+    <circle cx="154" cy="72" r="5" fill="#1565c0"/><text x="164" y="76" font-size="12">Siniestros exitoso</text>
+    <circle cx="324" cy="72" r="5" fill="#c62828"/><text x="334" y="76" font-size="12">Solicitud fallida</text>
+    <rect x="474" y="66" width="14" height="12" fill="#f3f4f6" stroke="#d1d5db"/><text x="494" y="76" font-size="12">Sin observación</text>
+<text x="24" y="114" font-size="15" font-weight="600">Disponibilidad de venta</text>
+<rect x="94" y="182" width="1106" height="188" fill="#ffffff" stroke="#e5e7eb"/>
+<path d="M 190.0 190.0 H 261.6 V 190.0 H 355.6 V 190.0 H 425.6 V 190.0 H 495.7 V 190.0 H 565.7 V 190.0 H 636.5 V 190.0 H 707.4 V 190.0 H 842.4 V 190.0 H 911.6 V 190.0 H 982.3 V 190.0 H 1054.6 V 190.0 H 1125.0 V 190.0 H 1195.7 V 190.0" fill="none" stroke="#0d7a45" stroke-width="2"/>
+<circle cx="190.0" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="261.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="355.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="425.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="495.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="565.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="636.5" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="707.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="842.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="911.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="982.3" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1054.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1125.0" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1195.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<text x="24" y="196" font-size="12" fill="#4b5563">100 %</text>
+<text x="24" y="368" font-size="12" fill="#4b5563">0 %</text>
+<text x="22" y="276" font-size="12" fill="#4b5563" text-anchor="middle" transform="rotate(-90 22 276)">Resultado de la solicitud</text>
+<line x1="94" y1="370" x2="94" y2="375" stroke="#4b5563"/>
+<text x="94" y="388" font-size="11" fill="#4b5563" text-anchor="middle">0 s</text>
+<line x1="357.9807146096379" y1="370" x2="357.9807146096379" y2="375" stroke="#4b5563"/>
+<text x="357.9807146096379" y="388" font-size="11" fill="#4b5563" text-anchor="middle">20 s</text>
+<line x1="621.9614292192758" y1="370" x2="621.9614292192758" y2="375" stroke="#4b5563"/>
+<text x="621.9614292192758" y="388" font-size="11" fill="#4b5563" text-anchor="middle">40 s</text>
+<line x1="885.9421438289138" y1="370" x2="885.9421438289138" y2="375" stroke="#4b5563"/>
+<text x="885.9421438289138" y="388" font-size="11" fill="#4b5563" text-anchor="middle">60 s</text>
+<line x1="1149.9228584385517" y1="370" x2="1149.9228584385517" y2="375" stroke="#4b5563"/>
+<text x="1149.9228584385517" y="388" font-size="11" fill="#4b5563" text-anchor="middle">80 s</text>
+<text x="647" y="402" font-size="12" fill="#4b5563" text-anchor="middle">Tiempo transcurrido (s)</text>
+<line x1="94" y1="182" x2="94" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="98" y="170" font-size="11" fill="#374151" text-anchor="start">Inicio del monitoreo</text>
+<line x1="813.8754087404826" y1="182" x2="813.8754087404826" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="817.8754087404826" y="170" font-size="11" fill="#374151" text-anchor="start">Inicio del rolling update</text>
+<line x1="1199.3136501420151" y1="182" x2="1199.3136501420151" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1195.3136501420151" y="170" font-size="11" fill="#374151" text-anchor="end">Fin del rolling update</text>
+<line x1="1200" y1="182" x2="1200" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1196" y="152" font-size="11" fill="#374151" text-anchor="end">Fin del monitoreo</text>
+<text x="24" y="438" font-size="15" font-weight="600">Disponibilidad de siniestros</text>
+<rect x="94" y="506" width="1106" height="188" fill="#ffffff" stroke="#e5e7eb"/>
+<path d="M 192.0 514.0 H 193.4 V 514.0 H 263.1 V 514.0 H 265.6 V 514.0 H 356.6 V 514.0 H 357.8 V 514.0 H 426.9 V 514.0 H 427.9 V 514.0 H 496.9 V 514.0 H 497.7 V 514.0 H 567.1 V 514.0 H 568.6 V 514.0 H 637.6 V 514.0 H 638.9 V 514.0 H 709.5 V 514.0 H 711.0 V 514.0 H 843.3 V 514.0 H 844.1 V 514.0 H 913.1 V 514.0 H 914.0 V 514.0 H 985.3 V 514.0 H 986.9 V 514.0 H 1055.7 V 514.0 H 1057.0 V 514.0 H 1126.3 V 514.0 H 1127.7 V 514.0 H 1197.1 V 514.0 H 1198.5 V 514.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="192.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="193.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="263.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="265.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="356.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="357.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="426.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="427.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="496.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="497.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="567.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="568.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="637.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="638.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="709.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="711.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="843.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="844.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="913.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="914.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="985.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="986.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1055.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1057.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1126.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1127.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1197.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1198.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<text x="24" y="520" font-size="12" fill="#4b5563">100 %</text>
+<text x="24" y="692" font-size="12" fill="#4b5563">0 %</text>
+<text x="22" y="600" font-size="12" fill="#4b5563" text-anchor="middle" transform="rotate(-90 22 600)">Resultado de la solicitud</text>
+<line x1="94" y1="694" x2="94" y2="699" stroke="#4b5563"/>
+<text x="94" y="712" font-size="11" fill="#4b5563" text-anchor="middle">0 s</text>
+<line x1="357.9807146096379" y1="694" x2="357.9807146096379" y2="699" stroke="#4b5563"/>
+<text x="357.9807146096379" y="712" font-size="11" fill="#4b5563" text-anchor="middle">20 s</text>
+<line x1="621.9614292192758" y1="694" x2="621.9614292192758" y2="699" stroke="#4b5563"/>
+<text x="621.9614292192758" y="712" font-size="11" fill="#4b5563" text-anchor="middle">40 s</text>
+<line x1="885.9421438289138" y1="694" x2="885.9421438289138" y2="699" stroke="#4b5563"/>
+<text x="885.9421438289138" y="712" font-size="11" fill="#4b5563" text-anchor="middle">60 s</text>
+<line x1="1149.9228584385517" y1="694" x2="1149.9228584385517" y2="699" stroke="#4b5563"/>
+<text x="1149.9228584385517" y="712" font-size="11" fill="#4b5563" text-anchor="middle">80 s</text>
+<text x="647" y="726" font-size="12" fill="#4b5563" text-anchor="middle">Tiempo transcurrido (s)</text>
+<line x1="94" y1="506" x2="94" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="98" y="494" font-size="11" fill="#374151" text-anchor="start">Inicio del monitoreo</text>
+<line x1="813.8754087404826" y1="506" x2="813.8754087404826" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="817.8754087404826" y="494" font-size="11" fill="#374151" text-anchor="start">Inicio del rolling update</text>
+<line x1="1199.3136501420151" y1="506" x2="1199.3136501420151" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1195.3136501420151" y="494" font-size="11" fill="#374151" text-anchor="end">Fin del rolling update</text>
+<line x1="1200" y1="506" x2="1200" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1196" y="476" font-size="11" fill="#374151" text-anchor="end">Fin del monitoreo</text>
+<text x="24" y="752" font-size="14">28 solicitudes exitosas / 28 evaluadas</text>
+<text x="24" y="770" font-size="14">Disponibilidad observada: 100,00 %</text>
+<text x="24" y="788" font-size="14">Esta ventana no demuestra el 99,97 % mensual.</text>
+</svg>

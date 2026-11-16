@@ -1,0 +1,79 @@
+[
+  {
+    "ts": "2026-11-16T03:01:58.533Z",
+    "tipo": "arq12-normal-inicio"
+  },
+  {
+    "ts": "2026-11-16T03:02:38.537Z",
+    "tipo": "arq12-normal-fin"
+  },
+  {
+    "ts": "2026-11-16T03:02:53.072Z",
+    "tipo": "captura",
+    "archivo": "grafana-normal.png",
+    "ok": true,
+    "motivo": null
+  },
+  {
+    "ts": "2026-11-16T03:02:53.073Z",
+    "tipo": "rolling-inicio",
+    "deployment": "canales"
+  },
+  {
+    "ts": "2026-11-16T03:03:22.275Z",
+    "tipo": "rolling-fin",
+    "ok": true,
+    "detalle": "completado"
+  },
+  {
+    "ts": "2026-11-16T03:03:29.541Z",
+    "tipo": "promover-primario",
+    "instancia": "solventa-pg-2"
+  },
+  {
+    "ts": "2026-11-16T03:04:07.010Z",
+    "tipo": "captura",
+    "archivo": "grafana-antes.png",
+    "ok": true,
+    "motivo": null
+  },
+  {
+    "ts": "2026-11-16T03:04:09.403Z",
+    "tipo": "falla-zona-a",
+    "nodo": "k3d-solventa-ha-local-agent-0",
+    "id": "decf37abe0db09ff1a08898ca7fdcc12dea030610c90da433055b4eec6709a4d",
+    "inicioFalla": "2026-11-16T03:04:09.403Z"
+  },
+  {
+    "ts": "2026-11-16T03:04:11.424Z",
+    "tipo": "docker-kill",
+    "ok": true,
+    "detalle": "detenido"
+  },
+  {
+    "ts": "2026-11-16T03:05:19.077Z",
+    "tipo": "captura",
+    "archivo": "grafana-durante.png",
+    "ok": true,
+    "motivo": null
+  },
+  {
+    "ts": "2026-11-16T03:07:30.150Z",
+    "tipo": "captura",
+    "archivo": "grafana-despues.png",
+    "ok": true,
+    "motivo": null
+  },
+  {
+    "ts": "2026-11-16T03:07:31.693Z",
+    "tipo": "restaurar-nodo",
+    "nodo": "k3d-solventa-ha-local-agent-0"
+  },
+  {
+    "ts": "2026-11-16T03:08:27.997Z",
+    "tipo": "captura",
+    "archivo": "grafana-final.png",
+    "ok": true,
+    "motivo": null
+  }
+]

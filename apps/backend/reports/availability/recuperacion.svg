@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="860" viewBox="0 0 1240 860">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>text { font-family: "Segoe UI", sans-serif; fill: #111827; }</style>
+  <text x="24" y="28" font-size="20" font-weight="700">Disponibilidad HTTP durante el experimento ARQ-13</text>
+<text x="24" y="50" font-size="13" fill="#374151">Pérdida de la zona simulada ha-zone-a.</text>
+<circle cx="24" cy="72" r="5" fill="#0d7a45"/><text x="34" y="76" font-size="12">Venta exitosa</text>
+    <circle cx="154" cy="72" r="5" fill="#1565c0"/><text x="164" y="76" font-size="12">Siniestros exitoso</text>
+    <circle cx="324" cy="72" r="5" fill="#c62828"/><text x="334" y="76" font-size="12">Solicitud fallida</text>
+    <rect x="474" y="66" width="14" height="12" fill="#f3f4f6" stroke="#d1d5db"/><text x="494" y="76" font-size="12">Sin observación</text>
+<text x="24" y="114" font-size="15" font-weight="600">Disponibilidad de venta</text>
+<rect x="94" y="182" width="1106" height="188" fill="#ffffff" stroke="#e5e7eb"/>
+<rect x="264.31416541530496" y="182" width="279.6777866109197" height="188" fill="#fecaca" opacity="0.55"/>
+<rect x="112.38828529085573" y="182" width="48.015062142789404" height="188" fill="#f3f4f6"/>
+<rect x="231.71675058151519" y="182" width="75.56854354575407" height="188" fill="#f3f4f6"/>
+<rect x="307.28529412726925" y="182" width="62.22781000238825" height="188" fill="#f3f4f6"/>
+<rect x="369.5131041296575" y="182" width="87.48727863982697" height="188" fill="#f3f4f6"/>
+<text x="413.256743449571" y="276" font-size="11" fill="#6b7280" text-anchor="middle">sin observación</text>
+<rect x="494.38844886755857" y="182" width="48.0295354094489" height="188" fill="#f3f4f6"/>
+<rect x="954.8879924885579" y="182" width="59.89761407021376" height="188" fill="#f3f4f6"/>
+<circle cx="112.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<path d="M 160.4 362.0 H 192.0 V 190.0 H 211.9 V 190.0 H 231.7 V 190.0" fill="none" stroke="#0d7a45" stroke-width="2"/>
+<circle cx="160.4" cy="362.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="192.0" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="211.9" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="231.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="307.3" cy="362.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="369.5" cy="362.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<path d="M 457.0 362.0 H 494.4 V 362.0" fill="none" stroke="#0d7a45" stroke-width="2"/>
+<circle cx="457.0" cy="362.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="494.4" cy="362.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<path d="M 542.4 190.0 H 568.9 V 190.0 H 588.2 V 190.0 H 607.0 V 190.0 H 633.8 V 190.0 H 652.5 V 190.0 H 676.3 V 190.0 H 702.1 V 190.0 H 720.6 V 190.0 H 739.1 V 190.0 H 757.7 V 190.0 H 783.7 V 190.0 H 804.8 V 190.0 H 823.4 V 190.0 H 849.3 V 190.0 H 867.9 V 190.0 H 886.5 V 190.0 H 905.1 V 190.0 H 931.1 V 190.0 H 954.9 V 190.0" fill="none" stroke="#0d7a45" stroke-width="2"/>
+<circle cx="542.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="568.9" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="588.2" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="607.0" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="633.8" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="652.5" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="676.3" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="702.1" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="720.6" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="739.1" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="757.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="783.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="804.8" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="823.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="849.3" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="867.9" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="886.5" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="905.1" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="931.1" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="954.9" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<path d="M 1014.8 190.0 H 1051.9 V 190.0 H 1084.3 V 190.0 H 1104.7 V 190.0 H 1125.3 V 190.0 H 1145.5 V 190.0 H 1164.4 V 190.0" fill="none" stroke="#0d7a45" stroke-width="2"/>
+<circle cx="1014.8" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1051.9" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1084.3" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1104.7" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1125.3" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1145.5" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1164.4" cy="190.0" r="4.5" fill="#0d7a45" stroke="#ffffff" stroke-width="1"/>
+<text x="24" y="196" font-size="12" fill="#4b5563">100 %</text>
+<text x="24" y="368" font-size="12" fill="#4b5563">0 %</text>
+<text x="22" y="276" font-size="12" fill="#4b5563" text-anchor="middle" transform="rotate(-90 22 276)">Resultado de la solicitud</text>
+<line x1="94" y1="370" x2="94" y2="375" stroke="#4b5563"/>
+<text x="94" y="388" font-size="11" fill="#4b5563" text-anchor="middle">0 s</text>
+<line x1="311.0989998920394" y1="370" x2="311.0989998920394" y2="375" stroke="#4b5563"/>
+<text x="311.0989998920394" y="388" font-size="11" fill="#4b5563" text-anchor="middle">60 s</text>
+<line x1="528.1979997840788" y1="370" x2="528.1979997840788" y2="375" stroke="#4b5563"/>
+<text x="528.1979997840788" y="388" font-size="11" fill="#4b5563" text-anchor="middle">120 s</text>
+<line x1="745.2969996761182" y1="370" x2="745.2969996761182" y2="375" stroke="#4b5563"/>
+<text x="745.2969996761182" y="388" font-size="11" fill="#4b5563" text-anchor="middle">180 s</text>
+<line x1="962.3959995681575" y1="370" x2="962.3959995681575" y2="375" stroke="#4b5563"/>
+<text x="962.3959995681575" y="388" font-size="11" fill="#4b5563" text-anchor="middle">240 s</text>
+<line x1="1179.494999460197" y1="370" x2="1179.494999460197" y2="375" stroke="#4b5563"/>
+<text x="1179.494999460197" y="388" font-size="11" fill="#4b5563" text-anchor="middle">300 s</text>
+<text x="647" y="402" font-size="12" fill="#4b5563" text-anchor="middle">Tiempo transcurrido (s)</text>
+<line x1="94" y1="182" x2="94" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="98" y="170" font-size="11" fill="#374151" text-anchor="start">Inicio del monitoreo</text>
+<line x1="264.31416541530496" y1="182" x2="264.31416541530496" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="268.31416541530496" y="170" font-size="11" fill="#374151" text-anchor="start">Interrupción de ha-zone-a</text>
+<line x1="340.53400596073504" y1="182" x2="340.53400596073504" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="344.53400596073504" y="152" font-size="11" fill="#374151" text-anchor="start">Primera solicitud fallida</text>
+<line x1="543.9919520262247" y1="182" x2="543.9919520262247" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="547.9919520262247" y="170" font-size="11" fill="#374151" text-anchor="start">Recuperación estable</text>
+<line x1="996.2634435513158" y1="182" x2="996.2634435513158" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1000.2634435513158" y="170" font-size="11" fill="#374151" text-anchor="start">Restauración del worker</text>
+<line x1="1200" y1="182" x2="1200" y2="370" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1196" y="152" font-size="11" fill="#374151" text-anchor="end">Fin del experimento</text>
+<text x="24" y="438" font-size="15" font-weight="600">Disponibilidad de siniestros</text>
+<rect x="94" y="506" width="1106" height="188" fill="#ffffff" stroke="#e5e7eb"/>
+<rect x="264.31416541530496" y="506" width="279.6777866109197" height="188" fill="#fecaca" opacity="0.55"/>
+<rect x="113.45207039032672" y="506" width="51.16661595788881" height="188" fill="#f3f4f6"/>
+<rect x="232.25587976458044" y="506" width="79.07469239401044" height="188" fill="#f3f4f6"/>
+<text x="271.7932259615857" y="600" font-size="11" fill="#6b7280" text-anchor="middle">sin observación</text>
+<rect x="340.53400596073504" y="506" width="58.171677021072014" height="188" fill="#f3f4f6"/>
+<rect x="402.75819764645837" y="506" width="58.25489830436396" height="188" fill="#f3f4f6"/>
+<rect x="955.2642974217041" y="506" width="59.82886605358112" height="188" fill="#f3f4f6"/>
+<path d="M 113.0 514.0 H 113.5 V 514.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="113.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="113.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<path d="M 164.6 686.0 H 166.2 V 514.0 H 192.4 V 514.0 H 193.3 V 514.0 H 212.4 V 514.0 H 213.3 V 514.0 H 232.0 V 514.0 H 232.3 V 514.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="164.6" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="166.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="192.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="193.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="212.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="213.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="232.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="232.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<path d="M 311.3 686.0 H 340.5 V 686.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="311.3" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="340.5" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<path d="M 398.7 686.0 H 402.8 V 686.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="398.7" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="402.8" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<path d="M 461.0 686.0 H 465.0 V 686.0 H 498.5 V 686.0 H 498.8 V 686.0 H 543.2 V 514.0 H 544.0 V 514.0 H 569.3 V 514.0 H 569.8 V 514.0 H 588.4 V 514.0 H 588.6 V 514.0 H 614.7 V 514.0 H 615.3 V 514.0 H 634.0 V 514.0 H 634.1 V 514.0 H 652.7 V 514.0 H 653.2 V 514.0 H 676.4 V 514.0 H 676.6 V 514.0 H 702.2 V 514.0 H 702.4 V 514.0 H 720.7 V 514.0 H 720.9 V 514.0 H 739.2 V 514.0 H 739.4 V 514.0 H 757.9 V 514.0 H 758.1 V 514.0 H 783.8 V 514.0 H 783.9 V 514.0 H 804.9 V 514.0 H 805.1 V 514.0 H 823.5 V 514.0 H 823.6 V 514.0 H 849.4 V 514.0 H 849.6 V 514.0 H 868.0 V 514.0 H 868.2 V 514.0 H 886.7 V 514.0 H 886.8 V 514.0 H 905.3 V 514.0 H 905.5 V 514.0 H 931.3 V 514.0 H 931.4 V 514.0 H 955.0 V 514.0 H 955.3 V 514.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="461.0" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="465.0" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="498.5" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="498.8" cy="686.0" r="4.5" fill="#c62828" stroke="#ffffff" stroke-width="1"/>
+<circle cx="543.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="544.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="569.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="569.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="588.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="588.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="614.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="615.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="634.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="634.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="652.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="653.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="676.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="676.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="702.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="702.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="720.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="720.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="739.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="739.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="757.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="758.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="783.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="783.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="804.9" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="805.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="823.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="823.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="849.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="849.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="868.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="868.2" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="886.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="886.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="905.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="905.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="931.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="931.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="955.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="955.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<path d="M 1015.1 514.0 H 1015.4 V 514.0 H 1052.4 V 514.0 H 1053.0 V 514.0 H 1085.6 V 514.0 H 1086.3 V 514.0 H 1104.8 V 514.0 H 1105.0 V 514.0 H 1125.5 V 514.0 H 1125.7 V 514.0 H 1145.7 V 514.0 H 1146.0 V 514.0 H 1164.6 V 514.0 H 1164.8 V 514.0" fill="none" stroke="#1565c0" stroke-width="2"/>
+<circle cx="1015.1" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1015.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1052.4" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1053.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1085.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1086.3" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1104.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1105.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1125.5" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1125.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1145.7" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1146.0" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1164.6" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<circle cx="1164.8" cy="514.0" r="4.5" fill="#1565c0" stroke="#ffffff" stroke-width="1"/>
+<text x="24" y="520" font-size="12" fill="#4b5563">100 %</text>
+<text x="24" y="692" font-size="12" fill="#4b5563">0 %</text>
+<text x="22" y="600" font-size="12" fill="#4b5563" text-anchor="middle" transform="rotate(-90 22 600)">Resultado de la solicitud</text>
+<line x1="94" y1="694" x2="94" y2="699" stroke="#4b5563"/>
+<text x="94" y="712" font-size="11" fill="#4b5563" text-anchor="middle">0 s</text>
+<line x1="311.0989998920394" y1="694" x2="311.0989998920394" y2="699" stroke="#4b5563"/>
+<text x="311.0989998920394" y="712" font-size="11" fill="#4b5563" text-anchor="middle">60 s</text>
+<line x1="528.1979997840788" y1="694" x2="528.1979997840788" y2="699" stroke="#4b5563"/>
+<text x="528.1979997840788" y="712" font-size="11" fill="#4b5563" text-anchor="middle">120 s</text>
+<line x1="745.2969996761182" y1="694" x2="745.2969996761182" y2="699" stroke="#4b5563"/>
+<text x="745.2969996761182" y="712" font-size="11" fill="#4b5563" text-anchor="middle">180 s</text>
+<line x1="962.3959995681575" y1="694" x2="962.3959995681575" y2="699" stroke="#4b5563"/>
+<text x="962.3959995681575" y="712" font-size="11" fill="#4b5563" text-anchor="middle">240 s</text>
+<line x1="1179.494999460197" y1="694" x2="1179.494999460197" y2="699" stroke="#4b5563"/>
+<text x="1179.494999460197" y="712" font-size="11" fill="#4b5563" text-anchor="middle">300 s</text>
+<text x="647" y="726" font-size="12" fill="#4b5563" text-anchor="middle">Tiempo transcurrido (s)</text>
+<line x1="94" y1="506" x2="94" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="98" y="494" font-size="11" fill="#374151" text-anchor="start">Inicio del monitoreo</text>
+<line x1="264.31416541530496" y1="506" x2="264.31416541530496" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="268.31416541530496" y="494" font-size="11" fill="#374151" text-anchor="start">Interrupción de ha-zone-a</text>
+<line x1="340.53400596073504" y1="506" x2="340.53400596073504" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="344.53400596073504" y="476" font-size="11" fill="#374151" text-anchor="start">Primera solicitud fallida</text>
+<line x1="543.9919520262247" y1="506" x2="543.9919520262247" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="547.9919520262247" y="494" font-size="11" fill="#374151" text-anchor="start">Recuperación estable</text>
+<line x1="996.2634435513158" y1="506" x2="996.2634435513158" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1000.2634435513158" y="494" font-size="11" fill="#374151" text-anchor="start">Restauración del worker</text>
+<line x1="1200" y1="506" x2="1200" y2="694" stroke="#374151" stroke-dasharray="3 3"/>
+<text x="1196" y="476" font-size="11" fill="#374151" text-anchor="end">Fin del experimento</text>
+<text x="24" y="752" font-size="14">Durante la falla: 48 evaluadas, 40 exitosas, 8 fallidas.</text>
+<text x="24" y="770" font-size="14">Disponibilidad observada: 83,33 %</text>
+<text x="24" y="788" font-size="14">Zona interrumpida: ha-zone-a</text>
+<text x="24" y="806" font-size="14">RTO observado: 77,295 s</text>
+<text x="24" y="824" font-size="14">RTO máximo permitido: 600,000 s</text>
+<text x="24" y="842" font-size="14">La franja rosa va del inicio de la falla a la recuperación estable. No es el intervalo desde el primer fallo.</text>
+</svg>

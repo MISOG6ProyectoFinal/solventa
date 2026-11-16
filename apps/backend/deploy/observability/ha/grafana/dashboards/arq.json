@@ -1,0 +1,108 @@
+{
+  "uid": "solventa-ha",
+  "title": "ARQ-12 y ARQ-13",
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "tags": ["ha-test", "local"],
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Disponibilidad HTTP de venta",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "avg_over_time(ha_probe_up{job=\"ha_monitor\",flow=\"venta\"}[1m])", "refId": "A", "interval": "5s" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "noValue": "sin datos" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Disponibilidad HTTP de siniestros",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "avg_over_time(ha_probe_up{job=\"ha_monitor\",flow=\"siniestros\"}[1m])", "refId": "A", "interval": "5s" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "noValue": "sin datos" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "PostgreSQL primario",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "ha_pg_primario", "refId": "A", "legendFormat": "{{instancia}} {{zona}}" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "name" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Falla de zona activa",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "ha_falla_activa", "refId": "A" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos", "min": 0, "max": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Solicitudes exitosas",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "targets": [{ "expr": "ha_probe_exitos{job=\"ha_monitor\"}", "refId": "A", "legendFormat": "{{flow}}" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Solicitudes fallidas",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "targets": [{ "expr": "ha_probe_fallos{job=\"ha_monitor\"}", "refId": "A", "legendFormat": "{{flow}}" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latencia",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+      "targets": [{ "expr": "ha_probe_latency_ms{job=\"ha_monitor\"}", "refId": "A", "legendFormat": "{{flow}}" }],
+      "fieldConfig": { "defaults": { "unit": "ms", "noValue": "sin datos", "custom": { "drawStyle": "points", "showPoints": "always" } } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Nodos Kubernetes listos",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [{ "expr": "kube_node_status_condition{condition=\"Ready\",status=\"true\"}", "refId": "A", "legendFormat": "{{node}}", "interval": "5s" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos", "min": 0, "max": 1 } }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Réplicas listas por zona",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "targets": [{ "expr": "ha_replicas_listas", "refId": "A", "legendFormat": "{{servicio}} {{zona}}" }],
+      "fieldConfig": { "defaults": { "noValue": "sin datos" } }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "PostgreSQL: primario y réplicas listas",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "targets": [
+        { "expr": "ha_pg_primario", "refId": "A", "legendFormat": "primario {{instancia}} {{zona}}" },
+        { "expr": "ha_pg_replicas_listas", "refId": "B", "legendFormat": "réplicas listas" }
+      ],
+      "fieldConfig": { "defaults": { "noValue": "sin datos" } }
+    }
+  ]
+}

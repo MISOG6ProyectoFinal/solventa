@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+scrape_configs:
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+  - job_name: kube-state-metrics
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["k3d-solventa-ha-local-server-0:8080"]
