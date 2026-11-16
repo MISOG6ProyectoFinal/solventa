@@ -1,0 +1,266 @@
+{
+  "experimento": "ARQ-13",
+  "ejecutado": true,
+  "inicio": "2026-11-16T03:03:22.333Z",
+  "fin": "2026-11-16T03:08:28.000Z",
+  "inicioFalla": "2026-11-16T03:04:09.403Z",
+  "nodo": {
+    "nombre": "k3d-solventa-ha-local-agent-0",
+    "id": "decf37abe0db09ff1a08898ca7fdcc12dea030610c90da433055b4eec6709a4d",
+    "zona": "ha-zone-a",
+    "cluster": "solventa-ha-local"
+  },
+  "precondiciones": [
+    {
+      "id": "monitor",
+      "ok": true,
+      "critico": true,
+      "detalle": "3 muestras de la línea base"
+    },
+    {
+      "id": "cluster",
+      "ok": true,
+      "critico": true,
+      "detalle": "3 nodos"
+    },
+    {
+      "id": "zonas",
+      "ok": true,
+      "critico": true,
+      "detalle": "ha-zone-a,ha-zone-b"
+    },
+    {
+      "id": "distribucion",
+      "ok": true,
+      "critico": true,
+      "detalle": "Cada servicio crítico tiene un pod listo en las dos zonas simuladas."
+    },
+    {
+      "id": "postgres-replicas",
+      "ok": true,
+      "critico": true,
+      "detalle": "ready=2 replicas=1 fase=Cluster in healthy state"
+    },
+    {
+      "id": "primario-conocido",
+      "ok": true,
+      "critico": true,
+      "detalle": "solventa-pg-1"
+    },
+    {
+      "id": "operador-fuera-de-zona-a",
+      "ok": true,
+      "critico": true,
+      "detalle": "k3d-solventa-ha-local-server-0"
+    },
+    {
+      "id": "zona-b-atiende",
+      "ok": true,
+      "critico": true,
+      "detalle": "canales, cotización, identidad y siniestros listos en ha-zone-b"
+    },
+    {
+      "id": "grafana",
+      "ok": true,
+      "critico": true,
+      "detalle": "responde"
+    },
+    {
+      "id": "promover-primario",
+      "ok": true,
+      "critico": true,
+      "detalle": "solventa-pg-2"
+    },
+    {
+      "id": "primario-en-zona-a",
+      "ok": true,
+      "critico": true,
+      "detalle": "solventa-pg-2 en ha-zone-a"
+    },
+    {
+      "id": "prometheus-sondas",
+      "ok": true,
+      "critico": true,
+      "detalle": "2 series (ha_probe_up)"
+    },
+    {
+      "id": "prometheus-nodos",
+      "ok": true,
+      "critico": true,
+      "detalle": "3 series (kube_node_status_condition{condition=\"Ready\",status=\"true\"})"
+    },
+    {
+      "id": "prometheus-replicas",
+      "ok": true,
+      "critico": true,
+      "detalle": "12 series (ha_replicas_listas)"
+    },
+    {
+      "id": "prometheus-postgres",
+      "ok": true,
+      "critico": true,
+      "detalle": "1 series (ha_pg_primario)"
+    }
+  ],
+  "primarioAntes": {
+    "instancia": "solventa-pg-2",
+    "nodo": "k3d-solventa-ha-local-agent-0",
+    "zona": "ha-zone-a",
+    "rol": "primary",
+    "listo": true
+  },
+  "primarioDespues": {
+    "instancia": "solventa-pg-1",
+    "nodo": "k3d-solventa-ha-local-agent-1",
+    "zona": "ha-zone-b",
+    "rol": "primary",
+    "listo": true
+  },
+  "primarioFinal": {
+    "instancia": "solventa-pg-1",
+    "nodo": "k3d-solventa-ha-local-agent-1",
+    "zona": "ha-zone-b",
+    "rol": "primary",
+    "listo": true
+  },
+  "postgresDurante": {
+    "fase": "Failing over",
+    "readyInstances": 1,
+    "instancias": [
+      {
+        "instancia": "solventa-pg-1",
+        "nodo": "k3d-solventa-ha-local-agent-1",
+        "zona": "ha-zone-b",
+        "rol": "primary",
+        "listo": true
+      },
+      {
+        "instancia": "solventa-pg-2",
+        "nodo": "k3d-solventa-ha-local-agent-0",
+        "zona": "ha-zone-a",
+        "rol": "replica",
+        "listo": false
+      }
+    ]
+  },
+  "postgresFinal": {
+    "fase": "Cluster in healthy state",
+    "readyInstances": 2,
+    "currentPrimary": "solventa-pg-1",
+    "instancias": [
+      {
+        "instancia": "solventa-pg-1",
+        "nodo": "k3d-solventa-ha-local-agent-1",
+        "zona": "ha-zone-b",
+        "rol": "primary",
+        "listo": true
+      },
+      {
+        "instancia": "solventa-pg-2",
+        "nodo": "k3d-solventa-ha-local-agent-0",
+        "zona": "ha-zone-a",
+        "rol": "replica",
+        "listo": true
+      }
+    ],
+    "primario": {
+      "instancia": "solventa-pg-1",
+      "nodo": "k3d-solventa-ha-local-agent-1",
+      "zona": "ha-zone-b",
+      "rol": "primary",
+      "listo": true
+    },
+    "replicasListas": 1
+  },
+  "recuperacion": {
+    "conclusion": "recuperado",
+    "rtoMs": 77295,
+    "inicioFalla": "2026-11-16T03:04:09.403Z",
+    "primerFallo": "2026-11-16T03:04:30.468Z",
+    "recuperacionEstable": "2026-11-16T03:05:26.698Z",
+    "duracionObservadaMs": 190959,
+    "criterio": "6 ciclos seguidos con todos los flujos evaluados en éxito",
+    "rtoMaximoMs": 600000,
+    "cumpleRto": true
+  },
+  "disponibilidad": {
+    "porFlujo": {
+      "venta": {
+        "total": 24,
+        "exitos": 20,
+        "fallos": 4,
+        "fallosDeAcceso": 2,
+        "latenciaMaxMs": 8078,
+        "disponibilidadObservada": 0.8333333333333334
+      },
+      "siniestros": {
+        "total": 24,
+        "exitos": 20,
+        "fallos": 4,
+        "fallosDeAcceso": 2,
+        "latenciaMaxMs": 8066,
+        "disponibilidadObservada": 0.8333333333333334
+      }
+    },
+    "total": 48,
+    "exitos": 40,
+    "fallos": 8,
+    "fallosDeAcceso": 4,
+    "muestrasNoObservadas": 0,
+    "sinMuestras": [],
+    "disponibilidadObservada": 0.8333333333333334,
+    "sloMensualObjetivo": 0.9997,
+    "sloMensualDemostrado": false,
+    "motivo": "La disponibilidad observada es la de los ciclos medidos. Un error de red o de tiempo de espera cuenta como fallo. Una ventana en la que el monitor no escribió muestras queda como no observada, no como disponible. Esta prueba no demuestra el 99,97 % mensual.",
+    "huecos": [
+      {
+        "desde": "2026-11-16T03:04:13.194Z",
+        "hasta": "2026-11-16T03:04:37.361Z",
+        "ms": 24167
+      },
+      {
+        "desde": "2026-11-16T03:04:37.361Z",
+        "hasta": "2026-11-16T03:04:54.593Z",
+        "ms": 17232
+      },
+      {
+        "desde": "2026-11-16T03:04:54.593Z",
+        "hasta": "2026-11-16T03:05:11.878Z",
+        "ms": 17285
+      },
+      {
+        "desde": "2026-11-16T03:07:20.214Z",
+        "hasta": "2026-11-16T03:08:28.000Z",
+        "ms": 67786,
+        "abierto": true
+      }
+    ]
+  },
+  "restauracion": {
+    "ok": true,
+    "detalle": "arrancado"
+  },
+  "capturas": [
+    {
+      "archivo": "grafana-antes.png",
+      "ok": true,
+      "motivo": null
+    },
+    {
+      "archivo": "grafana-durante.png",
+      "ok": true,
+      "motivo": null
+    },
+    {
+      "archivo": "grafana-despues.png",
+      "ok": true,
+      "motivo": null
+    },
+    {
+      "archivo": "grafana-final.png",
+      "ok": true,
+      "motivo": null
+    }
+  ],
+  "limitacion": "Se detuvo un worker de k3d. Las dos zonas comparten equipo, Docker Desktop y el nodo de control. No es una AZ física de AWS y el RPO no es cero."
+}

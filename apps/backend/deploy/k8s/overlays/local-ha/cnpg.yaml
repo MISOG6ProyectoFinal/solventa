@@ -1,0 +1,112 @@
+# PostgreSQL 17 con PostGIS, la misma major que usa el proyecto.
+# Replicación asíncrona: no hay quórum síncrono y el RPO no es cero.
+# El usuario solventa queda como superuser porque las migraciones actuales
+# ejecutan CREATE EXTENSION, igual que el usuario de la imagen local.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: solventa-pg-app
+type: kubernetes.io/basic-auth
+stringData:
+  username: solventa
+  password: solventa
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: solventa-pg
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgis:17-3-system-trixie
+  failoverDelay: 0
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+  bootstrap:
+    initdb:
+      database: solventa
+      owner: solventa
+      secret:
+        name: solventa-pg-app
+      postInitSQL:
+        - ALTER ROLE solventa WITH SUPERUSER
+  storage:
+    size: 2Gi
+    storageClass: local-path
+  postgresql:
+    parameters:
+      max_connections: "80"
+      shared_buffers: "64MB"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 512Mi
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: topology.kubernetes.io/zone
+    podAntiAffinityType: required
+  monitoring:
+    enablePodMonitor: false
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-cotizacion
+spec:
+  cluster:
+    name: solventa-pg
+  name: cotizacion
+  owner: solventa
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-polizas
+spec:
+  cluster:
+    name: solventa-pg
+  name: polizas
+  owner: solventa
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-siniestros
+spec:
+  cluster:
+    name: solventa-pg
+  name: siniestros
+  owner: solventa
+  extensions:
+    - name: postgis
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-identidad
+spec:
+  cluster:
+    name: solventa-pg
+  name: identidad
+  owner: solventa
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-pagos
+spec:
+  cluster:
+    name: solventa-pg
+  name: pagos
+  owner: solventa
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: solventa-db-auditoria
+spec:
+  cluster:
+    name: solventa-pg
+  name: auditoria
+  owner: solventa

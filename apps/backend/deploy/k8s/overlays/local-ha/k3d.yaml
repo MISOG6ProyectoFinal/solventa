@@ -1,0 +1,35 @@
+# Clúster temporal solventa-ha-local. Las zonas ha-zone-a y ha-zone-b
+# comparten el mismo equipo y Docker Desktop: no son zonas físicas.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: solventa-ha-local
+# k3s 1.35 no arranca: Docker Desktop de este equipo usa cgroup v1.
+image: rancher/k3s:v1.34.13-k3s1
+servers: 1
+agents: 2
+ports:
+  - port: 18080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 18081:8080
+    nodeFilters:
+      - server:0
+options:
+  k3d:
+    wait: true
+    timeout: 360s
+  kubeconfig:
+    updateDefaultKubeconfig: false
+    switchCurrentContext: false
+  k3s:
+    nodeLabels:
+      - label: topology.kubernetes.io/zone=ha-zone-a
+        nodeFilters:
+          - agent:0
+      - label: topology.kubernetes.io/zone=ha-zone-b
+        nodeFilters:
+          - agent:1
+      - label: topology.kubernetes.io/zone=ha-control
+        nodeFilters:
+          - server:0

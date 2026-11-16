@@ -1,0 +1,55 @@
+{
+  "experimento": "ARQ-12",
+  "ejecutado": true,
+  "inicio": "2026-11-16T03:01:58.533Z",
+  "fin": "2026-11-16T03:03:22.327Z",
+  "zonasSimuladas": [
+    "ha-zone-a",
+    "ha-zone-b"
+  ],
+  "rolling": {
+    "deployment": "canales",
+    "completado": true
+  },
+  "disponibilidad": {
+    "porFlujo": {
+      "venta": {
+        "total": 14,
+        "exitos": 14,
+        "fallos": 0,
+        "fallosDeAcceso": 0,
+        "latenciaMaxMs": 142,
+        "disponibilidadObservada": 1
+      },
+      "siniestros": {
+        "total": 14,
+        "exitos": 14,
+        "fallos": 0,
+        "fallosDeAcceso": 0,
+        "latenciaMaxMs": 221,
+        "disponibilidadObservada": 1
+      }
+    },
+    "total": 28,
+    "exitos": 28,
+    "fallos": 0,
+    "fallosDeAcceso": 0,
+    "muestrasNoObservadas": 0,
+    "sinMuestras": [],
+    "disponibilidadObservada": 1,
+    "sloMensualObjetivo": 0.9997,
+    "sloMensualDemostrado": false,
+    "motivo": "La disponibilidad observada es la de los ciclos medidos. Un error de red o de tiempo de espera cuenta como fallo. Una ventana en la que el monitor no escribió muestras queda como no observada, no como disponible. Esta prueba no demuestra el 99,97 % mensual.",
+    "huecos": []
+  },
+  "sloMensualObjetivo": 0.9997,
+  "sloMensualDemostrado": false,
+  "capturas": [
+    {
+      "archivo": "grafana-normal.png",
+      "ok": true,
+      "motivo": null
+    }
+  ],
+  "limitacion": "La disponibilidad observada es solo la de esta ventana. No demuestra el 99,97 % mensual."
+}
