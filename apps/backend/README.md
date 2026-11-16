@@ -310,21 +310,21 @@ Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigen
 
 ## Prueba de carga
 
-`load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
+`reports/load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
 
 - **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, tipos de documento, catálogo, contrato del producto, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** ramos y contrato del producto, cotización asistida, listado, detalle y configuración de socios.
 - **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `reports/load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
-OPERADOR_CONTRASENA=<clave> PERFIL=humo ./load-tests/run.sh
-PERFIL=carga DURACION=5m ./load-tests/run.sh
-PERFIL=asr04 TASA_OBJETIVO=50000 ./load-tests/run.sh
-PERFIL=emision TASA_VENTAS=600 DURACION=2m ./load-tests/run.sh
-PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./load-tests/run.sh
+OPERADOR_CONTRASENA=<clave> PERFIL=humo ./reports/load-tests/run.sh
+PERFIL=carga DURACION=5m ./reports/load-tests/run.sh
+PERFIL=asr04 TASA_OBJETIVO=50000 ./reports/load-tests/run.sh
+PERFIL=emision TASA_VENTAS=600 DURACION=2m ./reports/load-tests/run.sh
+PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./reports/load-tests/run.sh
 ```
 
 El perfil `degradacion` cambia el modo de Open Finance en el servicio `simuladores` por `PUT /simuladores/open-finance/modo`, en el mismo `BASE_URL`. Sirve igual en `local` y en AWS.
@@ -356,13 +356,13 @@ El perfil `degradacion` cambia el modo de Open Finance en el servicio `simulador
 | `CLIENTES_OPEN_FINANCE` | 200 | Clientes distintos en las cotizaciones de `degradacion`; los repetidos usan el último valor bueno |
 | `UMBRAL_DISPONIBILIDAD` | 99.9 | Disponibilidad mínima de cada fase en `degradacion` |
 
-Los resultados quedan en `load-tests/resultados/<fecha>-<perfil>/`:
+Los resultados quedan en `reports/load-tests/resultados/<fecha>-<perfil>/`:
 
 - `reporte.html`: veredicto, p95 de cotizaciones, cotizaciones por minuto y latencia de cada petición frente a su objetivo.
 - `dashboard.html`: el reporte de k6 con las gráficas en el tiempo (peticiones por segundo, latencia, errores y usuarios virtuales).
 - `resumen.md`, `resumen.csv` y `resumen.json`: la misma tabla para documentos, hojas de cálculo o comparar corridas.
 
-k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test load-tests/`.
+k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test reports/load-tests/`.
 
 Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
 
