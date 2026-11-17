@@ -1,6 +1,6 @@
 <slv-field [label]="label()" [required]="definition().required" [error]="error()">
   @if (definition().type === 'select') {
-    <select slvInput [invalid]="!!error()" [(ngModel)]="value">
+    <select slvInput [attr.data-testid]="'quote-field-' + definition().key" [invalid]="!!error()" [(ngModel)]="value">
       <option value="">{{ locale.t('common.select') }}</option>
       @for (option of definition().options; track option) {
         <option [value]="option">{{ locale.label('quote.option', option) }}</option>
@@ -9,6 +9,7 @@
   } @else {
     <input
       slvInput
+      [attr.data-testid]="'quote-field-' + definition().key"
       [invalid]="!!error()"
       [type]="definition().type"
       [placeholder]="definition().placeholder ?? ''"

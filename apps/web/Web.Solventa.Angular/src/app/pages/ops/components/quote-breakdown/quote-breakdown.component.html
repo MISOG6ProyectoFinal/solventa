@@ -1,4 +1,4 @@
-<slv-card class="sticky top-20">
+<slv-card class="sticky top-20" data-testid="quote-breakdown">
   <h2 class="text-base font-semibold mb-4 text-foreground">{{ locale.t('breakdown.title') }}</h2>
 
   @if (isCalculating()) {
@@ -9,7 +9,7 @@
   } @else if (errorMessage(); as error) {
     <slv-alert tone="error">{{ error }}</slv-alert>
   } @else if (quoteResult(); as result) {
-    <div class="space-y-4">
+    <div class="space-y-4" data-testid="quote-result">
       @if (result.degradada) {
         <slv-alert tone="warning">{{ locale.t('breakdown.degraded') }}</slv-alert>
       } @else {
@@ -19,7 +19,7 @@
       <div class="flex items-start justify-between pb-4 border-b border-border">
         <div>
           <p class="text-xs font-medium text-muted-foreground">{{ locale.t('breakdown.quote') }}</p>
-          <p class="text-sm font-mono text-foreground">{{ result.id }}</p>
+          <p class="text-sm font-mono text-foreground" data-testid="quote-id">{{ result.id }}</p>
         </div>
         <div class="text-right">
           <slv-badge tone="success">{{ result.estado ? locale.label('quoteStatus', result.estado) : locale.t('breakdown.valid') }}</slv-badge>
@@ -36,32 +36,32 @@
       <div class="space-y-2.5 text-sm">
         <div class="flex justify-between text-muted-foreground">
           <span>{{ locale.t('breakdown.basePremium') }}</span>
-          <span class="font-medium text-foreground">
+          <span class="font-medium text-foreground" data-testid="quote-base-premium">
             {{ result.desglose?.prima_basica ?? result.prima | copCurrency }}
           </span>
         </div>
         <div class="flex justify-between text-muted-foreground">
           <span>{{ locale.t('breakdown.riskSurcharge') }}</span>
-          <span class="font-medium text-foreground">
+          <span class="font-medium text-foreground" data-testid="quote-risk-surcharge">
             {{ result.desglose?.recargo_riesgo ?? 0 | copCurrency }}
           </span>
         </div>
         <div class="flex justify-between text-muted-foreground">
           <span>{{ locale.t('breakdown.extraCoverages') }}</span>
-          <span class="font-medium text-foreground">
+          <span class="font-medium text-foreground" data-testid="quote-extra-coverages">
             {{ result.desglose?.coberturas_adicionales ?? 0 | copCurrency }}
           </span>
         </div>
         <div class="flex justify-between text-muted-foreground">
           <span>{{ locale.t('breakdown.taxes') }}</span>
-          <span class="font-medium text-foreground">
+          <span class="font-medium text-foreground" data-testid="quote-taxes">
             {{ result.desglose?.impuestos ?? 0 | copCurrency }}
           </span>
         </div>
         <hr class="border-border my-2" />
         <div class="flex justify-between items-baseline pt-1">
           <span class="font-semibold text-foreground">{{ locale.t('breakdown.total') }}</span>
-          <span class="text-xl font-semibold font-serif text-primary">
+          <span class="text-xl font-semibold font-serif text-primary" data-testid="quote-total">
             {{ result.prima | copCurrency }}
           </span>
         </div>
