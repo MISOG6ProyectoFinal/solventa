@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { nxE2EPreset } from '@nx/playwright/preset';
 import { workspaceRoot } from '@nx/devkit';
+import { join } from 'node:path';
 
 // For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
@@ -24,17 +25,22 @@ const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  timeout: 90_000,
+  expect: { timeout: 15_000 },
   use: {
     baseURL,
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* El reporte HTML y las trazas los deja el preset de Nx en dist/.playwright. */
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
-  /* Run your local dev server before starting the tests */
+  /* El proyecto Nx se llama web.solventa.angular y no declara un target serve.
+     La configuración local apunta el portal a http://localhost:8000. */
   webServer: {
-    command: 'npx nx run web:serve',
+    command: 'npm run start:local',
     url: 'http://localhost:4200',
     reuseExistingServer: true,
-    cwd: workspaceRoot
+    timeout: 180_000,
+    cwd: join(workspaceRoot, 'apps/web/Web.Solventa.Angular'),
   },
   projects: [
     {

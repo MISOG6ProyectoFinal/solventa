@@ -1,8 +1,8 @@
-<slv-card>
+<slv-card data-testid="quote-form">
   <h2 class="text-base font-semibold mb-4 text-foreground">{{ locale.t('quote.form.title') }}</h2>
 
   <slv-field [label]="locale.t('quote.form.ramo')" [required]="true">
-    <select slvInput [ngModel]="ramo()" (ngModelChange)="changeRamo($event)">
+    <select slvInput data-testid="quote-ramo" [ngModel]="ramo()" (ngModelChange)="changeRamo($event)">
       @for (item of ramos(); track item.id) {
         <option [value]="item.id">{{ locale.label('ramo', item.id, item.name) }}{{ item.requiresConsent ? locale.t('quote.form.requiresConsent') : '' }}</option>
       }

@@ -47,6 +47,7 @@
       <button
         slv-button
         type="button"
+        data-testid="quote-calculate"
         [disabled]="isCalculating() || !puedeCalcular()"
         (click)="quoteForm.submit()"
       >

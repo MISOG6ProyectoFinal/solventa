@@ -1,5 +1,6 @@
-<slv-modal 
-  [open]="open()" 
+<slv-modal
+  data-testid="create-partner-modal"
+  [open]="open()"
   (closed)="handleClose()"
   [title]="createdResult() ? locale.t('createPartner.titleCreated') : locale.t('createPartner.title')"
   [wide]="true">
@@ -10,16 +11,16 @@
     }
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <slv-field [label]="locale.t('createPartner.name')" [required]="true" [error]="errors()['name']">
-        <input slvInput [invalid]="!!errors()['name']" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+        <input slvInput data-testid="partner-name" [invalid]="!!errors()['name']" [ngModel]="name()" (ngModelChange)="name.set($event)" />
       </slv-field>
       
       <slv-field [label]="locale.t('createPartner.identifier')" [required]="true" [error]="errors()['identifier']">
-        <input slvInput placeholder="MI-SOCIO" [invalid]="!!errors()['identifier']" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" />
+        <input slvInput data-testid="partner-identifier" placeholder="MI-SOCIO" [invalid]="!!errors()['identifier']" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" />
         <p class="text-xs text-muted-foreground mt-1">{{ locale.t('createPartner.identifierHint') }}</p>
       </slv-field>
       
       <slv-field [label]="locale.t('createPartner.type')" [required]="true">
-        <select slvInput [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
+        <select slvInput data-testid="partner-type" [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
           @for (t of partnerTypes(); track t) {
             <option [value]="t">{{ locale.label('partnerType', t) }}</option>
           }
@@ -27,7 +28,7 @@
       </slv-field>
       
       <slv-field [label]="locale.t('createPartner.country')" [required]="true">
-        <select slvInput [ngModel]="pais()" (ngModelChange)="pais.set($event)">
+        <select slvInput data-testid="partner-country" [ngModel]="pais()" (ngModelChange)="pais.set($event)">
           <option value="Colombia">Colombia</option>
           <option disabled value="México">{{ locale.t('createPartner.countrySoon', { country: 'México' }) }}</option>
           <option disabled value="Chile">{{ locale.t('createPartner.countrySoon', { country: 'Chile' }) }}</option>
@@ -36,7 +37,7 @@
       </slv-field>
       
       <slv-field [label]="locale.t('createPartner.email')" [required]="true" [error]="errors()['email']">
-        <input slvInput [invalid]="!!errors()['email']" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+        <input slvInput data-testid="partner-email" [invalid]="!!errors()['email']" [ngModel]="email()" (ngModelChange)="email.set($event)" />
       </slv-field>
       
       <slv-field [label]="locale.t('createPartner.scopes')" [required]="true" [error]="errors()['alcances']">
@@ -51,7 +52,7 @@
       </slv-field>
     </div>
   } @else {
-    <div class="space-y-4">
+    <div class="space-y-4" data-testid="partner-created">
       <slv-alert tone="success">{{ locale.t('createPartner.created') }}</slv-alert>
       <div class="rounded-lg border border-border bg-background p-4 grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-sm">
         <div>
