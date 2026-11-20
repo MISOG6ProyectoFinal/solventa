@@ -28,7 +28,7 @@ El modo desplegado por defecto (`ahorro`) corre en una sola instancia EC2 y no c
 Clúster k3d `solventa-ha-local` con dos zonas simuladas (`ha-zone-a`, `ha-zone-b`) y un nodo de control.
 
 1. `node deploy/scripts/ha/modo-local.mjs activar` levanta el clúster y CloudNativePG.
-2. `node deploy/scripts/ha/experimento-arq14.mjs --corridas 10` ejecuta las corridas. En cada una, k6 envía 5 cobros por segundo desde el nodo de control, a los 60 s se detiene el nodo de la zona del primario y la carga sigue hasta el final.
+2. `node deploy/scripts/ha/experimento-arq14.mjs --corridas 10` ejecuta las corridas. En cada una, k6 envía 5 cobros por segundo durante 240 s desde el nodo de control (hasta 1.200 cobros). A los 60 s se detiene el nodo de la zona del primario y la carga sigue los 180 s restantes.
 3. Tras restaurar el nodo, se ejecuta la reconciliación y se compara el registro del cliente con la tabla `cobros` y con los cargos de la pasarela simulada.
 4. `--control` repite una corrida con replicación asíncrona.
 
