@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Protocol
 
 from pagos.cobros.domain.models import Cobro, TipoReferencia
@@ -26,6 +27,11 @@ class CobroRepository(Protocol):
 
     def claim_nuevo_intento(self, cobro_id: str, clave_actual: str, reemplazo: Cobro) -> Cobro | None: ...
 
+    def pendientes(self, antes_de: datetime) -> list[Cobro]: ...
+
 
 class PasarelaPort(Protocol):
     def charge(self, amount: float, currency: str, token: str, idempotency_key: str) -> dict: ...
+
+    # None when the gateway never received a charge with this key.
+    def lookup(self, idempotency_key: str) -> dict | None: ...

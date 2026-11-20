@@ -1,5 +1,6 @@
 # PostgreSQL 17 con PostGIS, la misma major que usa el proyecto.
-# Replicación asíncrona: no hay quórum síncrono y el RPO no es cero.
+# Replicación síncrona (ASR-09): un commit se confirma solo cuando la réplica
+# de la otra zona lo tiene. "preferred" deja escribir al primario si la réplica cae.
 # El usuario solventa queda como superuser porque las migraciones actuales
 # ejecutan CREATE EXTENSION, igual que el usuario de la imagen local.
 apiVersion: v1
@@ -33,6 +34,10 @@ spec:
     size: 2Gi
     storageClass: local-path
   postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
     parameters:
       max_connections: "80"
       shared_buffers: "64MB"

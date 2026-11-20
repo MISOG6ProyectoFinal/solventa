@@ -1,5 +1,8 @@
 """Cobra una prima. La misma clave reconcilia; una referencia solo puede aprobarse una vez."""
 
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+
 from pagos.cobros.domain.models import Cobro, EstadoCobro, SolicitudCobro
 from pagos.cobros.domain.ports import CobroDuplicado, CobroRepository, PasarelaNoDisponible, PasarelaPort
 
@@ -85,3 +88,35 @@ class CobrarPrimaUseCase:
         if estado not in (EstadoCobro.APROBADO, EstadoCobro.RECHAZADO):
             raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
         return estado
+
+
+class ReconciliarCobrosUseCase:
+    """Closes payments left in PROCESANDO, for example by a database failover, by asking the gateway.
+
+    It never charges: the card token is not stored, and a lookup by key cannot create a second charge.
+    """
+
+    def __init__(
+        self,
+        cobros: CobroRepository,
+        pasarela: PasarelaPort,
+        antiguedad: timedelta,
+        now: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
+        self.cobros = cobros
+        self.pasarela = pasarela
+        self.antiguedad = antiguedad
+        self.now = now
+
+    def execute(self) -> list[Cobro]:
+        cerrados = []
+        for cobro in self.cobros.pendientes(self.now() - self.antiguedad):
+            try:
+                resultado = self.pasarela.lookup(cobro.idempotency_key)
+            except PasarelaNoDisponible:
+                continue
+            # The gateway never saw the charge, so no money was taken and a new attempt is safe.
+            cobro.estado = EstadoCobro(resultado["estado"]) if resultado else EstadoCobro.RECHAZADO
+            self.cobros.update(cobro)
+            cerrados.append(cobro)
+        return cerrados

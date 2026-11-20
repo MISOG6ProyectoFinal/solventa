@@ -96,3 +96,7 @@ apps/mobile-e2e/properties.json
 tools/project-metrics/.cache/
 
 apps/mobile/IMPROVEMENTS.md
+
+# Local run output: JMeter logs, HA cluster credentials and raw evidence
+jmeter.log
+experimentation/ha/

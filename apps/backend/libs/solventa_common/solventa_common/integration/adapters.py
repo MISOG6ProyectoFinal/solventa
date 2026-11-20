@@ -54,6 +54,9 @@ class PasarelaPagosAdapter(ExternalAdapter):
             headers={"Idempotency-Key": idempotency_key},
         )
 
+    def lookup(self, idempotency_key: str) -> Any:
+        return self._request("GET", f"/charges/{idempotency_key}")
+
 
 class AcordReaseguroAdapter(ExternalAdapter):
     """Mapeo semántico y versionado de esquemas ACORD hacia reaseguradores."""

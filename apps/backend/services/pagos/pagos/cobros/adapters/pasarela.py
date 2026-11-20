@@ -3,6 +3,7 @@
 PASARELA_URL apunta al proveedor. Mientras no hay acceso al real, apunta al servicio simuladores.
 """
 
+import httpx
 from solventa_common.cobros import EstadoCobro
 from solventa_common.integration import PasarelaPagosAdapter
 
@@ -24,14 +25,29 @@ class PasarelaPagosGateway:
             raw = self.adapter.charge(amount, currency, token, idempotency_key)
         except Exception as exc:
             raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
-        if not isinstance(raw, dict):
-            raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
-        marca = str(raw.get("estado", raw.get("status", ""))).lower()
-        if marca in _APROBADO:
-            return {"estado": EstadoCobro.APROBADO}
-        if marca in _RECHAZADO:
-            return {"estado": EstadoCobro.RECHAZADO}
+        return _resultado(raw)
+
+    def lookup(self, idempotency_key: str) -> dict | None:
+        try:
+            raw = self.adapter.lookup(idempotency_key)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return None
+            raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
+        except Exception as exc:
+            raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
+        return _resultado(raw)
+
+
+def _resultado(raw: object) -> dict:
+    if not isinstance(raw, dict):
         raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
+    marca = str(raw.get("estado", raw.get("status", ""))).lower()
+    if marca in _APROBADO:
+        return {"estado": EstadoCobro.APROBADO}
+    if marca in _RECHAZADO:
+        return {"estado": EstadoCobro.RECHAZADO}
+    raise PasarelaNoDisponible("La pasarela no devolvió un resultado reconocible")
 
 
 def construir_pasarela() -> PasarelaPagosGateway:

@@ -32,6 +32,7 @@ def ensure_schema(engine: Engine) -> None:
             text("CREATE UNIQUE INDEX IF NOT EXISTS uq_cobros_referencia ON cobros (tipo_referencia, referencia_id)")
         )
         conn.execute(text("DROP INDEX IF EXISTS uq_cobros_cotizacion_id"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cobros_estado_creado ON cobros (estado, creado_en)"))
 
 
 def _migrar_postgres(conn: Connection) -> None:
