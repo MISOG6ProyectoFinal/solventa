@@ -12,6 +12,7 @@ from pagos.config import settings
 
 _APROBADO = {"approved", "aprobado", "succeeded", "success"}
 _RECHAZADO = {"rejected", "rechazado", "declined", "failed"}
+_NO_DISPONIBLE = "Pasarela de pagos no disponible"
 
 
 class PasarelaPagosGateway:
@@ -24,18 +25,16 @@ class PasarelaPagosGateway:
         try:
             raw = self.adapter.charge(amount, currency, token, idempotency_key)
         except Exception as exc:
-            raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
+            raise PasarelaNoDisponible(_NO_DISPONIBLE) from exc
         return _resultado(raw)
 
     def lookup(self, idempotency_key: str) -> dict | None:
         try:
             raw = self.adapter.lookup(idempotency_key)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                return None
-            raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
         except Exception as exc:
-            raise PasarelaNoDisponible("Pasarela de pagos no disponible") from exc
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+                return None
+            raise PasarelaNoDisponible(_NO_DISPONIBLE) from exc
         return _resultado(raw)
 
 
