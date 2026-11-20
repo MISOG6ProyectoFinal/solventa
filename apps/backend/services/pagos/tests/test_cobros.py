@@ -36,6 +36,9 @@ class PasarelaSimulada:
         self.llamadas += 1
         return {"estado": "aprobado" if token == TOKEN_APROBADO else "rechazado", "referencia": idempotency_key}
 
+    def lookup(self, idempotency_key: str) -> dict | None:
+        return None
+
 
 class _Pasarela:
     def __init__(self, estado: str = "aprobado", error: Exception | None = None) -> None:
@@ -48,6 +51,9 @@ class _Pasarela:
         if self.error:
             raise self.error
         return {"estado": self.estado}
+
+    def lookup(self, idempotency_key: str) -> dict | None:
+        return None
 
 
 def _solicitud(**cambios) -> dict:
