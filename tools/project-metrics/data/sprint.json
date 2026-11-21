@@ -33,30 +33,58 @@
       },
       {
         "day": 8,
-        "completedStoryPoints": 8
-      },
-      {
-        "day": 9,
-        "completedStoryPoints": 8
-      },
-      {
-        "day": 10,
-        "completedStoryPoints": 10
-      },
-      {
-        "day": 11,
-        "completedStoryPoints": 10
-      },
-      {
-        "day": 12,
-        "completedStoryPoints": 8
-      },
-      {
-        "day": 13,
         "completedStoryPoints": 0
       },
       {
+        "day": 9,
+        "completedStoryPoints": 5
+      },
+      {
+        "day": 10,
+        "completedStoryPoints": 34
+      },
+      {
+        "day": 11,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 12,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 13,
+        "completedStoryPoints": 5
+      },
+      {
         "day": 14,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 15,
+        "completedStoryPoints": 10
+      },
+      {
+        "day": 16,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 17,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 18,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 19,
+        "completedStoryPoints": 5
+      },
+      {
+        "day": 20,
+        "completedStoryPoints": 0
+      },
+      {
+        "day": 21,
         "completedStoryPoints": 0
       }
     ]
@@ -95,7 +123,7 @@
     {
       "week": 7,
       "planned": 27,
-      "actual": 0
+      "actual": 15
     },
     {
       "week": 8,
@@ -249,30 +277,58 @@
       },
       {
         "day": 36,
-        "valueDelivered": 2
-      },
-      {
-        "day": 37,
-        "valueDelivered": 2
-      },
-      {
-        "day": 38,
-        "valueDelivered": 3
-      },
-      {
-        "day": 39,
-        "valueDelivered": 2
-      },
-      {
-        "day": 40,
-        "valueDelivered": 2
-      },
-      {
-        "day": 41,
         "valueDelivered": 0
       },
       {
+        "day": 37,
+        "valueDelivered": 4
+      },
+      {
+        "day": 38,
+        "valueDelivered": 23
+      },
+      {
+        "day": 39,
+        "valueDelivered": 0
+      },
+      {
+        "day": 40,
+        "valueDelivered": 0
+      },
+      {
+        "day": 41,
+        "valueDelivered": 4
+      },
+      {
         "day": 42,
+        "valueDelivered": 0
+      },
+      {
+        "day": 43,
+        "valueDelivered": 2
+      },
+      {
+        "day": 44,
+        "valueDelivered": 0
+      },
+      {
+        "day": 45,
+        "valueDelivered": 0
+      },
+      {
+        "day": 46,
+        "valueDelivered": 0
+      },
+      {
+        "day": 47,
+        "valueDelivered": 1
+      },
+      {
+        "day": 48,
+        "valueDelivered": 0
+      },
+      {
+        "day": 49,
         "valueDelivered": 0
       }
     ]
@@ -294,8 +350,8 @@
       {
         "sprint": 3,
         "plannedStoryPoints": 83,
-        "completedStoryPoints": 68,
-        "closed": false
+        "completedStoryPoints": 83,
+        "closed": true
       }
     ]
   }
