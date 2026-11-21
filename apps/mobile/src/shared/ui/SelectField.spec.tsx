@@ -48,7 +48,7 @@ describe('SelectField', () => {
     await fireEvent.press(getByText('Selecciona'));
 
     expect(getByLabelText('España')).toBeTruthy();
-    expect(getByLabelText('México').props.accessibilityState).toEqual({ selected: false });
+    expect(getByLabelText('México').props.accessibilityState).toEqual({ checked: false });
 
     await fireEvent.press(getByLabelText('México'));
 

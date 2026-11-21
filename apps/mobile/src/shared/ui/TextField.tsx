@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, type KeyboardTypeOptions } from 'react-native';
 
 import { useTexts } from '../texts';
 import { theme } from '../theme';
-import { FieldFrame } from './FieldFrame';
+import { FieldFrame, fieldHint } from './FieldFrame';
 
 type TextFieldProps = {
   label: string;
@@ -53,6 +53,7 @@ export function TextField({
         placeholder={placeholder}
         multiline={multiline}
         accessibilityLabel={label}
+        accessibilityHint={fieldHint(required, errorMessage ?? (error ? texts.required : undefined), texts.required)}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}

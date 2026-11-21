@@ -1,6 +1,7 @@
 import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 import { Icon, iconColor, type IconColor } from './Icon';
 import { type IconName } from './icons';
 
@@ -26,7 +27,7 @@ export function IconButton({
   const animatePressed = (toValue: number) => {
     Animated.timing(pressed, {
       toValue,
-      duration: toValue === 0 ? 160 : 80,
+      duration: motionDuration(toValue === 0 ? 160 : 80),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();

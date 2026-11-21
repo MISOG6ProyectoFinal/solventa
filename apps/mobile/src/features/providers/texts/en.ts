@@ -4,6 +4,10 @@ import { type Texts } from './es';
 export const en: Texts = {
   providers: {
     screenTitle: 'Nearby assistance',
+    views: {
+      map: 'Map',
+      list: 'List',
+    },
     refreshButton: 'Refresh',
     locationPending: 'Finding your location...',
     locationUnavailable: 'Could not get your location',

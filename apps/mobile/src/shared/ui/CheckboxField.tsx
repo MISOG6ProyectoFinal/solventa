@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
+import { useTexts } from '../texts';
 import { AppText } from './AppText';
 
 type CheckboxFieldProps = {
@@ -21,28 +23,35 @@ export function CheckboxField({
   error = false,
   testID,
 }: Readonly<CheckboxFieldProps>) {
+  const texts = useTexts();
   const fill = useAnimatedValue(checked ? 1 : 0);
   const mark = useAnimatedValue(checked ? 1 : 0);
 
   useEffect(() => {
     Animated.timing(fill, {
       toValue: checked ? 1 : 0,
-      duration: 160,
+      duration: motionDuration(160),
       useNativeDriver: false,
     }).start();
 
     Animated.timing(mark, {
       toValue: checked ? 1 : 0,
-      duration: 160,
+      duration: motionDuration(160),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
   }, [checked, fill, mark]);
 
-  const restBorder = error ? theme.colors.danger : theme.colors.border;
+  const restBorder = error ? theme.colors.danger : theme.colors.borderStrong;
 
   return (
-    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={styles.row}>
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityHint={required ? texts.required : undefined}
+      onPress={onPress}
+      style={styles.row}
+    >
       <Animated.View
         testID={testID}
         style={[
@@ -87,6 +96,7 @@ export function CheckboxField({
 
 const styles = StyleSheet.create({
   row: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.sm,
@@ -95,7 +105,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderStrong,
     borderRadius: theme.space.xs,
     backgroundColor: theme.colors.surface,
     alignItems: 'center',

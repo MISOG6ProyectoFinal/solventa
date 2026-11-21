@@ -3,13 +3,21 @@ import { Animated, Easing, StyleSheet, useAnimatedValue, View } from 'react-nati
 import { Pressable } from 'react-native-gesture-handler';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
+import { useTexts } from '../texts';
 import { AppText } from './AppText';
+
+export function fieldHint(required: boolean, message: string | undefined, requiredText: string) {
+  const parts = [required ? requiredText : undefined, message].filter(Boolean);
+  return parts.length > 0 ? parts.join('. ') : undefined;
+}
 
 type FieldFrameProps = {
   label: string;
   required?: boolean;
   error?: boolean;
   message?: string;
+  value?: string;
   focused?: boolean;
   testID?: string;
   trailing?: ReactNode;
@@ -22,19 +30,21 @@ export function FieldFrame({
   required = false,
   error = false,
   message,
+  value,
   focused = false,
   testID,
   trailing,
   onPress,
   children,
 }: Readonly<FieldFrameProps>) {
+  const texts = useTexts();
   const active = focused && !error;
   const focus = useAnimatedValue(active ? 1 : 0);
 
   useEffect(() => {
     Animated.timing(focus, {
       toValue: active ? 1 : 0,
-      duration: 180,
+      duration: motionDuration(180),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -50,7 +60,7 @@ export function FieldFrame({
             ? theme.colors.danger
             : focus.interpolate({
                 inputRange: [0, 1],
-                outputRange: [theme.colors.border, theme.colors.blue],
+                outputRange: [theme.colors.borderStrong, theme.colors.blue],
               }),
           borderWidth: focus.interpolate({
             inputRange: [0, 1],
@@ -75,7 +85,14 @@ export function FieldFrame({
         ) : null}
       </AppText>
       {onPress ? (
-        <Pressable testID={testID} accessibilityRole="button" onPress={onPress}>
+        <Pressable
+          testID={testID}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityValue={value ? { text: value } : undefined}
+          accessibilityHint={fieldHint(required, message, texts.required)}
+          onPress={onPress}
+        >
           {control}
         </Pressable>
       ) : (
@@ -108,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderStrong,
     borderRadius: theme.radius.medium,
     paddingVertical: theme.space.md,
     paddingHorizontal: theme.space.lg,

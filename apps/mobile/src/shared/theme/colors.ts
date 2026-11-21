@@ -2,6 +2,7 @@ export const colors = {
   background: '#F5F8FA',
   surface: '#FFFFFF',
   border: '#D4DEE6',
+  borderStrong: '#7A8B9B',
   text: '#1D2733',
   textMuted: '#5A6A7A',
 
@@ -10,7 +11,7 @@ export const colors = {
   blue: '#2878B5',
   blueSoft: '#5A9BC9',
   blueDeep: '#1E5A8A',
-  teal: '#28A6A1',
+  teal: '#1E7D79',
   tealSoft: '#5CBCB8',
   tealDeep: '#1E7D79',
 
@@ -18,7 +19,7 @@ export const colors = {
   onNavyMuted: '#9BB8D0',
 
   warningSolid: '#E8A838',
-  danger: '#C45C5C',
+  danger: '#B04A4A',
   borderSelected: '#2878B5',
 
   success: {

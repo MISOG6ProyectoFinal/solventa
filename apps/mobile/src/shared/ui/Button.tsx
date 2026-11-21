@@ -2,6 +2,7 @@ import { ActivityIndicator, Animated, Easing, StyleSheet, useAnimatedValue, View
 import { Pressable } from 'react-native-gesture-handler';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 import { AppText } from './AppText';
 import { Icon, IconColor } from './Icon';
 import { type IconName } from './icons';
@@ -51,7 +52,7 @@ export function Button({
   const animatePressed = (toValue: number) => {
     Animated.timing(pressed, {
       toValue,
-      duration: toValue === 0 ? 160 : 80,
+      duration: motionDuration(toValue === 0 ? 160 : 80),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -80,6 +81,8 @@ export function Button({
       <Pressable
         testID={testID}
         accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
         disabled={disabled || loading}
         onPress={onPress}
         onPressIn={() => {
@@ -113,6 +116,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     borderRadius: theme.radius.medium,
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: theme.space.lg,
   },

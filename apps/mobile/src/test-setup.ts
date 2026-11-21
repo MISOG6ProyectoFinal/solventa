@@ -136,6 +136,11 @@ jest.mock('react-native', () => {
       OS: 'android',
       select: (options: { android?: unknown }) => options.android,
     },
+    AccessibilityInfo: {
+      isReduceMotionEnabled: async () => false,
+      addEventListener: () => ({ remove: () => undefined }),
+      announceForAccessibility: jest.fn(),
+    },
     Keyboard: {
       addListener: () => ({ remove: () => undefined }),
     },

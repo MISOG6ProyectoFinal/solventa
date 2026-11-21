@@ -46,6 +46,7 @@ describe('PhotoPreviewScreen', () => {
     expect(getByText('Foto 1')).toBeTruthy();
     expect(photo.props.source).toEqual({ uri: 'file:///tmp/foto.jpg' });
     expect(photo.props.resizeMode).toBe('contain');
+    expect(photo.props.accessibilityLabel).toBe('Foto 1');
     expect(getByText('Eliminar')).toBeTruthy();
     expect(getByLabelText('Volver')).toBeTruthy();
   });

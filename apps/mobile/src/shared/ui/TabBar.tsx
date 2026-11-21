@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTexts } from '../texts';
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 import { AppText } from './AppText';
 import { Icon, type IconColor } from './Icon';
 import { type IconName } from './icons';
@@ -44,7 +45,7 @@ export function TabBar({ value, onChange }: Readonly<TabBarProps>) {
   useEffect(() => {
     Animated.timing(slide, {
       toValue: selectedIndex,
-      duration: 240,
+      duration: motionDuration(240),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();

@@ -16,7 +16,7 @@ export function ProviderSummary({ provider }: Readonly<{ provider: NearbyProvide
       : texts.providers.rating(formatDecimal(provider.rating, language));
 
   return (
-    <View style={styles.summary}>
+    <View accessible style={styles.summary}>
       <AppText variant="subtitle" style={styles.name}>
         {provider.name}
       </AppText>

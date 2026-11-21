@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, useAnimatedValue } from 'react-native';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 import { AppText } from './AppText';
 
 type Option = {
@@ -31,7 +32,7 @@ function Chip({ option, selected, onPress }: Readonly<ChipProps>) {
   const animateScale = (toValue: number, duration: number) => {
     Animated.timing(scale, {
       toValue,
-      duration,
+      duration: motionDuration(duration),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -40,7 +41,7 @@ function Chip({ option, selected, onPress }: Readonly<ChipProps>) {
   useEffect(() => {
     Animated.timing(progress, {
       toValue: selected ? 1 : 0,
-      duration: 240,
+      duration: motionDuration(240),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -54,7 +55,7 @@ function Chip({ option, selected, onPress }: Readonly<ChipProps>) {
       scale.setValue(PRESSED_SCALE);
       Animated.timing(scale, {
         toValue: 1,
-        duration: 240,
+        duration: motionDuration(240),
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
@@ -64,8 +65,9 @@ function Chip({ option, selected, onPress }: Readonly<ChipProps>) {
   return (
     <Pressable
       testID={`chip-${option.id}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      hitSlop={{ top: 4, bottom: 4 }}
       onPress={onPress}
       onPressIn={() => animateScale(PRESSED_SCALE, 80)}
       onPressOut={() => animateScale(1, 160)}
@@ -99,6 +101,7 @@ export const ChipSelector = memo(function ChipSelector({ options, value, onChang
   return (
     <ScrollView
       horizontal
+      accessibilityRole="radiogroup"
       showsHorizontalScrollIndicator={false}
       style={styles.scroll}
       contentContainerStyle={styles.row}

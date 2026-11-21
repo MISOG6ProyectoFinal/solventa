@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, useAnimatedValue, View } from 'react-native';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 import { AppText } from './AppText';
 
 type Option = {
@@ -29,7 +30,7 @@ function OptionRow({ option, selected, onPress }: Readonly<OptionRowProps>) {
   useEffect(() => {
     Animated.timing(progress, {
       toValue: selected ? 1 : 0,
-      duration: 280,
+      duration: motionDuration(280),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -46,7 +47,7 @@ function OptionRow({ option, selected, onPress }: Readonly<OptionRowProps>) {
     scale.setValue(0.96);
     Animated.timing(scale, {
       toValue: 1,
-      duration: 280,
+      duration: motionDuration(280),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -54,8 +55,8 @@ function OptionRow({ option, selected, onPress }: Readonly<OptionRowProps>) {
 
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={styles.hit}
     >
@@ -95,7 +96,7 @@ function OptionRow({ option, selected, onPress }: Readonly<OptionRowProps>) {
 
 export function OptionList({ options, value, onChange }: Readonly<OptionListProps>) {
   return (
-    <View style={styles.list}>
+    <View accessibilityRole="radiogroup" style={styles.list}>
       {options.map((option) => (
         <OptionRow
           key={option.id}
