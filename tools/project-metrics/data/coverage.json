@@ -1481,6 +1481,46 @@
       "linesCovered": 2047,
       "linesValid": 2112,
       "runId": 43614535430
+    },
+    {
+      "date": "2026-11-16T19:19:32Z",
+      "app": "Backend",
+      "coverage": 94.3,
+      "linesCovered": 6588,
+      "linesValid": 6985,
+      "runId": 43937848766
+    },
+    {
+      "date": "2026-11-16T22:21:00Z",
+      "app": "Backend",
+      "coverage": 94.3,
+      "linesCovered": 6588,
+      "linesValid": 6985,
+      "runId": 43968947856
+    },
+    {
+      "date": "2026-11-17T13:48:38Z",
+      "app": "Web",
+      "coverage": 96.9,
+      "linesCovered": 2047,
+      "linesValid": 2112,
+      "runId": 44096190054
+    },
+    {
+      "date": "2026-11-21T00:26:45Z",
+      "app": "Backend",
+      "coverage": 94,
+      "linesCovered": 6645,
+      "linesValid": 7068,
+      "runId": 44843703481
+    },
+    {
+      "date": "2026-11-21T01:18:24Z",
+      "app": "Mobile",
+      "coverage": 92,
+      "linesCovered": 1925,
+      "linesValid": 2093,
+      "runId": 44849230230
     }
   ]
 }
