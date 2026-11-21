@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 64,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderStrong,
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     textAlign: 'center',

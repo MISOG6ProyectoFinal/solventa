@@ -11,7 +11,7 @@ type LoadingStateProps = {
 export function LoadingState({ label, testID }: Readonly<LoadingStateProps>) {
   return (
     <View style={styles.container}>
-      <ActivityIndicator testID={testID} accessibilityLabel={label} color={theme.colors.blue} />
+      <ActivityIndicator testID={testID} color={theme.colors.blue} />
       <AppText variant="bodySmall">{label}</AppText>
     </View>
   );

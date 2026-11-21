@@ -63,7 +63,7 @@ export function AppHeader({ title, subtitle, leadingIcon, hideBackButton, action
       <View testID="app-header-row" style={styles.row}>
         {leadingControl(displayBackBtn, leadingIcon, () => navigation.goBack(), texts.back)}
         <View style={[styles.copy, !hasLeadingIcon && styles.noLeadingSpace]}>
-          <AppText variant="screenTitle" numberOfLines={1} style={styles.title}>
+          <AppText variant="screenTitle" numberOfLines={2} style={styles.title}>
             {title}
           </AppText>
           {subtitle ? (

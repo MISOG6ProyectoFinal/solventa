@@ -9,7 +9,7 @@ import { useTexts } from '../../texts';
 import { monthLayout, yearPageStart, yearsPerPage } from './date';
 import { YearGrid } from './YearGrid';
 
-const cellHeight = 40;
+const cellHeight = 44;
 
 type DayProps = {
   day: number;
@@ -70,7 +70,7 @@ export const MonthGrid = memo(function MonthGrid({
   const texts = useTexts();
   const monthName = texts.date.months[month - 1] ?? '';
   const monthLabel = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)}`;
-  const { lead, days, rows } = monthLayout(year, month);
+  const { lead, days } = monthLayout(year, month);
   const [yearPage, setYearPage] = useState<number | null>(null);
   const pickingYear = yearSelection && yearPage !== null;
 
@@ -144,7 +144,7 @@ export const MonthGrid = memo(function MonthGrid({
       {yearPage !== null ? (
         <YearGrid start={yearPage} selectedYear={year} onChoose={chooseYear} />
       ) : (
-        <View style={[styles.grid, { height: cellHeight * (1 + rows) }]}>
+        <View style={styles.grid}>
           {texts.date.weekdays.map((weekday, index) => (
             <View key={`${weekday}-${index}`} style={cellStyle}>
               <AppText variant="caption" style={styles.weekday}>
@@ -163,7 +163,7 @@ export const MonthGrid = memo(function MonthGrid({
                 day={day}
                 month={month}
                 year={year}
-                label={`${day} de ${monthName} de ${year}`}
+                label={texts.date.longDate(day, monthName, year)}
                 selected={selected}
                 style={selected ? selectedStyle : cellStyle}
                 onChoose={onChoose}
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   cell: {
-    height: cellHeight,
+    minHeight: cellHeight,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,

@@ -40,14 +40,14 @@ const styles = StyleSheet.create({
   },
   label: {
     color: theme.colors.text,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     ...outfitFont('400'),
   },
   size: {
     color: theme.colors.textMuted,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     ...outfitFont('400'),
   },
 });

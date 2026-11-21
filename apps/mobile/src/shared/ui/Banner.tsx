@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Children, ReactNode, useEffect } from 'react';
+import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
 
 import { theme } from '../theme';
 import { AppText } from './AppText';
@@ -23,9 +23,23 @@ const iconColor: Record<BannerVariant, IconColor> = {
 };
 
 export function Banner({ variant, icon, children, testID }: Readonly<BannerProps>) {
+  const message = Children.toArray(children)
+    .filter((child) => typeof child === 'string' || typeof child === 'number')
+    .join(' ');
+
+  // Android announces live regions itself. iOS needs an explicit announcement.
+  useEffect(() => {
+    if (Platform.OS === 'ios' && message) {
+      AccessibilityInfo.announceForAccessibility(message);
+    }
+  }, [message]);
+
   return (
     <View
       testID={testID}
+      accessible
+      accessibilityRole={variant === 'error' ? 'alert' : undefined}
+      accessibilityLiveRegion={variant === 'error' ? 'assertive' : 'polite'}
       style={[
         styles.banner,
         {

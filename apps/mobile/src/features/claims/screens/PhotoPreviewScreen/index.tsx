@@ -38,6 +38,7 @@ export default function PhotoPreviewScreen({ route }: Readonly<Props>) {
           <View style={styles.frame}>
             <Image
               testID="photo-preview"
+              accessibilityLabel={texts.report.photoLabel(photo.position)}
               style={styles.photo}
               resizeMode="contain"
               source={{ uri: photoUri(photo.filePath) }}

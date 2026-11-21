@@ -12,9 +12,9 @@ describe('ChipSelector', () => {
   it('marks only the chosen chip as selected', async () => {
     const { getByTestId } = await render(<ChipSelector options={OPTIONS} value="grua" onChange={jest.fn()} />);
 
-    expect(getByTestId('chip-grua').props.accessibilityState).toEqual({ selected: true });
-    expect(getByTestId('chip-all').props.accessibilityState).toEqual({ selected: false });
-    expect(getByTestId('chip-taller').props.accessibilityState).toEqual({ selected: false });
+    expect(getByTestId('chip-grua').props.accessibilityState).toEqual({ checked: true });
+    expect(getByTestId('chip-all').props.accessibilityState).toEqual({ checked: false });
+    expect(getByTestId('chip-taller').props.accessibilityState).toEqual({ checked: false });
   });
 
   it('still reports a chip pressed with its press animation running', async () => {

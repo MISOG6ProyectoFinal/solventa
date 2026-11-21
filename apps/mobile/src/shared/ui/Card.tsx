@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { theme } from '../theme';
+import { motionDuration } from './motion';
 
 type CardProps = {
   children: ReactNode;
@@ -49,7 +50,7 @@ export function Card({ children, variant = 'default', onPress, disabled = false,
   const animatePressed = (toValue: number) => {
     Animated.timing(pressed, {
       toValue,
-      duration: toValue === 0 ? 160 : 80,
+      duration: motionDuration(toValue === 0 ? 160 : 80),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();

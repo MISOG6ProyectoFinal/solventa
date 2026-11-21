@@ -8,13 +8,13 @@ import {
   ChipSelector,
   ErrorState,
   IconButton,
-  PinMap,
   Screen,
   Sheet,
   type SheetHandle,
 } from '../../../../shared/ui';
 import { listNearbyProviders } from '../../api/listNearbyProviders';
 import { Legend } from '../../components/Legend';
+import { ProviderArea } from '../../components/ProviderArea';
 import { ProviderSummary } from '../../components/ProviderSummary';
 import { categories } from '../../categories';
 import { useTexts } from '../../texts';
@@ -22,6 +22,7 @@ import { type NearbyProvider, type ProviderFilter, type ProviderType } from '../
 import styles from './styles';
 
 type Status = 'loading' | 'ready' | 'error';
+type ViewMode = 'map' | 'list';
 
 // The request flow opens the map already filtered to the service being requested.
 type Props = StaticScreenProps<{ filter?: ProviderType } | undefined>;
@@ -40,6 +41,7 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
   const [filter, setFilter] = useState<ProviderFilter>(route.params?.filter ?? 'all');
   const [providers, setProviders] = useState<NearbyProvider[]>([]);
   const [status, setStatus] = useState<Status>('loading');
+  const [view, setView] = useState<ViewMode>('map');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sheet = useRef<SheetHandle>(null);
   const request = useRef(0);
@@ -72,6 +74,15 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
       counter.current++;
     };
   }, [load]);
+
+  const viewOptions = useMemo(
+    () => (['map', 'list'] as const).map((id) => ({ id, label: texts.providers.views[id] })),
+    [texts],
+  );
+  const changeView = useCallback((id: string) => {
+    sheet.current?.dismiss();
+    setView(id as ViewMode);
+  }, []);
 
   const changeFilter = useCallback((id: string) => {
     sheet.current?.dismiss();
@@ -114,33 +125,26 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
       <View style={styles.content}>
         {location ? (
           <>
+            <ChipSelector options={viewOptions} value={view} onChange={changeView} />
             <ChipSelector options={filterOptions} value={filter} onChange={changeFilter} />
-            <Legend />
+            {view === 'map' ? <Legend /> : null}
             {status === 'error' ? (
               <ErrorState
                 message={texts.providers.loadFailed}
                 retry={{ label: texts.providers.retryButton, onPress: load }}
               />
             ) : null}
-            <View style={styles.mapArea}>
-              <PinMap
-                center={location}
-                pins={pins}
-                selectedId={selectedId}
-                onPinPress={selectPin}
-                onMapPress={dismissSummary}
-              />
-              {status === 'loading' ? (
-                <View style={styles.overlay}>
-                  <AppText variant="bodySmall">{texts.providers.loading}</AppText>
-                </View>
-              ) : null}
-              {status === 'ready' && providers.length === 0 ? (
-                <View style={styles.overlay}>
-                  <AppText variant="bodySmall">{texts.providers.empty(emptyScope)}</AppText>
-                </View>
-              ) : null}
-            </View>
+            <ProviderArea
+              view={view}
+              status={status}
+              center={location}
+              providers={providers}
+              pins={pins}
+              selectedId={selectedId}
+              emptyScope={emptyScope}
+              onPinPress={selectPin}
+              onMapPress={dismissSummary}
+            />
             <AppText variant="caption">{texts.providers.attribution}</AppText>
           </>
         ) : null}

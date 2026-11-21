@@ -7,7 +7,7 @@ import { useTexts } from '../../texts';
 import { yearsPerPage } from './date';
 
 const columns = 3;
-const cellHeight = 40;
+const cellHeight = 44;
 
 type YearProps = {
   year: number;
@@ -46,7 +46,7 @@ export const YearGrid = memo(function YearGrid({ start, selectedYear, onChoose }
   const selectedStyle = useMemo(() => [cellStyle, styles.selected], [cellStyle]);
 
   return (
-    <View style={[styles.grid, { height: cellHeight * (yearsPerPage / columns) }]}>
+    <View style={styles.grid}>
       {Array.from({ length: yearsPerPage }, (_, index) => {
         const year = start + index;
 
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   cell: {
-    height: cellHeight,
+    minHeight: cellHeight,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,

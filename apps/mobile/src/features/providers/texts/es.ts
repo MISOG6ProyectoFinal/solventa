@@ -3,6 +3,10 @@ import { NEARBY_RADIUS_KM } from '../constants';
 export const es = {
   providers: {
     screenTitle: 'Asistencia cercana',
+    views: {
+      map: 'Mapa',
+      list: 'Lista',
+    },
     refreshButton: 'Actualizar',
     locationPending: 'Buscando tu ubicación...',
     locationUnavailable: 'No se pudo obtener la ubicación',

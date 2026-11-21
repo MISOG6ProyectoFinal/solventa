@@ -112,6 +112,7 @@ export function DateField({
         focused={focused}
         message={errorMessage ?? (error ? texts.required : undefined)}
         testID={testID}
+        value={shown ? dateText : undefined}
         onPress={open}
         trailing={<Icon name="calendario" size={16} color="gray" testID={testID ? `${testID}-icon` : undefined} />}
       >

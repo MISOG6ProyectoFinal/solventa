@@ -112,8 +112,35 @@ describe('NearbyProvidersScreen', () => {
     await findByTestId('provider-pin-seed-grua-01');
 
     expect(requestedUrls()).toEqual([expect.stringMatching(new RegExp(`radio_km=${NEARBY_RADIUS_KM}&servicio=ambulancia$`))]);
-    expect(getByTestId('chip-ambulancia').props.accessibilityState).toEqual({ selected: true });
-    expect(getByTestId('chip-all').props.accessibilityState).toEqual({ selected: false });
+    expect(getByTestId('chip-ambulancia').props.accessibilityState).toEqual({ checked: true });
+    expect(getByTestId('chip-all').props.accessibilityState).toEqual({ checked: false });
+  });
+
+  it('lists the providers from the closest, instead of the map', async () => {
+    global.fetch = jest.fn(async () => jsonResponse(collection(WORKSHOP, TOW_TRUCK))) as typeof fetch;
+    const { findByTestId, getByTestId, queryByTestId, getAllByTestId } = await render(
+      <NearbyProvidersScreen route={{ params: undefined }} />,
+    );
+    await findByTestId('provider-pin-seed-grua-01');
+
+    await fireEvent.press(getByTestId('chip-list'));
+
+    expect(queryByTestId('pin-map')).toBeNull();
+    expect(getByTestId('chip-list').props.accessibilityState).toEqual({ checked: true });
+    const items = getAllByTestId(/^provider-item-/);
+    expect(items.map((item) => item.props.testID)).toEqual(['provider-item-seed-grua-01', 'provider-item-osm-node-101']);
+    expect(within(items[0]).getByText('Grúas Aliadas Chapinero')).toBeTruthy();
+    expect(within(items[0]).getByText('Calificación: 4,5 / 5')).toBeTruthy();
+  });
+
+  it('goes back to the map from the list', async () => {
+    const { findByTestId, getByTestId } = await render(<NearbyProvidersScreen route={{ params: undefined }} />);
+    await findByTestId('provider-pin-seed-grua-01');
+    await fireEvent.press(getByTestId('chip-list'));
+
+    await fireEvent.press(getByTestId('chip-map'));
+
+    expect(getByTestId('pin-map')).toBeTruthy();
   });
 
   it('draws one pin per provider', async () => {

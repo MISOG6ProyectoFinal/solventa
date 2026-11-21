@@ -8,6 +8,10 @@ type AppTextProps = NativeTextProps & {
   variant?: AppTextVariant;
 };
 
-export function AppText({ variant = 'body', style, ...rest }: AppTextProps) {
-  return <NativeText {...rest} style={[theme.type[variant], style]} />;
+const headingVariants: AppTextVariant[] = ['screenTitle', 'sectionTitle'];
+
+export function AppText({ variant = 'body', style, accessibilityRole, ...rest }: AppTextProps) {
+  const role = accessibilityRole ?? (headingVariants.includes(variant) ? 'header' : undefined);
+
+  return <NativeText {...rest} accessibilityRole={role} style={[theme.type[variant], style]} />;
 }

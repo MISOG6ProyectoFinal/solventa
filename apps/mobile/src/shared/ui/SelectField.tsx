@@ -56,6 +56,7 @@ export function SelectField({
         focused={focused}
         message={errorMessage ?? (error ? texts.required : undefined)}
         testID={testID}
+        value={shown ? selectText : undefined}
         onPress={
           options.length > 0
             ? () => {
@@ -79,9 +80,9 @@ export function SelectField({
             <Pressable
               key={option.value}
               testID={`select-option-${option.value}`}
-              accessibilityRole="button"
+              accessibilityRole="radio"
               accessibilityLabel={option.label}
-              accessibilityState={{ selected: selectedOption }}
+              accessibilityState={{ checked: selectedOption }}
               onPress={() => choose(option.value)}
               style={[styles.option, selectedOption && styles.selected]}
             >
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
   },
   option: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderStrong,
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     paddingVertical: theme.space.md,
