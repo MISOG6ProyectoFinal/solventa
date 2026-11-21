@@ -8,14 +8,13 @@ import {
   ChipSelector,
   ErrorState,
   IconButton,
-  PinMap,
   Screen,
   Sheet,
   type SheetHandle,
 } from '../../../../shared/ui';
 import { listNearbyProviders } from '../../api/listNearbyProviders';
 import { Legend } from '../../components/Legend';
-import { ProviderList } from '../../components/ProviderList';
+import { ProviderArea } from '../../components/ProviderArea';
 import { ProviderSummary } from '../../components/ProviderSummary';
 import { categories } from '../../categories';
 import { useTexts } from '../../texts';
@@ -135,29 +134,17 @@ export default function NearbyProvidersScreen({ route }: Readonly<Props>) {
                 retry={{ label: texts.providers.retryButton, onPress: load }}
               />
             ) : null}
-            <View style={styles.mapArea}>
-              {view === 'map' ? (
-                <PinMap
-                  center={location}
-                  pins={pins}
-                  selectedId={selectedId}
-                  onPinPress={selectPin}
-                  onMapPress={dismissSummary}
-                />
-              ) : (
-                <ProviderList providers={providers} />
-              )}
-              {status === 'loading' ? (
-                <View style={styles.overlay}>
-                  <AppText variant="bodySmall">{texts.providers.loading}</AppText>
-                </View>
-              ) : null}
-              {status === 'ready' && providers.length === 0 ? (
-                <View style={styles.overlay}>
-                  <AppText variant="bodySmall">{texts.providers.empty(emptyScope)}</AppText>
-                </View>
-              ) : null}
-            </View>
+            <ProviderArea
+              view={view}
+              status={status}
+              center={location}
+              providers={providers}
+              pins={pins}
+              selectedId={selectedId}
+              emptyScope={emptyScope}
+              onPinPress={selectPin}
+              onMapPress={dismissSummary}
+            />
             <AppText variant="caption">{texts.providers.attribution}</AppText>
           </>
         ) : null}
