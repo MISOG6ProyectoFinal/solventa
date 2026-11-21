@@ -9,6 +9,7 @@ import { postgresDesde } from "./lib/estado.mjs";
 import { graficaDisponibilidad, segmentosDe, eventosDisponibilidad, resumenArq13, rtoDe } from "./lib/grafica.mjs";
 import { ajenosSiguen, esRecursoHa, esWorkerZonaA, evaluarRecursos, planEliminacion } from "./lib/proteccion.mjs";
 import { medirRecuperacion } from "./lib/rto.mjs";
+import { bloqueResultados, compararEvidencia, reemplazarBloque } from "./lib/resultados-asr09.mjs";
 import { exposicionSondas } from "./lib/metricas.mjs";
 import { kubeconfigLocal } from "./lib/kube.mjs";
 import { backend, overlayHa, sqlBases } from "./lib/rutas.mjs";
@@ -276,6 +277,71 @@ test("CloudNativePG usa PostGIS, dos instancias y las bases del proyecto", () =>
   assert.match(texto, /name: postgis/);
   assert.doesNotMatch(texto, /minSyncReplicas/);
   assert.match(texto, /ALTER ROLE solventa WITH SUPERUSER/);
+});
+
+test("CloudNativePG confirma cada escritura en la réplica de la otra zona (ASR-09)", () => {
+  const texto = readFileSync(`${overlayHa}/cnpg.yaml`, "utf8");
+  assert.match(texto, /synchronous:\s*\n\s+method: any\s*\n\s+number: 1\s*\n\s+dataDurability: preferred/);
+  assert.doesNotMatch(texto, /asíncrona/);
+});
+
+const confirmado = (clave, referencia, estado = "aprobado") => ({ clave, referencia, http: 200, estado });
+
+test("ASR-09: un cobro confirmado que falta o cambia en la base es una pérdida", () => {
+  const resultado = compararEvidencia({
+    cliente: [confirmado("k1", "r1"), confirmado("k2", "r2"), confirmado("k3", "r3"), { clave: "k4", referencia: "r4", http: 503 }],
+    filas: [
+      { idempotency_key: "k1", estado: "aprobado" },
+      { idempotency_key: "k3", estado: "rechazado" },
+    ],
+    cargos: [],
+  });
+  assert.equal(resultado.confirmadas, 3);
+  assert.deepEqual(resultado.perdidas.sort(), ["k2", "k3"]);
+});
+
+test("ASR-09: dos cargos aprobados de la misma referencia son un duplicado", () => {
+  const resultado = compararEvidencia({
+    cliente: [confirmado("k1", "r1"), { clave: "k2", referencia: "r1", http: 503 }, confirmado("k3", "r2")],
+    filas: [
+      { idempotency_key: "k1", estado: "aprobado" },
+      { idempotency_key: "k3", estado: "aprobado" },
+      { idempotency_key: "k9", estado: "procesando" },
+    ],
+    cargos: [
+      { referencia: "k1", status: "approved" },
+      { referencia: "k2", status: "approved" },
+      { referencia: "k3", status: "approved" },
+    ],
+  });
+  assert.deepEqual(resultado.duplicados, ["r1"]);
+  assert.deepEqual(resultado.atascados, ["k9"]);
+  assert.equal(resultado.cumple, false);
+});
+
+test("ASR-09: una corrida sin pérdidas, duplicados ni atascados cumple", () => {
+  const resultado = compararEvidencia({
+    cliente: [confirmado("k1", "r1")],
+    filas: [{ idempotency_key: "k1", estado: "aprobado" }],
+    cargos: [{ referencia: "k1", status: "approved" }],
+  });
+  assert.equal(resultado.cumple, true);
+});
+
+test("ASR-09: el bloque de resultados se reemplaza y el texto escrito a mano se conserva", () => {
+  const informe = "# ASR-09\n\nIntro.\n\n<!-- resultados:inicio -->\nviejo\n<!-- resultados:fin -->\n\nConclusión.\n";
+  const corridas = [
+    { fecha: "2026-11-20T10:00:00Z", zona: "ha-zone-a", confirmadas: 900, perdidas: 0, duplicados: 0, atascados: 0, cumple: true, control: false },
+    { fecha: "2026-11-20T11:00:00Z", zona: "ha-zone-b", confirmadas: 880, perdidas: 3, duplicados: 0, atascados: 0, cumple: false, control: true },
+  ];
+  const nuevo = reemplazarBloque(informe, bloqueResultados(corridas));
+  assert.match(nuevo, /^# ASR-09\n\nIntro\.\n\n<!-- resultados:inicio -->\n/);
+  assert.match(nuevo, /\n<!-- resultados:fin -->\n\nConclusión\.\n$/);
+  assert.doesNotMatch(nuevo, /viejo/);
+  assert.match(nuevo, /ha-zone-a/);
+  assert.match(nuevo, /control/i);
+  assert.match(nuevo, /1 de 1 corridas cumplen/);
+  assert.throws(() => reemplazarBloque("# sin marcadores\n", "x"));
 });
 
 test("el render no conserva el StatefulSet local ni la afinidad de EKS", () => {

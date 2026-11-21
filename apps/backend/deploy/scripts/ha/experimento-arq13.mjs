@@ -144,7 +144,7 @@ export async function ejecutarArq13(ctx) {
     disponibilidad,
     restauracion: arranque,
     capturas: [antes, durante, despues, finalCaptura].filter(Boolean),
-    limitacion: "Se detuvo un worker de k3d. Las dos zonas comparten equipo, Docker Desktop y el nodo de control. No es una AZ física de AWS y el RPO no es cero.",
+    limitacion: "Se detuvo un worker de k3d. Las dos zonas comparten equipo, Docker Desktop y el nodo de control. No es una AZ física de AWS. El RPO se mide en ASR-09 (ARQ-14).",
   };
   escribirJson(ctx.salida, "arq13.json", resultado);
   return resultado;

@@ -101,6 +101,19 @@ def test_gateway_approves_only_the_demo_token_and_respects_idempotency():
     assert replay.json() == approved.json()
 
 
+def test_gateway_lists_its_charges_and_looks_one_up_by_key():
+    client.post("/pasarela-pagos/charges", json=CHARGE, headers={"Idempotency-Key": "k-1"})
+    client.post("/pasarela-pagos/charges", json=CHARGE, headers={"Idempotency-Key": "k-1"})
+
+    listed = client.get("/pasarela-pagos/charges")
+    found = client.get("/pasarela-pagos/charges/k-1")
+    missing = client.get("/pasarela-pagos/charges/k-unknown")
+
+    assert [charge["referencia"] for charge in listed.json()] == ["k-1"]
+    assert found.json()["status"] == "approved"
+    assert missing.status_code == 404
+
+
 def test_notifications_keep_an_outbox_to_read_the_otp():
     body = {"channel": "sms", "to": "3001234567", "template": "otp-consentimiento", "data": {"codigo": "123456"}}
     sent = client.post("/notificaciones/notifications", json=body)

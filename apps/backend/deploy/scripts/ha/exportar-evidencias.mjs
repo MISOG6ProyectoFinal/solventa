@@ -7,7 +7,7 @@ import { INTERVALO_S, SERVICIOS_OMITIDOS, ZONA_A, ZONA_B } from "./lib/constante
 
 const LIMITACIONES = [
   "Las zonas ha-zone-a y ha-zone-b son etiquetas de un clúster k3d en el mismo computador y el mismo Docker Desktop. No son zonas de disponibilidad físicas ni una prueba Multi-AZ de AWS.",
-  "La replicación de PostgreSQL es asíncrona. El experimento no demuestra RPO cero.",
+  "ARQ-13 mide la recuperación, no el RPO. La pérdida de datos se mide en el experimento de ASR-09 (ARQ-14).",
   "Una ventana de minutos no demuestra la disponibilidad mensual del 99,97 %.",
   "Detener el contenedor del worker reproduce una pérdida abrupta de cómputo en la zona simulada. El nodo de control, el operador de PostgreSQL y la observabilidad siguen en el mismo equipo.",
 ];

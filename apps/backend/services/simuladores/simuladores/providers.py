@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, status
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 from simuladores.control import PROVIDERS, Mode
@@ -55,6 +55,19 @@ async def charge(cobro: Charge, idempotency_key: Annotated[str, Header()]) -> di
             "amount": cobro.amount,
             "currency": cobro.currency,
         }
+    return charges[idempotency_key]
+
+
+@payment_gateway.get("/charges")
+async def list_charges() -> list[dict]:
+    """Lets the ASR-09 experiment count approved charges per reference."""
+    return list(charges.values())
+
+
+@payment_gateway.get("/charges/{idempotency_key}")
+async def get_charge(idempotency_key: str) -> dict:
+    if idempotency_key not in charges:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cobro no encontrado")
     return charges[idempotency_key]
 
 

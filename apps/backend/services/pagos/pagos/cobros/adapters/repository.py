@@ -1,6 +1,7 @@
 """Persistencia del cobro. Una fila por referencia de origen y una clave de idempotencia única."""
 
 import threading
+from datetime import datetime
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
@@ -78,6 +79,15 @@ class PostgresCobroRepository:
             return None
         return self.get_by_idempotency_key(reemplazo.idempotency_key)
 
+    def pendientes(self, antes_de: datetime) -> list[Cobro]:
+        consulta = (
+            select(cobros)
+            .where(cobros.c.estado == EstadoCobro.PROCESANDO.value, cobros.c.creado_en < antes_de)
+            .order_by(cobros.c.creado_en)
+        )
+        with self.engine.connect() as conn:
+            return [_cobro(row) for row in conn.execute(consulta).mappings()]
+
 
 class InMemoryCobroRepository:
     def __init__(self) -> None:
@@ -120,6 +130,13 @@ class InMemoryCobroRepository:
             del self.items[clave_actual]
             self.items[reemplazo.idempotency_key] = reemplazo
             return reemplazo
+
+    def pendientes(self, antes_de: datetime) -> list[Cobro]:
+        with self._lock:
+            return sorted(
+                (c for c in self.items.values() if c.estado == EstadoCobro.PROCESANDO and c.creado_en < antes_de),
+                key=lambda c: c.creado_en,
+            )
 
 
 def _cobro(row) -> Cobro:

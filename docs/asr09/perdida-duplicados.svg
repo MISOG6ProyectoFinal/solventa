@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 320" font-family="sans-serif">
+<rect width="760" height="320" fill="#fff"/>
+<rect x="60" y="12" width="12" height="12" fill="#2b6cb0"/><text x="78" y="22" font-size="12">Confirmadas</text>
+<rect x="190" y="12" width="12" height="12" fill="#c53030"/><text x="208" y="22" font-size="12">Perdidas</text>
+<rect x="320" y="12" width="12" height="12" fill="#d69e2e"/><text x="338" y="22" font-size="12">Duplicadas</text>
+<line x1="60" y1="260" x2="740" y2="260" stroke="#444"/>
+<text x="52" y="44" text-anchor="end" font-size="12">1056</text>
+<text x="52" y="264" text-anchor="end" font-size="12">0</text>
+<rect x="67.72727272727272" y="52.5" width="14.454545454545455" height="207.5" fill="#2b6cb0"><title>confirmadas: 996</title></rect>
+<rect x="83.18181818181817" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="98.63636363636363" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="90.9090909090909" y="278" text-anchor="middle" font-size="12">1</text>
+<rect x="129.54545454545453" y="53.54166666666666" width="14.454545454545455" height="206.45833333333334" fill="#2b6cb0"><title>confirmadas: 991</title></rect>
+<rect x="145" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="160.45454545454544" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="152.72727272727272" y="278" text-anchor="middle" font-size="12">2</text>
+<rect x="191.36363636363635" y="52.5" width="14.454545454545455" height="207.5" fill="#2b6cb0"><title>confirmadas: 996</title></rect>
+<rect x="206.8181818181818" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="222.27272727272725" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="214.54545454545453" y="278" text-anchor="middle" font-size="12">3</text>
+<rect x="253.1818181818182" y="49.791666666666686" width="14.454545454545455" height="210.20833333333331" fill="#2b6cb0"><title>confirmadas: 1009</title></rect>
+<rect x="268.6363636363636" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="284.0909090909091" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="276.3636363636364" y="278" text-anchor="middle" font-size="12">4</text>
+<rect x="315" y="48.54166666666666" width="14.454545454545455" height="211.45833333333334" fill="#2b6cb0"><title>confirmadas: 1015</title></rect>
+<rect x="330.45454545454544" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="345.90909090909093" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="338.1818181818182" y="278" text-anchor="middle" font-size="12">5</text>
+<rect x="376.81818181818187" y="47.70833333333334" width="14.454545454545455" height="212.29166666666666" fill="#2b6cb0"><title>confirmadas: 1019</title></rect>
+<rect x="392.2727272727273" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="407.7272727272728" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="400.00000000000006" y="278" text-anchor="middle" font-size="12">6</text>
+<rect x="438.6363636363637" y="54.58333333333334" width="14.454545454545455" height="205.41666666666666" fill="#2b6cb0"><title>confirmadas: 986</title></rect>
+<rect x="454.0909090909091" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="469.5454545454546" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="461.81818181818187" y="278" text-anchor="middle" font-size="12">7</text>
+<rect x="500.4545454545455" y="40" width="14.454545454545455" height="220" fill="#2b6cb0"><title>confirmadas: 1056</title></rect>
+<rect x="515.909090909091" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="531.3636363636364" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="523.6363636363636" y="278" text-anchor="middle" font-size="12">8</text>
+<rect x="562.2727272727273" y="45.625" width="14.454545454545455" height="214.375" fill="#2b6cb0"><title>confirmadas: 1029</title></rect>
+<rect x="577.7272727272727" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="593.1818181818181" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="585.4545454545454" y="278" text-anchor="middle" font-size="12">9</text>
+<rect x="624.0909090909091" y="51.45833333333334" width="14.454545454545455" height="208.54166666666666" fill="#2b6cb0"><title>confirmadas: 1001</title></rect>
+<rect x="639.5454545454546" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="655" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="647.2727272727273" y="278" text-anchor="middle" font-size="12">10</text>
+<rect x="685.909090909091" y="50.20833333333334" width="14.454545454545455" height="209.79166666666666" fill="#2b6cb0"><title>confirmadas: 1007</title></rect>
+<rect x="701.3636363636365" y="260" width="14.454545454545455" height="0" fill="#c53030"><title>perdidas: 0</title></rect>
+<rect x="716.8181818181819" y="260" width="14.454545454545455" height="0" fill="#d69e2e"><title>duplicados: 0</title></rect>
+<text x="709.0909090909091" y="278" text-anchor="middle" font-size="12">11 (c)</text>
+<text x="380" y="304" text-anchor="middle" font-size="12">Corrida (c = control con replicación asíncrona)</text>
+</svg>

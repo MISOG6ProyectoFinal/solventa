@@ -8,6 +8,8 @@ export function ejecutar(comando, args, { cwd, env, input, timeout } = {}) {
     timeout,
     encoding: "utf8",
     windowsHide: true,
+    // Evidence reads (k6 logs, gateway charges) grow past the 1 MB default.
+    maxBuffer: 256 * 1024 * 1024,
   });
   const fallo = resultado.error ? resultado.error.message : "";
   return {
