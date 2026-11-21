@@ -292,6 +292,16 @@ function businessValueSpec(businessValue) {
     (_, index) => index
   );
 
+  const totalValue = values.reduce(
+    (max, entry) => Math.max(max, entry.businessValue),
+    0
+  );
+  const valueMax = Math.max(100, Math.ceil(totalValue / 20) * 20);
+  const valueTicks = Array.from(
+    { length: valueMax / 20 + 1 },
+    (_, index) => index * 20
+  );
+
   return {
     width: 900,
     height: 450,
@@ -336,13 +346,13 @@ function businessValueSpec(businessValue) {
         title: 'Business Value acumulado',
 
         scale: {
-          domain: [0, 100],
+          domain: [0, valueMax],
           nice: false,
           zero: true
         },
 
         axis: {
-          values: [0, 20, 40, 60, 80, 100]
+          values: valueTicks
         }
       },
 
