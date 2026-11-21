@@ -106,6 +106,11 @@ function buildBusinessValueData(businessValue) {
     (a, b) => a.day - b.day
   );
 
+  const totalValue = sortedValues.reduce(
+    (sum, entry) => sum + entry.valueDelivered,
+    0
+  );
+
   let accumulated = 0;
 
   const result = [
@@ -122,7 +127,10 @@ function buildBusinessValueData(businessValue) {
     result.push({
       day: entry.day,
       weekPosition: entry.day / daysPerWeek,
-      businessValue: accumulated
+      businessValue:
+        totalValue > 0
+          ? Math.round((accumulated / totalValue) * 1000) / 10
+          : 0
     });
   }
 
@@ -292,16 +300,6 @@ function businessValueSpec(businessValue) {
     (_, index) => index
   );
 
-  const totalValue = values.reduce(
-    (max, entry) => Math.max(max, entry.businessValue),
-    0
-  );
-  const valueMax = Math.max(100, Math.ceil(totalValue / 20) * 20);
-  const valueTicks = Array.from(
-    { length: valueMax / 20 + 1 },
-    (_, index) => index * 20
-  );
-
   return {
     width: 900,
     height: 450,
@@ -343,16 +341,16 @@ function businessValueSpec(businessValue) {
       y: {
         field: 'businessValue',
         type: 'quantitative',
-        title: 'Business Value acumulado',
+        title: 'Business Value acumulado (%)',
 
         scale: {
-          domain: [0, valueMax],
+          domain: [0, 100],
           nice: false,
           zero: true
         },
 
         axis: {
-          values: valueTicks
+          values: [0, 20, 40, 60, 80, 100]
         }
       },
 
@@ -371,7 +369,7 @@ function businessValueSpec(businessValue) {
         {
           field: 'businessValue',
           type: 'quantitative',
-          title: 'Business Value acumulado'
+          title: 'Business Value acumulado (%)'
         }
       ]
     }
