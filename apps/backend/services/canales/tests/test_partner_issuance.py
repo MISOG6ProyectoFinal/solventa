@@ -1,6 +1,7 @@
 """HU015: el socio paga su cotización y emite la póliza desde la API pública."""
 
 import httpx
+import pytest
 from canales.main import app
 from fastapi.testclient import TestClient
 
@@ -27,6 +28,15 @@ POLICY = {
     "idempotency_key": "socios:socio-1:pedido-77",
     "socio_id": "socio-1",
 }
+HOLDER = {
+    "tipo_documento": "CC",
+    "numero_documento": "1020304050",
+    "nombre": "Laura",
+    "apellido": "Martínez",
+    "email": "laura@cliente.test",
+    "telefono": "3001234567",
+}
+ISSUE = {"cotizacion_id": "cot-1", "cobro_id": "cobro-1", "tomador": HOLDER}
 
 
 class _Upstream:
@@ -105,14 +115,14 @@ def test_expired_quote_is_not_charged(monkeypatch):
 
 def test_partner_issues_policy_with_scoped_key(monkeypatch):
     policies = _Upstream({"/polizas/emisiones": POLICY})
+    identity = _Upstream({"/identidad/clientes/asegurar": {"id": "cliente-77"}})
     quotes_service = _quotes()
     monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
     monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", policies)
+    monkeypatch.setattr("canales.socios.api.identidad", identity)
 
-    response = client.post(
-        "/socios/v1/polizas", json={"cotizacion_id": "cot-1", "cobro_id": "cobro-1"}, headers=HEADERS
-    )
+    response = client.post("/socios/v1/polizas", json=ISSUE, headers=HEADERS)
 
     assert response.status_code == 201
     assert response.json()["numero"] == "POL-ABC123"
@@ -126,7 +136,9 @@ def test_partner_issues_policy_with_scoped_key(monkeypatch):
         "idempotency_key": "socios:socio-1:pedido-77",
         "canal": "socios",
         "socio_id": "socio-1",
+        "cliente_id": "cliente-77",
     }
+    assert identity.calls[0][1]["json"] == HOLDER | {"fecha_nacimiento": None}
 
 
 def test_issuance_keeps_the_business_error(monkeypatch):
@@ -135,10 +147,9 @@ def test_issuance_keeps_the_business_error(monkeypatch):
     monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
     monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", _Upstream(error=_http_error(409, detail)))
+    monkeypatch.setattr("canales.socios.api.identidad", _Upstream({"/identidad/clientes/asegurar": {"id": "c-1"}}))
 
-    response = client.post(
-        "/socios/v1/polizas", json={"cotizacion_id": "cot-1", "cobro_id": "cobro-1"}, headers=HEADERS
-    )
+    response = client.post("/socios/v1/polizas", json=ISSUE, headers=HEADERS)
 
     assert response.status_code == 409
     assert response.json()["detail"] == detail
@@ -152,9 +163,7 @@ def test_scope_without_issuance_is_rejected_before_issuing(monkeypatch):
     monkeypatch.setattr("canales.quote_payment.cotizacion", quotes_service)
     monkeypatch.setattr("canales.socios.api.polizas", policies)
 
-    response = client.post(
-        "/socios/v1/polizas", json={"cotizacion_id": "cot-1", "cobro_id": "cobro-1"}, headers=HEADERS
-    )
+    response = client.post("/socios/v1/polizas", json=ISSUE, headers=HEADERS)
 
     assert response.status_code == 403
     assert response.json()["detail"] == detail
@@ -164,8 +173,44 @@ def test_scope_without_issuance_is_rejected_before_issuing(monkeypatch):
 def test_idempotency_key_is_required():
     headers = {k: v for k, v in HEADERS.items() if k != "Idempotency-Key"}
 
-    assert (
-        client.post("/socios/v1/polizas", json={"cotizacion_id": "c", "cobro_id": "p"}, headers=headers).status_code
-        == 422
-    )
+    assert client.post("/socios/v1/polizas", json=ISSUE | {"cotizacion_id": "c"}, headers=headers).status_code == 422
     assert client.post("/socios/v1/cotizaciones/c/pagos", json={"medio_token": "t"}, headers=headers).status_code == 422
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"cotizacion_id": "cot-1", "cobro_id": "cobro-1"},
+        ISSUE | {"tomador": HOLDER | {"numero_documento": ""}},
+        ISSUE | {"tomador": {key: value for key, value in HOLDER.items() if key != "email"}},
+        ISSUE | {"tomador": HOLDER | {"apellido": " "}},
+    ],
+)
+def test_issuance_requires_a_valid_policy_holder(monkeypatch, body):
+    policies = _Upstream({"/polizas/emisiones": POLICY})
+    identity = _Upstream({"/identidad/clientes/asegurar": {"id": "cliente-77"}})
+    quotes_service = _quotes()
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.socios.api.polizas", policies)
+    monkeypatch.setattr("canales.socios.api.identidad", identity)
+
+    response = client.post("/socios/v1/polizas", json=body, headers=HEADERS)
+
+    assert response.status_code == 422
+    assert identity.calls == []
+    assert policies.calls == []
+
+
+def test_identity_rejection_of_the_holder_issues_nothing(monkeypatch):
+    detail = [{"loc": ["body", "email"], "msg": "Formato de email inválido"}]
+    policies = _Upstream({"/polizas/emisiones": POLICY})
+    quotes_service = _quotes()
+    monkeypatch.setattr("canales.socios.api.cotizacion", quotes_service)
+    monkeypatch.setattr("canales.socios.api.polizas", policies)
+    monkeypatch.setattr("canales.socios.api.identidad", _Upstream(error=_http_error(422, detail)))
+
+    body = ISSUE | {"tomador": HOLDER | {"email": "sin-arroba"}}
+    response = client.post("/socios/v1/polizas", json=body, headers=HEADERS)
+
+    assert response.status_code == 422
+    assert policies.calls == []

@@ -381,8 +381,16 @@ export function ventaSocio(datos) {
     },
   );
   if (!cobro) return;
+  const tomador = {
+    tipo_documento: 'CC',
+    numero_documento: `${Date.now()}-${__VU}-${__ITER}`,
+    nombre: 'Cliente',
+    apellido: 'Socio',
+    email: `${pedido}@socio.test`,
+  };
+  const emision = { cotizacion_id: oferta.id, cobro_id: cobro.id, tomador };
   const emitir = (nombre, validar) =>
-    pedir(nombre, 'POST', `${BASE_URL}/socios/v1/polizas`, { cotizacion_id: oferta.id, cobro_id: cobro.id }, {
+    pedir(nombre, 'POST', `${BASE_URL}/socios/v1/polizas`, emision, {
       estado: 201,
       headers: { ...credenciales, 'Idempotency-Key': `emision-${pedido}` },
       validar,
