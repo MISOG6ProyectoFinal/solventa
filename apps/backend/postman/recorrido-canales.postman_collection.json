@@ -2998,9 +2998,9 @@
             "url": "{{baseUrl}}/socios/v1/polizas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\"\n}"
+              "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\",\n  \"tomador\": {\n    \"tipo_documento\": \"CC\",\n    \"numero_documento\": \"{{documento}}\",\n    \"nombre\": \"Prueba\",\n    \"apellido\": \"Carga\",\n    \"email\": \"{{correo}}\",\n    \"telefono\": \"3001234567\"\n  }\n}"
             },
-            "description": "Emite la póliza con el cobro aprobado (HU015). Idempotency-Key obligatoria."
+            "description": "Emite la póliza con el cobro aprobado (HU015) a nombre del tomador, el cliente del socio. Canales asegura al tomador en Identidad por su documento; aquí es el cliente que registró la carpeta Móvil, así que puede reportar siniestros sobre la póliza. Idempotency-Key obligatoria."
           },
           "event": [
             {

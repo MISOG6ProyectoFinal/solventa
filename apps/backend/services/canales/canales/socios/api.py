@@ -1,12 +1,14 @@
+from datetime import date
 from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from solventa_common.errors import api_error, error_detail
 from solventa_common.integration.base import call_upstream
 
-from canales.clients import cotizacion, polizas, siniestros
+from canales.clients import cotizacion, identidad, polizas, siniestros
+from canales.customers import ensure_customer
 from canales.paths import ResourceId
 from canales.quote_payment import charge_quote, payable_quote
 
@@ -114,9 +116,24 @@ class PartnerPaymentRequest(BaseModel):
     medio_token: str = Field(min_length=1, max_length=255)
 
 
+class PolicyHolder(BaseModel):
+    """El cliente del socio a cuyo nombre queda la póliza."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    tipo_documento: str = Field(min_length=1)
+    numero_documento: str = Field(min_length=1)
+    nombre: str = Field(min_length=1)
+    apellido: str = Field(min_length=1)
+    email: str = Field(min_length=1)
+    telefono: str = ""
+    fecha_nacimiento: date | None = None
+
+
 class PartnerIssueRequest(BaseModel):
     cotizacion_id: str = Field(min_length=1, max_length=64)
     cobro_id: str = Field(min_length=1, max_length=64)
+    tomador: PolicyHolder
 
 
 @router.post("/v1/cotizaciones/{cotizacion_id}/pagos")
@@ -146,7 +163,8 @@ def issue_policy(
     partner: IssuingPartner,
     idempotency_key: IdempotencyKey,
 ) -> dict:
-    """Emite la póliza de una cotización pagada. La misma Idempotency-Key devuelve la misma póliza."""
+    """Emite a nombre del tomador la póliza de una cotización pagada. La misma Idempotency-Key devuelve la misma."""
+    holder_id = ensure_customer(identidad, request.tomador.model_dump())
     policy = call_upstream(
         polizas.post,
         "/polizas/emisiones",
@@ -156,6 +174,7 @@ def issue_policy(
             "idempotency_key": f"socios:{partner['socio_id']}:{idempotency_key}",
             "canal": "socios",
             "socio_id": partner["socio_id"],
+            "cliente_id": holder_id,
         },
     )
     return {key: policy[key] for key in POLICY_FIELDS}

@@ -74,7 +74,9 @@ class Validity(BaseModel):
 
 
 class IssuePolicyRequest(BaseModel):
-    """El canal identifica al dueño de la cotización: socio_id para socios, cliente_id para móvil."""
+    """El canal identifica al dueño de la cotización: socio_id para socios, cliente_id para móvil.
+
+    Un socio envía también el cliente_id del tomador, el cliente a cuyo nombre queda la póliza."""
 
     cotizacion_id: str = Field(min_length=1, max_length=64)
     cobro_id: str = Field(min_length=1, max_length=64)

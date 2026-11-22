@@ -7,6 +7,7 @@ from solventa_common.operator_session import ADMIN, ADVISOR
 
 from canales.catalog import document_types, product_contract
 from canales.clients import cotizacion, identidad, polizas
+from canales.customers import ensure_customer
 from canales.paths import ResourceId
 from canales.web.auth import Operator, require_operator, require_roles
 from canales.web.policies import policy_detail, recent_policies, register_endorsement
@@ -85,29 +86,18 @@ def _extraer_identificacion(solicitud: dict) -> tuple[str, str]:
 
 
 def _ensure_customer(solicitud: dict, tipo_doc: str, num_doc: str) -> str | None:
-    nombre = str(solicitud.get("nombre") or "").strip()
-    apellido = str(solicitud.get("apellido") or "").strip()
-    email = str(solicitud.get("email") or "").strip()
-    telefono = str(solicitud.get("telefono") or "").strip()
-    fecha_nac = solicitud.get("fecha_nacimiento") or solicitud.get("fechaNacimiento")
-    fecha_nac_str = str(fecha_nac) if fecha_nac else None
-
-    nuevo = call_upstream(
-        identidad.post,
-        "/identidad/clientes/asegurar",
-        json={
+    return ensure_customer(
+        identidad,
+        {
             "tipo_documento": tipo_doc,
             "numero_documento": num_doc,
-            "nombre": nombre,
-            "apellido": apellido,
-            "email": email,
-            "telefono": telefono,
-            "fecha_nacimiento": fecha_nac_str,
+            "nombre": str(solicitud.get("nombre") or "").strip(),
+            "apellido": str(solicitud.get("apellido") or "").strip(),
+            "email": str(solicitud.get("email") or "").strip(),
+            "telefono": str(solicitud.get("telefono") or "").strip(),
+            "fecha_nacimiento": solicitud.get("fecha_nacimiento") or solicitud.get("fechaNacimiento"),
         },
     )
-    if not nuevo:
-        return None
-    return nuevo.get("id")
 
 
 def _resolver_cliente_id(solicitud: dict) -> str | None:

@@ -77,6 +77,14 @@ def test_issues_policy_with_valid_quote_and_approved_payment(stores):
     assert policy["socio_id"] == "socio-1"
 
 
+def test_partner_policy_stays_in_the_name_of_its_holder(stores):
+    response = _issue(cliente_id="cliente-77")
+
+    assert response.status_code == 201
+    assert response.json()["socio_id"] == "socio-1"
+    assert response.json()["cliente_id"] == "cliente-77"
+
+
 def test_same_key_returns_the_same_policy_without_reading_upstream_again(stores):
     policies, quotes, payments = stores
     first = _issue().json()
