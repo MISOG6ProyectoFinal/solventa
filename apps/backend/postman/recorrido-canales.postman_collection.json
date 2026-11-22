@@ -2475,7 +2475,7 @@
                   "const operadores = pm.response.json();",
                   "pm.test('Incluye al administrador', function () {",
                   "  pm.response.to.have.status(200);",
-                  "  pm.expect(operadores.map((o) => o.correo)).to.include(pm.collectionVariables.get('operadorCorreo'));",
+                  "  pm.expect(operadores.map((o) => o.correo)).to.include(pm.variables.get('operadorCorreo'));",
                   "  pm.expect(operadores[0]).to.not.have.property('password_hash');",
                   "});"
                 ]
