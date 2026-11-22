@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa API",
-    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios y la última, Revocación del socio, le revoca la credencial. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -167,6 +167,30 @@
     },
     {
       "key": "administradorId",
+      "value": ""
+    },
+    {
+      "key": "cuotaSocio",
+      "value": ""
+    },
+    {
+      "key": "socioSecretoAnterior",
+      "value": ""
+    },
+    {
+      "key": "cotizacionCancelacionId",
+      "value": ""
+    },
+    {
+      "key": "cobroCancelacionId",
+      "value": ""
+    },
+    {
+      "key": "polizaCancelacionId",
+      "value": ""
+    },
+    {
+      "key": "montoReintegro",
       "value": ""
     }
   ],
@@ -1834,6 +1858,355 @@
           ]
         },
         {
+          "name": "Tipos de endoso",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/tipos-endoso?ramo_id=ramo-viaje",
+            "description": "Tipos de endoso permitidos según el ramo de la póliza. Sin ramo_id responde todos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Viaje solo admite el endoso de datos del asegurado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().map((t) => t.id)).to.eql(['datos-asegurado']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Endosar datos del asegurado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/polizas/{{polizaMovilId}}/endosos",
+            "description": "Endoso de datos del asegurado (HU006) sobre la póliza emitida en el móvil. El script previo toma la vigencia y el asegurado actual de la póliza y cambia la dirección. El usuario sale del token. 409 poliza_no_endosable si no está activa; 422 fecha_efectiva_fuera_de_vigencia o endoso_sin_cambios.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha_efectiva\": \"{{fechaEndoso}}\",\n  \"motivo\": \"Cambio de dirección del recorrido Postman\",\n  \"version_nueva\": {{versionNueva}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.variables.replaceIn('{{baseUrl}}/web/polizas/{{polizaMovilId}}'),",
+                  "  method: 'GET',",
+                  "  header: [{ key: 'Authorization', value: `Bearer ${pm.collectionVariables.get('portalToken')}` }]",
+                  "}, function (error, respuesta) {",
+                  "  const poliza = respuesta.json();",
+                  "  pm.variables.set('fechaEndoso', poliza.vigencia.desde);",
+                  "  pm.variables.set('versionNueva', JSON.stringify({ ...poliza.asegurado, direccion: 'Calle 100 # 15-20, Bogotá' }));",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const endoso = pm.response.json();",
+                  "pm.test('El endoso guarda la versión anterior y la nueva', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(endoso.tipo).to.equal('datos-asegurado');",
+                  "  pm.expect(endoso.version_anterior.direccion).to.equal('');",
+                  "  pm.expect(endoso.version_nueva.direccion).to.equal('Calle 100 # 15-20, Bogotá');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Póliza endosada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/{{polizaMovilId}}",
+            "description": "El asegurado vigente sale del último endoso; Identidad no cambia."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.test('La póliza muestra el endoso y el asegurado nuevo', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(poliza.endosos).to.have.lengthOf(1);",
+                  "  pm.expect(poliza.asegurado.direccion).to.equal('Calle 100 # 15-20, Bogotá');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar en el móvil un viaje que sale hoy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones",
+            "description": "Preparación de la cancelación: la devolución se calcula con la fecha de hoy, que debe estar dentro de la vigencia. La póliza del móvil empieza en 30 días, así que el cliente compra un viaje que empieza hoy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"nombre\": \"Prueba Carga\",\n  \"cedula\": \"{{cedula}}\",\n  \"destino\": \"España\",\n  \"fecha_salida\": \"{{fechaSalida}}\",\n  \"fecha_regreso\": \"{{fechaRegreso}}\",\n  \"viajeros\": 1\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dia = (desplazamiento) => {",
+                  "  const fecha = new Date();",
+                  "  fecha.setDate(fecha.getDate() + desplazamiento);",
+                  "  return fecha.toISOString().slice(0, 10);",
+                  "};",
+                  "pm.variables.set('fechaSalida', dia(0));",
+                  "pm.variables.set('fechaRegreso', dia(10));",
+                  "pm.variables.set('cedula', '1' + String(Date.now()).slice(-9));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const oferta = pm.response.json();",
+                  "pm.collectionVariables.set('cotizacionCancelacionId', oferta.id);",
+                  "pm.test('El consenso devuelve una oferta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(Number(oferta.prima)).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar el viaje que sale hoy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones/{{cotizacionCancelacionId}}/pagos",
+            "description": "Preparación de la cancelación: cobro de la prima con el token del cliente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"intento_id\": \"{{intentoPago}}\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('intentoPago', `postman-cancelacion-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cobro = pm.response.json();",
+                  "pm.collectionVariables.set('cobroCancelacionId', cobro.id);",
+                  "pm.test('La pasarela aprueba el cobro', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(cobro.estado).to.equal('aprobado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Emitir la póliza del viaje que sale hoy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/cotizaciones/{{cotizacionCancelacionId}}/polizas",
+            "description": "Preparación de la cancelación: póliza activa con vigencia desde hoy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cobro_id\": \"{{cobroCancelacionId}}\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poliza = pm.response.json();",
+                  "pm.collectionVariables.set('polizaCancelacionId', poliza.id);",
+                  "pm.test('La póliza queda activa desde hoy', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  pm.expect(poliza.estado).to.equal('activa');",
+                  "  pm.expect(poliza.vigencia.desde).to.equal(new Date().toISOString().slice(0, 10));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calcular la devolución de la cancelación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/polizas/{{polizaCancelacionId}}/cancelacion/calculo",
+            "description": "Cancelación de póliza (HU007), paso 1: Cotización calcula la prima no devengada para la causa sin cambiar la póliza. impago-de-prima devuelve 0. 409 poliza_no_cancelable si no está activa; 503 devolucion_no_disponible si Cotización no responde.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"causa\": \"retracto\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const devolucion = pm.response.json();",
+                  "pm.collectionVariables.set('montoReintegro', String(devolucion.monto_reintegro));",
+                  "pm.test('Calcula la devolución de los días no devengados', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(devolucion.dias_vigencia).to.be.above(0);",
+                  "  pm.expect(devolucion.dias_no_devengados).to.be.at.most(devolucion.dias_vigencia);",
+                  "  pm.expect(Number(devolucion.monto_reintegro)).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar la póliza",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/polizas/{{polizaCancelacionId}}/cancelacion",
+            "description": "Paso 2: cancelación definitiva. La devolución se recalcula, no se confía en un monto del cliente, y el usuario sale del token. Publica PolizaCanceladaEvent para Pagos y Auditoría.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"causa\": \"retracto\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancela con la misma devolución calculada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(String(pm.response.json().monto_reintegro)).to.equal(pm.collectionVariables.get('montoReintegro'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Póliza cancelada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/web/polizas/{{polizaCancelacionId}}",
+            "description": "La póliza queda cancelada y ya no admite endosos ni otra cancelación (409)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La póliza queda cancelada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().estado).to.equal('cancelada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Tipos de socio",
           "request": {
             "method": "GET",
@@ -2370,7 +2743,7 @@
     },
     {
       "name": "API de socios",
-      "description": "API pública para socios. Credencial en X-Client-Id y X-Api-Key; pagos y emisión exigen Idempotency-Key.",
+      "description": "API pública para socios. Credencial en X-Client-Id y X-Api-Key; pagos y emisión exigen Idempotency-Key. X-Api-Version declara la versión del contrato (solo v1). Cada socio tiene una cuota de solicitudes por minuto: las respuestas traen X-RateLimit-* y, pasada la cuota, 429 cuota_excedida con Retry-After. El portal consulta el consumo, cambia la cuota y rota la credencial.",
       "item": [
         {
           "name": "API de socios disponible",
@@ -2840,6 +3213,374 @@
                   "  pm.response.to.have.status(422);",
                   "  pm.expect(error.codigo).to.equal('datos_invalidos');",
                   "  pm.expect(error.campos.map((c) => c.campo)).to.include.members(['fecha_salida', 'fecha_regreso']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Productos con la versión v1 del contrato",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "v1"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/productos",
+            "description": "Contrato versionado (HU017). Sin versión en la ruta, X-Api-Version declara la versión y el gateway la enruta: v1 llega a /socios/v1/productos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const producto = pm.response.json().find((p) => p.producto_id === pm.collectionVariables.get('productoId'));",
+                  "pm.test('X-Api-Version v1 llega al contrato v1', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(producto).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Productos con una versión no soportada",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "v9"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/productos",
+            "description": "Una versión que no existe responde 400 version_no_soportada con las versiones disponibles, antes de validar la credencial o contar la cuota."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const error = pm.response.json().detail;",
+                  "pm.test('La versión v9 se rechaza con las disponibles', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(error.codigo).to.equal('version_no_soportada');",
+                  "  pm.expect(error.versiones).to.eql(['v1']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consumo del socio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/consumo",
+            "description": "Cuota de consumo (HU011): solicitudes del socio en la ventana del minuto actual frente a su cuota. Lectura del portal con el token del operador."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const consumo = pm.response.json();",
+                  "pm.collectionVariables.set('cuotaSocio', consumo.cuota_consumo);",
+                  "pm.test('Responde la cuota y lo consumido en la ventana', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(consumo.socio_id).to.equal(pm.collectionVariables.get('socioId'));",
+                  "  pm.expect(consumo.cuota_consumo).to.be.above(0);",
+                  "  pm.expect(consumo.consumidas).to.be.a('number');",
+                  "  pm.expect(consumo.reinicia_en_s).to.be.within(1, 60);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bajar la cuota del socio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/cuota",
+            "description": "El administrador fija la cuota en solicitudes por minuto; aplica desde la siguiente llamada del socio. 422 si no está entre 1 y 1000000.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuota_consumo\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La cuota queda en una solicitud por minuto', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().cuota_consumo).to.equal(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Superar la cuota del socio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/productos",
+            "description": "El script previo gasta la única solicitud del minuto. Esta responde 429 cuota_excedida con X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset y Retry-After, sin consultar el catálogo."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.variables.replaceIn('{{baseUrl}}/socios/v1/productos'),",
+                  "  method: 'GET',",
+                  "  header: [",
+                  "    { key: 'X-Client-Id', value: pm.collectionVariables.get('socioClientId') },",
+                  "    { key: 'X-Api-Key', value: pm.collectionVariables.get('socioSecreto') }",
+                  "  ]",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pasada la cuota responde 429 con sus cabeceras', function () {",
+                  "  pm.response.to.have.status(429);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('cuota_excedida');",
+                  "  pm.expect(pm.response.headers.get('X-RateLimit-Limit')).to.equal('1');",
+                  "  pm.expect(pm.response.headers.get('X-RateLimit-Remaining')).to.equal('0');",
+                  "  pm.expect(pm.response.headers.get('Retry-After')).to.equal(pm.response.headers.get('X-RateLimit-Reset'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer la cuota del socio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/cuota",
+            "description": "Devuelve la cuota que leyó Consumo del socio para que el resto del recorrido no reciba 429.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuota_consumo\": {{cuotaSocio}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La cuota vuelve a su valor', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().cuota_consumo).to.equal(Number(pm.collectionVariables.get('cuotaSocio')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rotar la credencial del socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/credencial/rotacion",
+            "description": "Rotación de la credencial (HU009). Emite un secreto nuevo, la única vez que viaja en claro. gracia_minutos define cuánto sigue valiendo el anterior (por defecto 1440); con 0 deja de valer de inmediato.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gracia_minutos\": 0\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const socio = pm.response.json();",
+                  "pm.collectionVariables.set('socioSecretoAnterior', pm.collectionVariables.get('socioSecreto'));",
+                  "pm.collectionVariables.set('socioSecreto', socio.secreto);",
+                  "pm.test('La credencial queda activa con un secreto nuevo', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(socio.secreto).to.not.equal(pm.collectionVariables.get('socioSecretoAnterior'));",
+                  "  pm.expect(socio.estado_credencial).to.equal('Activa');",
+                  "  pm.expect(socio.gracia_hasta).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar con el secreto anterior",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecretoAnterior}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/productos",
+            "description": "Sin gracia, el secreto anterior responde 401 credencial_invalida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El secreto anterior ya no vale', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('credencial_invalida');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar con el secreto nuevo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/productos",
+            "description": "El secreto nuevo funciona de inmediato."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const producto = pm.response.json().find((p) => p.producto_id === pm.collectionVariables.get('productoId'));",
+                  "pm.test('El secreto nuevo es aceptado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(producto).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eventos de la credencial",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/credencial/eventos",
+            "description": "Bitácora de rotaciones y revocaciones del socio con fecha y actor, la más reciente primero."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const eventos = pm.response.json();",
+                  "pm.test('La rotación queda registrada con su actor', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(eventos[0].tipo).to.equal('rotada');",
+                  "  pm.expect(eventos[0].actor).to.be.a('string').that.is.not.empty;",
+                  "  pm.expect(eventos[0].fecha).to.be.a('string');",
                   "});"
                 ]
               }
@@ -3319,6 +4060,101 @@
                   "pm.test('notificaciones queda en normal', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(estado.modo).to.equal('normal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Revocación del socio",
+      "description": "Va al final del recorrido porque deja al socio sin credencial y Fallos simulados todavía la usa. Una rotación posterior la reactiva con un secreto nuevo.",
+      "item": [
+        {
+          "name": "Revocar la credencial del socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/credencial/revocacion",
+            "description": "Revocación de la credencial (HU009). Desde este momento toda llamada con la credencial del socio responde 401, también con el secreto vigente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La credencial queda revocada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().estado_credencial).to.equal('Revocada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar con la credencial revocada",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Client-Id",
+                "value": "{{socioClientId}}"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{socioSecreto}}"
+              }
+            ],
+            "url": "{{baseUrl}}/socios/v1/productos",
+            "description": "El secreto que funcionaba antes de la revocación responde 401 credencial_invalida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La credencial revocada se rechaza', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().detail.codigo).to.equal('credencial_invalida');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eventos tras la revocación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{portalToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/web/socios/{{socioId}}/credencial/eventos",
+            "description": "La revocación queda en la bitácora sobre la rotación."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const eventos = pm.response.json();",
+                  "pm.test('La bitácora tiene la revocación y la rotación', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(eventos.map((e) => e.tipo)).to.eql(['revocada', 'rotada']);",
                   "});"
                 ]
               }
