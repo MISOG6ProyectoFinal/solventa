@@ -192,6 +192,22 @@
     {
       "key": "montoReintegro",
       "value": ""
+    },
+    {
+      "key": "tomadorDocumento",
+      "value": ""
+    },
+    {
+      "key": "tomadorCorreo",
+      "value": ""
+    },
+    {
+      "key": "tomadorContrasena",
+      "value": ""
+    },
+    {
+      "key": "tokenTomador",
+      "value": ""
     }
   ],
   "item": [
@@ -2998,9 +3014,9 @@
             "url": "{{baseUrl}}/socios/v1/polizas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\",\n  \"tomador\": {\n    \"tipo_documento\": \"CC\",\n    \"numero_documento\": \"{{documento}}\",\n    \"nombre\": \"Prueba\",\n    \"apellido\": \"Carga\",\n    \"email\": \"{{correo}}\",\n    \"telefono\": \"3001234567\"\n  }\n}"
+              "raw": "{\n  \"cotizacion_id\": \"{{cotizacionSocioId}}\",\n  \"cobro_id\": \"{{cobroSocioId}}\",\n  \"tomador\": {\n    \"tipo_documento\": \"CC\",\n    \"numero_documento\": \"{{tomadorDocumento}}\",\n    \"nombre\": \"Andrea\",\n    \"apellido\": \"Rojas\",\n    \"email\": \"{{tomadorCorreo}}\",\n    \"telefono\": \"3104567890\"\n  }\n}"
             },
-            "description": "Emite la póliza con el cobro aprobado (HU015) a nombre del tomador, el cliente del socio. Canales asegura al tomador en Identidad por su documento; aquí es el cliente que registró la carpeta Móvil, así que puede reportar siniestros sobre la póliza. Idempotency-Key obligatoria."
+            "description": "Emite la póliza con el cobro aprobado (HU015) a nombre del tomador, el cliente del socio. Canales asegura al tomador en Identidad por su documento: si no existe, lo crea. Aquí es un cliente nuevo del socio, sin cuenta en la app. Idempotency-Key obligatoria."
           },
           "event": [
             {
@@ -3008,7 +3024,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.variables.set('claveEmision', `postman-${Date.now()}`);"
+                  "pm.variables.set('claveEmision', `postman-${Date.now()}`);",
+                  "pm.collectionVariables.set('tomadorDocumento', '9' + String(Date.now()).slice(-9));",
+                  "pm.collectionVariables.set('tomadorCorreo', `andrea.rojas.${Date.now()}@cliente-socio.test`);"
                 ]
               }
             },
@@ -3066,13 +3084,85 @@
           ]
         },
         {
+          "name": "El tomador crea su cuenta en la app",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/registros",
+            "description": "El cliente del socio descarga la app y se registra con el mismo correo y documento: Identidad vincula la cuenta al cliente que creó la emisión.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{tomadorCorreo}}\",\n  \"contrasena\": \"{{tomadorContrasena}}\",\n  \"nombre\": \"Andrea\",\n  \"apellido\": \"Rojas\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{tomadorDocumento}}\",\n  \"telefono\": \"3104567890\",\n  \"fecha_nacimiento\": \"1991-03-14\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('tomadorContrasena', pm.variables.replaceIn('{{$randomPassword}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cuenta = pm.response.json();",
+                  "pm.collectionVariables.set('tokenTomador', cuenta.token);",
+                  "pm.test('La cuenta queda vinculada al cliente del socio', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(cuenta.token).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El tomador ve la póliza del socio en la app",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenTomador}}"
+              }
+            ],
+            "url": "{{baseUrl}}/movil/polizas",
+            "description": "La póliza que emitió el socio aparece en la app del tomador porque quedó a su nombre."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const polizas = pm.response.json();",
+                  "pm.test('Incluye la póliza emitida por el socio', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(polizas.map((poliza) => poliza.id)).to.include(pm.collectionVariables.get('polizaSocioId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Reportar siniestro sobre la póliza del socio",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{tokenTomador}}"
               },
               {
                 "key": "Content-Type",
@@ -3080,7 +3170,7 @@
               }
             ],
             "url": "{{baseUrl}}/movil/siniestros",
-            "description": "Preparación de la consulta de siniestro: el cliente reporta desde el móvil un aviso sobre la póliza que emitió el socio.",
+            "description": "Preparación de la consulta de siniestro: el tomador reporta desde la app un aviso sobre la póliza que le emitió el socio.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"poliza_id\": \"{{polizaSocioId}}\",\n  \"tipo\": \"Cancelación de viaje\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso del recorrido de Postman\",\n  \"ubicacion\": \"Bogotá\"\n}"
