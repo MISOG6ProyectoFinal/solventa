@@ -1623,7 +1623,7 @@
             "description": "Vida hipotecario exige un consentimiento OTORGADO (422 si falta o no está otorgado). El portal resuelve el cliente por documento y lo envía a Cotización en X-Cliente-Id; los datos personales no viajan a Cotización. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos. Si el consentimiento autoriza Open Finance, el portal lo envía como consentimiento_open_finance y la cotización consulta el score en Open Finance (servicio simuladores).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"apellido\": \"Díaz\",\n  \"email\": \"lina.{{documentoPortal}}@solventa.test\",\n  \"telefono\": \"{{contactoOtp}}\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
             }
           },
           "event": [
