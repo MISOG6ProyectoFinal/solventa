@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa API",
-    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios y la última, Revocación del socio, le revoca la credencial. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee reports/load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios y la última, Revocación del socio, le revoca la credencial. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en reports/load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -653,8 +653,8 @@
                   "  fecha.setDate(fecha.getDate() + desplazamiento);",
                   "  return fecha.toISOString().slice(0, 10);",
                   "};",
-                  "pm.variables.set('fechaSalida', dia(30));",
-                  "pm.variables.set('fechaRegreso', dia(40));",
+                  "pm.variables.set('fechaSalida', dia(0));",
+                  "pm.variables.set('fechaRegreso', dia(10));",
                   "pm.variables.set('cedula', '1' + String(Date.now()).slice(-9));"
                 ]
               }
@@ -970,7 +970,7 @@
             "url": "{{baseUrl}}/movil/siniestros",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"poliza_id\": \"SLV-2026-03105\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso generado por la prueba de carga\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
+              "raw": "{\n  \"poliza_id\": \"{{polizaMovilId}}\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso del recorrido de Postman\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
             },
             "description": "Crea el aviso de siniestro en borrador para el cliente de la sesión."
           },
@@ -980,7 +980,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);",
+                  "const ayer = new Date(Date.now() - 3600 * 1000);",
                   "pm.variables.set('ocurridoEn', ayer.toISOString().slice(0, 19));"
                 ]
               }
@@ -1053,7 +1053,7 @@
             "body": {
               "mode": "file",
               "file": {
-                "src": "load-tests/fixtures/evidencia.png"
+                "src": "reports/load-tests/fixtures/evidencia.png"
               }
             },
             "url": "{{uploadUrl}}",
@@ -1374,7 +1374,7 @@
                   "const operador = pm.response.json();",
                   "pm.test('Responde el operador de la sesión', function () {",
                   "  pm.response.to.have.status(200);",
-                  "  pm.expect(operador.correo).to.equal(pm.collectionVariables.get('operadorCorreo'));",
+                  "  pm.expect(operador.correo).to.equal(pm.variables.get('operadorCorreo'));",
                   "});"
                 ]
               }
@@ -1623,7 +1623,7 @@
             "description": "Vida hipotecario exige un consentimiento OTORGADO (422 si falta o no está otorgado). El portal resuelve el cliente por documento y lo envía a Cotización en X-Cliente-Id; los datos personales no viajan a Cotización. Contrato común de cotización: el cuerpo depende del producto (GET /socios/v1/productos publica cada contrato). Un dato faltante o inválido responde 422 con codigo datos_invalidos y la lista de campos. Si el consentimiento autoriza Open Finance, el portal lo envía como consentimiento_open_finance y la cotización consulta el score en Open Finance (servicio simuladores).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
+              "raw": "{\n  \"producto_id\": \"vida-hipotecario\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"{{documentoPortal}}\",\n  \"nombre\": \"Lina\",\n  \"apellido\": \"Díaz\",\n  \"email\": \"lina.{{documentoPortal}}@solventa.test\",\n  \"telefono\": \"{{contactoOtp}}\",\n  \"fecha_nacimiento\": \"1986-01-01\",\n  \"entidad\": \"Banco Aurora\",\n  \"valor_credito\": \"250000000\",\n  \"plazo_anios\": 15,\n  \"consentimiento_id\": \"{{consentimientoId}}\"\n}"
             }
           },
           "event": [
@@ -2840,8 +2840,8 @@
                   "  fecha.setDate(fecha.getDate() + desplazamiento);",
                   "  return fecha.toISOString().slice(0, 10);",
                   "};",
-                  "pm.variables.set('fechaSalida', dia(30));",
-                  "pm.variables.set('fechaRegreso', dia(40));"
+                  "pm.variables.set('fechaSalida', dia(0));",
+                  "pm.variables.set('fechaRegreso', dia(10));"
                 ]
               }
             },
