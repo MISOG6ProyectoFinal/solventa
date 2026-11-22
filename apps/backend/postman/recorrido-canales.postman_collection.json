@@ -653,8 +653,8 @@
                   "  fecha.setDate(fecha.getDate() + desplazamiento);",
                   "  return fecha.toISOString().slice(0, 10);",
                   "};",
-                  "pm.variables.set('fechaSalida', dia(30));",
-                  "pm.variables.set('fechaRegreso', dia(40));",
+                  "pm.variables.set('fechaSalida', dia(0));",
+                  "pm.variables.set('fechaRegreso', dia(10));",
                   "pm.variables.set('cedula', '1' + String(Date.now()).slice(-9));"
                 ]
               }
@@ -970,7 +970,7 @@
             "url": "{{baseUrl}}/movil/siniestros",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"poliza_id\": \"SLV-2026-03105\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso generado por la prueba de carga\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
+              "raw": "{\n  \"poliza_id\": \"{{polizaMovilId}}\",\n  \"tipo\": \"Accidente con vehículo de alquiler\",\n  \"ocurrido_en\": \"{{ocurridoEn}}\",\n  \"descripcion\": \"Aviso del recorrido de Postman\",\n  \"ubicacion\": \"Calle 85 #12-34, Chapinero, Bogotá\"\n}"
             },
             "description": "Crea el aviso de siniestro en borrador para el cliente de la sesión."
           },
@@ -980,7 +980,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);",
+                  "const ayer = new Date(Date.now() - 3600 * 1000);",
                   "pm.variables.set('ocurridoEn', ayer.toISOString().slice(0, 19));"
                 ]
               }
@@ -1374,7 +1374,7 @@
                   "const operador = pm.response.json();",
                   "pm.test('Responde el operador de la sesión', function () {",
                   "  pm.response.to.have.status(200);",
-                  "  pm.expect(operador.correo).to.equal(pm.collectionVariables.get('operadorCorreo'));",
+                  "  pm.expect(operador.correo).to.equal(pm.variables.get('operadorCorreo'));",
                   "});"
                 ]
               }
@@ -2840,8 +2840,8 @@
                   "  fecha.setDate(fecha.getDate() + desplazamiento);",
                   "  return fecha.toISOString().slice(0, 10);",
                   "};",
-                  "pm.variables.set('fechaSalida', dia(30));",
-                  "pm.variables.set('fechaRegreso', dia(40));"
+                  "pm.variables.set('fechaSalida', dia(0));",
+                  "pm.variables.set('fechaRegreso', dia(10));"
                 ]
               }
             },
