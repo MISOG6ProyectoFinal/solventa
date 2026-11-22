@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Solventa API",
-    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios y la última, Revocación del socio, le revoca la credencial. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en load-tests/canales.js con k6.",
+    "description": "Todos los endpoints públicos de Solventa, documentados y en el orden de un recorrido que Newman puede correr de punta a punta.\n\n**Ambientes.** baseUrl apunta a CloudFront en AWS. En k3s local: --env-var baseUrl=http://localhost:8000.\n\n**Canales.**\n- /movil: BFF móvil, autenticación Bearer.\n- /web: BFF del portal de operación, con token del operador (Bearer) y roles.\n- /socios/v1: API pública de socios, credencial en X-Client-Id y X-Api-Key, Idempotency-Key en pagos y emisión.\n- /simuladores: control de los terceros simulados (Open Finance, pasarela de pagos, notificaciones y red de asistencia). Solventa los llama por HTTP como a un proveedor real; aquí se provocan sus fallos.\n\n**Errores.** Los servicios responden {\"detail\": {\"codigo\", \"mensaje\"}}. Un dato faltante o inválido en una cotización responde 422 datos_invalidos con la lista de campos, igual en los tres canales.\n\n**Correr.** Desde apps/backend (la subida de evidencia lee reports/load-tests/fixtures/evidencia.png):\nnpx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<contraseña del administrador>\n\nLa carpeta Portal web crea el socio que usa API de socios y la última, Revocación del socio, le revoca la credencial. La carpeta Fallos simulados deja cada tercero en normal al terminar. La prueba de carga está en reports/load-tests/canales.js con k6.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -1053,7 +1053,7 @@
             "body": {
               "mode": "file",
               "file": {
-                "src": "load-tests/fixtures/evidencia.png"
+                "src": "reports/load-tests/fixtures/evidencia.png"
               }
             },
             "url": "{{uploadUrl}}",
