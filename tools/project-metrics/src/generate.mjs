@@ -106,6 +106,11 @@ function buildBusinessValueData(businessValue) {
     (a, b) => a.day - b.day
   );
 
+  const totalValue = sortedValues.reduce(
+    (sum, entry) => sum + entry.valueDelivered,
+    0
+  );
+
   let accumulated = 0;
 
   const result = [
@@ -122,7 +127,10 @@ function buildBusinessValueData(businessValue) {
     result.push({
       day: entry.day,
       weekPosition: entry.day / daysPerWeek,
-      businessValue: accumulated
+      businessValue:
+        totalValue > 0
+          ? Math.round((accumulated / totalValue) * 1000) / 10
+          : 0
     });
   }
 
@@ -333,7 +341,7 @@ function businessValueSpec(businessValue) {
       y: {
         field: 'businessValue',
         type: 'quantitative',
-        title: 'Business Value acumulado',
+        title: 'Business Value acumulado (%)',
 
         scale: {
           domain: [0, 100],
@@ -361,7 +369,7 @@ function businessValueSpec(businessValue) {
         {
           field: 'businessValue',
           type: 'quantitative',
-          title: 'Business Value acumulado'
+          title: 'Business Value acumulado (%)'
         }
       ]
     }
