@@ -11,6 +11,8 @@ apps/backend/
 ├── Dockerfile                # Imagen única: --build-arg SERVICE=<servicio>
 ├── docker-compose.yml        # PostgreSQL, Redis, LocalStack, Canales y Siniestros
 ├── scripts/                  # test-all.sh, build-images.sh
+├── reports/load-tests/       # Prueba de carga con k6
+├── postman/                  # Colección del recorrido por Canales
 └── deploy/
     ├── k8s/base              # Deployments, Services, HPA, PDB, Ingress, NetworkPolicy
     ├── k8s/overlays/aws      # EKS + KEDA para los workers
@@ -21,7 +23,7 @@ apps/backend/
     └── scripts/deploy-aws.sh
 ```
 
-Cada servicio agrupa los componentes del VC-003 que comparten almacén. Cada componente es un módulo con su propio dominio, y separarlo en otro servicio es mover su carpeta:
+Cada servicio agrupa los componentes del VC-003 que comparten almacén. Cada componente es un módulo con su propio dominio; para separarlo en otro servicio basta con mover su carpeta:
 
 ```
 services/<servicio>/<servicio>/
@@ -35,7 +37,7 @@ services/<servicio>/<servicio>/
 
 ## Del modelo de componentes al código
 
-La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a varios componentes. Database-per-Service se mantiene: ningún servicio lee la base de otro. Quedan como despliegue propio los que tienen una razón en los ASR: Pagos por el perímetro PCI, el worker paramétrico porque escala por profundidad de cola (ASR-06) y el Monitor de Salud porque vigila a los demás.
+Hay un servicio por almacén de la Tabla 2, que ya asigna cada base a varios componentes. Se mantiene Database-per-Service: ningún servicio lee la base de otro. Tienen despliegue propio los componentes que lo justifican por un ASR: Pagos por el perímetro PCI, el worker paramétrico porque escala por profundidad de cola (ASR-06) y el Monitor de Salud porque vigila a los demás.
 
 | Servicio | Módulo | Componente VC-003 | Almacén |
 |---|---|---|---|
@@ -57,11 +59,11 @@ La regla es un servicio por almacén de la Tabla 2, que ya asigna cada base a va
 | `solventa_common` | `integration` | Adaptadores por tercero + Circuit Breaker Global | |
 | SNS + SQS | | Bus de Eventos + Dead Letter Queue | |
 
-La lógica completa está en los módulos que los experimentos validaron:
+Los módulos que validaron los experimentos tienen la lógica completa:
 
-- **Cotización y Rating**: las reglas de rating (tasas por mil, tarifa diaria de viaje, recargos por destino, montos paramétricos e IVA) viven en la tabla `reglas_rating`, versionadas, con la versión inicial cargada por el bootstrap. `POST /cotizaciones/reglas` publica una versión nueva y aplica desde la siguiente cotización, sin redesplegar; `GET /cotizaciones/reglas` lee la vigente y `GET /cotizaciones/reglas/versiones` las publicadas. Cada cotización guarda `version_reglas`. Estos endpoints son internos: el ingress solo expone Canales. El servicio corre con 3 réplicas detrás de un Service headless.
-- **Una sola cotización para los tres canales**: móvil, portal y socios entran por el mismo flujo de `consenso` (`quote_request`). El `producto_id` decide el contrato del cuerpo (`consenso/domain/quote_contract.py`) y Rating tarifa con el modelo de ese producto. `score_riesgo` y `cliente_id` los resuelve Solventa: el score sale de Open Finance cuando la solicitud trae `consentimiento_open_finance` y el cliente llega en `X-Cliente-Id` desde el BFF. Un dato faltante responde 422 `datos_invalidos` con cada campo y su motivo, y un problema del producto responde `{codigo, mensaje}`. Cada canal conserva solo lo suyo: la sesión y el titular en el móvil, el cliente y el consentimiento digital en el portal, la credencial, el ramo y las coberturas del socio.
-- **Un dueño por dato de negocio**: el catálogo de Cotización guarda en qué canales se ofrece cada producto (`canales`), si exige consentimiento Open Finance (`requiere_consentimiento`) y su presentación móvil (`presentacion_mobile`). Un producto fuera del canal responde 422 `producto_fuera_del_canal`. Canales, el móvil y el portal leen de ahí y no repiten ids ni reglas. Las listas cerradas que valida el backend las publica su servicio dueño y Canales las reenvía:
+- **Cotización y Rating**: las reglas de rating (tasas por mil, tarifa diaria de viaje, recargos por destino, montos paramétricos e IVA) están versionadas en la tabla `reglas_rating`, y el bootstrap carga la versión inicial. `POST /cotizaciones/reglas` publica una versión nueva, que aplica desde la siguiente cotización sin redesplegar; `GET /cotizaciones/reglas` devuelve la vigente y `GET /cotizaciones/reglas/versiones` las publicadas. Cada cotización guarda `version_reglas`. Estos endpoints son internos: el ingress solo expone Canales. El servicio corre con 3 réplicas detrás de un Service headless.
+- **Una sola cotización para los tres canales**: móvil, portal y socios entran por el mismo flujo de `consenso` (`quote_request`). El `producto_id` define el contrato del cuerpo (`consenso/domain/quote_contract.py`) y Rating tarifa con el modelo de ese producto. Solventa resuelve `score_riesgo` y `cliente_id`: el score sale de Open Finance cuando la solicitud trae `consentimiento_open_finance`, y el cliente llega en `X-Cliente-Id` desde el BFF. Un dato faltante responde 422 `datos_invalidos` con cada campo y su motivo; un problema del producto responde `{codigo, mensaje}`. Cada canal conserva solo lo suyo: la sesión y el titular en el móvil; el cliente y el consentimiento digital en el portal; la credencial, el ramo y las coberturas en el socio.
+- **Un dueño por dato de negocio**: el catálogo de Cotización guarda en qué canales se ofrece cada producto (`canales`), si exige consentimiento Open Finance (`requiere_consentimiento`) y su presentación móvil (`presentacion_mobile`). Un producto fuera del canal responde 422 `producto_fuera_del_canal`. Canales, el móvil y el portal leen ese catálogo y no repiten ids ni reglas. Cada lista cerrada que valida el backend la publica su servicio dueño, y Canales la reenvía:
 
   | Dato | Dueño | Servicio | Web | Móvil |
   |---|---|---|---|---|
@@ -70,13 +72,13 @@ La lógica completa está en los módulos que los experimentos validaron:
   | Tipos de socio y alcances | Cotización | `GET /gobierno-socios/tipos`, `/alcances` | `GET /web/socios/tipos`, `/alcances` | |
   | Estados de póliza y causas de cancelación | Pólizas | `GET /polizas/catalogos/estados`, `/causas-cancelacion` | `GET /web/polizas/estados`, `/causas-cancelacion` | |
   | Tipos de documento | Identidad | `GET /identidad/tipos-documento` | `GET /web/tipos-documento` | `GET /movil/tipos-documento` |
-- **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, para que actuaría reconstruya la decisión con `GET /consenso/cotizaciones/{id}`.
+- **Operación degradada (HU018)**: Open Finance tiene timeout de 300 ms (`OPEN_FINANCE_TIMEOUT_S`) y un circuit breaker que abre tras `OPEN_FINANCE_BREAKER_FAILURES` fallas (5) y vuelve a probar a los `OPEN_FINANCE_BREAKER_RESET_S` segundos (30). Si el proveedor falla, la cotización usa el último valor bueno de Redis o el valor neutral y queda marcada como `degradada`. Cada señal guarda `origen`, `motivo` (`timeout`, `circuito_abierto`, `error_proveedor`, `respuesta_invalida`) y `obtenido_en`, y con eso actuaría reconstruye la decisión mediante `GET /consenso/cotizaciones/{id}`.
 - **Validador de Consenso**: la réplica que recibe la solicitud llama a las 3 réplicas (incluida ella misma) con timeout de 300 ms y responde con la prima que tiene 2 de 3 votos.
 - **Siniestro Paramétrico**: la API recibe el evento externo y lo publica en el bus (202). El worker lo consume, reclama la clave de idempotencia en PostgreSQL y liquida una sola vez aunque el bus reentregue o varias réplicas compitan.
-- **Canales**: llaman a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; un circuito abierto responde 503. Cada llamada abre su propia conexión, sin keep-alive, para que `kube-proxy` la reparta entre todas las réplicas del destino.
-- **Monitor de Salud**: latido cada 500 ms a `/health/ready` de cada servicio y retiro tras 2 fallas consecutivas.
+- **Canales**: llama a los servicios internos con timeout de 1 s y un circuit breaker por servicio destino; con el circuito abierto responde 503. Cada llamada abre su propia conexión, sin keep-alive, para que `kube-proxy` la reparta entre todas las réplicas del destino.
+- **Monitor de Salud**: envía un latido cada 500 ms a `/health/ready` de cada servicio y lo retira tras 2 fallas consecutivas.
 
-Los demás módulos arrancan con su router y el dominio documentado en su `__init__.py`. El siguiente paso es implementar sus casos de uso sobre esa base.
+Los demás módulos tienen su router y el dominio documentado en su `__init__.py`.
 
 ### Librería común
 
@@ -91,7 +93,7 @@ Los demás módulos arrancan con su router y el dominio documentado en su `__ini
 
 ### Terceros simulados
 
-Solventa llama a los terceros por HTTP con los adaptadores de `integration`, también cuando el tercero es simulado. El servicio `simuladores` expone el mismo contrato que esos adaptadores y corre en `local` y en AWS. Para cambiar a un proveedor real basta con su variable de entorno:
+Solventa llama a los terceros por HTTP con los adaptadores de `integration`, también cuando el tercero es simulado. El servicio `simuladores` expone el mismo contrato que esos adaptadores y corre en `local` y en AWS. Para usar un proveedor real se cambia su variable de entorno:
 
 | Tercero | Quién lo llama | Variable (por defecto) |
 |---|---|---|
@@ -100,7 +102,7 @@ Solventa llama a los terceros por HTTP con los adaptadores de `integration`, tam
 | Notificaciones | Identidad, OTP del consentimiento (HU002) | `FIRMA_NOTIFICACION_URL` (`http://simuladores/notificaciones`) |
 | Red de asistencia | Siniestros, despacho de grúa, ambulancia o perito | `RED_ASISTENCIA_URL` (`http://simuladores/red-asistencia`) |
 
-Los fallos se provocan por API, en `/simuladores` del mismo `BASE_URL`:
+Los fallos se provocan por API en `/simuladores`, con el mismo `BASE_URL`:
 
 | Endpoint | Uso |
 |---|---|
@@ -110,7 +112,7 @@ Los fallos se provocan por API, en `/simuladores` del mismo `BASE_URL`:
 | `DELETE /simuladores/{proveedor}/llamadas` | Reinicia el conteo de llamadas |
 | `GET /simuladores/notificaciones/mensajes?to=` | Bandeja de lo enviado, para leer un OTP |
 
-`lento` responde después de `demora_s`, `caido` responde 503 e `invalida` responde un cuerpo que el adaptador no reconoce. La pasarela aprueba solo el token `demo-4242` y repite el resultado de una misma clave de idempotencia. El modo vive en memoria de la única réplica del servicio. Las pruebas unitarias de cada servicio usan dobles en código, no este servicio.
+`lento` responde después de `demora_s`, `caido` responde 503 e `invalida` responde un cuerpo que el adaptador no reconoce. La pasarela aprueba solo el token `demo-4242` y, para una misma clave de idempotencia, repite el resultado. El modo se guarda en memoria de la única réplica del servicio. Las pruebas unitarias de cada servicio usan dobles en código, no este servicio.
 
 ## Del modelo de despliegue a AWS
 
@@ -139,6 +141,8 @@ poetry install
 poetry run ./scripts/test-all.sh
 ```
 
+Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
+
 Para correr un servicio contra PostgreSQL, Redis y LocalStack:
 
 ```bash
@@ -150,30 +154,30 @@ DB_HOST=localhost DB_PORT=5433 DB_NAME=cotizacion DB_USER=solventa DB_PASSWORD=s
   poetry run uvicorn cotizacion.main:app --reload
 ```
 
-El bootstrap crea las tablas, carga el catálogo y las reglas de rating iniciales si están vacíos y completa los canales de un catálogo creado antes de ellos. Las réplicas no siembran nada: sin bootstrap no hay reglas y Cotización no puede tarifar.
+El bootstrap crea las tablas, carga el catálogo y las reglas de rating iniciales si están vacíos, y completa los canales de un catálogo creado antes de que existieran. Las réplicas no siembran datos: sin bootstrap no hay reglas y Cotización no puede tarifar.
 
-Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS, por eso Compose y k3s usan imágenes `postgis/postgis`. El catálogo se carga aparte, con el seed de aliados y los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda el seed:
+Los prestadores cercanos (`/movil/prestadores/cercanos`) se consultan en PostGIS; por eso Compose y k3s usan imágenes `postgis/postgis`. Su catálogo se carga aparte con el seed de aliados y con los talleres y estaciones de ambulancia de OpenStreetMap. Si OpenStreetMap no responde, queda solo el seed:
 
 ```bash
 docker compose run --rm siniestros-prestadores-sync
 ```
 
-Para el reporte desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias. Canales queda en el puerto 8000 del equipo. Copie `.env.example` a `.env` y defina `SESION_SECRETO`: identidad firma la sesión y canales la verifica con esa clave.
+Para reportar siniestros desde el teléfono, el mismo Compose levanta Canales, Siniestros y sus dependencias, con Canales en el puerto 8000 del equipo. Copie `.env.example` a `.env` y defina `SESION_SECRETO`: Identidad firma la sesión con esa clave y Canales la verifica.
 
 ```bash
 docker compose up -d canales
 CONTRASENA=Solventa-local-2026 EN_IDENTIDAD="docker compose exec -T identidad" ./scripts/crear_administrador.sh admin@solventa.local
 ```
 
-El segundo comando crea el administrador del portal web, que se describe en [Sesión del portal](#sesión-del-portal).
+El segundo comando crea el administrador del portal web (ver [Sesión del portal](#sesión-del-portal)).
 
-Todo el backend en un clúster local, sin cambios en el código, con el modo `local`:
+El modo `local` levanta todo el backend en un clúster local, sin cambios en el código:
 
 ```bash
 ./deploy/scripts/local.sh up
 ```
 
-Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `deploy/k8s/overlays/local`: los mismos manifiestos de AWS, con Postgres en el clúster, Redis y LocalStack en lugar de SNS, SQS y S3. Construye las imágenes de los servicios en la máquina y genera `SESION_SECRETO` dentro del clúster. Solo necesita Docker.
+El script levanta k3s dentro de Docker (el mismo Kubernetes del modo `ahorro`) y aplica `deploy/k8s/overlays/local`: los mismos manifiestos de AWS, con Postgres en el clúster, Redis y LocalStack en lugar de SNS, SQS y S3. Construye las imágenes de los servicios en la máquina y genera `SESION_SECRETO` dentro del clúster. Solo requiere Docker.
 
 | Dirección | Qué es |
 |---|---|
@@ -182,14 +186,14 @@ Levanta k3s dentro de Docker, el mismo Kubernetes del modo `ahorro`, y aplica `d
 
 `local.sh status` muestra los pods, `local.sh logs <servicio>` sus logs y `local.sh down` borra el clúster con sus datos. Siniestros corre con `PERSISTENT_STORES=false`, como en `.env.example`, porque con almacenes persistentes el servicio usa siempre el S3 real.
 
-Para tener datos de prueba en cualquier ambiente, `scripts/poblar_datos.py` llama a la API pública de Canales. Entra al portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA`, que por defecto son las del administrador local:
+`scripts/poblar_datos.py` carga datos de prueba en cualquier ambiente a través de la API pública de Canales. Entra al portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA`, que por defecto son las del administrador local:
 
 ```bash
 python scripts/poblar_datos.py                                                               # modo local
 OPERADOR_CONTRASENA=<clave> python scripts/poblar_datos.py https://dzwq94g5om86y.cloudfront.net  # dev en AWS
 ```
 
-Crea 5 socios con sus ramos habilitados, 12 clientes, cotizaciones por los canales móvil, web y de socios, y avisos de siniestro con evidencia. Al pasar por la API, los datos cumplen las mismas reglas del negocio. Se puede correr varias veces: el secreto de cada socio y la contraseña de cada cliente quedan en `scripts/.poblar/<host>.json`, fuera de git, y se reutilizan.
+Crea 5 socios con sus ramos habilitados, 12 clientes, cotizaciones por los canales móvil, web y de socios, y avisos de siniestro con evidencia. Como pasan por la API, los datos cumplen las mismas reglas de negocio. Se puede correr varias veces: el secreto de cada socio y la contraseña de cada cliente se guardan en `scripts/.poblar/<host>.json`, fuera de git, y se reutilizan.
 
 ### Sesión del portal
 
@@ -201,21 +205,19 @@ El portal web pide inicio de sesión. Identidad guarda los operadores en la tabl
 | `asesor` | Consultar, cotizar y solicitar o validar consentimientos |
 | `consulta` | Solo consultar ramos, cotizaciones, pólizas, socios y consentimientos |
 
-Sin token, `/web` responde 401 (`sesion_invalida`); con un rol sin permiso, 403 (`permiso_denegado`). Desactivar un operador le impide iniciar sesión; el token que ya tenga sigue vigente hasta que vence.
+Sin token, `/web` responde 401 (`sesion_invalida`); con un rol sin permiso, 403 (`permiso_denegado`). Un operador desactivado no puede iniciar sesión, pero el token que ya tenga sigue vigente hasta que vence.
 
-El primer administrador se crea con `scripts/crear_administrador.sh`, que corre el alta de operadores dentro del pod de Identidad con su conexión a la base. `local.sh up` lo llama con `admin@solventa.local` y la contraseña `Solventa-local-2026`. En AWS, con el `kubectl` conectado al clúster:
+El primer administrador se crea con `scripts/crear_administrador.sh`, que ejecuta el alta de operadores dentro del pod de Identidad, con su conexión a la base. `local.sh up` lo llama con `admin@solventa.local` y la contraseña `Solventa-local-2026`. En AWS, con `kubectl` conectado al clúster:
 
 ```bash
 CONTRASENA=<clave> ./scripts/crear_administrador.sh admin@solventa.co "Nombre Apellido"
 ```
 
-Sin `CONTRASENA`, el script la pide. Si el correo ya existe, lo deja como está. `EN_IDENTIDAD` cambia cómo entra al contenedor de Identidad; por defecto es `kubectl -n solventa exec -i deploy/identidad -c identidad --`.
-
-Desde la raíz del monorepo también funcionan `nx test backend`, `nx lint backend`, `nx tf-validate backend` y `nx k8s-render backend --overlay=local`.
+Sin `CONTRASENA`, el script la pide. Si el correo ya existe, no lo modifica. `EN_IDENTIDAD` define cómo entra al contenedor de Identidad; por defecto es `kubectl -n solventa exec -i deploy/identidad -c identidad --`.
 
 ## Despliegue en AWS
 
-El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC, sin claves de acceso guardadas en el repositorio.
+El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC, sin claves de acceso en el repositorio.
 
 | Workflow | Cuándo corre | Qué hace |
 |---|---|---|
@@ -224,7 +226,7 @@ El despliegue corre en GitHub Actions. El pipeline asume un rol de AWS con OIDC,
 | `Backend Infra` | Manual, desde `main` | `plan`, `apply` o `destroy` de Terraform, por stack o todos |
 | `CD` | Al publicar un release (`v1.2.0`) | Construye las imágenes desde ese tag, las publica en ECR, actualiza los pods y publica el portal web |
 
-Preparación, una sola vez, con un usuario que administre IAM y el repositorio:
+La preparación se hace una sola vez, con un usuario que administre IAM y el repositorio:
 
 ```bash
 cd apps/backend
@@ -233,13 +235,13 @@ ENV=dev ./deploy/scripts/bootstrap-ci.sh
 
 Crea el bucket de estados, el rol `solventa-github-deploy-dev` y el Environment `dev` de GitHub con sus variables. Después, en GitHub: **Actions**, **Backend Infra**, **Run workflow** con `plan` y luego con `apply`.
 
-El backend se despliega al publicar un release en GitHub. Para crearlo desde `main`, corra `npm run release` (siguiente parche; `-- minor`, `-- major` o `-- v1.2.0` para otra versión, `-- --draft` para no desplegar todavía, `-- --dry-run` para simular). El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Volver a una versión anterior es lanzar `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
+El backend se despliega al publicar un release en GitHub. Para crearlo desde `main`, corra `npm run release` (siguiente parche; `-- minor`, `-- major` o `-- v1.2.0` para otra versión, `-- --draft` para crearlo sin desplegar, `-- --dry-run` para simular). El tag del release (`v1.2.0`) es la versión de las imágenes en ECR y el registro de lo que corre en el clúster. Para volver a una versión anterior se lanza `CD` a mano con ese tag: las imágenes ya están en ECR y se reutilizan.
 
-`CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe y el anterior sale después. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
+`CD` actualiza los pods con rolling update: cada pod nuevo recibe tráfico cuando pasa su readinessProbe, y después sale el anterior. Si el rollout no queda sano en 10 minutos, el pipeline vuelve a la revisión anterior y el job falla.
 
 ### Modos de despliegue
 
-La variable del repositorio `MODO_DESPLIEGUE` (**Settings, Secrets and variables, Actions, Variables**) elige dónde despliegan `Backend Infra` y `CD`. Si no existe, se usa `ahorro`.
+La variable del repositorio `MODO_DESPLIEGUE` (**Settings, Secrets and variables, Actions, Variables**) define dónde despliegan `Backend Infra` y `CD`. Si no existe, se usa `ahorro`.
 
 | Modo | Qué crea | Costo estimado encendido | En pausa (`stop`) |
 |---|---|---|---|
@@ -267,7 +269,7 @@ Pasar de `eks-costoso` a `ahorro`:
 
 Las bases del modo anterior no se migran.
 
-`deploy-aws.sh` es el mismo script que usan los workflows y también corre a mano (`plan`, `infra`, `destroy`, `stop`, `start`, `images`, `k8s`, `web`) con `MODO=ahorro` o `MODO=eks-costoso`. En `ahorro`, `infra` aplica `network`, `container_registry`, `messaging`, `ahorro` y `edge`. En `eks-costoso` aplica los stacks en este orden:
+Los workflows usan `deploy-aws.sh`, que también se puede correr a mano (`plan`, `infra`, `destroy`, `stop`, `start`, `images`, `k8s`, `web`) con `MODO=ahorro` o `MODO=eks-costoso`. En `ahorro`, `infra` aplica `network`, `container_registry`, `messaging`, `ahorro` y `edge`. En `eks-costoso` aplica los stacks en este orden:
 
 | # | Stack | Crea | Depende de |
 |---|---|---|---|
@@ -286,7 +288,7 @@ Para una cuenta de AWS Academy, `eks/terraform.tfvars` y `data/terraform.tfvars`
 
 ### Costos del modo `eks-costoso`
 
-Los tfvars de `dev` usan el perfil más económico de EKS. Cada ahorro es un interruptor:
+Los tfvars de `dev` usan el perfil más económico de EKS. Cada ahorro se activa o se quita con un ajuste:
 
 | Ajuste | Archivo | Valor en `dev` | Para volver al modelo VC-004 |
 |---|---|---|---|
@@ -299,25 +301,23 @@ Los tfvars de `dev` usan el perfil más económico de EKS. Cada ahorro es un int
 
 La VPC conserva subredes en dos zonas porque EKS y RDS las exigen; las subredes no tienen costo.
 
-`Backend Infra` ofrece dos formas de apagar:
+`Backend Infra` tiene dos formas de apagar el ambiente:
 
-- `stop` y `start`: pausan y reanudan en minutos. En `ahorro` detienen la instancia. En `eks-costoso`, `stop` deja los nodos en 0 y detiene RDS; se siguen pagando el plano de control de EKS, el balanceador y el almacenamiento, y RDS enciende sola una instancia detenida a los 7 días.
-- `destroy`: elimina todo y lleva el costo a cero. Volver a crear el ambiente toma cerca de una hora y las bases quedan vacías.
+- `stop` y `start`: pausan y reanudan en minutos. En `ahorro` detienen la instancia. En `eks-costoso`, `stop` deja los nodos en 0 y detiene RDS; se siguen pagando el plano de control de EKS, el balanceador y el almacenamiento, y RDS vuelve a encender sola una instancia detenida a los 7 días.
+- `destroy`: elimina todo y lleva el costo a cero. Recorre los stacks en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network). Volver a crear el ambiente toma cerca de una hora y las bases quedan vacías.
 
 Después de un `apply` que cambie las bases, se lanza `CD` con la versión vigente para que el Job de bootstrap cree las tablas.
 
-`destroy` recorre los stacks en orden inverso (edge, platform, cluster_addons, messaging, data, eks, container_registry, network).
-
 ## Prueba de carga
 
-`reports/load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints que hoy ofrece Canales:
+`reports/load-tests/canales.js` es la prueba de carga con [k6](https://grafana.com/docs/k6/) sobre los endpoints de Canales:
 
 - **Móvil:** registro e inicio de sesión del cliente y, con su token (`Authorization: Bearer`), consulta de sesión, tipos de documento, catálogo, contrato del producto, cotización y reporte de siniestro con carga, confirmación y listado de evidencia, radicación del aviso y listado de avisos del cliente.
 - **Portal web:** ramos y contrato del producto, cotización asistida, listado, detalle y configuración de socios.
 - **API de socios:** cotización embebida con las credenciales de un socio, y la venta completa: cotizar, pagar, emitir la póliza, reintentar la emisión con la misma `Idempotency-Key` (HU015) y consultar la póliza (HU016).
 - **Open Finance degradado (HU018):** cotizaciones de vida hipotecario con consentimiento mientras un simulador de Open Finance pasa por las fases normal, caído y recuperado.
 
-Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y los alcances de cotización, emisión y consulta. `reports/load-tests/run.sh` usa `k6` si está instalado y, si no, la imagen `grafana/k6:2.3.0` con Docker.
+Antes de empezar, k6 inicia sesión en el portal con `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` y crea un socio de prueba con los ramos de viaje y vida hipotecario habilitados y con los alcances de cotización, emisión y consulta. `reports/load-tests/run.sh` usa `k6` si está instalado; si no, usa la imagen `grafana/k6:2.3.0` con Docker.
 
 ```bash
 OPERADOR_CONTRASENA=<clave> PERFIL=humo ./reports/load-tests/run.sh
@@ -327,7 +327,7 @@ PERFIL=emision TASA_VENTAS=600 DURACION=2m ./reports/load-tests/run.sh
 PERFIL=degradacion TASA_SOCIOS=1200 SEGUNDOS_POR_FASE=90 ./reports/load-tests/run.sh
 ```
 
-El perfil `degradacion` cambia el modo de Open Finance en el servicio `simuladores` por `PUT /simuladores/open-finance/modo`, en el mismo `BASE_URL`. Sirve igual en `local` y en AWS.
+El perfil `degradacion` cambia el modo de Open Finance en el servicio `simuladores` con `PUT /simuladores/open-finance/modo`, en el mismo `BASE_URL`, así que funciona igual en `local` y en AWS.
 
 | Perfil | Qué ejecuta |
 |---|---|
@@ -364,20 +364,27 @@ Los resultados quedan en `reports/load-tests/resultados/<fecha>-<perfil>/`:
 
 k6 termina con error si alguna petición supera su p95 o su porcentaje de errores, o si no alcanzó a lanzar todas las iteraciones de la tasa pedida. Las pruebas del reporte corren con `node --test reports/load-tests/`.
 
-Cada corrida crea un socio, cada recorrido móvil un cliente, un aviso de siniestro radicado y una evidencia, y cada venta de socio un cobro aprobado y una póliza en el ambiente.
+Cada corrida deja datos en el ambiente: un socio por corrida; un cliente, un aviso de siniestro radicado y una evidencia por recorrido móvil; un cobro aprobado y una póliza por venta de socio.
 
-`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta. La carpeta **Fallos simulados** tumba cada tercero y lo devuelve a normal. Las peticiones móviles usan el token que guarda **Iniciar sesión** en la variable `token`. La carpeta **Portal web** entra como administrador con `operadorCorreo` y `operadorContrasena`, guarda `portalToken` y crea el socio que usa **API de socios**. También endosa la póliza del móvil y cancela una póliza de viaje que empieza hoy, porque la devolución se calcula con la fecha de hoy dentro de la vigencia. **Operadores y roles** crea un asesor, comprueba que consulta pero no da de alta socios, y lo desactiva. **API de socios** muestra además la versión del contrato en `X-Api-Version`, el 429 `cuota_excedida` con la cuota del socio en 1 (y la restablece) y la rotación de la credencial. La emisión del socio va a nombre de un cliente propio del socio; ese cliente crea después su cuenta en la app, ve la póliza y reporta el siniestro que el socio consulta. **Revocación del socio** va al final porque deja al socio sin credencial.
+`postman/recorrido-canales.postman_collection.json` documenta todos los endpoints públicos (`/movil`, `/web`, `/socios/v1` y `/simuladores`), cada uno con su descripción, sus errores y sus pruebas, en el orden de un recorrido que Newman corre de punta a punta:
+
+- **Fallos simulados** pone cada tercero en falla y lo devuelve a normal.
+- Las peticiones móviles usan el token que **Iniciar sesión** guarda en la variable `token`.
+- **Portal web** entra como administrador con `operadorCorreo` y `operadorContrasena`, guarda `portalToken` y crea el socio que usa **API de socios**. También endosa la póliza del móvil y cancela una póliza de viaje que empieza hoy, porque la devolución se calcula con la fecha de hoy dentro de la vigencia.
+- **Operadores y roles** crea un asesor, comprueba que puede consultar pero no dar de alta socios, y lo desactiva.
+- **API de socios** muestra además la versión del contrato en `X-Api-Version`, el 429 `cuota_excedida` con la cuota del socio en 1 (y la restablece) y la rotación de la credencial. La emisión del socio va a nombre de un cliente propio del socio; ese cliente crea después su cuenta en la app, ve la póliza y reporta el siniestro que el socio consulta.
+- **Revocación del socio** va al final porque deja al socio sin credencial.
 
 ```bash
 npx newman run postman/recorrido-canales.postman_collection.json --env-var operadorContrasena=<clave>
 npx newman run postman/recorrido-canales.postman_collection.json --env-var baseUrl=http://localhost:8000 --env-var operadorContrasena=Solventa-local-2026
 ```
 
-En `local`, Siniestros guarda las evidencias en memoria y la URL de carga (`upload.local`) no resuelve fuera del clúster: la subida, el radicado y la asistencia fallan en Newman.
+En `local`, Siniestros guarda las evidencias en memoria y la URL de carga (`upload.local`) solo resuelve dentro del clúster, así que en Newman fallan la subida, el radicado y la asistencia.
 
 ## Siguientes pasos
 
 - Región secundaria del VC-004: réplica asíncrona de RDS en otra región, clúster pasivo y replicación del bus y de S3.
 - Perímetro PCI de `pagos`: red y accesos separados con Security Groups for Pods o una cuenta dedicada.
 - Certificado ACM en el NLB para cifrar el tramo CloudFront → API Gateway.
-- Casos de uso de los módulos que hoy exponen su base.
+- Casos de uso de los demás módulos, sobre el router y el dominio que ya tienen.

@@ -1,12 +1,12 @@
 # App móvil
 
-Desde la raíz del repositorio. iOS requiere un Mac.
+Todos los comandos se ejecutan desde la raíz del repositorio. iOS requiere un Mac.
 
-La versión recomendada de Node.js es 22.22.3 (comprueba con `node -v`). También son compatibles Node 24.15+ y Node 26.
+El repositorio fija Node.js 26 en `.nvmrc` (comprueba con `node -v`). El campo `engines` de `package.json` también acepta Node 22.22.3+ y 24.15+, pero los scripts que generan el APK exigen Node 26.
 
 ## Android
 
-Para Android, sigue la guía de React Native en Windows o macOS: [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment). Elige tu sistema y el destino Android.
+Prepara el entorno con la guía de React Native para Windows o macOS: [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment). Elige tu sistema operativo y Android como destino.
 
 Instala las dependencias una vez:
 
@@ -14,12 +14,11 @@ Instala las dependencias una vez:
 npm install
 ```
 
-La compilación de Android pide el NDK 27.1.12297006 y CMake 3.31.6. La guía de React Native no instala el NDK. Android Studio suele instalar CMake 3.22.1, y esa versión no sirve aquí.
+La compilación de Android necesita el NDK 27.1.12297006 y CMake 3.31.6. La guía de React Native no instala el NDK, y Android Studio suele instalar CMake 3.22.1, que no sirve para este proyecto.
 
-En Android Studio abre **SDK Manager**, pestaña **SDK Tools**. Marca **Show Package Details**. Despliega **NDK (Side by side)** y marca **27.1.12297006**. Despliega **CMake** y marca **3.31.6**. Pulsa **Apply**.
+En Android Studio abre **SDK Manager**, pestaña **SDK Tools**, y marca **Show Package Details**. En **NDK (Side by side)** marca **27.1.12297006**, en **CMake** marca **3.31.6** y pulsa **Apply**.
 
-El emulador es opcional: vale cualquiera que ya tengas abierto, o un dispositivo.
-El script a continuación abre un emulador, si no se pasa el nombre del dispositivo se usa por defecto Pixel_8.
+Puedes usar un emulador que ya tengas abierto o un dispositivo conectado. Este script abre un emulador; si no recibe el nombre del dispositivo virtual, usa Pixel_8:
 
 - Windows:
 
@@ -35,16 +34,16 @@ El script a continuación abre un emulador, si no se pasa el nombre del disposit
 ./scripts/startemu.sh Pixel_7
 ```
 
-Si bash niega el permiso, ejecuta `chmod +x scripts/startemu.sh` una vez. `emulator` debe estar en el `PATH`.
+`emulator` debe estar en el `PATH`. Si bash niega el permiso, ejecuta `chmod +x scripts/startemu.sh` una vez.
 
-En terminales distintas, con el emulador o el dispositivo ya conectado:
+Con el emulador o el dispositivo conectado, ejecuta cada comando en una terminal distinta:
 
 ```bash
 npm run metro
 npm run android
 ```
 
-`metro` levanta el bundler. Déjalo corriendo. `android` compila la app, la instala en el emulador o el dispositivo y usa ese Metro. No abre otro.
+`metro` levanta el bundler y debe quedar corriendo. `android` compila la app, la instala en el emulador o el dispositivo y se conecta a ese Metro, sin abrir otro.
 
 ## Mapa de prestadores
 
@@ -55,17 +54,21 @@ export GOOGLE_MAPS_API_KEY=<clave>          # Mac / Linux
 $env:GOOGLE_MAPS_API_KEY = "<clave>"        # Windows (PowerShell)
 ```
 
-También puede ir en `~/.gradle/gradle.properties` como `GOOGLE_MAPS_API_KEY=<clave>`. Sin clave la app compila y el mapa se ve vacío. En Google Cloud restringe la clave al paquete `com.solventa` y al SHA-1 del keystore que firma el APK. El workflow `mobile-apk.yml` la toma del secreto `GOOGLE_MAPS_API_KEY` del repositorio.
+También puede ir en `~/.gradle/gradle.properties` como `GOOGLE_MAPS_API_KEY=<clave>`. Sin clave, la app compila y el mapa se ve vacío.
+
+En Google Cloud, restringe la clave al paquete `com.solventa` y al SHA-1 del keystore que firma el APK. El workflow `mobile-apk.yml` toma la clave del secreto `GOOGLE_MAPS_API_KEY` del repositorio.
 
 ## Idiomas
 
-La app está en español e inglés. El texto de cada feature vive en `texts/es.ts` y `texts/en.ts`, y una clave nueva va en los dos: `en.ts` está tipado con `es.ts`, así que `npm run typecheck-mobile` falla si falta alguna. Los componentes leen el texto con `useTexts()`. El código que corre fuera del render usa `getTexts()`. El idioma se cambia en Ajustes, desde el menú de Inicio, y se guarda en el dispositivo.
+La app está en español e inglés. Los textos de cada feature están en `texts/es.ts` y `texts/en.ts`, y cada clave nueva va en los dos archivos: `en.ts` está tipado con `es.ts`, así que `npm run typecheck-mobile` falla si falta alguna.
+
+Los componentes leen los textos con `useTexts()`, y el código que corre fuera del render usa `getTexts()`. El usuario cambia el idioma en Ajustes, desde el menú de Inicio, y la elección se guarda en el dispositivo.
 
 ## APK
 
-Estos scripts generan un APK de release. No abren el emulador y no necesitan Metro: el JavaScript va dentro del APK. Hace falta Node.js (recomendado 22.22.3; también compatibles 24.15+ y 26.x), Java y el Android SDK en `ANDROID_HOME`, con el NDK y CMake de arriba. En Windows, si `ANDROID_HOME` no está definido, el script usa `%LOCALAPPDATA%\Android\Sdk`.
+Estos scripts generan un APK de release. No abren el emulador ni necesitan Metro, porque el JavaScript va dentro del APK. Requieren Node.js 26, Java y el Android SDK en `ANDROID_HOME`, con el NDK y CMake indicados arriba. En Windows, si `ANDROID_HOME` no está definido, el script usa `%LOCALAPPDATA%\Android\Sdk`.
 
-El APK se firma con la clave de depuración que ya trae el proyecto. Sirve para instalarlo. No es la firma de Play Store.
+El APK se firma con la clave de depuración que trae el proyecto. Sirve para instalarlo en un dispositivo, pero no es la firma de Play Store.
 
 - Windows:
 
@@ -79,9 +82,11 @@ El APK se firma con la clave de depuración que ya trae el proyecto. Sirve para 
 ./scripts/build-apk.sh
 ```
 
-Si bash niega el permiso, ejecuta `chmod +x scripts/build-apk.sh` una vez. El job de GitHub instala Node, Java y el SDK antes de llamar al script. Corre al publicar un release y adjunta `mobile-release.apk` a ese release. En el job el archivo queda en `dist/mobile-release.apk`.
+Si bash niega el permiso, ejecuta `chmod +x scripts/build-apk.sh` una vez.
 
-Para instalar ese APK, conecta un dispositivo con depuración USB o deja un emulador abierto. `adb` tiene que estar en el `PATH`, o dentro de `platform-tools` del SDK. Si hay más de un dispositivo, pasa el serial que muestra `adb devices`.
+El job de GitHub instala Node, Java y el SDK antes de llamar al script. Corre al publicar un release, deja el archivo en `dist/mobile-release.apk` y lo adjunta a ese release como `mobile-release.apk`.
+
+Para instalar el APK, conecta un dispositivo con depuración USB o deja un emulador abierto. `adb` debe estar en el `PATH` o en la carpeta `platform-tools` del SDK. Si hay más de un dispositivo, pasa el serial que muestra `adb devices`.
 
 - Windows:
 

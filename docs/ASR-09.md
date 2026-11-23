@@ -19,13 +19,13 @@
 - **Replicación síncrona entre zonas.** En AWS (modo `eks-costoso`), RDS Multi-AZ confirma un commit solo cuando la réplica de la otra zona lo tiene. En el clúster local, CloudNativePG hace lo mismo con `synchronous` (`method: any`, `number: 1`, `dataDurability: preferred`).
 - **Clave de idempotencia en la misma fila del cobro.** La clave es una columna única de `cobros`, así que se replica en el mismo commit que el pago.
 - **Reintento seguro.** Si la base no responde, Pagos devuelve `503` con `Retry-After: 2` y el cliente reintenta con la misma clave. La pasarela devuelve el mismo resultado para la misma clave.
-- **Reconciliación.** `python -m pagos.cobros.reconciliar` consulta en la pasarela los cobros que quedaron en `procesando`. Nunca vuelve a cobrar.
+- **Reconciliación.** `python -m pagos.cobros.reconciliar` consulta en la pasarela el estado de los cobros que quedaron en `procesando`, sin volver a cobrar.
 
-El modo desplegado por defecto (`ahorro`) corre en una sola instancia EC2 y no cumple ASR-09. Es una decisión de costo del proyecto académico.
+El modo desplegado por defecto (`ahorro`) corre en una sola instancia EC2 y no cumple ASR-09; es una decisión de costo del proyecto académico.
 
 ## 3. Cómo se probó
 
-Clúster k3d `solventa-ha-local` con dos zonas simuladas (`ha-zone-a`, `ha-zone-b`) y un nodo de control.
+El experimento corre en el clúster k3d `solventa-ha-local`, con dos zonas simuladas (`ha-zone-a`, `ha-zone-b`) y un nodo de control. Los comandos se ejecutan desde `apps/backend`.
 
 1. `node deploy/scripts/ha/modo-local.mjs activar` levanta el clúster y CloudNativePG.
 2. `node deploy/scripts/ha/experimento-arq14.mjs --corridas 10` ejecuta las corridas. En cada una, k6 envía 5 cobros por segundo durante 240 s desde el nodo de control (hasta 1.200 cobros). A los 60 s se detiene el nodo de la zona del primario y la carga sigue los 180 s restantes.
@@ -59,8 +59,7 @@ Una corrida cumple cuando no hay cobros confirmados perdidos, cobros duplicados 
 ## 5. Limitaciones
 
 - Las zonas son contenedores del mismo equipo. La prueba demuestra la replicación síncrona, la idempotencia y la reconciliación, no el comportamiento de red de zonas reales.
-- CloudNativePG reemplaza a RDS Multi-AZ. Ambos confirman un commit solo cuando la réplica lo tiene, pero la conmutación es distinta.
-- El modo `ahorro` desplegado en AWS no cumple ASR-09.
+- CloudNativePG reemplaza a RDS Multi-AZ. Ambos confirman un commit solo cuando la réplica lo tiene, pero conmutan de forma distinta.
 - La corrida de control con replicación asíncrona tampoco perdió cobros. Con 5 cobros por segundo, el retraso de la réplica es casi cero cuando se detiene la zona, así que el control no demuestra que la comparación detecte una pérdida. Una carga mayor o un retraso inyectado en la réplica lo haría visible.
 - La tasa efectiva fue algo menor a 5 cobros por segundo (cerca de 1.000 cobros en 240 s), porque k6 omite llegadas mientras la conmutación hace más lentas las respuestas.
 - La corrida 10 se repitió: en el primer intento la conmutación terminó, pero el script falló al leer los cargos de la pasarela (límite de salida de 1 MB) y la corrida no se registró.
