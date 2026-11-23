@@ -1,38 +1,37 @@
-# Web.Solventa.Angular (Shell Host)
+# Web.Solventa.Angular (shell host)
 
-Este proyecto es el cascarón base (Host / Shell) para la arquitectura de Micro Frontends de Solventa.
+Shell (host) de la arquitectura de micro frontends del portal web de Solventa.
 
-## Arquitectura y Tecnologías
-- **Framework:** Angular 22 (Standalone, Zoneless Change Detection).
-- **Reactividad:** Basado en **Signals**.
-- **Estilos:** Tailwind CSS v4, configurado con los Design Tokens de Solventa extraídos de los mockups (Fuentes: Outfit, Fraunces).
-- **Micro Frontends:** `@angular-architects/native-federation` configurado como host.
+## Tecnologías
 
-## Requisitos Previos
-Ver el archivo `requirements.txt` para consultar las versiones mínimas necesarias:
+- Angular 22 con componentes standalone y detección de cambios zoneless.
+- Reactividad con Signals.
+- Tailwind CSS v4, configurado con los design tokens de Solventa tomados de los mockups (fuentes Outfit y Fraunces).
+- `@angular-architects/native-federation`, configurado como host.
+
+## Requisitos
+
+Las versiones mínimas están en `requirements.txt`:
+
 - Node.js >= 26.7.0
 - npm >= 11.19.0
-- Angular CLI == 22.2.1
+- Angular CLI >= 22.2.1
 
 ## Instalación
 
-1. Clona el repositorio.
-2. Instala las dependencias:
-   ```bash
-   npm install
-   ```
+El proyecto tiene su propio `package.json`. Desde `apps/web/Web.Solventa.Angular`:
 
-## Ejecución del Servidor de Desarrollo
+```bash
+npm install
+```
 
-Para iniciar el entorno de desarrollo (levantará el servidor de desarrollo adaptado para Native Federation):
+## Servidor de desarrollo
 
 ```bash
 ng serve
-# o alternativamente:
-npm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200/`.
+Usa la configuración `development` (`src/environments/environment.dev.ts`). La aplicación queda en `http://localhost:4200/`.
 
 Para trabajar contra el backend local (BFF `canales` en `http://localhost:8000`, ver `apps/backend/docker-compose.yml`):
 
@@ -40,29 +39,39 @@ Para trabajar contra el backend local (BFF `canales` en `http://localhost:8000`,
 npm run start:local
 ```
 
-## Compilación para Producción o Entornos
+`npm start` ejecuta el mismo comando (`ng serve --configuration local`).
 
-Para compilar la aplicación para el entorno de producción:
+## Compilación
+
+Producción (`src/environments/environment.prd.ts`):
 
 ```bash
 ng build
 ```
 
-Para compilar hacia el entorno de Staging (`stg`) u otros configurados:
+Despliegue: `scripts/write-environment.mjs` genera `src/environments/environment.deploy.ts` con la URL del backend y luego compila con la configuración `deploy`. `API_BASE_URL` es obligatoria y `ENVIRONMENT_NAME` toma `dev` si no se define:
 
 ```bash
-ng build --configuration=stg
+API_BASE_URL=<url-del-backend> ENVIRONMENT_NAME=<ambiente> npm run build:deploy
 ```
 
-Los artefactos de compilación se guardarán en el directorio `dist/Web.Solventa.Angular/`.
+El script `apps/backend/deploy/scripts/deploy-aws.sh web` ejecuta este paso con la URL del stack `edge` y publica el resultado en S3 y CloudFront.
 
-## Añadir Micro Frontends (Remotos)
+Los artefactos quedan en `dist/Web.Solventa.Angular/`.
 
-1. Desarrolla y despliega tu aplicación remota (por ejemplo, `ops-polizas`).
-2. Actualiza el archivo `public/federation.manifest.json` en este proyecto con la URL donde está alojado el `remoteEntry.json` de tu remoto.
-3. Asegúrate de mapear adecuadamente la ruta dentro de `src/app/app.routes.ts` usando la función `loadRemoteModule`.
+## Pruebas
 
-## Estructura de Carpetas
+```bash
+npm test
+```
+
+## Añadir un micro frontend remoto
+
+1. Desarrolla y despliega la aplicación remota (por ejemplo, `ops-polizas`).
+2. Agrega en `public/federation.manifest.json` la URL del `remoteEntry.json` del remoto.
+3. Registra el remoto en `REMOTES`, en `src/app/core/constants/remotes.constants.ts`: nombre del manifiesto, módulo expuesto, ruta, etiqueta, ícono y roles. `src/app/app.routes.ts` crea una ruta por cada remoto, y `RemoteLoaderService` lo carga con `loadRemoteModule`; si el remoto no responde, el shell muestra un componente de respaldo.
+
+## Estructura de carpetas
 
 ```
 src/
@@ -71,6 +80,7 @@ src/
 │   ├── shared/                  # Elementos reutilizables (pipes, utilidades sin estado)
 │   ├── ui/                      # Elementos visuales reutilizables (componentes puros de UI)
 │   ├── layout/                  # Shell layout principal (Header, Sidebar)
+│   ├── pages/                   # Páginas del shell (login, ops, partners, users)
 │   ├── app.ts                   # Componente raíz
 │   ├── app.config.ts            # Configuración de proveedores (zoneless, http)
 │   └── app.routes.ts            # Enrutamiento de MFE
