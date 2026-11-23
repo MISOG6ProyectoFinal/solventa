@@ -23,7 +23,7 @@ from secrets import token_urlsafe
 from urllib.parse import urlparse
 
 URL_LOCAL = "http://localhost:8000"
-EVIDENCIA = Path(__file__).resolve().parents[1] / "load-tests" / "fixtures" / "evidencia.png"
+EVIDENCIA = Path(__file__).resolve().parents[1] / "reports" / "load-tests" / "fixtures" / "evidencia.png"
 CREDENCIALES = Path(__file__).resolve().parent / ".poblar"
 OPERADOR = "Ana Gómez"
 OPERADOR_LOCAL = ("admin@solventa.local", "Solventa-local-2026")
