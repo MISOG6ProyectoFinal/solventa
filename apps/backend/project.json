@@ -51,7 +51,7 @@
     "load-test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "./load-tests/run.sh",
+        "command": "./reports/load-tests/run.sh",
         "cwd": "apps/backend"
       }
     }
